@@ -13,9 +13,12 @@ import {
   Loader2,
   CheckCircle2,
   XCircle,
-  MoreVertical
+  MoreVertical,
+  Settings,
+  Sparkles
 } from "lucide-react";
 import AdminLayout from "@/components/AdminLayout";
+import FormBuilder from "@/components/FormBuilder";
 
 interface Attendee {
   id: number;
@@ -40,6 +43,7 @@ interface Event {
   start_date: string;
   location: string;
   capacity: number;
+  custom_fields_schema: any[];
 }
 
 export default function EventDetailsPage() {
@@ -49,6 +53,7 @@ export default function EventDetailsPage() {
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"registrants" | "form">("registrants");
 
   useEffect(() => {
     const fetchData = async () => {
@@ -88,7 +93,6 @@ export default function EventDetailsPage() {
 
   const exportToCSV = () => {
     if (registrations.length === 0) return;
-    
     const headers = ["First Name", "Last Name", "Email", "Company", "Status", "Checked In", "Registered At"];
     const rows = registrations.map(r => [
       r.attendee.first_name,
@@ -99,21 +103,13 @@ export default function EventDetailsPage() {
       r.checked_in ? "Yes" : "No",
       new Date(r.created_at).toLocaleString()
     ]);
-
-    const csvContent = [
-      headers.join(","),
-      ...rows.map(row => row.map(cell => `"${cell}"`).join(","))
-    ].join("\n");
-
+    const csvContent = [headers.join(","), ...rows.map(row => row.map(cell => `"${cell}"`).join(","))].join("\n");
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
     link.setAttribute("download", `${event?.title.replace(/\s+/g, "_")}_registrations.csv`);
-    link.style.visibility = "hidden";
-    document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
   };
 
   if (loading) {
@@ -148,7 +144,7 @@ export default function EventDetailsPage() {
         </Link>
 
         {/* Event Header Card */}
-        <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden mb-12">
+        <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden mb-8">
           <div className="p-10 lg:p-14">
             <div className="flex flex-col md:flex-row justify-between items-start gap-12">
               <div className="flex-1">
@@ -206,86 +202,107 @@ export default function EventDetailsPage() {
                 </Link>
               </div>
             </div>
-            <div className="mt-12 pt-12 border-t border-slate-50">
-              <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Event Description</h3>
-              <p className="text-slate-500 leading-relaxed font-medium max-w-4xl text-lg italic">"{event.description}"</p>
-            </div>
+          </div>
+          
+          {/* Tab Navigation */}
+          <div className="px-10 flex border-t border-slate-50 bg-slate-50/20">
+             <button 
+               onClick={() => setActiveTab("registrants")}
+               className={`px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2 ${activeTab === "registrants" ? "border-yellow-400 text-[#0f172a]" : "border-transparent text-slate-400"}`}
+             >
+                Registrants
+             </button>
+             <button 
+               onClick={() => setActiveTab("form")}
+               className={`px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2 ${activeTab === "form" ? "border-yellow-400 text-[#0f172a]" : "border-transparent text-slate-400"}`}
+             >
+                Form Studio
+             </button>
           </div>
         </div>
 
-        {/* Registrants Section */}
-        <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
-          <div className="px-10 py-8 border-b border-slate-50 flex justify-between items-center bg-slate-50/30">
-            <h2 className="text-xl font-black text-[#0f172a] font-bricolage italic uppercase tracking-tight">Active <span className="text-slate-300">Registrants</span></h2>
-            <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-white px-4 py-2 rounded-xl border border-slate-100">
-              {registrations.length} Verified
+        {activeTab === "registrants" ? (
+          <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
+            <div className="px-10 py-8 border-b border-slate-50 flex justify-between items-center bg-slate-50/30">
+              <h2 className="text-xl font-black text-[#0f172a] font-bricolage italic uppercase tracking-tight">Active <span className="text-slate-300">Registrants</span></h2>
+              <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-white px-4 py-2 rounded-xl border border-slate-100">
+                {registrations.length} Verified
+              </div>
             </div>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead>
-                <tr className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em]">
-                  <th className="px-10 py-6">Attendee Details</th>
-                  <th className="px-10 py-6">Organization</th>
-                  <th className="px-10 py-6">Status</th>
-                  <th className="px-10 py-6">Verified On</th>
-                  <th className="px-10 py-6 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50">
-                {registrations.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="px-10 py-24 text-center">
-                      <div className="bg-slate-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
-                        <Users className="text-slate-200" size={32} />
-                      </div>
-                      <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">No active registrations yet.</p>
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em]">
+                    <th className="px-10 py-6">Attendee Details</th>
+                    <th className="px-10 py-6">Organization</th>
+                    <th className="px-10 py-6">Status</th>
+                    <th className="px-10 py-6">Verified On</th>
+                    <th className="px-10 py-6 text-right">Actions</th>
                   </tr>
-                ) : (
-                  registrations.map((reg) => (
-                    <tr key={reg.id} className="hover:bg-slate-50/50 transition-colors group">
-                      <td className="px-10 py-8">
-                        <div className="flex items-center gap-4">
-                           <div className="w-10 h-10 bg-[#0f172a] text-white rounded-xl flex items-center justify-center font-bold text-xs uppercase">
-                              {reg.attendee.first_name[0]}{reg.attendee.last_name[0]}
-                           </div>
-                           <div>
-                              <p className="font-bold text-[#0f172a]">{reg.attendee.first_name} {reg.attendee.last_name}</p>
-                              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{reg.attendee.email}</p>
-                           </div>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {registrations.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="px-10 py-24 text-center">
+                        <div className="bg-slate-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
+                          <Users className="text-slate-200" size={32} />
                         </div>
-                      </td>
-                      <td className="px-10 py-8 text-slate-600 font-bold text-xs">
-                        {reg.attendee.company || "—"}
-                      </td>
-                      <td className="px-10 py-8">
-                        <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border ${
-                          reg.status === "confirmed" ? "bg-green-50 text-green-600 border-green-100" : "bg-yellow-50 text-yellow-600 border-yellow-100"
-                        }`}>
-                          <div className={`w-1.5 h-1.5 rounded-full ${reg.status === "confirmed" ? "bg-green-500" : "bg-yellow-500"}`}></div>
-                          {reg.status}
-                        </span>
-                      </td>
-                      <td className="px-10 py-8 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                        {new Date(reg.created_at).toLocaleDateString()}
-                      </td>
-                      <td className="px-10 py-8 text-right">
-                        <button
-                          onClick={() => handleDeleteRegistration(reg.id)}
-                          disabled={deletingId === reg.id}
-                          className="text-slate-300 hover:text-red-500 p-2 transition-all"
-                        >
-                          {deletingId === reg.id ? <Loader2 size={18} className="animate-spin" /> : <Trash2 size={18} />}
-                        </button>
+                        <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">No active registrations yet.</p>
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ) : (
+                    registrations.map((reg) => (
+                      <tr key={reg.id} className="hover:bg-slate-50/50 transition-colors group">
+                        <td className="px-10 py-8">
+                          <div className="flex items-center gap-4">
+                             <div className="w-10 h-10 bg-[#0f172a] text-white rounded-xl flex items-center justify-center font-bold text-xs uppercase">
+                                {reg.attendee.first_name[0]}{reg.attendee.last_name[0]}
+                             </div>
+                             <div>
+                                <p className="font-bold text-[#0f172a]">{reg.attendee.first_name} {reg.attendee.last_name}</p>
+                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{reg.attendee.email}</p>
+                             </div>
+                          </div>
+                        </td>
+                        <td className="px-10 py-8 text-slate-600 font-bold text-xs">
+                          {reg.attendee.company || "—"}
+                        </td>
+                        <td className="px-10 py-8">
+                          <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border ${
+                            reg.status === "confirmed" ? "bg-green-50 text-green-600 border-green-100" : "bg-yellow-50 text-yellow-600 border-yellow-100"
+                          }`}>
+                            <div className={`w-1.5 h-1.5 rounded-full ${reg.status === "confirmed" ? "bg-green-500" : "bg-yellow-500"}`}></div>
+                            {reg.status}
+                          </span>
+                        </td>
+                        <td className="px-10 py-8 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                          {new Date(reg.created_at).toLocaleDateString()}
+                        </td>
+                        <td className="px-10 py-8 text-right">
+                          <button
+                            onClick={() => handleDeleteRegistration(reg.id)}
+                            disabled={deletingId === reg.id}
+                            className="text-slate-300 hover:text-red-500 p-2 transition-all"
+                          >
+                            {deletingId === reg.id ? <Loader2 size={18} className="animate-spin" /> : <Trash2 size={18} />}
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 p-10 lg:p-14">
+             <FormBuilder 
+               eventId={id as string} 
+               initialSchema={event.custom_fields_schema} 
+               onSave={(newSchema) => setEvent({ ...event, custom_fields_schema: newSchema })} 
+             />
+          </div>
+        )}
       </div>
     </AdminLayout>
   );

@@ -1,5 +1,5 @@
-from sqlmodel import SQLModel, Field, Relationship
-from typing import Optional, List
+from sqlmodel import SQLModel, Field, Relationship, JSON, Column
+from typing import Optional, List, Dict, Any
 from uuid import UUID, uuid4
 from datetime import datetime
 
@@ -11,6 +11,8 @@ class Event(SQLModel, table=True):
     start_date: datetime
     location: str
     capacity: int
+    
+    custom_fields_schema: Optional[List[Dict[str, Any]]] = Field(default=[], sa_column=Column(JSON))
     
     registrations: List["Registration"] = Relationship(back_populates="event")
 
@@ -30,6 +32,7 @@ class Registration(SQLModel, table=True):
     status: str = "confirmed" # confirmed, waitlisted, cancelled
     checked_in: bool = False
     created_at: datetime = Field(default_factory=datetime.utcnow)
+    custom_answers: Optional[Dict[str, Any]] = Field(default={}, sa_column=Column(JSON))
     
     event: Event = Relationship(back_populates="registrations")
     attendee: Attendee = Relationship(back_populates="registrations")

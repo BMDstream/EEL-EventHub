@@ -92,13 +92,15 @@ def get_event_registrations(event_id: int, session: Session = Depends(get_sessio
 
 @app.post("/api/py/register", response_model=Registration)
 def register_attendee(
-    event_id: int, 
-    email: str, 
-    first_name: str, 
-    last_name: str, 
-    company: str = None, 
+    data: Dict[str, Any],
     session: Session = Depends(get_session)
 ):
+    event_id = data.get("event_id")
+    email = data.get("email")
+    first_name = data.get("first_name")
+    last_name = data.get("last_name")
+    company = data.get("company")
+    custom_answers = data.get("custom_answers", {})
     # Check if attendee exists
     attendee = session.exec(select(Attendee).where(Attendee.email == email)).first()
     if not attendee:
@@ -123,7 +125,11 @@ def register_attendee(
         return existing_reg
     
     # Create registration
-    registration = Registration(event_id=event_id, attendee_id=attendee.id)
+    registration = Registration(
+        event_id=event_id, 
+        attendee_id=attendee.id, 
+        custom_answers=custom_answers
+    )
     session.add(registration)
     session.commit()
     session.refresh(registration)

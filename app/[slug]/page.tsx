@@ -2,7 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { Calendar, MapPin, CheckCircle2, Loader2, AlertCircle } from "lucide-react";
+import { Calendar, MapPin, CheckCircle2, Loader2, AlertCircle, ChevronDown } from "lucide-react";
+
+interface FormField {
+  id: string;
+  label: string;
+  type: "text" | "select" | "checkbox";
+  required: boolean;
+  options?: string[];
+}
 
 interface Event {
   id: number;
@@ -11,6 +19,7 @@ interface Event {
   start_date: string;
   location: string;
   capacity: number;
+  custom_fields_schema?: FormField[];
 }
 
 export default function PublicRegistrationPage() {
@@ -27,6 +36,8 @@ export default function PublicRegistrationPage() {
     email: "",
     company: "",
   });
+
+  const [customAnswers, setCustomAnswers] = useState<Record<string, any>>({});
 
   useEffect(() => {
     fetch(`/api/py/events/${slug}`)
@@ -51,8 +62,14 @@ export default function PublicRegistrationPage() {
     setRegistering(true);
 
     try {
-      const response = await fetch(`/api/py/register?event_id=${event.id}&email=${formData.email}&first_name=${formData.first_name}&last_name=${formData.last_name}&company=${formData.company}`, {
+      const response = await fetch(`/api/py/register`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          event_id: event.id,
+          ...formData,
+          custom_answers: customAnswers
+        })
       });
 
       if (response.ok) {
@@ -69,8 +86,12 @@ export default function PublicRegistrationPage() {
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+  };
+
+  const handleCustomChange = (id: string, value: any) => {
+    setCustomAnswers(prev => ({ ...prev, [id]: value }));
   };
 
   if (loading) {
@@ -118,23 +139,14 @@ export default function PublicRegistrationPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 min-h-screen">
         {/* Left Side: Info */}
         <div className="bg-black p-12 lg:p-24 flex flex-col justify-center text-white relative overflow-hidden">
-          {/* Decorative Elements */}
           <div className="absolute top-0 right-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,rgba(234,179,8,0.1),transparent_70%)]"></div>
-          
           <div className="relative z-10">
             <div className="inline-flex items-center gap-3 px-4 py-2 bg-zinc-900 rounded-full mb-12 border border-white/5">
               <span className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></span>
-              <span className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-400">
-                Excellence Entertainment Logistics
-              </span>
+              <span className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-400">Excellence Entertainment Logistics</span>
             </div>
-            <h1 className="text-6xl lg:text-8xl font-black mb-10 leading-[0.9] tracking-tighter font-bricolage italic">
-              {event.title}
-            </h1>
-            <p className="text-xl text-zinc-500 mb-20 max-w-lg leading-relaxed font-medium">
-              {event.description}
-            </p>
-            
+            <h1 className="text-6xl lg:text-8xl font-black mb-10 leading-[0.9] tracking-tighter font-bricolage italic">{event.title}</h1>
+            <p className="text-xl text-zinc-500 mb-20 max-w-lg leading-relaxed font-medium">{event.description}</p>
             <div className="space-y-10">
               <div className="flex items-center gap-8 group">
                 <div className="bg-zinc-900 p-5 rounded-2xl border border-white/5 group-hover:border-yellow-500/50 transition-all">
@@ -143,10 +155,8 @@ export default function PublicRegistrationPage() {
                 <div>
                   <p className="text-zinc-600 text-[10px] font-black uppercase tracking-[0.3em] mb-2">Schedule</p>
                   <p className="text-2xl font-black font-bricolage italic tracking-tight">{new Date(event.start_date).toLocaleDateString(undefined, { dateStyle: 'full' })}</p>
-                  <p className="text-zinc-400 font-medium">{new Date(event.start_date).toLocaleTimeString(undefined, { timeStyle: 'short' })}</p>
                 </div>
               </div>
-              
               <div className="flex items-center gap-8 group">
                 <div className="bg-zinc-900 p-5 rounded-2xl border border-white/5 group-hover:border-yellow-500/50 transition-all">
                   <MapPin size={32} className="text-yellow-500" />
@@ -158,87 +168,88 @@ export default function PublicRegistrationPage() {
               </div>
             </div>
           </div>
-          
-          <div className="absolute bottom-12 left-12 lg:left-24 text-[10px] font-black text-zinc-800 tracking-[0.4em] uppercase font-bricolage">
-            EEL-EventHub / Operational Node
-          </div>
         </div>
 
         {/* Right Side: Form */}
         <div className="p-12 lg:p-24 flex flex-col justify-center bg-zinc-900/30 border-l border-white/5 relative">
-          <div className="max-w-md w-full mx-auto relative z-10">
+          <div className="max-w-md w-full mx-auto relative z-10 py-12">
             <div className="mb-16">
               <h2 className="text-5xl font-black text-white mb-6 tracking-tight font-bricolage italic">Register.</h2>
               <p className="text-zinc-500 text-lg font-medium leading-relaxed">Secure your credentials for this exclusive engagement.</p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-8">
+              {/* Default Fields */}
               <div className="grid grid-cols-2 gap-6">
                 <div className="space-y-3">
                   <label className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500 ml-1">First Name</label>
-                  <input
-                    required
-                    type="text"
-                    name="first_name"
-                    value={formData.first_name}
-                    onChange={handleChange}
-                    className="w-full px-6 py-5 rounded-[1.5rem] bg-black border border-white/5 focus:border-yellow-500/50 focus:ring-4 focus:ring-yellow-500/5 outline-none transition-all font-bold text-white placeholder-zinc-700"
-                    placeholder="Jane"
-                  />
+                  <input required type="text" name="first_name" value={formData.first_name} onChange={handleChange} className="w-full px-6 py-5 rounded-[1.5rem] bg-black border border-white/5 focus:border-yellow-500/50 focus:ring-4 focus:ring-yellow-500/5 outline-none transition-all font-bold text-white placeholder-zinc-700" placeholder="Jane" />
                 </div>
                 <div className="space-y-3">
                   <label className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500 ml-1">Last Name</label>
-                  <input
-                    required
-                    type="text"
-                    name="last_name"
-                    value={formData.last_name}
-                    onChange={handleChange}
-                    className="w-full px-6 py-5 rounded-[1.5rem] bg-black border border-white/5 focus:border-yellow-500/50 focus:ring-4 focus:ring-yellow-500/5 outline-none transition-all font-bold text-white placeholder-zinc-700"
-                    placeholder="Doe"
-                  />
+                  <input required type="text" name="last_name" value={formData.last_name} onChange={handleChange} className="w-full px-6 py-5 rounded-[1.5rem] bg-black border border-white/5 focus:border-yellow-500/50 focus:ring-4 focus:ring-yellow-500/5 outline-none transition-all font-bold text-white placeholder-zinc-700" placeholder="Doe" />
                 </div>
               </div>
 
               <div className="space-y-3">
                 <label className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500 ml-1">Intelligence / Email</label>
-                <input
-                  required
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  placeholder="jane.doe@company.com"
-                  className="w-full px-6 py-5 rounded-[1.5rem] bg-black border border-white/5 focus:border-yellow-500/50 focus:ring-4 focus:ring-yellow-500/5 outline-none transition-all font-bold text-white placeholder-zinc-700"
-                />
+                <input required type="email" name="email" value={formData.email} onChange={handleChange} placeholder="jane.doe@company.com" className="w-full px-6 py-5 rounded-[1.5rem] bg-black border border-white/5 focus:border-yellow-500/50 focus:ring-4 focus:ring-yellow-500/5 outline-none transition-all font-bold text-white placeholder-zinc-700" />
               </div>
 
               <div className="space-y-3">
                 <label className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500 ml-1">Organization</label>
-                <input
-                  type="text"
-                  name="company"
-                  value={formData.company}
-                  onChange={handleChange}
-                  placeholder="Global Enterprises Inc."
-                  className="w-full px-6 py-5 rounded-[1.5rem] bg-black border border-white/5 focus:border-yellow-500/50 focus:ring-4 focus:ring-yellow-500/5 outline-none transition-all font-bold text-white placeholder-zinc-700"
-                />
+                <input type="text" name="company" value={formData.company} onChange={handleChange} placeholder="Global Enterprises Inc." className="w-full px-6 py-5 rounded-[1.5rem] bg-black border border-white/5 focus:border-yellow-500/50 focus:ring-4 focus:ring-yellow-500/5 outline-none transition-all font-bold text-white placeholder-zinc-700" />
               </div>
 
+              {/* Dynamic Custom Fields */}
+              {event.custom_fields_schema?.map((field) => (
+                <div key={field.id} className="space-y-3 animate-in fade-in slide-in-from-bottom-2">
+                  <label className="text-[10px] font-black uppercase tracking-[0.3em] text-yellow-500/70 ml-1">
+                    {field.label} {field.required && "*"}
+                  </label>
+                  
+                  {field.type === "text" && (
+                    <input
+                      required={field.required}
+                      type="text"
+                      onChange={(e) => handleCustomChange(field.id, e.target.value)}
+                      className="w-full px-6 py-5 rounded-[1.5rem] bg-black border border-white/5 focus:border-yellow-500/50 focus:ring-4 focus:ring-yellow-500/5 outline-none transition-all font-bold text-white placeholder-zinc-700"
+                    />
+                  )}
+
+                  {field.type === "select" && (
+                    <div className="relative">
+                      <select
+                        required={field.required}
+                        onChange={(e) => handleCustomChange(field.id, e.target.value)}
+                        className="w-full px-6 py-5 rounded-[1.5rem] bg-black border border-white/5 focus:border-yellow-500/50 focus:ring-4 focus:ring-yellow-500/5 outline-none transition-all font-bold text-white appearance-none cursor-pointer"
+                      >
+                        <option value="">Select Option</option>
+                        {field.options?.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                      </select>
+                      <ChevronDown className="absolute right-6 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" size={20} />
+                    </div>
+                  )}
+
+                  {field.type === "checkbox" && (
+                    <label className="flex items-center gap-4 cursor-pointer group p-5 bg-black rounded-[1.5rem] border border-white/5 hover:border-yellow-500/30 transition-all">
+                       <input 
+                         type="checkbox" 
+                         onChange={(e) => handleCustomChange(field.id, e.target.checked)}
+                         className="w-6 h-6 rounded-lg bg-zinc-900 border-white/10 checked:bg-yellow-500 transition-all" 
+                       />
+                       <span className="text-xs font-bold text-zinc-400 group-hover:text-white">Yes, I agree / confirm</span>
+                    </label>
+                  )}
+                </div>
+              ))}
+
               <div className="pt-8">
-                <button
-                  type="submit"
-                  disabled={registering}
-                  className="w-full bg-yellow-500 hover:bg-white disabled:bg-zinc-800 text-black font-black py-6 rounded-[2rem] shadow-2xl shadow-yellow-500/10 transition-all flex items-center justify-center gap-4 uppercase tracking-[0.3em] text-xs"
-                >
+                <button type="submit" disabled={registering} className="w-full bg-yellow-500 hover:bg-white disabled:bg-zinc-800 text-black font-black py-6 rounded-[2rem] shadow-2xl shadow-yellow-500/10 transition-all flex items-center justify-center gap-4 uppercase tracking-[0.3em] text-xs">
                   {registering ? <Loader2 className="animate-spin" size={20} /> : null}
                   {registering ? "Dispatching..." : "Submit Registration"}
                 </button>
               </div>
-              
-              <p className="text-[10px] text-center text-zinc-700 font-black leading-relaxed px-12 uppercase tracking-[0.1em]">
-                Secure registration powered by Excellence Entertainment Logistics.
-              </p>
             </form>
           </div>
         </div>
