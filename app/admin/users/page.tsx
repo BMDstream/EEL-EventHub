@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Users, Plus, Shield, Mail, Trash2, Loader2, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
+import AdminLayout from "@/components/AdminLayout";
 
 interface User {
   id: number;
@@ -69,16 +70,13 @@ export default function UserManagementPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] font-outfit p-8">
-      <div className="max-w-6xl mx-auto">
+    <AdminLayout>
+      <div className="max-w-6xl mx-auto font-outfit">
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
           <div>
-            <Link href="/admin" className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] hover:text-[#1e293b] transition-colors mb-2 block">
-              ← Back to Dashboard
-            </Link>
-            <h1 className="text-4xl font-black text-[#0f172a] tracking-tighter font-bricolage italic">TEAM <span className="text-slate-400">MANAGEMENT</span></h1>
-            <p className="text-[#64748b] font-medium text-sm">Orchestrate permissions and access levels for Excellence Entertainment Logistics.</p>
+            <h1 className="text-5xl font-black text-[#0f172a] tracking-tighter font-bricolage italic uppercase">TEAM <span className="text-slate-300">MANAGEMENT</span></h1>
+            <p className="text-slate-500 font-medium text-lg">Orchestrate permissions and access levels for Excellence Entertainment Logistics.</p>
           </div>
           <button 
             onClick={() => setShowAddModal(true)}
@@ -213,6 +211,6 @@ export default function UserManagementPage() {
           </div>
         )}
       </div>
-    </div>
+    </AdminLayout>
   );
 }
