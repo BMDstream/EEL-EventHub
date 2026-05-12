@@ -1,0 +1,147 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { Calendar, MapPin, Users, Search, MoreHorizontal, ArrowUpRight, Loader2, Plus } from "lucide-react";
+import Link from "next/link";
+import AdminLayout from "@/components/AdminLayout";
+
+interface Event {
+  id: number;
+  slug: string;
+  title: string;
+  description: string;
+  start_date: string;
+  location: string;
+  capacity: number;
+}
+
+export default function EventsListPage() {
+  const [events, setEvents] = useState<Event[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    fetch("/api/py/events")
+      .then((res) => res.json())
+      .then((data) => {
+        setEvents(data);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error(err);
+        setLoading(false);
+      });
+  }, []);
+
+  const filteredEvents = events.filter(e => 
+    e.title.toLowerCase().includes(search.toLowerCase()) || 
+    e.location.toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <AdminLayout>
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
+          <div>
+            <h1 className="text-5xl font-black text-[#0f172a] tracking-tighter font-bricolage italic uppercase">EVENT <span className="text-slate-300">CATALOG</span></h1>
+            <p className="text-slate-500 font-medium text-lg">Browse and manage your full portfolio of excellence.</p>
+          </div>
+          <Link 
+            href="/admin/create"
+            className="flex items-center gap-3 bg-[#0f172a] hover:bg-black text-white px-8 py-4 rounded-2xl font-black transition-all shadow-2xl shadow-slate-200 uppercase tracking-widest text-xs"
+          >
+            <Plus size={20} />
+            New Event
+          </Link>
+        </div>
+
+        {/* Toolbar */}
+        <div className="bg-white p-4 rounded-[2rem] shadow-sm border border-slate-100 mb-8 flex flex-col md:flex-row gap-4 items-center">
+           <div className="relative flex-1 w-full">
+              <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300" size={20} />
+              <input 
+                type="text" 
+                placeholder="Search events by title or location..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-16 pr-8 py-4 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a]"
+              />
+           </div>
+           <div className="flex gap-2 w-full md:w-auto">
+              <button className="px-6 py-4 bg-slate-50 text-slate-400 font-black text-[10px] uppercase tracking-widest rounded-2xl hover:bg-slate-100 transition-all">Filter</button>
+              <button className="px-6 py-4 bg-slate-50 text-slate-400 font-black text-[10px] uppercase tracking-widest rounded-2xl hover:bg-slate-100 transition-all">Export CSV</button>
+           </div>
+        </div>
+
+        {/* List */}
+        <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
+          {loading ? (
+            <div className="p-24 flex justify-center"><Loader2 className="animate-spin text-slate-200" size={48} /></div>
+          ) : filteredEvents.length === 0 ? (
+            <div className="p-24 text-center">
+               <Calendar className="mx-auto mb-6 text-slate-100" size={80} />
+               <h3 className="text-2xl font-bold text-[#0f172a]">No events found</h3>
+               <p className="text-slate-400">Try adjusting your search or create a new event.</p>
+            </div>
+          ) : (
+            <table className="w-full text-left border-collapse">
+               <thead>
+                 <tr className="bg-slate-50/50">
+                    <th className="px-10 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Event Name</th>
+                    <th className="px-10 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Date & Location</th>
+                    <th className="px-10 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Capacity</th>
+                    <th className="px-10 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Status</th>
+                    <th className="px-10 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 text-right">Action</th>
+                 </tr>
+               </thead>
+               <tbody className="divide-y divide-slate-50">
+                 {filteredEvents.map(event => (
+                   <tr key={event.id} className="hover:bg-slate-50/50 transition-colors group">
+                      <td className="px-10 py-8">
+                         <div>
+                            <p className="text-lg font-black text-[#0f172a] group-hover:text-yellow-500 transition-colors">{event.title}</p>
+                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Slug: {event.slug}</p>
+                         </div>
+                      </td>
+                      <td className="px-10 py-8">
+                         <div className="space-y-1">
+                            <div className="flex items-center gap-2 text-xs font-bold text-slate-500">
+                               <Calendar size={14} className="text-slate-300" />
+                               {new Date(event.start_date).toLocaleDateString(undefined, { dateStyle: 'medium' })}
+                            </div>
+                            <div className="flex items-center gap-2 text-xs font-bold text-slate-400">
+                               <MapPin size={14} className="text-slate-300" />
+                               {event.location}
+                            </div>
+                         </div>
+                      </td>
+                      <td className="px-10 py-8">
+                         <div className="flex items-center gap-3">
+                            <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden max-w-[80px]">
+                               <div className="h-full bg-yellow-400 w-2/3"></div>
+                            </div>
+                            <span className="text-xs font-black text-[#0f172a]">{event.capacity}</span>
+                         </div>
+                      </td>
+                      <td className="px-10 py-8">
+                         <span className="px-3 py-1 bg-green-50 text-green-600 text-[10px] font-black uppercase tracking-widest rounded-lg border border-green-100">Confirmed</span>
+                      </td>
+                      <td className="px-10 py-8 text-right">
+                         <Link 
+                           href={`/admin/events/${event.id}`}
+                           className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#0f172a] hover:gap-3 transition-all"
+                         >
+                           Control Panel <ArrowUpRight size={14} />
+                         </Link>
+                      </td>
+                   </tr>
+                 ))}
+               </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+    </AdminLayout>
+  );
+}

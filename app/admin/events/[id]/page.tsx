@@ -15,6 +15,7 @@ import {
   XCircle,
   MoreVertical
 } from "lucide-react";
+import AdminLayout from "@/components/AdminLayout";
 
 interface Attendee {
   id: number;
@@ -52,13 +53,11 @@ export default function EventDetailsPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch event details
         const eventRes = await fetch(`/api/py/events/id/${id}`);
         if (!eventRes.ok) throw new Error("Event not found");
         const eventData = await eventRes.json();
         setEvent(eventData);
 
-        // Fetch registrations
         const regRes = await fetch(`/api/py/events/${id}/registrations`);
         const regData = await regRes.json();
         setRegistrations(regData);
@@ -119,142 +118,163 @@ export default function EventDetailsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Loader2 className="animate-spin text-blue-600" size={48} />
-      </div>
+      <AdminLayout>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <Loader2 className="animate-spin text-[#0f172a]" size={48} />
+        </div>
+      </AdminLayout>
     );
   }
 
   if (!event) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-6">
-        <h1 className="text-2xl font-bold text-slate-900 mb-2">Event not found</h1>
-        <Link href="/admin" className="text-blue-600 hover:underline">Return to Dashboard</Link>
-      </div>
+      <AdminLayout>
+        <div className="text-center py-20">
+          <h1 className="text-2xl font-bold text-slate-900 mb-2">Event not found</h1>
+          <Link href="/admin/events" className="text-blue-600 hover:underline">Return to Catalog</Link>
+        </div>
+      </AdminLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] p-8">
-      <div className="max-w-6xl mx-auto">
+    <AdminLayout>
+      <div className="max-w-7xl mx-auto font-outfit">
         <Link 
-          href="/admin" 
-          className="flex items-center gap-2 text-slate-500 hover:text-slate-700 mb-8 transition-colors text-sm font-bold uppercase tracking-widest"
+          href="/admin/events" 
+          className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] hover:text-[#0f172a] transition-colors mb-4 block"
         >
-          <ArrowLeft size={18} />
-          Back to Dashboard
+          ← Back to Catalog
         </Link>
 
         {/* Event Header Card */}
-        <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden mb-8">
-          <div className="p-8 lg:p-12">
-            <div className="flex flex-col md:flex-row justify-between items-start gap-8">
-              <div>
-                <div className="flex items-center gap-3 mb-4">
-                   <span className="px-3 py-1 bg-[#1e293b]/5 text-[#1e293b] text-[10px] font-black uppercase tracking-widest rounded-full border border-[#1e293b]/10">
-                     Active Event
+        <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden mb-12">
+          <div className="p-10 lg:p-14">
+            <div className="flex flex-col md:flex-row justify-between items-start gap-12">
+              <div className="flex-1">
+                <div className="flex items-center gap-3 mb-6">
+                   <span className="px-3 py-1 bg-yellow-400/10 text-yellow-600 text-[10px] font-black uppercase tracking-[0.2em] rounded-lg border border-yellow-400/20">
+                     Command Panel
                    </span>
-                   <span className="text-[10px] font-mono text-slate-400">UUID: {id}</span>
+                   <span className="text-[10px] font-mono text-slate-300">ID: {id}</span>
                 </div>
-                <h1 className="text-4xl font-black text-[#0f172a] mb-6 tracking-tight italic">{event.title}</h1>
-                <div className="flex flex-wrap gap-8 text-slate-500">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-slate-50 rounded-xl">
-                      <Calendar size={20} className="text-[#1e293b]" />
+                <h1 className="text-5xl font-black text-[#0f172a] mb-10 tracking-tighter italic font-bricolage leading-none">{event.title}</h1>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 bg-slate-50 text-[#0f172a] rounded-2xl">
+                      <Calendar size={22} />
                     </div>
-                    <span className="font-bold text-slate-700">{new Date(event.start_date).toLocaleDateString(undefined, { dateStyle: 'full' })}</span>
+                    <div>
+                      <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Date</p>
+                      <p className="font-bold text-[#0f172a]">{new Date(event.start_date).toLocaleDateString(undefined, { dateStyle: 'medium' })}</p>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-slate-50 rounded-xl">
-                      <MapPin size={20} className="text-[#1e293b]" />
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 bg-slate-50 text-[#0f172a] rounded-2xl">
+                      <MapPin size={22} />
                     </div>
-                    <span className="font-bold text-slate-700">{event.location}</span>
+                    <div>
+                      <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Location</p>
+                      <p className="font-bold text-[#0f172a] truncate max-w-[150px]">{event.location}</p>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-slate-50 rounded-xl">
-                      <Users size={20} className="text-[#1e293b]" />
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 bg-slate-50 text-[#0f172a] rounded-2xl">
+                      <Users size={22} />
                     </div>
-                    <span className="font-bold text-slate-700">{registrations.length} / {event.capacity} Enrolled</span>
+                    <div>
+                      <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Enrollment</p>
+                      <p className="font-bold text-[#0f172a]">{registrations.length} / {event.capacity}</p>
+                    </div>
                   </div>
                 </div>
               </div>
-              <div className="flex gap-4">
-                <Link
-                  href={`/admin/events/${id}/edit`}
-                  className="px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold transition-all border border-slate-200"
-                >
-                  Edit Settings
-                </Link>
+              <div className="flex flex-col gap-4 w-full md:w-auto">
                 <button
                   onClick={exportToCSV}
                   disabled={registrations.length === 0}
-                  className="flex items-center gap-3 bg-[#1e293b] hover:bg-[#0f172a] disabled:bg-slate-300 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-xl shadow-slate-200"
+                  className="flex items-center justify-center gap-3 bg-[#0f172a] hover:bg-black disabled:bg-slate-200 text-white px-8 py-5 rounded-2xl font-black transition-all shadow-2xl shadow-slate-200 uppercase tracking-widest text-xs"
                 >
                   <Download size={20} />
                   Export Manifest
                 </button>
+                <Link
+                  href={`/admin/events/${id}/edit`}
+                  className="flex items-center justify-center gap-3 bg-white hover:bg-slate-50 text-[#0f172a] px-8 py-5 rounded-2xl font-black transition-all border border-slate-200 uppercase tracking-widest text-xs"
+                >
+                  Edit Configuration
+                </Link>
               </div>
             </div>
-            <div className="mt-12 pt-12 border-t border-slate-100">
-              <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Event Intelligence</h3>
-              <p className="text-slate-600 leading-relaxed font-medium max-w-3xl">{event.description}</p>
+            <div className="mt-12 pt-12 border-t border-slate-50">
+              <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Event Description</h3>
+              <p className="text-slate-500 leading-relaxed font-medium max-w-4xl text-lg italic">"{event.description}"</p>
             </div>
           </div>
         </div>
 
-        {/* Registrants Table */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="px-8 py-6 border-b border-gray-100 flex justify-between items-center">
-            <h2 className="text-xl font-bold text-slate-900">Registrants</h2>
-            <div className="text-sm text-slate-500">
-              {registrations.length} total
+        {/* Registrants Section */}
+        <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
+          <div className="px-10 py-8 border-b border-slate-50 flex justify-between items-center bg-slate-50/30">
+            <h2 className="text-xl font-black text-[#0f172a] font-bricolage italic uppercase tracking-tight">Active <span className="text-slate-300">Registrants</span></h2>
+            <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-white px-4 py-2 rounded-xl border border-slate-100">
+              {registrations.length} Verified
             </div>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead>
-                <tr className="bg-gray-50 text-slate-500 text-xs uppercase tracking-wider">
-                  <th className="px-8 py-4 font-bold">Attendee</th>
-                  <th className="px-8 py-4 font-bold">Company</th>
-                  <th className="px-8 py-4 font-bold">Status</th>
-                  <th className="px-8 py-4 font-bold">Date Joined</th>
-                  <th className="px-8 py-4 font-bold text-right">Actions</th>
+                <tr className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em]">
+                  <th className="px-10 py-6">Attendee Details</th>
+                  <th className="px-10 py-6">Organization</th>
+                  <th className="px-10 py-6">Status</th>
+                  <th className="px-10 py-6">Verified On</th>
+                  <th className="px-10 py-6 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-slate-50">
                 {registrations.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-8 py-12 text-center text-slate-400">
-                      No one has registered for this event yet.
+                    <td colSpan={5} className="px-10 py-24 text-center">
+                      <div className="bg-slate-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <Users className="text-slate-200" size={32} />
+                      </div>
+                      <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">No active registrations yet.</p>
                     </td>
                   </tr>
                 ) : (
                   registrations.map((reg) => (
-                    <tr key={reg.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-8 py-4">
-                        <div className="font-semibold text-slate-900">{reg.attendee.first_name} {reg.attendee.last_name}</div>
-                        <div className="text-sm text-slate-500">{reg.attendee.email}</div>
+                    <tr key={reg.id} className="hover:bg-slate-50/50 transition-colors group">
+                      <td className="px-10 py-8">
+                        <div className="flex items-center gap-4">
+                           <div className="w-10 h-10 bg-[#0f172a] text-white rounded-xl flex items-center justify-center font-bold text-xs uppercase">
+                              {reg.attendee.first_name[0]}{reg.attendee.last_name[0]}
+                           </div>
+                           <div>
+                              <p className="font-bold text-[#0f172a]">{reg.attendee.first_name} {reg.attendee.last_name}</p>
+                              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{reg.attendee.email}</p>
+                           </div>
+                        </div>
                       </td>
-                      <td className="px-8 py-4 text-slate-600">
+                      <td className="px-10 py-8 text-slate-600 font-bold text-xs">
                         {reg.attendee.company || "—"}
                       </td>
-                      <td className="px-8 py-4">
-                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          reg.status === "confirmed" ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"
+                      <td className="px-10 py-8">
+                        <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border ${
+                          reg.status === "confirmed" ? "bg-green-50 text-green-600 border-green-100" : "bg-yellow-50 text-yellow-600 border-yellow-100"
                         }`}>
-                          {reg.status === "confirmed" ? <CheckCircle2 size={12} /> : null}
+                          <div className={`w-1.5 h-1.5 rounded-full ${reg.status === "confirmed" ? "bg-green-500" : "bg-yellow-500"}`}></div>
                           {reg.status}
                         </span>
                       </td>
-                      <td className="px-8 py-4 text-sm text-slate-500">
+                      <td className="px-10 py-8 text-[10px] font-black text-slate-400 uppercase tracking-widest">
                         {new Date(reg.created_at).toLocaleDateString()}
                       </td>
-                      <td className="px-8 py-4 text-right">
+                      <td className="px-10 py-8 text-right">
                         <button
                           onClick={() => handleDeleteRegistration(reg.id)}
                           disabled={deletingId === reg.id}
-                          className="text-red-500 hover:text-red-700 p-2 rounded-lg hover:bg-red-50 transition-colors"
-                          title="Remove registrant"
+                          className="text-slate-300 hover:text-red-500 p-2 transition-all"
                         >
                           {deletingId === reg.id ? <Loader2 size={18} className="animate-spin" /> : <Trash2 size={18} />}
                         </button>
@@ -267,6 +287,6 @@ export default function EventDetailsPage() {
           </div>
         </div>
       </div>
-    </div>
+    </AdminLayout>
   );
 }

@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Save, Loader2 } from "lucide-react";
+import { ArrowLeft, Save, Loader2, Sparkles, Globe, Calendar, MapPin, Users, FileText } from "lucide-react";
 import Link from "next/link";
+import AdminLayout from "@/components/AdminLayout";
 
 export default function CreateEventPage() {
   const router = useRouter();
@@ -34,7 +35,7 @@ export default function CreateEventPage() {
       });
 
       if (response.ok) {
-        router.push("/admin");
+        router.push("/admin/events");
       } else {
         const error = await response.json();
         alert(`Error: ${error.detail || "Failed to create event"}`);
@@ -56,114 +57,140 @@ export default function CreateEventPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-3xl mx-auto">
+    <AdminLayout>
+      <div className="max-w-4xl mx-auto font-outfit">
         <Link 
-          href="/admin" 
-          className="flex items-center gap-2 text-slate-500 hover:text-slate-700 mb-8 transition-colors"
+          href="/admin/events" 
+          className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] hover:text-[#0f172a] transition-colors mb-4 block"
         >
-          <ArrowLeft size={20} />
-          Back to Dashboard
+          ← Back to Catalog
         </Link>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="bg-blue-600 px-8 py-6">
-            <h1 className="text-2xl font-bold text-white">Create New Event</h1>
-            <p className="text-blue-100">Fill in the details to launch your event.</p>
-          </div>
+        <div className="flex items-center gap-4 mb-12">
+           <div className="w-16 h-16 bg-[#0f172a] text-white rounded-[2rem] flex items-center justify-center shadow-2xl">
+              <Sparkles size={32} />
+           </div>
+           <div>
+              <h1 className="text-4xl font-black text-[#0f172a] tracking-tighter font-bricolage italic uppercase">LAUNCH <span className="text-slate-300">NEW EVENT</span></h1>
+              <p className="text-slate-500 font-medium">Define the parameters for your next logistics masterpiece.</p>
+           </div>
+        </div>
 
-          <form onSubmit={handleSubmit} className="p-8 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700">Event Title</label>
-                <input
-                  required
-                  type="text"
-                  name="title"
-                  value={formData.title}
-                  onChange={handleChange}
-                  placeholder="e.g. Enterprise Summit 2024"
-                  className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none"
-                />
+        <form onSubmit={handleSubmit} className="space-y-8">
+           {/* Section 1: Core Details */}
+           <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 p-10 lg:p-14">
+              <h3 className="text-xs font-black text-slate-300 uppercase tracking-[0.2em] mb-10 flex items-center gap-3">
+                 <FileText size={16} /> Core Information
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                 <div className="space-y-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Event Title</label>
+                    <input
+                      required
+                      type="text"
+                      name="title"
+                      value={formData.title}
+                      onChange={handleChange}
+                      placeholder="e.g. Excellence Gala 2026"
+                      className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a] transition-all"
+                    />
+                 </div>
+
+                 <div className="space-y-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                       <Globe size={14} /> URL Slug
+                    </label>
+                    <input
+                      required
+                      type="text"
+                      name="slug"
+                      value={formData.slug}
+                      onChange={handleChange}
+                      placeholder="excellence-gala-2026"
+                      className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a] transition-all"
+                    />
+                 </div>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700">URL Slug</label>
-                <input
-                  required
-                  type="text"
-                  name="slug"
-                  value={formData.slug}
-                  onChange={handleChange}
-                  placeholder="e.g. enterprise-summit-2024"
-                  className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none"
-                />
+              <div className="mt-10 space-y-3">
+                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Manifesto (Description)</label>
+                 <textarea
+                    required
+                    name="description"
+                    value={formData.description}
+                    onChange={handleChange}
+                    rows={4}
+                    placeholder="Describe the vision and scope of this event..."
+                    className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a] transition-all resize-none"
+                 />
               </div>
+           </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700">Date & Time</label>
-                <input
-                  required
-                  type="datetime-local"
-                  name="start_date"
-                  value={formData.start_date}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none"
-                />
+           {/* Section 2: Logistics */}
+           <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 p-10 lg:p-14">
+              <h3 className="text-xs font-black text-slate-300 uppercase tracking-[0.2em] mb-10 flex items-center gap-3">
+                 <MapPin size={16} /> Logistics & Scheduling
+              </h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+                 <div className="space-y-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                       <Calendar size={14} /> Start Date
+                    </label>
+                    <input
+                      required
+                      type="datetime-local"
+                      name="start_date"
+                      value={formData.start_date}
+                      onChange={handleChange}
+                      className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a] transition-all"
+                    />
+                 </div>
+
+                 <div className="space-y-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                       <MapPin size={14} /> Venue
+                    </label>
+                    <input
+                      required
+                      type="text"
+                      name="location"
+                      value={formData.location}
+                      onChange={handleChange}
+                      placeholder="e.g. Metropolitan Hall"
+                      className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a] transition-all"
+                    />
+                 </div>
+
+                 <div className="space-y-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                       <Users size={14} /> Capacity
+                    </label>
+                    <input
+                      required
+                      type="number"
+                      name="capacity"
+                      value={formData.capacity}
+                      onChange={handleChange}
+                      className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a] transition-all"
+                    />
+                 </div>
               </div>
+           </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700">Location</label>
-                <input
-                  required
-                  type="text"
-                  name="location"
-                  value={formData.location}
-                  onChange={handleChange}
-                  placeholder="e.g. Grand Ballroom, Hilton"
-                  className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700">Capacity</label>
-                <input
-                  required
-                  type="number"
-                  name="capacity"
-                  value={formData.capacity}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-slate-700">Description</label>
-              <textarea
-                required
-                name="description"
-                value={formData.description}
-                onChange={handleChange}
-                rows={4}
-                placeholder="Describe what the event is about..."
-                className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none resize-none"
-              />
-            </div>
-
-            <div className="pt-4">
+           <div className="flex gap-6">
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-bold py-3 rounded-xl shadow-lg shadow-blue-200 transition-all flex items-center justify-center gap-2"
+                className="flex-1 bg-[#0f172a] hover:bg-black disabled:bg-slate-200 text-white px-10 py-6 rounded-[2rem] font-black transition-all shadow-2xl shadow-slate-200 uppercase tracking-[0.2em] text-xs flex items-center justify-center gap-4"
               >
                 {loading ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />}
-                {loading ? "Creating..." : "Create Event"}
+                {loading ? "Initializing..." : "Launch Event"}
               </button>
-            </div>
-          </form>
-        </div>
+           </div>
+        </form>
       </div>
-    </div>
+    </AdminLayout>
   );
 }
