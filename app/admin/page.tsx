@@ -39,13 +39,22 @@ export default function AdminDashboard() {
             <h1 className="text-3xl font-black text-[#0f172a] tracking-tight font-bricolage italic">EEL-EVENT<span className="text-slate-400">HUB</span></h1>
             <p className="text-[#64748b] font-medium uppercase tracking-widest text-[10px]">Excellence Entertainment Logistics Management</p>
           </div>
-          <Link 
-            href="/admin/create"
-            className="flex items-center gap-2 bg-[#1e293b] hover:bg-[#0f172a] text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg shadow-slate-200"
-          >
-            <Plus size={20} />
-            Create New Event
-          </Link>
+          <div className="flex items-center gap-4">
+            <Link 
+              href="/admin/users"
+              className="flex items-center gap-2 bg-white hover:bg-slate-50 text-[#1e293b] px-6 py-3 rounded-xl font-bold transition-all border border-slate-200"
+            >
+              <Users size={20} />
+              Manage Team
+            </Link>
+            <Link 
+              href="/admin/create"
+              className="flex items-center gap-2 bg-[#1e293b] hover:bg-[#0f172a] text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg shadow-slate-200"
+            >
+              <Plus size={20} />
+              Create New Event
+            </Link>
+          </div>
         </div>
 
         {loading ? (

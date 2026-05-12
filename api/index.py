@@ -2,7 +2,7 @@ from fastapi import FastAPI, Depends, HTTPException, status
 from sqlmodel import Session, select
 from typing import List
 from backend.database import get_session, init_db
-from backend.models import Event, Attendee, Registration
+from backend.models import Event, Attendee, Registration, User
 import uvicorn
 
 app = FastAPI(docs_url="/api/py/docs", openapi_url="/api/py/openapi.json")
@@ -135,6 +135,52 @@ def delete_registration(registration_id: str, session: Session = Depends(get_ses
     if not registration:
         raise HTTPException(status_code=404, detail="Registration not found")
     session.delete(registration)
+    session.commit()
+    return {"ok": True}
+
+@app.get("/api/py/users", response_model=List[User])
+def read_users(session: Session = Depends(get_session)):
+    users = session.exec(select(User)).all()
+    return users
+
+@app.post("/api/py/users", response_model=User)
+def create_user(user: User, session: Session = Depends(get_session)):
+    existing = session.exec(select(User).where(User.email == user.email)).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="User already exists")
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+    return user
+
+@app.get("/api/py/users/me", response_model=User)
+def get_current_user(email: str, session: Session = Depends(get_session)):
+    user = session.exec(select(User).where(User.email == email)).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
+
+@app.put("/api/py/users/{user_id}", response_model=User)
+def update_user(user_id: int, user_data: User, session: Session = Depends(get_session)):
+    db_user = session.get(User, user_id)
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    user_dict = user_data.dict(exclude_unset=True)
+    for key, value in user_dict.items():
+        setattr(db_user, key, value)
+    
+    session.add(db_user)
+    session.commit()
+    session.refresh(db_user)
+    return db_user
+
+@app.delete("/api/py/users/{user_id}")
+def delete_user(user_id: int, session: Session = Depends(get_session)):
+    user = session.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    session.delete(user)
     session.commit()
     return {"ok": True}
 

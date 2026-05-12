@@ -33,3 +33,10 @@ class Registration(SQLModel, table=True):
     
     event: Event = Relationship(back_populates="registrations")
     attendee: Attendee = Relationship(back_populates="registrations")
+
+class User(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    email: str = Field(unique=True, index=True)
+    role: str = "staff" # admin, manager, staff
+    is_active: bool = True
+    created_at: datetime = Field(default_factory=datetime.utcnow)

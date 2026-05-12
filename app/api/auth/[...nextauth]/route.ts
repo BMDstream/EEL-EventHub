@@ -1,5 +1,6 @@
 import NextAuth from "next-auth"
 import AzureADProvider from "next-auth/providers/azure-ad"
+import CredentialsProvider from "next-auth/providers/credentials"
 
 const handler = NextAuth({
   providers: [
@@ -14,6 +15,19 @@ const handler = NextAuth({
       },
       issuer: `https://login.microsoftonline.com/${process.env.AZURE_AD_TENANT_ID}/v2.0`,
     }),
+    CredentialsProvider({
+      name: "Admin Login",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" }
+      },
+      async authorize(credentials) {
+        if (credentials?.email === "admin@eel-eventhub.com" && credentials?.password === "EEL-Admin-2026!") {
+          return { id: "1", name: "Super Admin", email: "admin@eel-eventhub.com", role: "admin" }
+        }
+        return null
+      }
+    })
   ],
   callbacks: {
     async session({ session, token }) {
