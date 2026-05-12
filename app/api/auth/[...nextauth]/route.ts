@@ -23,6 +23,10 @@ const handler = NextAuth({
     },
   },
   secret: process.env.NEXTAUTH_SECRET,
+  pages: {
+    signIn: '/api/auth/signin',
+    error: '/api/auth/error',
+  },
   debug: true,
 })
 
