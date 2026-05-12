@@ -1,13 +1,21 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Bricolage_Grotesque, Outfit } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/Providers";
 
-const inter = Inter({ subsets: ["latin"] });
+const bricolage = Bricolage_Grotesque({ 
+  subsets: ["latin"],
+  variable: '--font-bricolage',
+});
+
+const outfit = Outfit({ 
+  subsets: ["latin"],
+  variable: '--font-outfit',
+});
 
 export const metadata: Metadata = {
-  title: "EEL Cvent | Enterprise Event Management",
-  description: "Manage your events and attendees with ease.",
+  title: "EEL-EventHub | Excellence Entertainment Logistics",
+  description: "Professional event management and logistics platform.",
 };
 
 export default function RootLayout({
@@ -17,7 +25,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={inter.className}>
+      <body className={`${bricolage.variable} ${outfit.variable} font-outfit antialiased`}>
         <Providers>{children}</Providers>
       </body>
     </html>

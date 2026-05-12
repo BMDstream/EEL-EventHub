@@ -36,8 +36,8 @@ export default function AdminDashboard() {
       <div className="max-w-6xl mx-auto">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-10">
           <div>
-            <h1 className="text-3xl font-black text-[#0f172a] tracking-tight">Events Dashboard</h1>
-            <p className="text-[#64748b] font-medium uppercase tracking-widest text-[10px]">BMD Computing Management Portal</p>
+            <h1 className="text-3xl font-black text-[#0f172a] tracking-tight font-bricolage italic">EEL-EVENT<span className="text-slate-400">HUB</span></h1>
+            <p className="text-[#64748b] font-medium uppercase tracking-widest text-[10px]">Excellence Entertainment Logistics Management</p>
           </div>
           <Link 
             href="/admin/create"
