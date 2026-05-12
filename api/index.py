@@ -1,0 +1,142 @@
+from fastapi import FastAPI, Depends, HTTPException, status
+from sqlmodel import Session, select
+from typing import List
+from backend.database import get_session, init_db
+from backend.models import Event, Attendee, Registration
+import uvicorn
+
+app = FastAPI(docs_url="/api/py/docs", openapi_url="/api/py/openapi.json")
+
+@app.on_event("startup")
+def on_startup():
+    # In a real production app, migrations are better
+    # but for initialization, this works
+    try:
+        init_db()
+    except Exception as e:
+        print(f"Database initialization failed: {e}")
+
+@app.get("/api/py/healthcheck")
+def healthcheck():
+    return {"status": "ok"}
+
+@app.get("/api/py/events", response_model=List[Event])
+def read_events(session: Session = Depends(get_session)):
+    events = session.exec(select(Event)).all()
+    return events
+
+@app.post("/api/py/events", response_model=Event)
+def create_event(event: Event, session: Session = Depends(get_session)):
+    session.add(event)
+    session.commit()
+    session.refresh(event)
+    return event
+
+@app.get("/api/py/events/{slug}", response_model=Event)
+def read_event(slug: str, session: Session = Depends(get_session)):
+    event = session.exec(select(Event).where(Event.slug == slug)).first()
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+    return event
+
+@app.get("/api/py/events/id/{event_id}", response_model=Event)
+def read_event_by_id(event_id: int, session: Session = Depends(get_session)):
+    event = session.get(Event, event_id)
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+    return event
+
+@app.put("/api/py/events/{event_id}", response_model=Event)
+def update_event(event_id: int, event_data: Event, session: Session = Depends(get_session)):
+    db_event = session.get(Event, event_id)
+    if not db_event:
+        raise HTTPException(status_code=404, detail="Event not found")
+    
+    event_dict = event_data.dict(exclude_unset=True)
+    for key, value in event_dict.items():
+        setattr(db_event, key, value)
+    
+    session.add(db_event)
+    session.commit()
+    session.refresh(db_event)
+    return db_event
+
+@app.delete("/api/py/events/{event_id}")
+def delete_event(event_id: int, session: Session = Depends(get_session)):
+    event = session.get(Event, event_id)
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+    session.delete(event)
+    session.commit()
+    return {"ok": True}
+
+@app.get("/api/py/events/{event_id}/registrations")
+def get_event_registrations(event_id: int, session: Session = Depends(get_session)):
+    # This join will give us the registrations with attendee info
+    registrations = session.exec(
+        select(Registration, Attendee)
+        .join(Attendee)
+        .where(Registration.event_id == event_id)
+    ).all()
+    
+    # Format the response
+    return [
+        {
+            "id": reg.id,
+            "status": reg.status,
+            "checked_in": reg.checked_in,
+            "created_at": reg.created_at,
+            "attendee": att
+        } for reg, att in registrations
+    ]
+
+@app.post("/api/py/register", response_model=Registration)
+def register_attendee(
+    event_id: int, 
+    email: str, 
+    first_name: str, 
+    last_name: str, 
+    company: str = None, 
+    session: Session = Depends(get_session)
+):
+    # Check if attendee exists
+    attendee = session.exec(select(Attendee).where(Attendee.email == email)).first()
+    if not attendee:
+        attendee = Attendee(
+            email=email, 
+            first_name=first_name, 
+            last_name=last_name, 
+            company=company
+        )
+        session.add(attendee)
+        session.commit()
+        session.refresh(attendee)
+    
+    # Check if already registered
+    existing_reg = session.exec(
+        select(Registration)
+        .where(Registration.event_id == event_id)
+        .where(Registration.attendee_id == attendee.id)
+    ).first()
+    
+    if existing_reg:
+        return existing_reg
+    
+    # Create registration
+    registration = Registration(event_id=event_id, attendee_id=attendee.id)
+    session.add(registration)
+    session.commit()
+    session.refresh(registration)
+    return registration
+
+@app.delete("/api/py/registrations/{registration_id}")
+def delete_registration(registration_id: str, session: Session = Depends(get_session)):
+    registration = session.get(Registration, registration_id)
+    if not registration:
+        raise HTTPException(status_code=404, detail="Registration not found")
+    session.delete(registration)
+    session.commit()
+    return {"ok": True}
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8000)
