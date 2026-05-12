@@ -22,7 +22,8 @@ const handler = NextAuth({
       return session;
     },
   },
-  debug: true, // Enable debug logs to see exact error in Vercel
+  secret: process.env.NEXTAUTH_SECRET,
+  debug: true,
 })
 
 export { handler as GET, handler as POST }
