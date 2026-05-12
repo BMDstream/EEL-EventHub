@@ -7,6 +7,11 @@ const handler = NextAuth({
       clientId: process.env.AZURE_AD_CLIENT_ID!,
       clientSecret: process.env.AZURE_AD_CLIENT_SECRET!,
       tenantId: process.env.AZURE_AD_TENANT_ID!,
+      authorization: {
+        params: {
+          scope: "openid profile email User.Read",
+        },
+      },
     }),
   ],
   callbacks: {
@@ -17,6 +22,7 @@ const handler = NextAuth({
       return session;
     },
   },
+  debug: true, // Enable debug logs to see exact error in Vercel
 })
 
 export { handler as GET, handler as POST }
