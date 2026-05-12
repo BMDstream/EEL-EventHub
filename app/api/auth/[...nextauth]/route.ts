@@ -12,6 +12,7 @@ const handler = NextAuth({
           scope: "openid profile email User.Read",
         },
       },
+      issuer: `https://login.microsoftonline.com/${process.env.AZURE_AD_TENANT_ID}/v2.0`,
     }),
   ],
   callbacks: {
