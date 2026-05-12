@@ -6,9 +6,9 @@ import Link from "next/link";
 
 interface User {
   id: number;
-  email: str;
+  email: string;
   role: string;
-  is_active: bool;
+  is_active: boolean;
 }
 
 export default function UserManagementPage() {
