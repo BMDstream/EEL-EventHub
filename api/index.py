@@ -122,6 +122,7 @@ def get_event_registrations(event_id: int, session: Session = Depends(get_sessio
             "status": reg.status,
             "checked_in": reg.checked_in,
             "created_at": reg.created_at,
+            "custom_answers": reg.custom_answers,
             "attendee": att
         } for reg, att in registrations
     ]
@@ -164,38 +165,46 @@ def register_attendee(
     import random
     pin = str(random.randint(1000, 9999))
     
+    # Check for attendance status (RSVP)
+    # If they explicitly say they are not attending, we mark as declined
+    is_attending = data.get("is_attending", True)
+    status = "confirmed" if is_attending else "declined"
+
     # Create registration
     try:
         registration = Registration(
             event_id=event_id, 
             attendee_id=attendee.id, 
             custom_answers=custom_answers,
-            pin=pin
+            pin=pin,
+            status=status
         )
         session.add(registration)
         session.commit()
         session.refresh(registration)
-        print(f"Successfully created registration {registration.id} with PIN {pin}")
+        print(f"Successfully created registration {registration.id} with status {status}")
     except Exception as e:
         session.rollback()
         print(f"FAILED to create registration: {e}")
         raise HTTPException(status_code=500, detail=f"Database error: {e}")
 
-    # Send confirmation email
-    try:
-        event = session.get(Event, event_id)
-        if event:
-            print(f"Attempting to send email to {attendee.email} for PIN {pin}")
-            send_confirmation_email(
-                to_email=attendee.email,
-                first_name=attendee.first_name,
-                event_title=event.title,
-                clearance_id=pin
-            )
-            print(f"Email dispatch triggered successfully")
-    except Exception as e:
-        # Don't fail the registration if only the email fails
-        print(f"Error triggering confirmation email: {e}")
+    # Send confirmation email ONLY if they are attending
+    if is_attending:
+        try:
+            event = session.get(Event, event_id)
+            if event:
+                print(f"Attempting to send email to {attendee.email} for PIN {pin}")
+                send_confirmation_email(
+                    to_email=attendee.email,
+                    first_name=attendee.first_name,
+                    event_title=event.title,
+                    clearance_id=pin
+                )
+                print(f"Email dispatch triggered successfully")
+        except Exception as e:
+            print(f"Error triggering confirmation email: {e}")
+    else:
+        print(f"User declined attendance, skipping email.")
 
     return {
         "id": str(registration.id),

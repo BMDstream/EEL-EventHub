@@ -35,6 +35,7 @@ interface Registration {
   status: string;
   checked_in: boolean;
   created_at: string;
+  custom_answers?: Record<string, any>;
   attendee: Attendee;
 }
 
@@ -59,6 +60,7 @@ export default function EventDetailsPage() {
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [selectedReg, setSelectedReg] = useState<Registration | null>(null);
   const [activeTab, setActiveTab] = useState<"registrants" | "form" | "scanner" | "communications">(initialTab as any || "registrants");
 
   useEffect(() => {
@@ -99,16 +101,15 @@ export default function EventDetailsPage() {
 
   const exportToCSV = () => {
     if (registrations.length === 0) return;
-    const headers = ["First Name", "Last Name", "Email", "Company", "Status", "Checked In", "Registered At"];
-    const rows = registrations.map(r => [
-      r.attendee.first_name,
-      r.attendee.last_name,
-      r.attendee.email,
-      r.attendee.company || "",
       r.status,
       r.checked_in ? "Yes" : "No",
-      new Date(r.created_at).toLocaleString()
+      new Date(r.created_at).toLocaleString(),
+      ...(event?.custom_fields_schema || []).map(f => r.custom_answers?.[f.id] || "")
     ]);
+    const headers = [
+      "First Name", "Last Name", "Email", "Company", "Status", "Checked In", "Registered At",
+      ...(event?.custom_fields_schema || []).map(f => f.label)
+    ];
     const csvContent = [headers.join(","), ...rows.map(row => row.map(cell => `"${cell}"`).join(","))].join("\n");
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
@@ -310,9 +311,15 @@ export default function EventDetailsPage() {
                         </td>
                         <td className="px-10 py-8">
                           <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border ${
-                            reg.status === "confirmed" ? "bg-green-50 text-green-600 border-green-100" : "bg-yellow-50 text-yellow-600 border-yellow-100"
+                            reg.status === "confirmed" 
+                              ? "bg-green-50 text-green-600 border-green-100" 
+                              : reg.status === "declined"
+                                ? "bg-red-50 text-red-600 border-red-100"
+                                : "bg-yellow-50 text-yellow-600 border-yellow-100"
                           }`}>
-                            <div className={`w-1.5 h-1.5 rounded-full ${reg.status === "confirmed" ? "bg-green-500" : "bg-yellow-500"}`}></div>
+                            <div className={`w-1.5 h-1.5 rounded-full ${
+                              reg.status === "confirmed" ? "bg-green-500" : reg.status === "declined" ? "bg-red-500" : "bg-yellow-500"
+                            }`}></div>
                             {reg.status}
                           </span>
                         </td>
@@ -339,6 +346,12 @@ export default function EventDetailsPage() {
                             }`}
                           >
                             {reg.checked_in ? "Checked In" : "Check In"}
+                          </button>
+                          <button
+                            onClick={() => setSelectedReg(reg)}
+                            className="p-2 text-slate-300 hover:text-[#0f172a] transition-all"
+                          >
+                            <MoreVertical size={18} />
                           </button>
                           <button
                             onClick={() => handleDeleteRegistration(reg.id)}
@@ -432,6 +445,73 @@ export default function EventDetailsPage() {
                    </button>
                 </form>
              </div>
+          </div>
+        )}
+
+        {/* Details Modal */}
+        {selectedReg && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={() => setSelectedReg(null)}></div>
+            <div className="bg-white rounded-[2.5rem] w-full max-w-2xl relative z-10 overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+              <div className="p-10 border-b border-slate-50 flex justify-between items-center bg-slate-50/30">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-[#0f172a] text-white rounded-[1.2rem] flex items-center justify-center font-black text-lg">
+                    {selectedReg.attendee.first_name[0]}{selectedReg.attendee.last_name[0]}
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-black text-[#0f172a] font-bricolage italic uppercase tracking-tight">Registration <span className="text-slate-300">Details</span></h3>
+                    <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">{selectedReg.attendee.first_name} {selectedReg.attendee.last_name}</p>
+                  </div>
+                </div>
+                <button onClick={() => setSelectedReg(null)} className="p-3 bg-slate-50 rounded-xl hover:bg-slate-100 transition-all">
+                   <ArrowLeft size={20} />
+                </button>
+              </div>
+              <div className="p-10 max-h-[60vh] overflow-y-auto space-y-8">
+                 <div className="grid grid-cols-2 gap-8">
+                    <div>
+                       <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">Status</p>
+                       <p className="font-bold text-[#0f172a] capitalize">{selectedReg.status}</p>
+                    </div>
+                    <div>
+                       <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">Company</p>
+                       <p className="font-bold text-[#0f172a]">{selectedReg.attendee.company || "—"}</p>
+                    </div>
+                    <div>
+                       <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">Email Address</p>
+                       <p className="font-bold text-[#0f172a]">{selectedReg.attendee.email}</p>
+                    </div>
+                    <div>
+                       <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">Registered On</p>
+                       <p className="font-bold text-[#0f172a]">{new Date(selectedReg.created_at).toLocaleString()}</p>
+                    </div>
+                 </div>
+
+                 <div className="pt-8 border-t border-slate-50">
+                    <h4 className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] mb-6">Custom Field Responses</h4>
+                    <div className="space-y-6">
+                       {event.custom_fields_schema?.length === 0 ? (
+                         <p className="text-slate-400 text-xs italic">No custom fields defined for this event.</p>
+                       ) : (
+                         event.custom_fields_schema.map(field => (
+                           <div key={field.id} className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
+                              <p className="text-[10px] font-black text-yellow-600 uppercase tracking-widest mb-2">{field.label}</p>
+                              <p className="font-bold text-[#0f172a]">{selectedReg.custom_answers?.[field.id] || "—"}</p>
+                           </div>
+                         ))
+                       )}
+                    </div>
+                 </div>
+              </div>
+              <div className="p-10 bg-slate-50 border-t border-slate-100 flex justify-end">
+                 <button 
+                   onClick={() => setSelectedReg(null)}
+                   className="px-8 py-4 bg-[#0f172a] text-white text-[10px] font-black uppercase tracking-widest rounded-2xl hover:bg-black transition-all shadow-xl shadow-slate-200"
+                 >
+                    Close Review
+                 </button>
+              </div>
+            </div>
           </div>
         )}
       </div>

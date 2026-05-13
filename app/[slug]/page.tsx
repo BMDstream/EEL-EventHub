@@ -41,6 +41,7 @@ export default function PublicRegistrationPage() {
   });
 
   const [customAnswers, setCustomAnswers] = useState<Record<string, any>>({});
+  const [isAttending, setIsAttending] = useState<boolean>(true);
 
   useEffect(() => {
     fetch(`/api/py/events/${slug}`)
@@ -71,7 +72,8 @@ export default function PublicRegistrationPage() {
         body: JSON.stringify({
           event_id: event.id,
           ...formData,
-          custom_answers: customAnswers
+          custom_answers: customAnswers,
+          is_attending: isAttending
         })
       });
 
@@ -124,12 +126,18 @@ export default function PublicRegistrationPage() {
           <div className="bg-yellow-500 w-24 h-24 rounded-[2rem] flex items-center justify-center mx-auto mb-10 shadow-2xl shadow-yellow-500/20">
             <CheckCircle2 className="text-black" size={56} />
           </div>
-          <h1 className="text-4xl font-black text-white mb-6 font-bricolage italic uppercase tracking-tight">Access Granted.</h1>
+          <h1 className="text-4xl font-black text-white mb-6 font-bricolage italic uppercase tracking-tight">
+            {isAttending ? "Access Granted." : "Response Recorded."}
+          </h1>
           <p className="text-zinc-400 mb-12 font-medium leading-relaxed">
             Your orchestration for <span className="text-white font-bold">{event.title}</span> is confirmed. 
-            Verification has been dispatched to <span className="text-yellow-500 font-bold">{formData.email}</span>.
+            {isAttending 
+              ? ` Verification has been dispatched to `
+              : ` We've noted that you cannot attend. Thank you for letting us know. `}
+            {isAttending && <span className="text-yellow-500 font-bold">{formData.email}</span>}
           </p>
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-8">
+          {isAttending && (
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-8">
             <div className="flex justify-center mb-4">
               <div className="bg-white p-2 rounded-xl">
                 <QRCodeSVG 
@@ -223,6 +231,27 @@ export default function PublicRegistrationPage() {
               <div className="space-y-3">
                 <label className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500 ml-1">Organization</label>
                 <input type="text" name="company" value={formData.company} onChange={handleChange} placeholder="Global Enterprises Inc." className="w-full px-6 py-5 rounded-[1.5rem] bg-black border border-white/5 focus:border-yellow-500/50 focus:ring-4 focus:ring-yellow-500/5 outline-none transition-all font-bold text-white placeholder-zinc-700" />
+              </div>
+
+              {/* RSVP Question */}
+              <div className="py-6 border-y border-white/5 space-y-4">
+                <label className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500 ml-1">Attendance Status</label>
+                <div className="grid grid-cols-2 gap-4">
+                  <button
+                    type="button"
+                    onClick={() => setIsAttending(true)}
+                    className={`px-6 py-4 rounded-[1.2rem] font-bold transition-all border-2 ${isAttending ? 'border-yellow-500 bg-yellow-500 text-black' : 'border-white/5 bg-transparent text-zinc-500 hover:border-white/10'}`}
+                  >
+                    I am attending
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsAttending(false)}
+                    className={`px-6 py-4 rounded-[1.2rem] font-bold transition-all border-2 ${!isAttending ? 'border-red-500 bg-red-500 text-white' : 'border-white/5 bg-transparent text-zinc-500 hover:border-white/10'}`}
+                  >
+                    Cannot attend
+                  </button>
+                </div>
               </div>
 
               {/* Dynamic Custom Fields */}
