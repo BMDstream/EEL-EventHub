@@ -146,6 +146,7 @@ export default function CreateEventPage() {
                       onChange={handleChange}
                       className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a] transition-all"
                     />
+                    <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest ml-1">Note: Please select both date and time</p>
                  </div>
 
                  <div className="space-y-3">

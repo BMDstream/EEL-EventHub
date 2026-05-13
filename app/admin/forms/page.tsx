@@ -87,7 +87,13 @@ export default function FormsHubPage() {
           <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 p-20 text-center">
             <Layout className="text-slate-200 mx-auto mb-6" size={64} />
             <h3 className="text-2xl font-bold text-[#0f172a] mb-2">No events found</h3>
-            <p className="text-slate-400 mb-8 max-w-sm mx-auto">We couldn't find any events matching your search criteria.</p>
+            <p className="text-slate-400 mb-8 max-w-sm mx-auto">Registration forms are tied to events. Create your first event to start designing its custom form.</p>
+            <Link 
+              href="/admin/create"
+              className="inline-flex items-center gap-3 bg-[#0f172a] hover:bg-black text-white px-8 py-4 rounded-2xl font-black transition-all shadow-xl shadow-slate-200 uppercase tracking-widest text-xs"
+            >
+              Create New Event
+            </Link>
           </div>
         ) : (
           <motion.div 
