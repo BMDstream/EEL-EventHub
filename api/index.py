@@ -160,31 +160,41 @@ def register_attendee(
     if existing_reg:
         return existing_reg
     
-    # Create registration
+    # Generate a random 4-digit PIN for clearance_id
     import random
     pin = str(random.randint(1000, 9999))
     
-    registration = Registration(
-        event_id=event_id, 
-        attendee_id=attendee.id, 
-        custom_answers=custom_answers,
-        pin=pin
-    )
-    session.add(registration)
-    session.commit()
-    session.refresh(registration)
+    # Create registration
+    try:
+        registration = Registration(
+            event_id=event_id, 
+            attendee_id=attendee.id, 
+            custom_answers=custom_answers,
+            pin=pin
+        )
+        session.add(registration)
+        session.commit()
+        session.refresh(registration)
+        print(f"Successfully created registration {registration.id} with PIN {pin}")
+    except Exception as e:
+        session.rollback()
+        print(f"FAILED to create registration: {e}")
+        raise HTTPException(status_code=500, detail=f"Database error: {e}")
 
     # Send confirmation email
     try:
         event = session.get(Event, event_id)
         if event:
+            print(f"Attempting to send email to {attendee.email} for PIN {pin}")
             send_confirmation_email(
                 to_email=attendee.email,
                 first_name=attendee.first_name,
                 event_title=event.title,
-                clearance_id=registration.pin or str(registration.id)
+                clearance_id=pin
             )
+            print(f"Email dispatch triggered successfully")
     except Exception as e:
+        # Don't fail the registration if only the email fails
         print(f"Error triggering confirmation email: {e}")
 
     return registration

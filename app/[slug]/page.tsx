@@ -30,6 +30,7 @@ export default function PublicRegistrationPage() {
   const [loading, setLoading] = useState(true);
   const [registering, setRegistering] = useState(false);
   const [registeredId, setRegisteredId] = useState<string | null>(null);
+  const [registeredPin, setRegisteredPin] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
@@ -77,6 +78,7 @@ export default function PublicRegistrationPage() {
       if (response.ok) {
         const data = await response.json();
         setRegisteredId(data.id);
+        setRegisteredPin(data.pin);
       } else {
         alert("Failed to register. Please try again.");
       }
@@ -127,19 +129,20 @@ export default function PublicRegistrationPage() {
             Your orchestration for <span className="text-white font-bold">{event.title}</span> is confirmed. 
             Verification has been dispatched to <span className="text-yellow-500 font-bold">{formData.email}</span>.
           </p>
-          <div className="bg-black p-8 rounded-3xl border border-white/5 flex flex-col items-center gap-6">
-            <div className="bg-white p-4 rounded-2xl">
-              <QRCodeSVG 
-                value={registeredId} 
-                size={160}
-                level="H"
-                includeMargin={false}
-              />
+          <div className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-8">
+            <div className="flex justify-center mb-4">
+              <div className="bg-white p-2 rounded-xl">
+                <QRCodeSVG 
+                  value={registeredPin || registeredId || ""} 
+                  size={160}
+                  level="H"
+                />
+              </div>
             </div>
-            <div className="text-center">
-              <p className="text-[10px] uppercase tracking-[0.3em] text-zinc-500 font-black mb-3">Unique Clearance ID</p>
-              <code className="text-xl font-black text-yellow-500 font-bricolage block truncate max-w-[200px]">{registeredId}</code>
-            </div>
+            <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 mb-1">Unique Clearance ID</p>
+            <p className="text-3xl font-black text-yellow-400 tracking-tighter italic font-bricolage">
+              {registeredPin || (registeredId ? registeredId.substring(0, 8) : "")}
+            </p>
           </div>
         </div>
       </div>
