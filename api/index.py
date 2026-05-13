@@ -274,5 +274,22 @@ def broadcast_to_attendees(
     
     return {"ok": success, "sent": len(emails)}
 
+@app.get("/api/py/stats")
+def get_stats(session: Session = Depends(get_session)):
+    events_count = len(session.exec(select(Event)).all())
+    registrations_count = len(session.exec(select(Registration)).all())
+    checked_in_count = len(session.exec(select(Registration).where(Registration.checked_in == True)).all())
+    
+    check_in_rate = 0
+    if registrations_count > 0:
+        check_in_rate = round((checked_in_count / registrations_count) * 100, 1)
+        
+    return {
+        "events": events_count,
+        "registrations": registrations_count,
+        "check_in_rate": f"{check_in_rate}%",
+        "revenue": "R0.00" # Placeholder for now as no payment integration exists
+    }
+
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)

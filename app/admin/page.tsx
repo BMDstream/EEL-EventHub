@@ -29,26 +29,34 @@ interface Event {
 
 export default function AdminDashboard() {
   const [events, setEvents] = useState<Event[]>([]);
+  const [statsData, setStatsData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/py/events")
-      .then((res) => res.json())
-      .then((data) => {
-        setEvents(data);
+    const fetchData = async () => {
+      try {
+        const [eventsRes, statsRes] = await Promise.all([
+          fetch("/api/py/events"),
+          fetch("/api/py/stats")
+        ]);
+        const eventsData = await eventsRes.json();
+        const sData = await statsRes.json();
+        setEvents(eventsData);
+        setStatsData(sData);
+      } catch (err) {
+        console.error("Failed to fetch dashboard data", err);
+      } finally {
         setLoading(false);
-      })
-      .catch((err) => {
-        console.error("Failed to fetch events", err);
-        setLoading(false);
-      });
+      }
+    };
+    fetchData();
   }, []);
 
   const stats = [
-    { name: "Total Events", value: events.length, icon: Calendar, change: "+12%", color: "text-blue-600", bg: "bg-blue-50" },
-    { name: "Total Registrations", value: "1,284", icon: Users, change: "+18%", color: "text-green-600", bg: "bg-green-50" },
-    { name: "Check-in Rate", value: "94.2%", icon: CheckCircle2, change: "+2.4%", color: "text-yellow-600", bg: "bg-yellow-50" },
-    { name: "Projected Revenue", value: "R42.5k", icon: Ticket, change: "+5%", color: "text-purple-600", bg: "bg-purple-50" },
+    { name: "Total Events", value: statsData?.events || 0, icon: Calendar, change: "+0%", color: "text-blue-600", bg: "bg-blue-50" },
+    { name: "Total Registrations", value: statsData?.registrations || 0, icon: Users, change: "+0%", color: "text-green-600", bg: "bg-green-50" },
+    { name: "Check-in Rate", value: statsData?.check_in_rate || "0%", icon: CheckCircle2, change: "+0%", color: "text-yellow-600", bg: "bg-yellow-50" },
+    { name: "Projected Revenue", value: statsData?.revenue || "R0.00", icon: Ticket, change: "+0%", color: "text-purple-600", bg: "bg-purple-50" },
   ];
 
   const containerVariants = {
