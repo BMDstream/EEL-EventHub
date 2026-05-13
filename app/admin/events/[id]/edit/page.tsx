@@ -17,6 +17,7 @@ export default function EditEventPage() {
     start_date: "",
     location: "",
     capacity: 100,
+    banner_url: "",
   });
 
   useEffect(() => {
@@ -37,6 +38,7 @@ export default function EditEventPage() {
           start_date: formattedDate,
           location: data.location,
           capacity: data.capacity,
+          banner_url: data.banner_url || "",
         });
         setLoading(false);
       })
@@ -197,6 +199,40 @@ export default function EditEventPage() {
                   onChange={handleChange}
                   className="w-full px-5 py-4 rounded-2xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-slate-700 bg-slate-50/50"
                 />
+              </div>
+
+              <div className="space-y-3">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center justify-between">
+                  Background Banner
+                  {formData.banner_url && <button onClick={() => setFormData({...formData, banner_url: ""})} className="text-red-500 hover:underline">Remove</button>}
+                </label>
+                <div className="relative group">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          setFormData(prev => ({ ...prev, banner_url: reader.result as string }));
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                    className="absolute inset-0 opacity-0 cursor-pointer z-10"
+                  />
+                  <div className={`w-full h-24 rounded-2xl border-2 border-dashed ${formData.banner_url ? 'border-green-500/30 bg-green-50/50' : 'border-slate-200 bg-slate-50/50'} flex flex-col items-center justify-center transition-all overflow-hidden`}>
+                    {formData.banner_url ? (
+                      <img src={formData.banner_url} alt="Banner Preview" className="w-full h-full object-cover" />
+                    ) : (
+                      <>
+                        <p className="text-[10px] font-black text-slate-400 uppercase">Upload Banner Image</p>
+                        <p className="text-[8px] text-slate-300 uppercase mt-1">Recommended: 1920x1080</p>
+                      </>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
 

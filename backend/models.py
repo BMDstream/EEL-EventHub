@@ -11,6 +11,7 @@ class Event(SQLModel, table=True):
     start_date: datetime
     location: str
     capacity: int
+    banner_url: Optional[str] = None
     
     custom_fields_schema: Optional[List[Dict[str, Any]]] = Field(default=[], sa_column=Column(JSON))
     

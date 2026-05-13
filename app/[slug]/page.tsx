@@ -19,6 +19,7 @@ interface Event {
   start_date: string;
   location: string;
   capacity: number;
+  banner_url?: string;
   custom_fields_schema?: FormField[];
 }
 
@@ -139,7 +140,16 @@ export default function PublicRegistrationPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 min-h-screen">
         {/* Left Side: Info */}
         <div className="bg-black p-12 lg:p-24 flex flex-col justify-center text-white relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,rgba(234,179,8,0.1),transparent_70%)]"></div>
+          {event.banner_url ? (
+            <div 
+              className="absolute inset-0 z-0 bg-cover bg-center" 
+              style={{ backgroundImage: `url(${event.banner_url})` }}
+            >
+              <div className="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+            </div>
+          ) : (
+            <div className="absolute top-0 right-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,rgba(234,179,8,0.1),transparent_70%)]"></div>
+          )}
           <div className="relative z-10">
             <div className="inline-flex items-center gap-3 px-4 py-2 bg-zinc-900 rounded-full mb-12 border border-white/5">
               <span className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></span>

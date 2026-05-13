@@ -29,6 +29,12 @@ def on_startup():
                 session.commit()
             except Exception:
                 session.rollback()
+            
+            try:
+                session.execute(text("ALTER TABLE \"event\" ADD COLUMN banner_url VARCHAR"))
+                session.commit()
+            except Exception:
+                session.rollback()
 
             # For Registration table
             try:
