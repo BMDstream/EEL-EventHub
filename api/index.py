@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Depends, HTTPException, status
 from sqlmodel import Session, select
-from typing import List
+from typing import List, Dict, Any
 from backend.database import get_session, init_db, engine
 from backend.models import Event, Attendee, Registration, User
 import uvicorn
@@ -13,14 +13,28 @@ def on_startup():
     # but for initialization, this works
     try:
         init_db()
-        # Add password column to user table if it doesn't exist
+        # Add columns if they don't exist (lightweight migrations)
         from sqlalchemy import text
         with Session(engine) as session:
+            # For User table
             try:
                 session.execute(text("ALTER TABLE \"user\" ADD COLUMN password VARCHAR"))
                 session.commit()
             except Exception:
-                # Column probably already exists
+                session.rollback()
+            
+            # For Event table
+            try:
+                session.execute(text("ALTER TABLE \"event\" ADD COLUMN custom_fields_schema JSON"))
+                session.commit()
+            except Exception:
+                session.rollback()
+
+            # For Registration table
+            try:
+                session.execute(text("ALTER TABLE \"registration\" ADD COLUMN custom_answers JSON"))
+                session.commit()
+            except Exception:
                 session.rollback()
     except Exception as e:
         print(f"Database initialization failed: {e}")
