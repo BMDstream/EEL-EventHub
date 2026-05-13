@@ -34,7 +34,7 @@ def send_confirmation_email(to_email: str, first_name: str, event_title: str, cl
 
     try:
         r = resend.Emails.send({
-            "from": "EEL-EventHub <onboarding@resend.dev>",
+            "from": "EEL-EventHub <events@eelogistics.co.za>",
             "to": to_email,
             "subject": f"Access Granted: {event_title}",
             "html": html_content
@@ -64,7 +64,7 @@ def send_broadcast_email(to_emails: List[str], subject: str, body: str, event_ti
     try:
         for email in to_emails:
             resend.Emails.send({
-                "from": "EEL-EventHub <onboarding@resend.dev>",
+                "from": "EEL-EventHub <events@eelogistics.co.za>",
                 "to": email,
                 "subject": subject,
                 "html": html_content
