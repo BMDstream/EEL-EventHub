@@ -19,6 +19,25 @@ import { signOut } from "next-auth/react";
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [logo, setLogo] = useState<string | null>(null);
+
+  useEffect(() => {
+    const savedLogo = localStorage.getItem("eel-logo");
+    if (savedLogo) setLogo(savedLogo);
+  }, []);
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        setLogo(base64String);
+        localStorage.setItem("eel-logo", base64String);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const navItems = [
     { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
@@ -34,13 +53,21 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* Sidebar */}
       <aside className={`fixed inset-y-0 left-0 z-50 w-72 bg-[#0f172a] text-white transition-all duration-500 ease-in-out transform ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"} lg:relative lg:translate-x-0`}>
         <div className="h-full flex flex-col p-8">
-          {/* Logo */}
-          <div className="flex items-center gap-3 mb-12">
-            <div className="w-10 h-10 bg-yellow-400 rounded-2xl flex items-center justify-center rotate-3">
-              <span className="text-black font-black text-xl font-bricolage italic">E</span>
-            </div>
+          {/* Logo Section */}
+          <div className="flex items-center gap-3 mb-12 group relative">
+            <label className="cursor-pointer relative overflow-hidden w-10 h-10 bg-yellow-400 rounded-2xl flex items-center justify-center rotate-3 transition-transform hover:scale-110">
+              {logo ? (
+                <img src={logo} alt="Logo" className="w-full h-full object-cover -rotate-3" />
+              ) : (
+                <span className="text-black font-black text-xl font-bricolage italic">E</span>
+              )}
+              <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
+              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                <span className="text-[8px] font-black uppercase">Edit</span>
+              </div>
+            </label>
             <div>
-              <h1 className="text-xl font-black font-bricolage italic tracking-tight leading-none">EEL<span className="text-yellow-400">HUB</span></h1>
+              <h1 className="text-xl font-black font-bricolage italic tracking-tight leading-none uppercase">EEL-<span className="text-yellow-400">EventHub</span></h1>
               <p className="text-[8px] font-black uppercase tracking-[0.3em] text-slate-500">Excellence Logistics</p>
             </div>
           </div>

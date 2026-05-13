@@ -17,6 +17,7 @@ export default function UserManagementPage() {
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [newEmail, setNewEmail] = useState("");
+  const [newPassword, setNewPassword] = useState("");
   const [newRole, setNewRole] = useState("staff");
   const [saving, setSaving] = useState(false);
 
@@ -43,11 +44,16 @@ export default function UserManagementPage() {
       const res = await fetch("/api/py/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: newEmail, role: newRole }),
+        body: JSON.stringify({ 
+          email: newEmail, 
+          password: newPassword,
+          role: newRole 
+        }),
       });
       if (res.ok) {
         setShowAddModal(false);
         setNewEmail("");
+        setNewPassword("");
         fetchUsers();
       } else {
         alert("Failed to add user. They might already exist.");
@@ -157,10 +163,10 @@ export default function UserManagementPage() {
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-6">
             <div className="bg-white rounded-[3rem] shadow-2xl max-w-md w-full p-12 relative overflow-hidden">
               <div className="absolute top-0 left-0 w-full h-2 bg-[#0f172a]"></div>
-              <h2 className="text-3xl font-black text-[#0f172a] mb-2 font-bricolage italic uppercase tracking-tight">Invite Member</h2>
-              <p className="text-slate-500 font-medium mb-10">Assign security clearance for EEL-EventHub.</p>
+              <h2 className="text-3xl font-black text-[#0f172a] mb-2 font-bricolage italic uppercase tracking-tight">Add Member</h2>
+              <p className="text-slate-500 font-medium mb-10">Create a new account for EEL-EventHub.</p>
               
-              <form onSubmit={handleAddUser} className="space-y-8">
+              <form onSubmit={handleAddUser} className="space-y-6">
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Email Address</label>
                   <div className="relative">
@@ -171,7 +177,22 @@ export default function UserManagementPage() {
                       value={newEmail}
                       onChange={(e) => setNewEmail(e.target.value)}
                       placeholder="teammate@excellence.com"
-                      className="w-full pl-14 pr-6 py-5 rounded-2xl bg-slate-50 border border-slate-100 focus:border-[#0f172a] focus:ring-4 focus:ring-slate-100 outline-none transition-all font-bold text-[#0f172a]"
+                      className="w-full pl-14 pr-6 py-4 rounded-2xl bg-slate-50 border border-slate-100 focus:border-[#0f172a] focus:ring-4 focus:ring-slate-100 outline-none transition-all font-bold text-[#0f172a]"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Password</label>
+                  <div className="relative">
+                    <Shield className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                    <input
+                      required
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full pl-14 pr-6 py-4 rounded-2xl bg-slate-50 border border-slate-100 focus:border-[#0f172a] focus:ring-4 focus:ring-slate-100 outline-none transition-all font-bold text-[#0f172a]"
                     />
                   </div>
                 </div>
@@ -181,7 +202,7 @@ export default function UserManagementPage() {
                   <select
                     value={newRole}
                     onChange={(e) => setNewRole(e.target.value)}
-                    className="w-full px-6 py-5 rounded-2xl bg-slate-50 border border-slate-100 focus:border-[#0f172a] outline-none transition-all font-bold text-[#0f172a] appearance-none"
+                    className="w-full px-6 py-4 rounded-2xl bg-slate-50 border border-slate-100 focus:border-[#0f172a] outline-none transition-all font-bold text-[#0f172a] appearance-none"
                   >
                     <option value="admin">Administrator (Full Access)</option>
                     <option value="manager">Event Manager (Editor)</option>
