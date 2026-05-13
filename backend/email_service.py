@@ -1,45 +1,18 @@
 import os
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+import resend
 from typing import List, Dict, Any
 from dotenv import load_dotenv
 
 load_dotenv()
 
-# SMTP Configuration (Recommended for Microsoft/Office 365)
-SMTP_HOST = os.getenv("SMTP_HOST", "smtp.office365.com")
-SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
-SMTP_USER = os.getenv("SMTP_USER") # e.g. hello@yourdomain.com
-SMTP_PASS = os.getenv("SMTP_PASS")
-
-def send_smtp_email(to_email: str, subject: str, html_content: str):
-    """Generic SMTP sender."""
-    if not SMTP_USER or not SMTP_PASS:
-        print(f"MOCK SMTP EMAIL to {to_email}: {subject}")
-        return False
-
-    msg = MIMEMultipart()
-    msg['From'] = SMTP_USER
-    msg['To'] = to_email
-    msg['Subject'] = subject
-
-    msg.attach(MIMEText(html_content, 'html'))
-
-    try:
-        server = smtplib.SMTP(SMTP_HOST, SMTP_PORT)
-        server.starttls()
-        server.login(SMTP_USER, SMTP_PASS)
-        server.send_message(msg)
-        server.quit()
-        return True
-    except Exception as e:
-        print(f"SMTP Error: {e}")
-        return False
+resend.api_key = os.getenv("RESEND_API_KEY")
 
 def send_confirmation_email(to_email: str, first_name: str, event_title: str, clearance_id: str, qr_code_url: str = None):
     """Sends a registration confirmation email with the QR code and PIN."""
-    
+    if not resend.api_key:
+        print(f"MOCK EMAIL to {to_email}: Welcome to {event_title}! Your ID is {clearance_id}")
+        return None
+
     html_content = f"""
     <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 40px; border: 1px solid #eee; border-radius: 20px;">
         <h2 style="color: #0f172a; text-transform: uppercase; font-style: italic;">Access Granted.</h2>
@@ -59,11 +32,24 @@ def send_confirmation_email(to_email: str, first_name: str, event_title: str, cl
     </div>
     """
 
-    return send_smtp_email(to_email, f"Access Granted: {event_title}", html_content)
+    try:
+        r = resend.Emails.send({
+            "from": "EEL-EventHub <onboarding@resend.dev>",
+            "to": to_email,
+            "subject": f"Access Granted: {event_title}",
+            "html": html_content
+        })
+        return r
+    except Exception as e:
+        print(f"Failed to send email: {e}")
+        return None
 
 def send_broadcast_email(to_emails: List[str], subject: str, body: str, event_title: str):
     """Sends a broadcast email to multiple attendees."""
-    
+    if not resend.api_key:
+        print(f"MOCK BROADCAST to {len(to_emails)} users: {subject}")
+        return None
+
     html_content = f"""
     <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 40px; border: 1px solid #eee; border-radius: 20px;">
         <h2 style="color: #0f172a; text-transform: uppercase; font-style: italic;">Update: {event_title}</h2>
@@ -75,9 +61,15 @@ def send_broadcast_email(to_emails: List[str], subject: str, body: str, event_ti
     </div>
     """
 
-    success_count = 0
-    for email in to_emails:
-        if send_smtp_email(email, subject, html_content):
-            success_count += 1
-    
-    return success_count > 0
+    try:
+        for email in to_emails:
+            resend.Emails.send({
+                "from": "EEL-EventHub <onboarding@resend.dev>",
+                "to": email,
+                "subject": subject,
+                "html": html_content
+            })
+        return True
+    except Exception as e:
+        print(f"Failed to send broadcast: {e}")
+        return False
