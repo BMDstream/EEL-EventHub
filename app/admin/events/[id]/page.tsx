@@ -59,7 +59,7 @@ export default function EventDetailsPage() {
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"registrants" | "form" | "scanner">(initialTab as any || "registrants");
+  const [activeTab, setActiveTab] = useState<"registrants" | "form" | "scanner" | "communications">(initialTab as any || "registrants");
 
   useEffect(() => {
     const fetchData = async () => {
@@ -253,6 +253,12 @@ export default function EventDetailsPage() {
              >
                 Live Scanner
              </button>
+             <button 
+               onClick={() => setActiveTab("communications")}
+               className={`px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2 ${activeTab === "communications" ? "border-yellow-400 text-[#0f172a]" : "border-transparent text-slate-400"}`}
+             >
+                Communications
+             </button>
           </div>
         </div>
 
@@ -357,7 +363,7 @@ export default function EventDetailsPage() {
                onSave={(newSchema) => setEvent({ ...event, custom_fields_schema: newSchema })} 
              />
           </div>
-        ) : (
+        ) : activeTab === "scanner" ? (
           <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 p-10 lg:p-24">
              <div className="max-w-2xl mx-auto text-center mb-16">
                 <h2 className="text-5xl font-black text-[#0f172a] mb-6 tracking-tight font-bricolage italic uppercase">LIVE <span className="text-slate-300">SCANNER</span></h2>
@@ -376,6 +382,56 @@ export default function EventDetailsPage() {
                  setRegistrations(prev => prev.map(r => r.id === regId ? { ...r, checked_in: updated.checked_in } : r));
                }} 
              />
+          </div>
+        ) : (
+          <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 p-10 lg:p-24">
+             <div className="max-w-2xl mx-auto mb-16">
+                <h2 className="text-5xl font-black text-[#0f172a] mb-6 tracking-tight font-bricolage italic uppercase text-center">BROADCAST <span className="text-slate-300">DISPATCH</span></h2>
+                <p className="text-slate-500 font-medium text-center">Send updates or reminders to all {registrations.length} confirmed attendees.</p>
+             </div>
+
+             <div className="max-w-xl mx-auto">
+                <form 
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    const target = e.target as any;
+                    const subject = target.subject.value;
+                    const body = target.body.value;
+                    
+                    if (!confirm(`Are you sure you want to send this broadcast to ${registrations.length} attendees?`)) return;
+                    
+                    try {
+                      const res = await fetch(`/api/py/events/${id}/broadcast`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ subject, body })
+                      });
+                      if (res.ok) {
+                        alert("Broadcast dispatched successfully!");
+                        target.reset();
+                      } else {
+                        alert("Failed to send broadcast. Ensure RESEND_API_KEY is configured.");
+                      }
+                    } catch (err) {
+                      console.error(err);
+                      alert("An error occurred during dispatch.");
+                    }
+                  }}
+                  className="space-y-8"
+                >
+                   <div className="space-y-3">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Subject Line</label>
+                      <input required name="subject" placeholder={`Update for ${event.title}`} className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a]" />
+                   </div>
+                   <div className="space-y-3">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Message Body</label>
+                      <textarea required name="body" rows={6} placeholder="Type your message here..." className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a] resize-none" />
+                   </div>
+                   <button type="submit" className="w-full bg-[#0f172a] hover:bg-black text-white font-black py-6 rounded-[2rem] shadow-2xl shadow-slate-200 transition-all uppercase tracking-[0.3em] text-xs">
+                      Dispatch Broadcast
+                   </button>
+                </form>
+             </div>
           </div>
         )}
       </div>

@@ -3,6 +3,7 @@ from sqlmodel import Session, select
 from typing import List, Dict, Any
 from backend.database import get_session, init_db, engine
 from backend.models import Event, Attendee, Registration, User
+from backend.email_service import send_confirmation_email, send_broadcast_email
 import uvicorn
 
 app = FastAPI(docs_url="/api/py/docs", openapi_url="/api/py/openapi.json")
@@ -162,6 +163,20 @@ def register_attendee(
     session.add(registration)
     session.commit()
     session.refresh(registration)
+
+    # Send confirmation email
+    try:
+        event = session.get(Event, event_id)
+        if event:
+            send_confirmation_email(
+                to_email=attendee.email,
+                first_name=attendee.first_name,
+                event_title=event.title,
+                clearance_id=str(registration.id)
+            )
+    except Exception as e:
+        print(f"Error triggering confirmation email: {e}")
+
     return registration
 
 @app.delete("/api/py/registrations/{registration_id}")
@@ -229,6 +244,35 @@ def toggle_checkin(registration_id: str, session: Session = Depends(get_session)
     session.commit()
     session.refresh(registration)
     return registration
+
+@app.post("/api/py/events/{event_id}/broadcast")
+def broadcast_to_attendees(
+    event_id: int,
+    data: Dict[str, str],
+    session: Session = Depends(get_session)
+):
+    event = session.get(Event, event_id)
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+    
+    subject = data.get("subject", f"Reminder: {event.title}")
+    body = data.get("body", "")
+    
+    # Get all registrant emails
+    registrations = session.exec(
+        select(Registration, Attendee)
+        .join(Attendee)
+        .where(Registration.event_id == event_id)
+    ).all()
+    
+    emails = [att.email for reg, att in registrations]
+    
+    if not emails:
+        return {"ok": True, "sent": 0}
+    
+    success = send_broadcast_email(emails, subject, body, event.title)
+    
+    return {"ok": success, "sent": len(emails)}
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
