@@ -44,12 +44,12 @@ export default function EventsListPage() {
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
           <div>
-            <h1 className="text-5xl font-black text-[#0f172a] tracking-tighter font-bricolage italic uppercase">EVENT <span className="text-slate-300">CATALOG</span></h1>
-            <p className="text-slate-500 font-medium text-lg">Browse and manage your full portfolio of excellence.</p>
+            <h1 className="text-5xl font-black text-[#0f172a] tracking-tighter font-bricolage italic uppercase dark:text-white">EVENT <span className="text-slate-300 dark:text-slate-600">CATALOG</span></h1>
+            <p className="text-slate-500 font-medium text-lg dark:text-slate-400">Browse and manage your full portfolio of excellence.</p>
           </div>
           <Link 
             href="/admin/create"
-            className="flex items-center gap-3 bg-[#0f172a] hover:bg-black text-white px-8 py-4 rounded-2xl font-black transition-all shadow-2xl shadow-slate-200 uppercase tracking-widest text-xs"
+            className="flex items-center gap-3 bg-[#0f172a] hover:bg-black text-white px-8 py-4 rounded-2xl font-black transition-all shadow-2xl shadow-slate-200 uppercase tracking-widest text-xs dark:bg-yellow-400 dark:text-black dark:shadow-yellow-400/20"
           >
             <Plus size={20} />
             New Event
@@ -57,7 +57,7 @@ export default function EventsListPage() {
         </div>
 
         {/* Toolbar */}
-        <div className="bg-white p-4 rounded-[2rem] shadow-sm border border-slate-100 mb-8 flex flex-col md:flex-row gap-4 items-center">
+        <div className="bg-white p-4 rounded-[2rem] shadow-sm border border-slate-100 mb-8 flex flex-col md:flex-row gap-4 items-center dark:bg-[#0f172a] dark:border-slate-800">
            <div className="relative flex-1 w-full">
               <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300" size={20} />
               <input 
@@ -65,17 +65,17 @@ export default function EventsListPage() {
                 placeholder="Search events by title or location..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-16 pr-8 py-4 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a]"
+                className="w-full pl-16 pr-8 py-4 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a] dark:bg-slate-800 dark:text-white"
               />
            </div>
            <div className="flex gap-2 w-full md:w-auto">
-              <button className="px-6 py-4 bg-slate-50 text-slate-400 font-black text-[10px] uppercase tracking-widest rounded-2xl hover:bg-slate-100 transition-all">Filter</button>
-              <button className="px-6 py-4 bg-slate-50 text-slate-400 font-black text-[10px] uppercase tracking-widest rounded-2xl hover:bg-slate-100 transition-all">Export CSV</button>
+              <button className="px-6 py-4 bg-slate-50 text-slate-400 font-black text-[10px] uppercase tracking-widest rounded-2xl hover:bg-slate-100 transition-all dark:bg-slate-800 dark:hover:bg-slate-700">Filter</button>
+              <button className="px-6 py-4 bg-slate-50 text-slate-400 font-black text-[10px] uppercase tracking-widest rounded-2xl hover:bg-slate-100 transition-all dark:bg-slate-800 dark:hover:bg-slate-700">Export CSV</button>
            </div>
         </div>
 
         {/* List */}
-        <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
+        <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden dark:bg-[#0f172a] dark:border-slate-800">
           {loading ? (
             <div className="p-24 flex justify-center"><Loader2 className="animate-spin text-slate-200" size={48} /></div>
           ) : filteredEvents.length === 0 ? (
@@ -87,7 +87,7 @@ export default function EventsListPage() {
           ) : (
             <table className="w-full text-left border-collapse">
                <thead>
-                 <tr className="bg-slate-50/50">
+                 <tr className="bg-slate-50/50 dark:bg-slate-800/50">
                     <th className="px-10 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Event Name</th>
                     <th className="px-10 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Date & Location</th>
                     <th className="px-10 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Capacity</th>
@@ -95,9 +95,9 @@ export default function EventsListPage() {
                     <th className="px-10 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 text-right">Action</th>
                  </tr>
                </thead>
-               <tbody className="divide-y divide-slate-50">
+               <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
                  {filteredEvents.map(event => (
-                   <tr key={event.id} className="hover:bg-slate-50/50 transition-colors group">
+                   <tr key={event.id} className="hover:bg-slate-50/50 transition-colors group dark:hover:bg-slate-800/50">
                       <td className="px-10 py-8">
                          <div>
                             <p className="text-lg font-black text-[#0f172a] group-hover:text-yellow-500 transition-colors">{event.title}</p>

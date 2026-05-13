@@ -11,7 +11,9 @@ import {
   TrendingUp,
   ShieldCheck,
   Menu,
-  X
+  X,
+  Sun,
+  Moon
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { signOut } from "next-auth/react";
@@ -20,11 +22,29 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [logo, setLogo] = useState<string | null>(null);
+  const [theme, setTheme] = useState<"dark" | "light">("light");
 
   useEffect(() => {
     const savedLogo = localStorage.getItem("eel-logo");
     if (savedLogo) setLogo(savedLogo);
+
+    const savedTheme = localStorage.getItem("eel-theme") as "dark" | "light";
+    if (savedTheme) {
+      setTheme(savedTheme);
+      document.documentElement.classList.toggle("dark", savedTheme === "dark");
+    } else {
+      // Default to dark for premium feel if not set
+      setTheme("dark");
+      document.documentElement.classList.add("dark");
+    }
   }, []);
+
+  const toggleTheme = () => {
+    const newTheme = theme === "dark" ? "light" : "dark";
+    setTheme(newTheme);
+    localStorage.setItem("eel-theme", newTheme);
+    document.documentElement.classList.toggle("dark", newTheme === "dark");
+  };
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -49,7 +69,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   ];
 
   return (
-    <div className="min-h-screen bg-[#f1f5f9] flex font-outfit">
+    <div className="min-h-screen bg-[#f1f5f9] flex font-outfit transition-colors duration-500 dark:bg-[#020617]">
       {/* Sidebar */}
       <aside className={`fixed inset-y-0 left-0 z-50 w-72 bg-[#0f172a] text-white transition-all duration-500 ease-in-out transform ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"} lg:relative lg:translate-x-0`}>
         <div className="h-full flex flex-col p-8">
@@ -109,7 +129,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top Header */}
-        <header className="h-20 bg-white/80 backdrop-blur-md border-b border-slate-200 px-8 flex items-center justify-between sticky top-0 z-40">
+        <header className="h-20 bg-white/80 backdrop-blur-md border-b border-slate-200 px-8 flex items-center justify-between sticky top-0 z-40 transition-colors dark:bg-[#0f172a]/80 dark:border-slate-800">
            <button 
              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
              className="lg:hidden p-2 text-slate-500"
@@ -118,6 +138,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
            </button>
            
            <div className="flex items-center gap-6">
+              <button 
+                onClick={toggleTheme}
+                className="p-3 rounded-2xl bg-slate-50 text-slate-500 hover:bg-slate-100 transition-all dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700"
+              >
+                {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
+              </button>
+
               <div className="hidden md:flex flex-col text-right">
                 <span className="text-xs font-black text-slate-400 uppercase tracking-widest">System Status</span>
                 <span className="text-[10px] text-green-500 font-bold flex items-center gap-1 justify-end">
@@ -125,7 +152,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                    Operational
                 </span>
               </div>
-              <div className="w-10 h-10 bg-slate-100 rounded-full border border-slate-200"></div>
+              <div className="w-10 h-10 bg-slate-100 rounded-full border border-slate-200 dark:bg-slate-800 dark:border-slate-700"></div>
            </div>
         </header>
 

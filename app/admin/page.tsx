@@ -76,12 +76,12 @@ export default function AdminDashboard() {
           className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12"
         >
           <div>
-            <h1 className="text-5xl font-black text-[#0f172a] tracking-tighter font-bricolage italic mb-2 uppercase">COMMAND <span className="text-slate-300">CENTER</span></h1>
-            <p className="text-slate-500 font-medium text-lg">Welcome back. Here is what's happening across your EEL events today.</p>
+            <h1 className="text-5xl font-black text-[#0f172a] tracking-tighter font-bricolage italic mb-2 uppercase dark:text-white">COMMAND <span className="text-slate-300 dark:text-slate-600">CENTER</span></h1>
+            <p className="text-slate-500 font-medium text-lg dark:text-slate-400">Welcome back. Here is what's happening across your EEL events today.</p>
           </div>
           <Link 
             href="/admin/create"
-            className="flex items-center gap-3 bg-[#0f172a] hover:bg-black text-white px-8 py-4 rounded-2xl font-black transition-all shadow-2xl shadow-slate-200 uppercase tracking-widest text-xs group"
+            className="flex items-center gap-3 bg-[#0f172a] hover:bg-black text-white px-8 py-4 rounded-2xl font-black transition-all shadow-2xl shadow-slate-200 uppercase tracking-widest text-xs group dark:bg-yellow-400 dark:text-black dark:shadow-yellow-400/20"
           >
             <Plus size={20} className="group-hover:rotate-90 transition-transform duration-300" />
             Create New Event
@@ -99,7 +99,7 @@ export default function AdminDashboard() {
             <motion.div 
               variants={itemVariants}
               key={stat.name} 
-              className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100 hover:shadow-xl transition-all group cursor-default"
+              className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100 hover:shadow-xl transition-all group cursor-default dark:bg-[#0f172a] dark:border-slate-800"
             >
               <div className="flex justify-between items-start mb-6">
                 <div className={`p-4 ${stat.bg} ${stat.color} rounded-2xl group-hover:scale-110 group-hover:rotate-3 transition-all`}>
@@ -110,7 +110,7 @@ export default function AdminDashboard() {
                 </span>
               </div>
               <p className="text-slate-400 font-bold text-[10px] uppercase tracking-[0.2em] mb-1">{stat.name}</p>
-              <h3 className="text-3xl font-black text-[#0f172a] font-bricolage italic tracking-tight">{stat.value}</h3>
+              <h3 className="text-3xl font-black text-[#0f172a] font-bricolage italic tracking-tight dark:text-white">{stat.value}</h3>
             </motion.div>
           ))}
         </motion.div>
@@ -119,8 +119,8 @@ export default function AdminDashboard() {
           {/* Main Content: Events */}
           <div className="lg:col-span-2 space-y-8">
              <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-black text-[#0f172a] font-bricolage italic uppercase tracking-tight">Active <span className="text-slate-300">Events</span></h2>
-                <Link href="/admin/events" className="text-xs font-black text-[#0f172a] underline underline-offset-4 decoration-yellow-400">View All</Link>
+                <h2 className="text-2xl font-black text-[#0f172a] font-bricolage italic uppercase tracking-tight dark:text-white">Active <span className="text-slate-300 dark:text-slate-600">Events</span></h2>
+                <Link href="/admin/events" className="text-xs font-black text-[#0f172a] underline underline-offset-4 decoration-yellow-400 dark:text-yellow-400">View All</Link>
              </div>
 
              {loading ? (
@@ -148,7 +148,7 @@ export default function AdminDashboard() {
                     <motion.div 
                       variants={itemVariants}
                       key={event.id} 
-                      className="group bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-100 hover:shadow-2xl transition-all"
+                      className="group bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-100 hover:shadow-2xl transition-all dark:bg-[#0f172a] dark:border-slate-800"
                     >
                       <div className="flex justify-between items-start mb-6">
                         <span className="px-3 py-1 bg-green-50 text-green-600 text-[10px] font-black uppercase tracking-[0.15em] rounded-lg border border-green-100">Live</span>
@@ -157,7 +157,7 @@ export default function AdminDashboard() {
                            <div className="w-6 h-6 rounded-full border-2 border-white bg-slate-100 text-[8px] flex items-center justify-center font-bold">+12</div>
                         </div>
                       </div>
-                      <h3 className="text-xl font-black text-[#0f172a] mb-4 group-hover:text-yellow-500 transition-colors">{event.title}</h3>
+                      <h3 className="text-xl font-black text-[#0f172a] mb-4 group-hover:text-yellow-500 transition-colors dark:text-white">{event.title}</h3>
                       <div className="space-y-3 mb-8">
                         <div className="flex items-center gap-3 text-slate-500 text-xs font-medium">
                           <Calendar size={14} className="text-slate-400" />
@@ -170,7 +170,7 @@ export default function AdminDashboard() {
                       </div>
                       <Link 
                         href={`/admin/events/${event.id}`}
-                        className="flex items-center justify-between w-full p-4 bg-slate-50 rounded-2xl group-hover:bg-[#0f172a] group-hover:text-white transition-all text-xs font-black uppercase tracking-widest"
+                        className="flex items-center justify-between w-full p-4 bg-slate-50 rounded-2xl group-hover:bg-[#0f172a] group-hover:text-white transition-all text-xs font-black uppercase tracking-widest dark:bg-slate-800 dark:group-hover:bg-yellow-400 dark:group-hover:text-black"
                       >
                         Manage
                         <ArrowUpRight size={16} />
@@ -183,11 +183,11 @@ export default function AdminDashboard() {
 
           {/* Sidebar: Activity */}
           <div className="space-y-8">
-             <h2 className="text-2xl font-black text-[#0f172a] font-bricolage italic uppercase tracking-tight">Recent <span className="text-slate-300">Activity</span></h2>
+             <h2 className="text-2xl font-black text-[#0f172a] font-bricolage italic uppercase tracking-tight dark:text-white">Recent <span className="text-slate-300 dark:text-slate-600">Activity</span></h2>
              <motion.div 
                initial={{ opacity: 0, x: 20 }}
                animate={{ opacity: 1, x: 0 }}
-               className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 p-8 space-y-8 relative overflow-hidden"
+               className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 p-8 space-y-8 relative overflow-hidden dark:bg-[#0f172a] dark:border-slate-800"
              >
                 <div className="absolute top-0 left-0 w-1 h-full bg-yellow-400/20"></div>
                 {[
@@ -202,7 +202,7 @@ export default function AdminDashboard() {
                     key={i} 
                     className="flex gap-4 relative"
                   >
-                    <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-[#0f172a]">
+                    <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-[#0f172a] dark:bg-slate-800 dark:text-white">
                       <activity.icon size={18} />
                     </div>
                     <div>
@@ -211,7 +211,7 @@ export default function AdminDashboard() {
                     </div>
                   </motion.div>
                 ))}
-                <button className="w-full py-4 bg-slate-50 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-400 hover:bg-slate-100 transition-all">
+                <button className="w-full py-4 bg-slate-50 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-400 hover:bg-slate-100 transition-all dark:bg-slate-800 dark:hover:bg-slate-700">
                   View Full Audit Log
                 </button>
              </motion.div>
