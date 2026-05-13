@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { Calendar, MapPin, CheckCircle2, Loader2, AlertCircle, ChevronDown } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 
 interface FormField {
   id: string;
@@ -126,9 +127,19 @@ export default function PublicRegistrationPage() {
             Your orchestration for <span className="text-white font-bold">{event.title}</span> is confirmed. 
             Verification has been dispatched to <span className="text-yellow-500 font-bold">{formData.email}</span>.
           </p>
-          <div className="bg-black p-8 rounded-3xl border border-white/5">
-            <p className="text-[10px] uppercase tracking-[0.3em] text-zinc-500 font-black mb-3">Unique Clearance ID</p>
-            <code className="text-2xl font-black text-yellow-500 font-bricolage">{registeredId}</code>
+          <div className="bg-black p-8 rounded-3xl border border-white/5 flex flex-col items-center gap-6">
+            <div className="bg-white p-4 rounded-2xl">
+              <QRCodeSVG 
+                value={registeredId} 
+                size={160}
+                level="H"
+                includeMargin={false}
+              />
+            </div>
+            <div className="text-center">
+              <p className="text-[10px] uppercase tracking-[0.3em] text-zinc-500 font-black mb-3">Unique Clearance ID</p>
+              <code className="text-xl font-black text-yellow-500 font-bricolage block truncate max-w-[200px]">{registeredId}</code>
+            </div>
           </div>
         </div>
       </div>

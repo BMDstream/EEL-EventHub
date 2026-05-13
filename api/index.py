@@ -219,5 +219,16 @@ def delete_user(user_id: int, session: Session = Depends(get_session)):
     session.commit()
     return {"ok": True}
 
+@app.put("/api/py/registrations/{registration_id}/checkin", response_model=Registration)
+def toggle_checkin(registration_id: str, session: Session = Depends(get_session)):
+    registration = session.get(Registration, registration_id)
+    if not registration:
+        raise HTTPException(status_code=404, detail="Registration not found")
+    registration.checked_in = not registration.checked_in
+    session.add(registration)
+    session.commit()
+    session.refresh(registration)
+    return registration
+
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)

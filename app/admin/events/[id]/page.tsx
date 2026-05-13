@@ -306,7 +306,27 @@ export default function EventDetailsPage() {
                         <td className="px-10 py-8 text-[10px] font-black text-slate-400 uppercase tracking-widest">
                           {new Date(reg.created_at).toLocaleDateString()}
                         </td>
-                        <td className="px-10 py-8 text-right">
+                        <td className="px-10 py-8 text-right flex items-center justify-end gap-3">
+                          <button
+                            onClick={async () => {
+                              try {
+                                const res = await fetch(`/api/py/registrations/${reg.id}/checkin`, { method: "PUT" });
+                                if (res.ok) {
+                                  const updated = await res.json();
+                                  setRegistrations(prev => prev.map(r => r.id === reg.id ? { ...r, checked_in: updated.checked_in } : r));
+                                }
+                              } catch (err) {
+                                console.error(err);
+                              }
+                            }}
+                            className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${
+                              reg.checked_in 
+                                ? "bg-green-500 text-white shadow-lg shadow-green-500/20" 
+                                : "bg-slate-50 text-slate-400 hover:bg-slate-100"
+                            }`}
+                          >
+                            {reg.checked_in ? "Checked In" : "Check In"}
+                          </button>
                           <button
                             onClick={() => handleDeleteRegistration(reg.id)}
                             disabled={deletingId === reg.id}
