@@ -135,7 +135,7 @@ export default function PublicRegistrationPage() {
                 <QRCodeSVG 
                   value={registeredPin || registeredId || ""} 
                   size={160}
-                  level="H"
+                  level="M"
                 />
               </div>
             </div>
