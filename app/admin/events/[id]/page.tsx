@@ -39,6 +39,7 @@ interface Registration {
 
 interface Event {
   id: number;
+  slug: string;
   title: string;
   description: string;
   start_date: string;
