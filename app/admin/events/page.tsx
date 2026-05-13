@@ -127,7 +127,17 @@ export default function EventsListPage() {
                       <td className="px-10 py-8">
                          <span className="px-3 py-1 bg-green-50 text-green-600 text-[10px] font-black uppercase tracking-widest rounded-lg border border-green-100">Confirmed</span>
                       </td>
-                      <td className="px-10 py-8 text-right">
+                      <td className="px-10 py-8 text-right flex items-center justify-end gap-6">
+                         <button 
+                           onClick={() => {
+                             const url = `${window.location.origin}/${event.slug}`;
+                             navigator.clipboard.writeText(url);
+                             alert("Registration link copied to clipboard!");
+                           }}
+                           className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-yellow-500 transition-all"
+                         >
+                           Copy Link
+                         </button>
                          <Link 
                            href={`/admin/events/${event.id}`}
                            className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#0f172a] hover:gap-3 transition-all"

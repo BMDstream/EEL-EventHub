@@ -15,7 +15,8 @@ import {
   XCircle,
   MoreVertical,
   Settings,
-  Sparkles
+  Sparkles,
+  ArrowUpRight
 } from "lucide-react";
 import AdminLayout from "@/components/AdminLayout";
 import FormBuilder from "@/components/FormBuilder";
@@ -157,7 +158,30 @@ export default function EventDetailsPage() {
                    </span>
                    <span className="text-[10px] font-mono text-slate-300">ID: {id}</span>
                 </div>
-                <h1 className="text-5xl font-black text-[#0f172a] mb-10 tracking-tighter italic font-bricolage leading-none">{event.title}</h1>
+                <h1 className="text-5xl font-black text-[#0f172a] mb-6 tracking-tighter italic font-bricolage leading-none">{event.title}</h1>
+                <div className="flex items-center gap-2 mb-10 bg-slate-50 p-4 rounded-2xl border border-slate-100 group">
+                   <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest ml-1">Public Link:</p>
+                   <code className="text-xs font-bold text-[#0f172a] bg-white px-3 py-1 rounded-lg border border-slate-100 flex-1 truncate">
+                     {typeof window !== 'undefined' ? `${window.location.origin}/${event.slug}` : `/${event.slug}`}
+                   </code>
+                   <button 
+                     onClick={() => {
+                       const url = `${window.location.origin}/${event.slug}`;
+                       navigator.clipboard.writeText(url);
+                       alert("Link copied!");
+                     }}
+                     className="px-4 py-2 bg-[#0f172a] text-white text-[9px] font-black uppercase tracking-widest rounded-xl hover:bg-black transition-all"
+                   >
+                     Copy Link
+                   </button>
+                   <a 
+                     href={`/${event.slug}`} 
+                     target="_blank" 
+                     className="p-2 text-slate-400 hover:text-[#0f172a] transition-all"
+                   >
+                     <ArrowUpRight size={16} />
+                   </a>
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
                   <div className="flex items-center gap-4">
                     <div className="p-3 bg-slate-50 text-[#0f172a] rounded-2xl">
