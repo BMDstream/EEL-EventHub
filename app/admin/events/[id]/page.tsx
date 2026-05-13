@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { 
   ArrowLeft, 
@@ -49,11 +49,14 @@ interface Event {
 export default function EventDetailsPage() {
   const { id } = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const initialTab = searchParams.get("tab") === "form" ? "form" : "registrants";
+  
   const [event, setEvent] = useState<Event | null>(null);
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"registrants" | "form">("registrants");
+  const [activeTab, setActiveTab] = useState<"registrants" | "form">(initialTab);
 
   useEffect(() => {
     const fetchData = async () => {

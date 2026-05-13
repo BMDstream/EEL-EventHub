@@ -14,6 +14,7 @@ import {
   Activity,
   CheckCircle2
 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import AdminLayout from "@/components/AdminLayout";
 
 interface Event {
@@ -47,33 +48,61 @@ export default function AdminDashboard() {
     { name: "Total Events", value: events.length, icon: Calendar, change: "+12%", color: "text-blue-600", bg: "bg-blue-50" },
     { name: "Total Registrations", value: "1,284", icon: Users, change: "+18%", color: "text-green-600", bg: "bg-green-50" },
     { name: "Check-in Rate", value: "94.2%", icon: CheckCircle2, change: "+2.4%", color: "text-yellow-600", bg: "bg-yellow-50" },
-    { name: "Projected Revenue", value: "$42.5k", icon: Ticket, change: "+5%", color: "text-purple-600", bg: "bg-purple-50" },
+    { name: "Projected Revenue", value: "R42.5k", icon: Ticket, change: "+5%", color: "text-purple-600", bg: "bg-purple-50" },
   ];
+
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    show: { opacity: 1, y: 0 }
+  };
 
   return (
     <AdminLayout>
       <div className="max-w-7xl mx-auto">
         {/* Welcome Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
+        <motion.div 
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12"
+        >
           <div>
-            <h1 className="text-5xl font-black text-[#0f172a] tracking-tighter font-bricolage italic mb-2">COMMAND <span className="text-slate-300">CENTER</span></h1>
+            <h1 className="text-5xl font-black text-[#0f172a] tracking-tighter font-bricolage italic mb-2 uppercase">COMMAND <span className="text-slate-300">CENTER</span></h1>
             <p className="text-slate-500 font-medium text-lg">Welcome back. Here is what's happening across your EEL events today.</p>
           </div>
           <Link 
             href="/admin/create"
-            className="flex items-center gap-3 bg-[#0f172a] hover:bg-black text-white px-8 py-4 rounded-2xl font-black transition-all shadow-2xl shadow-slate-200 uppercase tracking-widest text-xs"
+            className="flex items-center gap-3 bg-[#0f172a] hover:bg-black text-white px-8 py-4 rounded-2xl font-black transition-all shadow-2xl shadow-slate-200 uppercase tracking-widest text-xs group"
           >
-            <Plus size={20} />
+            <Plus size={20} className="group-hover:rotate-90 transition-transform duration-300" />
             Create New Event
           </Link>
-        </div>
+        </motion.div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+        <motion.div 
+          variants={containerVariants}
+          initial="hidden"
+          animate="show"
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12"
+        >
           {stats.map((stat) => (
-            <div key={stat.name} className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100 hover:shadow-xl transition-all group">
+            <motion.div 
+              variants={itemVariants}
+              key={stat.name} 
+              className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100 hover:shadow-xl transition-all group cursor-default"
+            >
               <div className="flex justify-between items-start mb-6">
-                <div className={`p-4 ${stat.bg} ${stat.color} rounded-2xl group-hover:scale-110 transition-transform`}>
+                <div className={`p-4 ${stat.bg} ${stat.color} rounded-2xl group-hover:scale-110 group-hover:rotate-3 transition-all`}>
                   <stat.icon size={24} />
                 </div>
                 <span className={`text-[10px] font-black px-2 py-1 ${stat.bg} ${stat.color} rounded-lg uppercase tracking-widest`}>
@@ -82,9 +111,9 @@ export default function AdminDashboard() {
               </div>
               <p className="text-slate-400 font-bold text-[10px] uppercase tracking-[0.2em] mb-1">{stat.name}</p>
               <h3 className="text-3xl font-black text-[#0f172a] font-bricolage italic tracking-tight">{stat.value}</h3>
-            </div>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
           {/* Main Content: Events */}
@@ -99,15 +128,28 @@ export default function AdminDashboard() {
                   <Loader2 className="animate-spin text-[#0f172a]" size={48} />
                 </div>
               ) : events.length === 0 ? (
-                <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 p-20 text-center">
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 p-20 text-center"
+                >
                   <Calendar className="text-slate-200 mx-auto mb-6" size={64} />
                   <h3 className="text-2xl font-bold text-[#0f172a] mb-2">No active events</h3>
                   <p className="text-slate-400 mb-8 max-w-sm mx-auto">Start by creating your first event to see it here on the command center.</p>
-                </div>
+                </motion.div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <motion.div 
+                  variants={containerVariants}
+                  initial="hidden"
+                  animate="show"
+                  className="grid grid-cols-1 md:grid-cols-2 gap-6"
+                >
                   {events.slice(0, 4).map((event) => (
-                    <div key={event.id} className="group bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-100 hover:shadow-2xl transition-all">
+                    <motion.div 
+                      variants={itemVariants}
+                      key={event.id} 
+                      className="group bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-100 hover:shadow-2xl transition-all"
+                    >
                       <div className="flex justify-between items-start mb-6">
                         <span className="px-3 py-1 bg-green-50 text-green-600 text-[10px] font-black uppercase tracking-[0.15em] rounded-lg border border-green-100">Live</span>
                         <div className="flex -space-x-2">
@@ -133,23 +175,33 @@ export default function AdminDashboard() {
                         Manage
                         <ArrowUpRight size={16} />
                       </Link>
-                    </div>
+                    </motion.div>
                   ))}
-                </div>
+                </motion.div>
               )}
           </div>
 
           {/* Sidebar: Activity */}
           <div className="space-y-8">
              <h2 className="text-2xl font-black text-[#0f172a] font-bricolage italic uppercase tracking-tight">Recent <span className="text-slate-300">Activity</span></h2>
-             <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 p-8 space-y-8 relative overflow-hidden">
+             <motion.div 
+               initial={{ opacity: 0, x: 20 }}
+               animate={{ opacity: 1, x: 0 }}
+               className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 p-8 space-y-8 relative overflow-hidden"
+             >
                 <div className="absolute top-0 left-0 w-1 h-full bg-yellow-400/20"></div>
                 {[
                   { user: "Barton D.", action: "created new event", time: "2m ago", icon: Plus },
                   { user: "Sarah L.", action: "registered for Gala", time: "15m ago", icon: Activity },
                   { user: "System", action: "database backup complete", time: "1h ago", icon: TrendingUp },
                 ].map((activity, i) => (
-                  <div key={i} className="flex gap-4 relative">
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.5 + (i * 0.1) }}
+                    key={i} 
+                    className="flex gap-4 relative"
+                  >
                     <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-[#0f172a]">
                       <activity.icon size={18} />
                     </div>
@@ -157,12 +209,12 @@ export default function AdminDashboard() {
                       <p className="text-xs text-[#0f172a] font-bold"><span className="text-slate-400">{activity.user}</span> {activity.action}</p>
                       <p className="text-[10px] text-slate-400 font-medium uppercase tracking-widest mt-1">{activity.time}</p>
                     </div>
-                  </div>
+                  </motion.div>
                 ))}
                 <button className="w-full py-4 bg-slate-50 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-400 hover:bg-slate-100 transition-all">
                   View Full Audit Log
                 </button>
-             </div>
+             </motion.div>
           </div>
         </div>
       </div>
