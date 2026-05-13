@@ -43,6 +43,12 @@ def on_startup():
                 session.commit()
             except Exception:
                 session.rollback()
+                
+            try:
+                session.execute(text("ALTER TABLE \"registration\" ADD COLUMN pin VARCHAR"))
+                session.commit()
+            except Exception:
+                session.rollback()
     except Exception as e:
         print(f"Database initialization failed: {e}")
 
@@ -155,10 +161,14 @@ def register_attendee(
         return existing_reg
     
     # Create registration
+    import random
+    pin = str(random.randint(1000, 9999))
+    
     registration = Registration(
         event_id=event_id, 
         attendee_id=attendee.id, 
-        custom_answers=custom_answers
+        custom_answers=custom_answers,
+        pin=pin
     )
     session.add(registration)
     session.commit()
@@ -172,7 +182,7 @@ def register_attendee(
                 to_email=attendee.email,
                 first_name=attendee.first_name,
                 event_title=event.title,
-                clearance_id=str(registration.id)
+                clearance_id=registration.pin or str(registration.id)
             )
     except Exception as e:
         print(f"Error triggering confirmation email: {e}")

@@ -28,6 +28,7 @@ class Attendee(SQLModel, table=True):
 
 class Registration(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
+    pin: Optional[str] = None # 4-digit numeric PIN
     event_id: int = Field(foreign_key="event.id")
     attendee_id: int = Field(foreign_key="attendee.id")
     status: str = "confirmed" # confirmed, waitlisted, cancelled
