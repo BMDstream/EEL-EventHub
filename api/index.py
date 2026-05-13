@@ -197,7 +197,10 @@ def register_attendee(
         # Don't fail the registration if only the email fails
         print(f"Error triggering confirmation email: {e}")
 
-    return registration
+    return {
+        "id": str(registration.id),
+        "pin": pin
+    }
 
 @app.delete("/api/py/registrations/{registration_id}")
 def delete_registration(registration_id: str, session: Session = Depends(get_session)):
