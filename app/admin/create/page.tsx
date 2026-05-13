@@ -23,6 +23,22 @@ export default function CreateEventPage() {
     setLoading(true);
 
     try {
+      // Validate date
+      if (!formData.start_date) {
+        alert("Please select a start date and time.");
+        setLoading(false);
+        return;
+      }
+
+      let formattedDate;
+      try {
+        formattedDate = new Date(formData.start_date).toISOString();
+      } catch (dateErr) {
+        alert("Invalid date format. Please re-select the date and time.");
+        setLoading(false);
+        return;
+      }
+
       const response = await fetch("/api/py/events", {
         method: "POST",
         headers: {
@@ -30,19 +46,25 @@ export default function CreateEventPage() {
         },
         body: JSON.stringify({
           ...formData,
-          start_date: new Date(formData.start_date).toISOString(),
+          start_date: formattedDate,
         }),
       });
 
       if (response.ok) {
         router.push("/admin/events");
       } else {
-        const error = await response.json();
-        alert(`Error: ${error.detail || "Failed to create event"}`);
+        let errorMessage = "Failed to create event";
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.detail || errorMessage;
+        } catch (jsonErr) {
+          errorMessage = `Server error: ${response.status} ${response.statusText}`;
+        }
+        alert(`Error: ${errorMessage}`);
       }
     } catch (err) {
       console.error("Failed to create event", err);
-      alert("An unexpected error occurred.");
+      alert(`An unexpected error occurred: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
       setLoading(false);
     }

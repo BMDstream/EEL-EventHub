@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Depends, HTTPException, status
 from sqlmodel import Session, select
 from typing import List
-from backend.database import get_session, init_db
+from backend.database import get_session, init_db, engine
 from backend.models import Event, Attendee, Registration, User
 import uvicorn
 
@@ -13,6 +13,15 @@ def on_startup():
     # but for initialization, this works
     try:
         init_db()
+        # Add password column to user table if it doesn't exist
+        from sqlalchemy import text
+        with Session(engine) as session:
+            try:
+                session.execute(text("ALTER TABLE \"user\" ADD COLUMN password VARCHAR"))
+                session.commit()
+            except Exception:
+                # Column probably already exists
+                session.rollback()
     except Exception as e:
         print(f"Database initialization failed: {e}")
 
