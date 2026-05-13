@@ -1,5 +1,8 @@
 import os
 import resend
+import qrcode
+import base64
+from io import BytesIO
 from typing import List, Dict, Any
 from dotenv import load_dotenv
 
@@ -7,11 +10,24 @@ load_dotenv()
 
 resend.api_key = os.getenv("RESEND_API_KEY")
 
+def generate_qr_base64(data: str):
+    """Generates a QR code and returns it as a base64 string."""
+    qr = qrcode.QRCode(version=1, box_size=10, border=5)
+    qr.add_data(data)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white")
+    
+    buffered = BytesIO()
+    img.save(buffered, format="PNG")
+    return base64.b64encode(buffered.getvalue()).decode()
+
 def send_confirmation_email(to_email: str, first_name: str, event_title: str, clearance_id: str, qr_code_url: str = None):
-    """Sends a registration confirmation email with the QR code and PIN."""
+    """Sends a registration confirmation email with an embedded QR code."""
     if not resend.api_key:
         print(f"MOCK EMAIL to {to_email}: Welcome to {event_title}! Your ID is {clearance_id}")
         return None
+
+    qr_base64 = generate_qr_base64(clearance_id)
 
     html_content = f"""
     <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 40px; border: 1px solid #eee; border-radius: 20px;">
@@ -20,7 +36,7 @@ def send_confirmation_email(to_email: str, first_name: str, event_title: str, cl
         <p>Your orchestration for <strong>{event_title}</strong> is confirmed. Below are your secure credentials for entry.</p>
         
         <div style="background: #f8fafc; padding: 30px; border-radius: 20px; text-align: center; margin: 30px 0;">
-            <img src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data={clearance_id}" alt="QR Code" style="margin-bottom: 20px; border-radius: 10px;" />
+            <img src="data:image/png;base64,{qr_base64}" width="160" height="160" alt="QR Code" style="margin-bottom: 20px; border-radius: 10px;" />
             <p style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.2em; color: #64748b; margin-bottom: 10px;">Unique Clearance ID</p>
             <code style="font-size: 20px; font-weight: bold; color: #eab308;">{clearance_id}</code>
         </div>
