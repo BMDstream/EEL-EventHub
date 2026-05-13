@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import AdminLayout from "@/components/AdminLayout";
 import FormBuilder from "@/components/FormBuilder";
+import QRScanner from "@/components/QRScanner";
 
 interface Attendee {
   id: number;
@@ -58,7 +59,7 @@ export default function EventDetailsPage() {
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"registrants" | "form">(initialTab);
+  const [activeTab, setActiveTab] = useState<"registrants" | "form" | "scanner">(initialTab as any || "registrants");
 
   useEffect(() => {
     const fetchData = async () => {
@@ -246,6 +247,12 @@ export default function EventDetailsPage() {
              >
                 Form Studio
              </button>
+             <button 
+               onClick={() => setActiveTab("scanner")}
+               className={`px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2 ${activeTab === "scanner" ? "border-yellow-400 text-[#0f172a]" : "border-transparent text-slate-400"}`}
+             >
+                Live Scanner
+             </button>
           </div>
         </div>
 
@@ -342,12 +349,32 @@ export default function EventDetailsPage() {
               </table>
             </div>
           </div>
-        ) : (
+        ) : activeTab === "form" ? (
           <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 p-10 lg:p-14">
              <FormBuilder 
                eventId={id as string} 
                initialSchema={event.custom_fields_schema} 
                onSave={(newSchema) => setEvent({ ...event, custom_fields_schema: newSchema })} 
+             />
+          </div>
+        ) : (
+          <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 p-10 lg:p-24">
+             <div className="max-w-2xl mx-auto text-center mb-16">
+                <h2 className="text-5xl font-black text-[#0f172a] mb-6 tracking-tight font-bricolage italic uppercase">LIVE <span className="text-slate-300">SCANNER</span></h2>
+                <p className="text-slate-500 font-medium">Scan attendee QR codes for instantaneous entry verification and check-in.</p>
+             </div>
+             <QRScanner 
+               onScan={async (regId) => {
+                 // Check if it's a valid ID and from this event
+                 const res = await fetch(`/api/py/registrations/${regId}/checkin`, { method: "PUT" });
+                 if (!res.ok) {
+                   const error = await res.json();
+                   throw new Error(error.detail || "Authentication Failed");
+                 }
+                 const updated = await res.json();
+                 // Update the registrations list in the background
+                 setRegistrations(prev => prev.map(r => r.id === regId ? { ...r, checked_in: updated.checked_in } : r));
+               }} 
              />
           </div>
         )}
