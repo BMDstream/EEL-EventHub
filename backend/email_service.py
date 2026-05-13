@@ -20,6 +20,7 @@ def send_confirmation_email(to_email: str, first_name: str, event_title: str, cl
         <p>Your orchestration for <strong>{event_title}</strong> is confirmed. Below are your secure credentials for entry.</p>
         
         <div style="background: #f8fafc; padding: 30px; border-radius: 20px; text-align: center; margin: 30px 0;">
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data={clearance_id}" alt="QR Code" style="margin-bottom: 20px; border-radius: 10px;" />
             <p style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.2em; color: #64748b; margin-bottom: 10px;">Unique Clearance ID</p>
             <code style="font-size: 20px; font-weight: bold; color: #eab308;">{clearance_id}</code>
         </div>
