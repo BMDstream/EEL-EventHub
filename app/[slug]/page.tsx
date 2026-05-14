@@ -152,6 +152,7 @@ export default function PublicRegistrationPage() {
               {registeredPin || (registeredId ? registeredId.substring(0, 8) : "")}
             </p>
           </div>
+          )}
         </div>
       </div>
     );

@@ -101,15 +101,20 @@ export default function EventDetailsPage() {
 
   const exportToCSV = () => {
     if (registrations.length === 0) return;
+    const headers = [
+      "First Name", "Last Name", "Email", "Company", "Status", "Checked In", "Registered At",
+      ...(event?.custom_fields_schema || []).map(f => f.label)
+    ];
+    const rows = registrations.map(r => [
+      r.attendee.first_name,
+      r.attendee.last_name,
+      r.attendee.email,
+      r.attendee.company || "",
       r.status,
       r.checked_in ? "Yes" : "No",
       new Date(r.created_at).toLocaleString(),
       ...(event?.custom_fields_schema || []).map(f => r.custom_answers?.[f.id] || "")
     ]);
-    const headers = [
-      "First Name", "Last Name", "Email", "Company", "Status", "Checked In", "Registered At",
-      ...(event?.custom_fields_schema || []).map(f => f.label)
-    ];
     const csvContent = [headers.join(","), ...rows.map(row => row.map(cell => `"${cell}"`).join(","))].join("\n");
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
