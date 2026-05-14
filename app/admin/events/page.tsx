@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Calendar, MapPin, Users, Search, MoreHorizontal, ArrowUpRight, Loader2, Plus } from "lucide-react";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 import AdminLayout from "@/components/AdminLayout";
 
 interface Event {
@@ -19,6 +20,8 @@ export default function EventsListPage() {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const { data: session } = useSession();
+  const userRole = (session?.user as any)?.role || "staff";
 
   useEffect(() => {
     fetch("/api/py/events")
@@ -33,10 +36,19 @@ export default function EventsListPage() {
       });
   }, []);
 
-  const filteredEvents = events.filter(e => 
-    e.title.toLowerCase().includes(search.toLowerCase()) || 
-    e.location.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredEvents = events.filter(e => {
+    const matchesSearch = e.title.toLowerCase().includes(search.toLowerCase()) || 
+                          e.location.toLowerCase().includes(search.toLowerCase());
+    
+    if (userRole === "staff") {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const eventDate = new Date(e.start_date);
+      return matchesSearch && eventDate >= today;
+    }
+    
+    return matchesSearch;
+  });
 
   return (
     <AdminLayout>
@@ -47,13 +59,15 @@ export default function EventsListPage() {
             <h1 className="text-5xl font-black text-[#0f172a] tracking-tighter font-bricolage italic uppercase dark:text-white">EVENT <span className="text-slate-300 dark:text-slate-600">CATALOG</span></h1>
             <p className="text-slate-500 font-medium text-lg dark:text-slate-400">Browse and manage your full portfolio of excellence.</p>
           </div>
-          <Link 
-            href="/admin/create"
-            className="flex items-center gap-3 bg-[#0f172a] hover:bg-black text-white px-8 py-4 rounded-2xl font-black transition-all shadow-2xl shadow-slate-200 uppercase tracking-widest text-xs dark:bg-yellow-400 dark:text-black dark:shadow-yellow-400/20"
-          >
-            <Plus size={20} />
-            New Event
-          </Link>
+          {userRole !== "staff" && (
+            <Link 
+              href="/admin/create"
+              className="flex items-center gap-3 bg-[#0f172a] hover:bg-black text-white px-8 py-4 rounded-2xl font-black transition-all shadow-2xl shadow-slate-200 uppercase tracking-widest text-xs dark:bg-yellow-400 dark:text-black dark:shadow-yellow-400/20"
+            >
+              <Plus size={20} />
+              New Event
+            </Link>
+          )}
         </div>
 
         {/* Toolbar */}

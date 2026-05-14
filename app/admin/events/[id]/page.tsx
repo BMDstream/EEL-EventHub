@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 import { 
   ArrowLeft, 
   Users, 
@@ -64,7 +65,11 @@ export default function EventDetailsPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [selectedReg, setSelectedReg] = useState<Registration | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const { data: session } = useSession();
+  const userRole = (session?.user as any)?.role || "staff";
   const [activeTab, setActiveTab] = useState<"registrants" | "form" | "scanner" | "communications">(initialTab as any || "registrants");
+  const [pin, setPin] = useState("");
+  const [pinLoading, setPinLoading] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -299,24 +304,28 @@ export default function EventDetailsPage() {
              >
                 Registrants
              </button>
-             <button 
-               onClick={() => setActiveTab("form")}
-               className={`px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2 ${activeTab === "form" ? "border-yellow-400 text-[#0f172a]" : "border-transparent text-slate-400"}`}
-             >
-                Form Studio
-             </button>
+             {userRole !== "staff" && (
+               <button 
+                 onClick={() => setActiveTab("form")}
+                 className={`px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2 ${activeTab === "form" ? "border-yellow-400 text-[#0f172a]" : "border-transparent text-slate-400"}`}
+               >
+                  Form Studio
+               </button>
+             )}
              <button 
                onClick={() => setActiveTab("scanner")}
                className={`px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2 ${activeTab === "scanner" ? "border-yellow-400 text-[#0f172a]" : "border-transparent text-slate-400"}`}
              >
                 Live Scanner
              </button>
-             <button 
-               onClick={() => setActiveTab("communications")}
-               className={`px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2 ${activeTab === "communications" ? "border-yellow-400 text-[#0f172a]" : "border-transparent text-slate-400"}`}
-             >
-                Communications
-             </button>
+             {userRole !== "staff" && (
+               <button 
+                 onClick={() => setActiveTab("communications")}
+                 className={`px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2 ${activeTab === "communications" ? "border-yellow-400 text-[#0f172a]" : "border-transparent text-slate-400"}`}
+               >
+                  Communications
+               </button>
+             )}
           </div>
         </div>
 
@@ -453,22 +462,80 @@ export default function EventDetailsPage() {
           <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 p-10 lg:p-24">
              <div className="max-w-2xl mx-auto text-center mb-16">
                 <h2 className="text-5xl font-black text-[#0f172a] mb-6 tracking-tight font-bricolage italic uppercase">LIVE <span className="text-slate-300">SCANNER</span></h2>
-                <p className="text-slate-500 font-medium">Scan attendee QR codes for instantaneous entry verification and check-in.</p>
+                <p className="text-slate-500 font-medium">Scan attendee QR codes or enter their Unique Clearance ID for instantaneous verification.</p>
              </div>
-             <QRScanner 
-               onScan={async (regId) => {
-                 // Check if it's a valid ID and from this event
-                 const res = await fetch(`/api/py/registrations/${regId}/checkin`, { method: "PUT" });
-                 if (!res.ok) {
-                   const error = await res.json();
-                   throw new Error(error.detail || "Authentication Failed");
-                 }
-                 const updated = await res.json();
-                 // Update the registrations list in the background
-                 setRegistrations(prev => prev.map(r => r.id === regId ? { ...r, checked_in: updated.checked_in } : r));
-               }} 
-             />
+             
+             <div className="max-w-4xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
+               <div className="space-y-8">
+                 <div className="bg-slate-50 p-8 rounded-[2rem] border border-slate-100">
+                   <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 ml-1">QR Verification</h3>
+                   <QRScanner 
+                     onScan={async (regId) => {
+                       const res = await fetch(`/api/py/registrations/${regId}/checkin`, { method: "PUT" });
+                       if (!res.ok) {
+                         const error = await res.json();
+                         throw new Error(error.detail || "Authentication Failed");
+                       }
+                       const updated = await res.json();
+                       setRegistrations(prev => prev.map(r => r.id === regId ? { ...r, checked_in: updated.checked_in } : r));
+                     }} 
+                   />
+                 </div>
+               </div>
+
+               <div className="space-y-8">
+                 <div className="bg-slate-50 p-10 rounded-[2rem] border border-slate-100">
+                   <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 ml-1">Manual PIN Entry</h3>
+                   <div className="space-y-4">
+                     <input 
+                       type="text" 
+                       maxLength={4}
+                       placeholder="ENTER 4-DIGIT PIN"
+                       value={pin}
+                       onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
+                       className="w-full text-center text-4xl font-black py-8 bg-white rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none text-[#0f172a] placeholder-slate-200 tracking-[0.5em]"
+                     />
+                     <button 
+                       onClick={async () => {
+                         if (pin.length !== 4) return alert("Please enter a 4-digit PIN");
+                         setPinLoading(true);
+                         try {
+                           const res = await fetch(`/api/py/events/${id}/checkin-by-pin`, {
+                             method: "POST",
+                             headers: { "Content-Type": "application/json" },
+                             body: JSON.stringify({ pin })
+                           });
+                           if (res.ok) {
+                             const updated = await res.json();
+                             setRegistrations(prev => prev.map(r => r.id === updated.id ? { ...r, checked_in: true } : r));
+                             alert(`Check-in Successful: ${updated.attendee?.first_name || 'Guest'}`);
+                             setPin("");
+                           } else {
+                             const err = await res.json();
+                             alert(err.detail || "Invalid PIN");
+                           }
+                         } catch (err) {
+                           alert("Verification error");
+                         } finally {
+                           setPinLoading(false);
+                         }
+                       }}
+                       disabled={pinLoading || pin.length !== 4}
+                       className="w-full bg-[#0f172a] hover:bg-black disabled:bg-slate-200 text-white font-black py-6 rounded-2xl transition-all uppercase tracking-widest text-xs"
+                     >
+                       {pinLoading ? <Loader2 size={18} className="animate-spin mx-auto" /> : "Verify & Check In"}
+                     </button>
+                   </div>
+                 </div>
+
+                 <div className="p-8 bg-yellow-400/5 rounded-[2rem] border border-yellow-400/10">
+                   <p className="text-[10px] font-medium text-yellow-600/70 leading-relaxed uppercase tracking-wider">
+                     Attendees can find their 4-digit Unique Clearance ID at the bottom of their confirmation email or below their QR code.
+                   </p>
+                 </div>
+               </div>
           </div>
+        </div>
         ) : (
           <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 p-10 lg:p-24">
              <div className="max-w-2xl mx-auto mb-16">

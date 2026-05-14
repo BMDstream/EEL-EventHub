@@ -299,6 +299,30 @@ def toggle_checkin(registration_id: str, session: Session = Depends(get_session)
     session.refresh(registration)
     return registration
 
+@app.post("/api/py/events/{event_id}/checkin-by-pin")
+def checkin_by_pin(event_id: int, data: Dict[str, str], session: Session = Depends(get_session)):
+    pin = data.get("pin")
+    if not pin:
+        raise HTTPException(status_code=400, detail="PIN is required")
+    
+    registration = session.exec(
+        select(Registration)
+        .where(Registration.event_id == event_id)
+        .where(Registration.pin == pin)
+    ).first()
+    
+    if not registration:
+        raise HTTPException(status_code=404, detail="Invalid PIN or no registration found for this event")
+    
+    if registration.status == "declined":
+        raise HTTPException(status_code=400, detail="This registration was declined and cannot be used for check-in")
+        
+    registration.checked_in = True
+    session.add(registration)
+    session.commit()
+    session.refresh(registration)
+    return registration
+
 @app.post("/api/py/events/{event_id}/broadcast")
 def broadcast_to_attendees(
     event_id: int,
