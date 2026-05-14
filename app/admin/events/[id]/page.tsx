@@ -6,6 +6,8 @@ import Link from "next/link";
 import { 
   ArrowLeft, 
   Users, 
+  UserX,
+  Search,
   Download, 
   Trash2, 
   Calendar, 
@@ -61,6 +63,7 @@ export default function EventDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [selectedReg, setSelectedReg] = useState<Registration | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState<"registrants" | "form" | "scanner" | "communications">(initialTab as any || "registrants");
 
   useEffect(() => {
@@ -105,24 +108,41 @@ export default function EventDetailsPage() {
       "First Name", "Last Name", "Email", "Company", "Status", "Checked In", "Registered At",
       ...(event?.custom_fields_schema || []).map(f => f.label)
     ];
-    const rows = registrations.map(r => [
-      r.attendee.first_name,
-      r.attendee.last_name,
-      r.attendee.email,
-      r.attendee.company || "",
-      r.status,
-      r.checked_in ? "Yes" : "No",
-      new Date(r.created_at).toLocaleString(),
-      ...(event?.custom_fields_schema || []).map(f => r.custom_answers?.[f.id] || "")
+    const rows = registrations.map(reg => [
+      reg.attendee.first_name,
+      reg.attendee.last_name,
+      reg.attendee.email,
+      reg.attendee.company || "",
+      reg.status,
+      reg.checked_in ? "Yes" : "No",
+      new Date(reg.created_at).toLocaleString(),
+      ...(event?.custom_fields_schema || []).map(f => reg.custom_answers?.[f.id] || "")
     ]);
-    const csvContent = [headers.join(","), ...rows.map(row => row.map(cell => `"${cell}"`).join(","))].join("\n");
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
+    
+    const csvContent = "data:text/csv;charset=utf-8," + 
+      [headers.join(","), ...rows.map(r => r.map(v => `"${v}"`).join(","))].join("\n");
+    
+    const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `${event?.title.replace(/\s+/g, "_")}_registrations.csv`);
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `${event?.title?.replace(/\s+/g, '_') || 'event'}_manifest.csv`);
+    document.body.appendChild(link);
     link.click();
+    document.body.removeChild(link);
   };
+
+  const declinedCount = registrations.filter(r => r.status === "declined").length;
+  const confirmedCount = registrations.filter(r => r.status === "confirmed").length;
+
+  const filteredRegistrations = registrations.filter(reg => {
+    const search = searchTerm.toLowerCase();
+    return (
+      reg.attendee.first_name.toLowerCase().includes(search) ||
+      reg.attendee.last_name.toLowerCase().includes(search) ||
+      reg.attendee.email.toLowerCase().includes(search) ||
+      (reg.attendee.company || "").toLowerCase().includes(search)
+    );
+  });
 
   if (loading) {
     return (
@@ -215,7 +235,16 @@ export default function EventDetailsPage() {
                     </div>
                     <div>
                       <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Enrollment</p>
-                      <p className="font-bold text-[#0f172a]">{registrations.length} / {event.capacity}</p>
+                      <p className="font-bold text-[#0f172a]">{confirmedCount} / {event.capacity}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 bg-red-50 text-red-500 rounded-2xl">
+                      <UserX size={22} />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Declined</p>
+                      <p className="font-bold text-red-500">{declinedCount}</p>
                     </div>
                   </div>
                 </div>
@@ -269,15 +298,30 @@ export default function EventDetailsPage() {
         </div>
 
         {activeTab === "registrants" ? (
-          <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
-            <div className="px-10 py-8 border-b border-slate-50 flex justify-between items-center bg-slate-50/30">
-              <h2 className="text-xl font-black text-[#0f172a] font-bricolage italic uppercase tracking-tight">Active <span className="text-slate-300">Registrants</span></h2>
-              <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-white px-4 py-2 rounded-xl border border-slate-100">
-                {registrations.length} Verified
-              </div>
+          <div className="space-y-6">
+            <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 p-8 flex flex-col md:flex-row md:items-center justify-between gap-6">
+               <div className="relative flex-1 max-w-md">
+                  <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300" size={20} />
+                  <input 
+                    type="text" 
+                    placeholder="Search by name, email or company..." 
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-16 pr-8 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a] placeholder-slate-300 transition-all"
+                  />
+               </div>
+               <div className="flex items-center gap-4 px-6 py-4 bg-slate-50 rounded-2xl">
+                  <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Showing:</span>
+                  <span className="text-xs font-black text-[#0f172a]">{filteredRegistrations.length} Registrants</span>
+               </div>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
+
+            <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
+              <div className="px-10 py-8 border-b border-slate-50 flex justify-between items-center bg-slate-50/30">
+                <h2 className="text-xl font-black text-[#0f172a] font-bricolage italic uppercase tracking-tight">Active <span className="text-slate-300">Registrants</span></h2>
+              </div>
+              <div className="overflow-x-auto pb-4">
+                <table className="w-full text-left min-w-[1100px]">
                 <thead>
                   <tr className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em]">
                     <th className="px-10 py-6">Attendee Details</th>
@@ -288,17 +332,17 @@ export default function EventDetailsPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
-                  {registrations.length === 0 ? (
+                  {filteredRegistrations.length === 0 ? (
                     <tr>
                       <td colSpan={5} className="px-10 py-24 text-center">
                         <div className="bg-slate-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
                           <Users className="text-slate-200" size={32} />
                         </div>
-                        <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">No active registrations yet.</p>
+                        <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">No matching registrations found.</p>
                       </td>
                     </tr>
                   ) : (
-                    registrations.map((reg) => (
+                    filteredRegistrations.map((reg) => (
                       <tr key={reg.id} className="hover:bg-slate-50/50 transition-colors group">
                         <td className="px-10 py-8">
                           <div className="flex items-center gap-4">
@@ -373,6 +417,7 @@ export default function EventDetailsPage() {
               </table>
             </div>
           </div>
+        </div>
         ) : activeTab === "form" ? (
           <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 p-10 lg:p-14">
              <FormBuilder 

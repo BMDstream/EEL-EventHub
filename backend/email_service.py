@@ -61,6 +61,7 @@ def send_confirmation_email(to_email: str, first_name: str, event_title: str, cl
             "subject": f"Access Granted: {event_title}",
             "html": html_content
         })
+        print(f"RESEND SUCCESS: {r}")
         return r
     except Exception as e:
         print(f"Failed to send email: {e}")

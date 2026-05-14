@@ -216,22 +216,22 @@ export default function PublicRegistrationPage() {
               <div className="grid grid-cols-2 gap-6">
                 <div className="space-y-3">
                   <label className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500 ml-1">First Name</label>
-                  <input required type="text" name="first_name" value={formData.first_name} onChange={handleChange} className="w-full px-6 py-5 rounded-[1.5rem] bg-black border border-white/5 focus:border-yellow-500/50 focus:ring-4 focus:ring-yellow-500/5 outline-none transition-all font-bold text-white placeholder-zinc-700" placeholder="Jane" />
+                  <input required type="text" name="first_name" value={formData.first_name} onChange={handleChange} className="w-full px-6 py-5 rounded-[1.5rem] bg-zinc-950 border border-white/20 focus:border-yellow-500 focus:ring-4 focus:ring-yellow-500/10 outline-none transition-all font-bold text-white placeholder-zinc-600" placeholder="Jane" />
                 </div>
                 <div className="space-y-3">
                   <label className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500 ml-1">Last Name</label>
-                  <input required type="text" name="last_name" value={formData.last_name} onChange={handleChange} className="w-full px-6 py-5 rounded-[1.5rem] bg-black border border-white/5 focus:border-yellow-500/50 focus:ring-4 focus:ring-yellow-500/5 outline-none transition-all font-bold text-white placeholder-zinc-700" placeholder="Doe" />
+                  <input required type="text" name="last_name" value={formData.last_name} onChange={handleChange} className="w-full px-6 py-5 rounded-[1.5rem] bg-zinc-950 border border-white/20 focus:border-yellow-500 focus:ring-4 focus:ring-yellow-500/10 outline-none transition-all font-bold text-white placeholder-zinc-600" placeholder="Doe" />
                 </div>
               </div>
 
               <div className="space-y-3">
                 <label className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500 ml-1">Intelligence / Email</label>
-                <input required type="email" name="email" value={formData.email} onChange={handleChange} placeholder="jane.doe@company.com" className="w-full px-6 py-5 rounded-[1.5rem] bg-black border border-white/5 focus:border-yellow-500/50 focus:ring-4 focus:ring-yellow-500/5 outline-none transition-all font-bold text-white placeholder-zinc-700" />
+                <input required type="email" name="email" value={formData.email} onChange={handleChange} placeholder="jane.doe@company.com" className="w-full px-6 py-5 rounded-[1.5rem] bg-zinc-950 border border-white/20 focus:border-yellow-500 focus:ring-4 focus:ring-yellow-500/10 outline-none transition-all font-bold text-white placeholder-zinc-600" />
               </div>
 
               <div className="space-y-3">
                 <label className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500 ml-1">Organization</label>
-                <input type="text" name="company" value={formData.company} onChange={handleChange} placeholder="Global Enterprises Inc." className="w-full px-6 py-5 rounded-[1.5rem] bg-black border border-white/5 focus:border-yellow-500/50 focus:ring-4 focus:ring-yellow-500/5 outline-none transition-all font-bold text-white placeholder-zinc-700" />
+                <input type="text" name="company" value={formData.company} onChange={handleChange} placeholder="Global Enterprises Inc." className="w-full px-6 py-5 rounded-[1.5rem] bg-zinc-950 border border-white/20 focus:border-yellow-500 focus:ring-4 focus:ring-yellow-500/10 outline-none transition-all font-bold text-white placeholder-zinc-600" />
               </div>
 
               {/* RSVP Question */}
@@ -267,7 +267,7 @@ export default function PublicRegistrationPage() {
                       required={field.required}
                       type="text"
                       onChange={(e) => handleCustomChange(field.id, e.target.value)}
-                      className="w-full px-6 py-5 rounded-[1.5rem] bg-black border border-white/5 focus:border-yellow-500/50 focus:ring-4 focus:ring-yellow-500/5 outline-none transition-all font-bold text-white placeholder-zinc-700"
+                      className="w-full px-6 py-5 rounded-[1.5rem] bg-zinc-950 border border-white/20 focus:border-yellow-500 focus:ring-4 focus:ring-yellow-500/10 outline-none transition-all font-bold text-white placeholder-zinc-600"
                     />
                   )}
 
@@ -276,7 +276,7 @@ export default function PublicRegistrationPage() {
                       <select
                         required={field.required}
                         onChange={(e) => handleCustomChange(field.id, e.target.value)}
-                        className="w-full px-6 py-5 rounded-[1.5rem] bg-black border border-white/5 focus:border-yellow-500/50 focus:ring-4 focus:ring-yellow-500/5 outline-none transition-all font-bold text-white appearance-none cursor-pointer"
+                        className="w-full px-6 py-5 rounded-[1.5rem] bg-zinc-950 border border-white/20 focus:border-yellow-500 focus:ring-4 focus:ring-yellow-500/10 outline-none transition-all font-bold text-white appearance-none cursor-pointer"
                       >
                         <option value="">Select Option</option>
                         {field.options?.map(opt => <option key={opt} value={opt}>{opt}</option>)}
@@ -286,7 +286,7 @@ export default function PublicRegistrationPage() {
                   )}
 
                   {field.type === "checkbox" && (
-                    <label className="flex items-center gap-4 cursor-pointer group p-5 bg-black rounded-[1.5rem] border border-white/5 hover:border-yellow-500/30 transition-all">
+                    <label className="flex items-center gap-4 cursor-pointer group p-5 bg-zinc-950 rounded-[1.5rem] border border-white/20 hover:border-yellow-500/30 transition-all">
                        <input 
                          type="checkbox" 
                          onChange={(e) => handleCustomChange(field.id, e.target.checked)}
