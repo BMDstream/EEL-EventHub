@@ -16,7 +16,7 @@ import {
   Moon
 } from "lucide-react";
 import { useState, useEffect } from "react";
-import { signOut } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -59,7 +59,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     }
   };
 
-  const navItems = [
+  const { data: session } = useSession();
+  const userRole = (session?.user as any)?.role || "staff";
+
+  const allNavItems = [
     { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
     { name: "Events", href: "/admin/events", icon: Calendar },
     { name: "Forms", href: "/admin/forms", icon: Settings },
@@ -67,6 +70,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { name: "Analytics", href: "/admin/analytics", icon: TrendingUp },
     { name: "Security", href: "/admin/security", icon: ShieldCheck },
   ];
+
+  const navItems = allNavItems.filter(item => {
+    if (userRole === "staff") {
+      return item.name === "Dashboard" || item.name === "Events";
+    }
+    if (userRole === "manager") {
+      return item.name !== "Team" && item.name !== "Security";
+    }
+    return true; // admin
+  });
 
   return (
     <div className="min-h-screen bg-[#f1f5f9] flex font-outfit transition-colors duration-500 dark:bg-[#020617]">

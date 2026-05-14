@@ -34,6 +34,23 @@ const handler = NextAuth({
       if (user) {
         token.role = (user as any).role;
       }
+      
+      // If role is missing (e.g. Azure AD login), try to fetch from DB
+      if (!token.role && token.email) {
+        try {
+          const res = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/py/users`);
+          if (res.ok) {
+            const users = await res.json();
+            const dbUser = users.find((u: any) => u.email === token.email);
+            if (dbUser) {
+              token.role = dbUser.role;
+            }
+          }
+        } catch (err) {
+          console.error("Failed to fetch user role from DB", err);
+        }
+      }
+      
       return token;
     },
     async session({ session, token }) {

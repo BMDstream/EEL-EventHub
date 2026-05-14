@@ -263,35 +263,39 @@ export default function EventDetailsPage() {
                   <Download size={20} />
                   Export Manifest
                 </button>
-                <Link
-                  href={`/admin/events/${id}/edit`}
-                  className="flex items-center justify-center gap-3 bg-white hover:bg-slate-50 text-[#0f172a] px-8 py-5 rounded-2xl font-black transition-all border border-slate-200 uppercase tracking-widest text-xs"
-                >
-                  Edit Configuration
-                </Link>
-                <button
-                   onClick={async () => {
-                     const email = prompt("Enter test email address:");
-                     if (!email) return;
-                     try {
-                       const res = await fetch(`/api/py/events/${id}/test-email`, {
-                         method: "POST",
-                         headers: { "Content-Type": "application/json" },
-                         body: JSON.stringify({ email })
-                       });
-                       if (res.ok) alert("Test email dispatched!");
-                       else {
-                         const err = await res.json();
-                         alert(`Failed: ${err.detail || "Unknown error"}`);
-                       }
-                     } catch (err) {
-                       alert("Error sending test email");
-                     }
-                   }}
-                   className="flex items-center justify-center gap-3 bg-slate-50 hover:bg-slate-100 text-[#0f172a] px-8 py-5 rounded-2xl font-black transition-all border border-slate-100 uppercase tracking-widest text-xs"
-                 >
-                   Test Email Service
-                 </button>
+                {(userRole === "admin" || userRole === "manager") && (
+                   <>
+                    <Link
+                      href={`/admin/events/${id}/edit`}
+                      className="flex items-center justify-center gap-3 bg-white hover:bg-slate-50 text-[#0f172a] px-8 py-5 rounded-2xl font-black transition-all border border-slate-200 uppercase tracking-widest text-xs"
+                    >
+                      Edit Configuration
+                    </Link>
+                    <button
+                       onClick={async () => {
+                         const email = prompt("Enter test email address:");
+                         if (!email) return;
+                         try {
+                           const res = await fetch(`/api/py/events/${id}/test-email`, {
+                             method: "POST",
+                             headers: { "Content-Type": "application/json" },
+                             body: JSON.stringify({ email })
+                           });
+                           if (res.ok) alert("Test email dispatched!");
+                           else {
+                             const err = await res.json();
+                             alert(`Failed: ${err.detail || "Unknown error"}`);
+                           }
+                         } catch (err) {
+                           alert("Error sending test email");
+                         }
+                       }}
+                       className="flex items-center justify-center gap-3 bg-slate-50 hover:bg-slate-100 text-[#0f172a] px-8 py-5 rounded-2xl font-black transition-all border border-slate-100 uppercase tracking-widest text-xs"
+                     >
+                       Test Email Service
+                     </button>
+                   </>
+                )}
               </div>
             </div>
           </div>
@@ -304,7 +308,7 @@ export default function EventDetailsPage() {
              >
                 Registrants
              </button>
-             {userRole !== "staff" && (
+             {(userRole === "admin" || userRole === "manager") && (
                <button 
                  onClick={() => setActiveTab("form")}
                  className={`px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2 ${activeTab === "form" ? "border-yellow-400 text-[#0f172a]" : "border-transparent text-slate-400"}`}
@@ -318,7 +322,7 @@ export default function EventDetailsPage() {
              >
                 Live Scanner
              </button>
-             {userRole !== "staff" && (
+             {(userRole === "admin" || userRole === "manager") && (
                <button 
                  onClick={() => setActiveTab("communications")}
                  className={`px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2 ${activeTab === "communications" ? "border-yellow-400 text-[#0f172a]" : "border-transparent text-slate-400"}`}

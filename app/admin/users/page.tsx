@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Users, Plus, Shield, Mail, Trash2, Loader2, CheckCircle2 } from "lucide-react";
+import { Users, Plus, Shield, Mail, Trash2, Loader2, CheckCircle2, Lock } from "lucide-react";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 import AdminLayout from "@/components/AdminLayout";
 
 interface User {
@@ -13,6 +14,9 @@ interface User {
 }
 
 export default function UserManagementPage() {
+  const { data: session } = useSession();
+  const userRole = (session?.user as any)?.role || "staff";
+  
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -22,8 +26,24 @@ export default function UserManagementPage() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    fetchUsers();
-  }, []);
+    if (userRole === "admin") {
+      fetchUsers();
+    }
+  }, [userRole]);
+
+  if (userRole !== "admin") {
+    return (
+      <AdminLayout>
+        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-6">
+          <div className="w-24 h-24 bg-red-50 rounded-full flex items-center justify-center mb-8">
+            <Lock className="text-red-500" size={48} />
+          </div>
+          <h1 className="text-4xl font-black text-[#0f172a] mb-4 uppercase italic font-bricolage tracking-tight">Access <span className="text-red-500">Restricted</span></h1>
+          <p className="text-slate-500 font-medium max-w-md">You do not have the clearance level required to manage team members. Please contact a system administrator.</p>
+        </div>
+      </AdminLayout>
+    );
+  }
 
   const fetchUsers = async () => {
     try {

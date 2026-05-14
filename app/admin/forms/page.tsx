@@ -8,9 +8,11 @@ import {
   ArrowRight,
   Sparkles,
   Search,
-  Layout
+  Layout,
+  Lock
 } from "lucide-react";
 import { motion } from "framer-motion";
+import { useSession } from "next-auth/react";
 import AdminLayout from "@/components/AdminLayout";
 
 interface Event {
@@ -21,11 +23,20 @@ interface Event {
 }
 
 export default function FormsHubPage() {
+  const { data: session } = useSession();
+  const userRole = (session?.user as any)?.role || "staff";
+
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
+    if (userRole === "admin" || userRole === "manager") {
+      fetchEvents();
+    }
+  }, [userRole]);
+
+  const fetchEvents = () => {
     fetch("/api/py/events")
       .then((res) => res.json())
       .then((data) => {
@@ -36,7 +47,21 @@ export default function FormsHubPage() {
         console.error("Failed to fetch events", err);
         setLoading(false);
       });
-  }, []);
+  };
+
+  if (userRole === "staff") {
+    return (
+      <AdminLayout>
+        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-6">
+          <div className="w-24 h-24 bg-red-50 rounded-full flex items-center justify-center mb-8">
+            <Lock className="text-red-500" size={48} />
+          </div>
+          <h1 className="text-4xl font-black text-[#0f172a] mb-4 uppercase italic font-bricolage tracking-tight">Access <span className="text-red-500">Restricted</span></h1>
+          <p className="text-slate-500 font-medium max-w-md">You do not have the clearance level required to access Form Studio. Please contact a system administrator.</p>
+        </div>
+      </AdminLayout>
+    );
+  }
 
   const filteredEvents = events.filter(e => 
     e.title.toLowerCase().includes(searchTerm.toLowerCase())
