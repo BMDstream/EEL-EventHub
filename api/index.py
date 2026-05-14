@@ -194,13 +194,13 @@ def register_attendee(
             event = session.get(Event, event_id)
             if event:
                 print(f"Attempting to send email to {attendee.email} for PIN {pin}")
-                send_confirmation_email(
+                res = send_confirmation_email(
                     to_email=attendee.email,
                     first_name=attendee.first_name,
                     event_title=event.title,
                     clearance_id=pin
                 )
-                print(f"Email dispatch triggered successfully")
+                print(f"Email dispatch triggered successfully. Resend ID: {res}")
         except Exception as e:
             print(f"Error triggering confirmation email: {e}")
     else:
@@ -223,13 +223,13 @@ def test_email(event_id: str, data: dict, session: Session = Depends(get_session
         
     try:
         from backend.email_service import send_confirmation_email
-        send_confirmation_email(
+        res = send_confirmation_email(
             to_email=email,
             first_name="Test",
             event_title=event.title,
             clearance_id="1234"
         )
-        return {"ok": True}
+        return {"ok": True, "resend_id": res}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

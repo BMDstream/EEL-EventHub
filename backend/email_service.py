@@ -36,21 +36,46 @@ def send_confirmation_email(to_email: str, first_name: str, event_title: str, cl
     qr_base64 = generate_qr_base64(clearance_id)
 
     html_content = f"""
-    <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 40px; border: 1px solid #eee; border-radius: 20px;">
-        <h2 style="color: #0f172a; text-transform: uppercase; font-style: italic;">Access Granted.</h2>
-        <p>Hello <strong>{first_name}</strong>,</p>
-        <p>Your orchestration for <strong>{event_title}</strong> is confirmed. Below are your secure credentials for entry.</p>
-        
-        <div style="background: #f8fafc; padding: 30px; border-radius: 20px; text-align: center; margin: 30px 0;">
-            <img src="data:image/png;base64,{qr_base64}" width="160" height="160" alt="QR Code" style="margin-bottom: 20px; border-radius: 10px;" />
-            <p style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.2em; color: #64748b; margin-bottom: 10px;">Unique Clearance ID</p>
-            <code style="font-size: 20px; font-weight: bold; color: #eab308;">{clearance_id}</code>
+    <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 40px auto; padding: 40px; border: 1px solid #f1f5f9; border-radius: 32px; background-color: #ffffff; color: #0f172a;">
+        <div style="text-align: center; margin-bottom: 40px;">
+            <div style="display: inline-block; background: #f8fafc; padding: 12px 24px; rounded-radius: 12px; border: 1px solid #e2e8f0;">
+                <span style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.3em; color: #94a3b8;">Official Dispatch</span>
+            </div>
         </div>
 
-        <p style="color: #64748b; font-size: 14px;">Please present your Clearance ID or the QR code at the registration desk on arrival.</p>
+        <h2 style="font-size: 32px; font-weight: 900; color: #0f172a; margin-bottom: 24px; text-transform: uppercase; font-style: italic; letter-spacing: -0.02em;">Access <span style="color: #94a3b8;">Granted.</span></h2>
         
-        <hr style="border: 0; border-top: 1px solid #eee; margin: 30px 0;" />
-        <p style="font-size: 12px; color: #94a3b8;">Excellence Entertainment Logistics • Automated Dispatch</p>
+        <p style="font-size: 16px; line-height: 1.6; margin-bottom: 32px;">
+            Hello <strong>{first_name}</strong>,<br><br>
+            Your orchestration for <strong>{event_title}</strong> is confirmed. Below are your secure credentials for entry verification.
+        </p>
+        
+        <div style="background: #f8fafc; padding: 40px; border-radius: 24px; text-align: center; border: 1px solid #f1f5f9; margin-bottom: 32px;">
+            <img src="data:image/png;base64,{qr_base64}" width="180" height="180" alt="Clearance QR Code" style="margin-bottom: 24px; border-radius: 16px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);" />
+            <p style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.2em; color: #64748b; margin-bottom: 12px;">Unique Clearance ID</p>
+            <div style="display: inline-block; background: #ffffff; padding: 12px 24px; border-radius: 12px; border: 2px solid #f1f5f9;">
+                <code style="font-size: 24px; font-weight: 900; color: #0f172a; letter-spacing: 0.2em;">{clearance_id}</code>
+            </div>
+        </div>
+
+        <div style="background: #fffbeb; padding: 24px; border-radius: 16px; border: 1px solid #fef3c7; margin-bottom: 40px;">
+            <p style="color: #b45309; font-size: 13px; font-weight: 600; margin: 0; line-height: 1.5;">
+                Please present this digital clearance or the 4-digit PIN at the registration desk on arrival.
+            </p>
+        </div>
+        
+        <hr style="border: 0; border-top: 1px solid #f1f5f9; margin-bottom: 32px;" />
+        
+        <div style="text-align: center;">
+            <p style="font-size: 12px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px;">Excellence Entertainment Logistics</p>
+            <p style="font-size: 11px; color: #cbd5e1; margin-bottom: 24px;">
+                Automated Event Management System<br>
+                Johannesburg, South Africa
+            </p>
+            <p style="font-size: 10px; color: #e2e8f0;">
+                You are receiving this because you registered for {event_title}.
+            </p>
+        </div>
     </div>
     """
 
@@ -59,7 +84,10 @@ def send_confirmation_email(to_email: str, first_name: str, event_title: str, cl
             "from": "EEL-EventHub <events@eelogistics.co.za>",
             "to": to_email,
             "subject": f"Access Granted: {event_title}",
-            "html": html_content
+            "html": html_content,
+            "headers": {
+                "X-Entity-Ref-ID": clearance_id
+            }
         })
         print(f"RESEND SUCCESS: {r}")
         return r
