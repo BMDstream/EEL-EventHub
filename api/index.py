@@ -211,6 +211,28 @@ def register_attendee(
         "pin": pin
     }
 
+@app.post("/api/py/events/{event_id}/test-email")
+def test_email(event_id: str, data: dict, session: Session = Depends(get_session)):
+    email = data.get("email")
+    if not email:
+        raise HTTPException(status_code=400, detail="Email required")
+    
+    event = session.get(Event, event_id)
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+        
+    try:
+        from backend.email_service import send_confirmation_email
+        send_confirmation_email(
+            to_email=email,
+            first_name="Test",
+            event_title=event.title,
+            clearance_id="1234"
+        )
+        return {"ok": True}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.delete("/api/py/registrations/{registration_id}")
 def delete_registration(registration_id: str, session: Session = Depends(get_session)):
     registration = session.get(Registration, registration_id)
