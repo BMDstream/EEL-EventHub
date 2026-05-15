@@ -499,7 +499,7 @@ export default function EventDetailsPage() {
                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 ml-1">QR Verification</h3>
                    <QRScanner 
                      onScan={async (regId) => {
-                       const res = await fetch(`/api/py/registrations/${regId}/checkin`, { method: "PUT" });
+                       const res = await fetch(`/api/py/registrations/${regId}/checkin?mode=checkin`, { method: "PUT" });
                        if (!res.ok) {
                          const error = await res.json();
                          throw new Error(error.detail || "Authentication Failed");

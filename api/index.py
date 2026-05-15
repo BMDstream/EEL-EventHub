@@ -289,19 +289,16 @@ def delete_user(user_id: int, session: Session = Depends(get_session)):
     return {"ok": True}
 
 @app.put("/api/py/registrations/{registration_id}/checkin", response_model=Registration)
-def toggle_checkin(registration_id: str, session: Session = Depends(get_session)):
+def toggle_checkin(registration_id: str, mode: str = "toggle", session: Session = Depends(get_session)):
     # Try looking up by UUID first
     registration = None
     try:
         from uuid import UUID
-        # Check if it's a valid UUID
         val = UUID(registration_id, version=4)
         registration = session.get(Registration, val)
     except (ValueError, AttributeError):
-        # Not a valid UUID format, maybe it's a PIN?
         pass
     
-    # If not found by UUID, try looking up by PIN
     if not registration:
         registration = session.exec(
             select(Registration).where(Registration.pin == registration_id)
@@ -310,10 +307,15 @@ def toggle_checkin(registration_id: str, session: Session = Depends(get_session)
     if not registration:
         raise HTTPException(status_code=404, detail="Registration not found")
         
-    if registration.checked_in:
+    if mode == "checkin" and registration.checked_in:
         raise HTTPException(status_code=400, detail="Attendee already checked in")
         
-    registration.checked_in = True
+    if mode == "checkin":
+        registration.checked_in = True
+    else:
+        # Default is toggle for manual admin control
+        registration.checked_in = not registration.checked_in
+        
     session.add(registration)
     session.commit()
     session.refresh(registration)
