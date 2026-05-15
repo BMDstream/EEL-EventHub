@@ -168,7 +168,7 @@ export default function PublicRegistrationPage() {
               className="absolute inset-0 z-0 bg-cover bg-center" 
               style={{ backgroundImage: `url(${event.banner_url})` }}
             >
-              <div className="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+              <div className="absolute inset-0 bg-black/40"></div>
             </div>
           ) : (
             <div className="absolute top-0 right-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,rgba(234,179,8,0.1),transparent_70%)]"></div>
