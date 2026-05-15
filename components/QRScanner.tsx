@@ -10,7 +10,7 @@ interface QRScannerProps {
 
 export default function QRScanner({ onScan }: QRScannerProps) {
   const [scanning, setScanning] = useState(false);
-  const [status, setStatus] = useState<"idle" | "success" | "error" | "processing" | "loading">("idle");
+  const [status, setStatus] = useState<"idle" | "success" | "error" | "processing" | "loading" | "warning">("idle");
   const [message, setMessage] = useState("");
   const scannerRef = useRef<Html5Qrcode | null>(null);
 
@@ -55,8 +55,14 @@ export default function QRScanner({ onScan }: QRScannerProps) {
               setMessage("Check-in Successful");
               setTimeout(() => setStatus("idle"), 3000);
             } catch (err) {
-              setStatus("error");
-              setMessage(err instanceof Error ? err.message : "Invalid or already used credential");
+              const errMsg = err instanceof Error ? err.message : "Invalid or already used credential";
+              if (errMsg.toLowerCase().includes("already checked in")) {
+                setStatus("warning");
+                setMessage("Already Checked In");
+              } else {
+                setStatus("error");
+                setMessage(errMsg);
+              }
               setTimeout(() => setStatus("idle"), 4000);
             }
           },
@@ -140,22 +146,26 @@ export default function QRScanner({ onScan }: QRScannerProps) {
         </div>
       )}
 
-      {(status === "success" || status === "error" || status === "processing") && (
+      {(status === "success" || status === "error" || status === "processing" || status === "warning") && (
         <div className={`flex flex-col items-center gap-6 p-12 rounded-[3rem] shadow-2xl w-full max-w-md animate-in zoom-in-95 duration-300 ${
           status === "success" ? "bg-green-500 text-white" : 
           status === "error" ? "bg-red-500 text-white" : 
+          status === "warning" ? "bg-yellow-400 text-black" :
           "bg-[#0f172a] text-white"
         }`}>
           {status === "processing" && <Loader2 className="animate-spin" size={64} />}
           {status === "success" && <CheckCircle2 size={64} />}
           {status === "error" && <XCircle size={64} />}
+          {status === "warning" && <AlertCircle size={64} />}
           
           <div className="text-center">
              <p className="text-2xl font-black italic uppercase tracking-tighter font-bricolage leading-tight">{message}</p>
              {status !== "processing" && (
                <button 
                  onClick={() => setStatus("idle")}
-                 className="mt-8 px-10 py-4 bg-white/20 hover:bg-white/30 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border border-white/10"
+                 className={`mt-8 px-10 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border ${
+                   status === "warning" ? "bg-black/10 hover:bg-black/20 border-black/10" : "bg-white/20 hover:bg-white/30 border-white/10"
+                 }`}
                >
                  Dismiss
                </button>
@@ -163,6 +173,7 @@ export default function QRScanner({ onScan }: QRScannerProps) {
           </div>
         </div>
       )}
+
     </div>
   );
 }

@@ -310,7 +310,10 @@ def toggle_checkin(registration_id: str, session: Session = Depends(get_session)
     if not registration:
         raise HTTPException(status_code=404, detail="Registration not found")
         
-    registration.checked_in = not registration.checked_in
+    if registration.checked_in:
+        raise HTTPException(status_code=400, detail="Attendee already checked in")
+        
+    registration.checked_in = True
     session.add(registration)
     session.commit()
     session.refresh(registration)
