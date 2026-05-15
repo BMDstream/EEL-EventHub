@@ -154,22 +154,48 @@ def send_confirmation_email(to_email: str, first_name: str, event_title: str, cl
         print(f"Failed to send email: {e}")
         return None
 
-def send_broadcast_email(to_emails: List[str], subject: str, body: str, event_title: str, signature: str = None):
-    """Sends a broadcast email to multiple attendees."""
+def send_broadcast_email(to_emails: List[str], subject: str, body: str, event_title: str, signature: str = None, config: Dict[str, Any] = None):
+    """Sends a broadcast email to multiple attendees with premium styling."""
     if not resend.api_key or MOCK_EMAIL_SERVICE:
         print(f"MOCK BROADCAST to {len(to_emails)} users: {subject}")
         return True
 
-    signature_html = f'<div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-style: italic; color: #64748b;">{signature.replace("\r\n", "<br>").replace("\n", "<br>")}</div>' if signature else ""
+    if not config:
+        config = {
+            "primary_color": "#0f172a",
+            "accent_color": "#94a3b8"
+        }
+
+    primary_color = config.get("primary_color", "#0f172a")
+    accent_color = config.get("accent_color", "#94a3b8")
+
+    signature_html = f'<div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #f1f5f9; font-style: italic; color: #64748b; font-size: 14px;">{signature.replace("\r\n", "<br>").replace("\n", "<br>")}</div>' if signature else ""
 
     html_content = f"""
-    <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 40px; border: 1px solid #eee; border-radius: 20px;">
-        <h2 style="color: #0f172a; text-transform: uppercase; font-style: italic;">Update: {event_title}</h2>
-        <div style="line-height: 1.6; color: #334155;">
+    <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 40px auto; padding: 40px; border: 1px solid #f1f5f9; border-radius: 40px; background-color: #ffffff; color: {primary_color}; box-shadow: 0 20px 50px rgba(0,0,0,0.05);">
+        <div style="text-align: center; margin-bottom: 48px;">
+            <div style="display: inline-block; background: {primary_color}; padding: 12px 28px; border-radius: 16px;">
+                <span style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.4em; color: #ffffff;">Broadcast Dispatch</span>
+            </div>
+        </div>
+
+        <h2 style="font-size: 32px; font-weight: 900; color: {primary_color}; margin-bottom: 28px; text-transform: uppercase; font-style: italic; letter-spacing: -0.04em; line-height: 1.1;">
+            Update: <span style="color: {accent_color};">{event_title}</span>
+        </h2>
+        
+        <div style="font-size: 16px; line-height: 1.8; color: #334155; margin-bottom: 40px;">
             {body.replace("\r\n", "<br>").replace("\n", "<br>")}
         </div>
+
         {signature_html}
-        <hr style="border: 0; border-top: 1px solid #eee; margin: 30px 0;" />
+        
+        <hr style="border: 0; border-top: 1px solid #f1f5f9; margin: 40px 0;" />
+        
+        <div style="text-align: center;">
+            <p style="font-size: 10px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.2em;">
+                Automated Event Management System • Security Tier 4
+            </p>
+        </div>
     </div>
     """
 

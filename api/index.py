@@ -455,10 +455,12 @@ def broadcast_to_attendees(
     
     emails = [att.email for reg, att in registrations]
     
-    if not emails:
-        return {"ok": True, "sent": 0}
+    # Get email config
+    from backend.models import SystemSetting
+    email_setting = session.exec(select(SystemSetting).where(SystemSetting.key == "email_config")).first()
+    config = email_setting.value if email_setting else {}
     
-    success = send_broadcast_email(emails, subject, body, event.title, signature)
+    success = send_broadcast_email(emails, subject, body, event.title, signature, config)
     
     return {"ok": success, "sent": len(emails)}
 
