@@ -141,7 +141,7 @@ export default function PublicRegistrationPage() {
             <div className="flex justify-center mb-4">
               <div className="bg-white p-2 rounded-xl">
                 <QRCodeSVG 
-                  value={registeredPin || registeredId || ""} 
+                  value={registeredId || ""} 
                   size={160}
                   level="M"
                 />
