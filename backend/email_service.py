@@ -28,8 +28,8 @@ def generate_qr_base64(data: str):
     img.save(buffered, format="PNG")
     return base64.b64encode(buffered.getvalue()).decode()
 
-def send_confirmation_email(to_email: str, first_name: str, event_title: str, clearance_id: str, qr_code_url: str = None, config: Dict[str, Any] = None):
-    """Sends a registration confirmation email with an embedded QR code."""
+def send_confirmation_email(to_email: str, first_name: str, event_title: str, clearance_id: str, event_details: Dict[str, Any] = None, qr_code_url: str = None, config: Dict[str, Any] = None):
+    """Sends a registration confirmation email with an embedded QR code and event details."""
     if not resend.api_key or MOCK_EMAIL_SERVICE:
         print(f"MOCK CONFIRMATION to {to_email}: Welcome to {event_title}! Your ID is {clearance_id}")
         return {"id": "mock-confirmation-id"}
@@ -45,12 +45,51 @@ def send_confirmation_email(to_email: str, first_name: str, event_title: str, cl
 
     qr_base64 = generate_qr_base64(clearance_id)
     
-    # Process body text for basic bolding
+    # Process body text
     body_html = config.get("body_text", "").replace("**{event_title}**", f"<strong>{event_title}</strong>").replace("{event_title}", event_title).replace("\n", "<br>")
     footer_html = config.get("footer_text", "").replace("\n", "<br>")
     primary_color = config.get("primary_color", "#0f172a")
     accent_color = config.get("accent_color", "#94a3b8")
     heading_text = config.get("heading_text", "Access Granted.")
+
+    # Format event details if provided
+    details_html = ""
+    if event_details:
+        from datetime import datetime
+        try:
+            # Handle both string and datetime objects
+            dt_raw = event_details.get('start_date')
+            if isinstance(dt_raw, str):
+                dt = datetime.fromisoformat(dt_raw.replace('Z', '+00:00'))
+            else:
+                dt = dt_raw
+            
+            date_str = dt.strftime("%A, %B %d, %Y")
+            time_str = dt.strftime("%I:%M %p")
+        except:
+            date_str = str(event_details.get('start_date'))
+            time_str = "TBA"
+
+        details_html = f"""
+        <div style="background: #ffffff; padding: 32px; border: 1px solid #f1f5f9; border-radius: 32px; margin-bottom: 40px;">
+            <p style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.3em; color: {accent_color}; margin-bottom: 24px;">Engagement Details</p>
+            
+            <div style="margin-bottom: 20px;">
+                <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin: 0 0 4px 0;">Event</p>
+                <p style="font-size: 18px; font-weight: 800; color: {primary_color}; margin: 0;">{event_title}</p>
+            </div>
+
+            <div style="margin-bottom: 20px;">
+                <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin: 0 0 4px 0;">Date & Time</p>
+                <p style="font-size: 16px; font-weight: 700; color: #0f172a; margin: 0;">{date_str} @ {time_str}</p>
+            </div>
+
+            <div>
+                <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin: 0 0 4px 0;">Venue</p>
+                <p style="font-size: 16px; font-weight: 700; color: #0f172a; margin: 0;">{event_details.get('location', 'TBA')}</p>
+            </div>
+        </div>
+        """
 
     html_content = f"""
     <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 40px auto; padding: 40px; border: 1px solid #f1f5f9; border-radius: 40px; background-color: #ffffff; color: {primary_color}; box-shadow: 0 20px 50px rgba(0,0,0,0.05);">
@@ -69,6 +108,8 @@ def send_confirmation_email(to_email: str, first_name: str, event_title: str, cl
             {body_html}
         </p>
         
+        {details_html}
+
         <div style="background: #f8fafc; padding: 48px; border-radius: 32px; text-align: center; border: 1px solid #f1f5f9; margin-bottom: 40px; position: relative; overflow: hidden;">
             <div style="position: absolute; top: -10px; right: -10px; font-size: 120px; font-weight: 900; color: #000; opacity: 0.02; font-style: italic;">EEL</div>
             <img src="data:image/png;base64,{qr_base64}" width="200" height="200" alt="Clearance QR Code" style="margin-bottom: 32px; border-radius: 20px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.15);" />

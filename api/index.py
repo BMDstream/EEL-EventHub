@@ -281,6 +281,10 @@ def register_attendee(
                     first_name=attendee.first_name,
                     event_title=event.title,
                     clearance_id=registration.pin,
+                    event_details={
+                        "start_date": event.start_date,
+                        "location": event.location
+                    },
                     config=config
                 )
         except Exception as e:
