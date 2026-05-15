@@ -12,9 +12,11 @@ import {
   Ticket, 
   ArrowUpRight,
   Activity,
-  CheckCircle2
+  CheckCircle2,
+  ShieldCheck
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useSession } from "next-auth/react";
 import AdminLayout from "@/components/AdminLayout";
 
 interface Event {
@@ -31,6 +33,8 @@ export default function AdminDashboard() {
   const [events, setEvents] = useState<Event[]>([]);
   const [statsData, setStatsData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const { data: session } = useSession();
+  const userRole = (session?.user as any)?.role || "staff";
 
   useEffect(() => {
     const fetchData = async () => {
@@ -56,7 +60,7 @@ export default function AdminDashboard() {
     { name: "Total Events", value: statsData?.events || 0, icon: Calendar, change: "+0%", color: "text-blue-600", bg: "bg-blue-50" },
     { name: "Total Registrations", value: statsData?.registrations || 0, icon: Users, change: "+0%", color: "text-green-600", bg: "bg-green-50" },
     { name: "Check-in Rate", value: statsData?.check_in_rate || "0%", icon: CheckCircle2, change: "+0%", color: "text-yellow-600", bg: "bg-yellow-50" },
-    { name: "Projected Revenue", value: statsData?.revenue || "R0.00", icon: Ticket, change: "+0%", color: "text-purple-600", bg: "bg-purple-50" },
+    { name: "Digital Clearance", value: "Level 4", icon: ShieldCheck, change: "Active", color: "text-purple-600", bg: "bg-purple-50" },
   ];
 
   const containerVariants = {
@@ -84,16 +88,18 @@ export default function AdminDashboard() {
           className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12"
         >
           <div>
-            <h1 className="text-5xl font-black text-[#0f172a] tracking-tighter font-bricolage italic mb-2 uppercase dark:text-white">COMMAND <span className="text-slate-300 dark:text-slate-600">CENTER</span></h1>
-            <p className="text-slate-500 font-medium text-lg dark:text-slate-400">Welcome back. Here is what's happening across your EEL events today.</p>
+            <h1 className="text-3xl md:text-5xl font-black text-[#0f172a] tracking-tighter font-bricolage italic mb-2 uppercase dark:text-white">COMMAND <span className="text-slate-300 dark:text-slate-600">CENTER</span></h1>
+            <p className="text-slate-500 font-medium text-base md:text-lg dark:text-slate-400">Welcome back. Here is what's happening across your EEL events today.</p>
           </div>
-          <Link 
-            href="/admin/create"
-            className="flex items-center gap-3 bg-[#0f172a] hover:bg-black text-white px-8 py-4 rounded-2xl font-black transition-all shadow-2xl shadow-slate-200 uppercase tracking-widest text-xs group dark:bg-yellow-400 dark:text-black dark:shadow-yellow-400/20"
-          >
-            <Plus size={20} className="group-hover:rotate-90 transition-transform duration-300" />
-            Create New Event
-          </Link>
+          {(userRole === "admin" || userRole === "manager") && (
+            <Link 
+              href="/admin/create"
+              className="flex items-center gap-3 bg-[#0f172a] hover:bg-black text-white px-8 py-4 rounded-2xl font-black transition-all shadow-2xl shadow-slate-200 uppercase tracking-widest text-xs group dark:bg-yellow-400 dark:text-black dark:shadow-yellow-400/20"
+            >
+              <Plus size={20} className="group-hover:rotate-90 transition-transform duration-300" />
+              Create New Event
+            </Link>
+          )}
         </motion.div>
 
         {/* Stats Grid */}
@@ -219,9 +225,11 @@ export default function AdminDashboard() {
                     </div>
                   </motion.div>
                 ))}
-                <button className="w-full py-4 bg-slate-50 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-400 hover:bg-slate-100 transition-all dark:bg-slate-800 dark:hover:bg-slate-700">
-                  View Full Audit Log
-                </button>
+                {userRole === "admin" && (
+                  <button className="w-full py-4 bg-slate-50 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-400 hover:bg-slate-100 transition-all dark:bg-slate-800 dark:hover:bg-slate-700">
+                    View Full Audit Log
+                  </button>
+                )}
              </motion.div>
           </div>
         </div>

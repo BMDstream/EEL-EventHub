@@ -19,7 +19,8 @@ import {
   MoreVertical,
   Settings,
   Sparkles,
-  ArrowUpRight
+  ArrowUpRight,
+  Eye
 } from "lucide-react";
 import AdminLayout from "@/components/AdminLayout";
 import FormBuilder from "@/components/FormBuilder";
@@ -138,6 +139,7 @@ export default function EventDetailsPage() {
 
   const declinedCount = registrations.filter(r => r.status === "declined").length;
   const confirmedCount = registrations.filter(r => r.status === "confirmed").length;
+  const checkedInCount = registrations.filter(r => r.checked_in).length;
 
   const filteredRegistrations = registrations.filter(reg => {
     const search = searchTerm.toLowerCase();
@@ -191,8 +193,8 @@ export default function EventDetailsPage() {
                    </span>
                    <span className="text-[10px] font-mono text-slate-300">ID: {id}</span>
                 </div>
-                <h1 className="text-5xl font-black text-[#0f172a] mb-6 tracking-tighter italic font-bricolage leading-none">{event.title}</h1>
-                <div className="flex items-center gap-2 mb-10 bg-slate-50 p-4 rounded-2xl border border-slate-100 group">
+                <h1 className="text-3xl md:text-5xl font-black text-[#0f172a] mb-6 tracking-tighter italic font-bricolage leading-none">{event.title}</h1>
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mb-10 bg-slate-50 p-4 rounded-2xl border border-slate-100 group">
                    <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest ml-1">Public Link:</p>
                    <code className="text-xs font-bold text-[#0f172a] bg-white px-3 py-1 rounded-lg border border-slate-100 flex-1 truncate">
                      {typeof window !== 'undefined' ? `${window.location.origin}/${event.slug}` : `/${event.slug}`}
@@ -252,6 +254,15 @@ export default function EventDetailsPage() {
                       <p className="font-bold text-red-500">{declinedCount}</p>
                     </div>
                   </div>
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 bg-green-50 text-green-600 rounded-2xl">
+                      <CheckCircle2 size={22} />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Checked In</p>
+                      <p className="font-bold text-green-600">{checkedInCount}</p>
+                    </div>
+                  </div>
                 </div>
               </div>
               <div className="flex flex-col gap-4 w-full md:w-auto">
@@ -262,6 +273,17 @@ export default function EventDetailsPage() {
                 >
                   <Download size={20} />
                   Export Manifest
+                </button>
+                <button
+                  onClick={() => {
+                    const url = `${window.location.origin}/view/${event.slug}`;
+                    navigator.clipboard.writeText(url);
+                    alert("Client dashboard link copied to clipboard!");
+                  }}
+                  className="flex items-center justify-center gap-3 bg-white hover:bg-slate-50 text-[#0f172a] px-8 py-5 rounded-2xl font-black transition-all border border-slate-200 uppercase tracking-widest text-xs"
+                >
+                  <Eye size={20} />
+                  Share Client Link
                 </button>
                 {(userRole === "admin" || userRole === "manager") && (
                    <>
@@ -301,32 +323,32 @@ export default function EventDetailsPage() {
           </div>
           
           {/* Tab Navigation */}
-          <div className="px-10 flex border-t border-slate-50 bg-slate-50/20">
+          <div className="px-10 flex border-t border-slate-50 bg-slate-50/20 overflow-x-auto whitespace-nowrap scrollbar-hide">
              <button 
                onClick={() => setActiveTab("registrants")}
-               className={`px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2 ${activeTab === "registrants" ? "border-yellow-400 text-[#0f172a]" : "border-transparent text-slate-400"}`}
+               className={`px-6 md:px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2 shrink-0 ${activeTab === "registrants" ? "border-yellow-400 text-[#0f172a]" : "border-transparent text-slate-400"}`}
              >
                 Registrants
              </button>
              {(userRole === "admin" || userRole === "manager") && (
-               <button 
-                 onClick={() => setActiveTab("form")}
-                 className={`px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2 ${activeTab === "form" ? "border-yellow-400 text-[#0f172a]" : "border-transparent text-slate-400"}`}
-               >
+                <button 
+                  onClick={() => setActiveTab("form")}
+                  className={`px-6 md:px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2 shrink-0 ${activeTab === "form" ? "border-yellow-400 text-[#0f172a]" : "border-transparent text-slate-400"}`}
+                >
                   Form Studio
                </button>
              )}
-             <button 
-               onClick={() => setActiveTab("scanner")}
-               className={`px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2 ${activeTab === "scanner" ? "border-yellow-400 text-[#0f172a]" : "border-transparent text-slate-400"}`}
-             >
+              <button 
+                onClick={() => setActiveTab("scanner")}
+                className={`px-6 md:px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2 shrink-0 ${activeTab === "scanner" ? "border-yellow-400 text-[#0f172a]" : "border-transparent text-slate-400"}`}
+              >
                 Live Scanner
              </button>
              {(userRole === "admin" || userRole === "manager") && (
-               <button 
-                 onClick={() => setActiveTab("communications")}
-                 className={`px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2 ${activeTab === "communications" ? "border-yellow-400 text-[#0f172a]" : "border-transparent text-slate-400"}`}
-               >
+                <button 
+                  onClick={() => setActiveTab("communications")}
+                  className={`px-6 md:px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2 shrink-0 ${activeTab === "communications" ? "border-yellow-400 text-[#0f172a]" : "border-transparent text-slate-400"}`}
+                >
                   Communications
                </button>
              )}
@@ -438,13 +460,15 @@ export default function EventDetailsPage() {
                           >
                             <MoreVertical size={18} />
                           </button>
-                          <button
-                            onClick={() => handleDeleteRegistration(reg.id)}
-                            disabled={deletingId === reg.id}
-                            className="text-slate-300 hover:text-red-500 p-2 transition-all"
-                          >
-                            {deletingId === reg.id ? <Loader2 size={18} className="animate-spin" /> : <Trash2 size={18} />}
-                          </button>
+                          {(userRole === "admin" || userRole === "manager") && (
+                            <button
+                              onClick={() => handleDeleteRegistration(reg.id)}
+                              disabled={deletingId === reg.id}
+                              className="text-slate-300 hover:text-red-500 p-2 transition-all"
+                            >
+                              {deletingId === reg.id ? <Loader2 size={18} className="animate-spin" /> : <Trash2 size={18} />}
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))
@@ -497,7 +521,7 @@ export default function EventDetailsPage() {
                        placeholder="ENTER 4-DIGIT PIN"
                        value={pin}
                        onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
-                       className="w-full text-center text-4xl font-black py-8 bg-white rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none text-[#0f172a] placeholder-slate-200 tracking-[0.5em]"
+                       className="w-full text-center text-2xl md:text-4xl font-black py-8 bg-white rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none text-[#0f172a] placeholder-slate-200 tracking-[0.2em] md:tracking-[0.5em]"
                      />
                      <button 
                        onClick={async () => {
@@ -554,6 +578,7 @@ export default function EventDetailsPage() {
                     const target = e.target as any;
                     const subject = target.subject.value;
                     const body = target.body.value;
+                    const signature = target.signature.value;
                     
                     if (!confirm(`Are you sure you want to send this broadcast to ${registrations.length} attendees?`)) return;
                     
@@ -561,7 +586,7 @@ export default function EventDetailsPage() {
                       const res = await fetch(`/api/py/events/${id}/broadcast`, {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ subject, body })
+                        body: JSON.stringify({ subject, body, signature })
                       });
                       if (res.ok) {
                         alert("Broadcast dispatched successfully!");
@@ -584,6 +609,10 @@ export default function EventDetailsPage() {
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Message Body</label>
                       <textarea required name="body" rows={6} placeholder="Type your message here..." className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a] resize-none" />
                    </div>
+                    <div className="space-y-3">
+                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Signature (Optional)</label>
+                       <textarea name="signature" rows={2} placeholder="Kind regards, EEL Team" className="w-full px-6 py-4 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a] resize-none text-sm" />
+                    </div>
                    <button type="submit" className="w-full bg-[#0f172a] hover:bg-black text-white font-black py-6 rounded-[2rem] shadow-2xl shadow-slate-200 transition-all uppercase tracking-[0.3em] text-xs">
                       Dispatch Broadcast
                    </button>

@@ -56,8 +56,8 @@ export default function EventsListPage() {
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
           <div>
-            <h1 className="text-5xl font-black text-[#0f172a] tracking-tighter font-bricolage italic uppercase dark:text-white">EVENT <span className="text-slate-300 dark:text-slate-600">CATALOG</span></h1>
-            <p className="text-slate-500 font-medium text-lg dark:text-slate-400">Browse and manage your full portfolio of excellence.</p>
+            <h1 className="text-3xl md:text-5xl font-black text-[#0f172a] tracking-tighter font-bricolage italic uppercase dark:text-white">EVENT <span className="text-slate-300 dark:text-slate-600">CATALOG</span></h1>
+            <p className="text-slate-500 font-medium text-base md:text-lg dark:text-slate-400">Browse and manage your full portfolio of excellence.</p>
           </div>
           {userRole !== "staff" && (
             <Link 
@@ -99,7 +99,8 @@ export default function EventsListPage() {
                <p className="text-slate-400">Try adjusting your search or create a new event.</p>
             </div>
           ) : (
-            <table className="w-full text-left border-collapse">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse min-w-[800px]">
                <thead>
                  <tr className="bg-slate-50/50 dark:bg-slate-800/50">
                     <th className="px-10 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Event Name</th>
@@ -114,8 +115,8 @@ export default function EventsListPage() {
                    <tr key={event.id} className="hover:bg-slate-50/50 transition-colors group dark:hover:bg-slate-800/50">
                       <td className="px-10 py-8">
                          <div>
-                            <p className="text-lg font-black text-[#0f172a] group-hover:text-yellow-500 transition-colors">{event.title}</p>
-                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Slug: {event.slug}</p>
+                            <p className="text-lg font-black text-[#0f172a] dark:text-white group-hover:text-yellow-500 transition-colors">{event.title}</p>
+                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1 dark:text-slate-500">Slug: {event.slug}</p>
                          </div>
                       </td>
                       <td className="px-10 py-8">
@@ -132,10 +133,10 @@ export default function EventsListPage() {
                       </td>
                       <td className="px-10 py-8">
                          <div className="flex items-center gap-3">
-                            <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden max-w-[80px]">
+                            <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden max-w-[80px] dark:bg-slate-800">
                                <div className="h-full bg-yellow-400 w-2/3"></div>
                             </div>
-                            <span className="text-xs font-black text-[#0f172a]">{event.capacity}</span>
+                            <span className="text-xs font-black text-[#0f172a] dark:text-slate-300">{event.capacity}</span>
                          </div>
                       </td>
                       <td className="px-10 py-8">
@@ -154,15 +155,16 @@ export default function EventsListPage() {
                          </button>
                          <Link 
                            href={`/admin/events/${event.id}`}
-                           className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#0f172a] hover:gap-3 transition-all"
+                           className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#0f172a] hover:gap-3 transition-all dark:text-yellow-500 dark:hover:text-white"
                          >
                            Control Panel <ArrowUpRight size={14} />
                          </Link>
                       </td>
                    </tr>
                  ))}
-               </tbody>
-            </table>
+                </tbody>
+             </table>
+            </div>
           )}
         </div>
       </div>

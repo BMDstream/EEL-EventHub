@@ -15,7 +15,10 @@ class Event(SQLModel, table=True):
     
     custom_fields_schema: Optional[List[Dict[str, Any]]] = Field(default=[], sa_column=Column(JSON))
     
-    registrations: List["Registration"] = Relationship(back_populates="event")
+    registrations: List["Registration"] = Relationship(
+        back_populates="event", 
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )
 
 class Attendee(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)

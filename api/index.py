@@ -36,7 +36,7 @@ def on_startup():
                 session.commit()
             except Exception:
                 session.rollback()
-
+ 
             # For Registration table
             try:
                 session.execute(text("ALTER TABLE \"registration\" ADD COLUMN custom_answers JSON"))
@@ -335,12 +335,14 @@ def broadcast_to_attendees(
     
     subject = data.get("subject", f"Reminder: {event.title}")
     body = data.get("body", "")
+    signature = data.get("signature", "")
     
     # Get all registrant emails
     registrations = session.exec(
         select(Registration, Attendee)
         .join(Attendee)
         .where(Registration.event_id == event_id)
+        .where(Registration.status == "confirmed")
     ).all()
     
     emails = [att.email for reg, att in registrations]
@@ -348,9 +350,29 @@ def broadcast_to_attendees(
     if not emails:
         return {"ok": True, "sent": 0}
     
-    success = send_broadcast_email(emails, subject, body, event.title)
+    success = send_broadcast_email(emails, subject, body, event.title, signature)
     
     return {"ok": success, "sent": len(emails)}
+
+@app.get("/api/py/events/{slug}/public-stats")
+def get_public_stats(slug: str, session: Session = Depends(get_session)):
+    event = session.exec(select(Event).where(Event.slug == slug)).first()
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+    
+    registrations = session.exec(select(Registration).where(Registration.event_id == event.id)).all()
+    
+    rsvp_count = len([r for r in registrations if r.status == "confirmed"])
+    declined_count = len([r for r in registrations if r.status == "declined"])
+    checked_in_count = len([r for r in registrations if r.checked_in])
+    
+    return {
+        "title": event.title,
+        "rsvp": rsvp_count,
+        "declined": declined_count,
+        "checked_in": checked_in_count,
+        "total": len(registrations)
+    }
 
 @app.get("/api/py/stats")
 def get_stats(session: Session = Depends(get_session)):

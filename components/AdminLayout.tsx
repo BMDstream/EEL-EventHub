@@ -13,14 +13,17 @@ import {
   Menu,
   X,
   Sun,
-  Moon
+  Moon,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { signOut, useSession } from "next-auth/react";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [logo, setLogo] = useState<string | null>(null);
   const [theme, setTheme] = useState<"dark" | "light">("light");
 
@@ -65,7 +68,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const allNavItems = [
     { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
     { name: "Events", href: "/admin/events", icon: Calendar },
-    { name: "Forms", href: "/admin/forms", icon: Settings },
     { name: "Team", href: "/admin/users", icon: Users },
     { name: "Analytics", href: "/admin/analytics", icon: TrendingUp },
     { name: "Security", href: "/admin/security", icon: ShieldCheck },
@@ -83,11 +85,32 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <div className="min-h-screen bg-[#f1f5f9] flex font-outfit transition-colors duration-500 dark:bg-[#020617]">
+      {/* Mobile Backdrop */}
+      {isSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden transition-opacity duration-500"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 z-50 w-72 bg-[#0f172a] text-white transition-all duration-500 ease-in-out transform ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"} lg:relative lg:translate-x-0`}>
-        <div className="h-full flex flex-col p-8">
+      <aside className={`
+        fixed inset-y-0 left-0 z-50 bg-[#0f172a] text-white transition-all duration-500 ease-in-out transform 
+        ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"} 
+        lg:relative lg:translate-x-0
+        ${isSidebarCollapsed ? "lg:w-24" : "lg:w-80"}
+      `}>
+        {/* Collapse Toggle (Desktop) */}
+        <button 
+          onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+          className="hidden lg:flex absolute -right-3 top-10 w-6 h-6 bg-yellow-400 text-black rounded-full items-center justify-center shadow-lg z-50 hover:scale-110 transition-transform"
+        >
+          {isSidebarCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+        </button>
+
+        <div className={`h-full flex flex-col p-8 transition-all ${isSidebarCollapsed ? "items-center px-4" : ""}`}>
           {/* Logo Section */}
-          <div className="flex items-center gap-3 mb-12 group relative">
+          <div className={`flex items-center gap-3 mb-12 group relative ${isSidebarCollapsed ? "justify-center" : ""}`}>
             <label className="cursor-pointer relative overflow-hidden w-10 h-10 bg-yellow-400 rounded-2xl flex items-center justify-center rotate-3 transition-transform hover:scale-110">
               {logo ? (
                 <img src={logo} alt="Logo" className="w-full h-full object-cover -rotate-3" />
@@ -99,10 +122,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 <span className="text-[8px] font-black uppercase">Edit</span>
               </div>
             </label>
-            <div>
-              <h1 className="text-xl font-black font-bricolage italic tracking-tight leading-none uppercase">EEL-<span className="text-yellow-400">EventHub</span></h1>
-              <p className="text-[8px] font-black uppercase tracking-[0.3em] text-slate-500">Excellence Logistics</p>
-            </div>
+            {!isSidebarCollapsed && (
+              <div className="transition-opacity duration-300">
+                <h1 className="text-xl font-black font-bricolage italic tracking-tight leading-none uppercase">EEL-<span className="text-yellow-400">EventHub</span></h1>
+                <p className="text-[8px] font-black uppercase tracking-[0.3em] text-slate-500">Excellence Logistics</p>
+              </div>
+            )}
           </div>
 
           {/* Navigation */}
@@ -113,14 +138,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 <Link
                   key={item.name}
                   href={item.href}
+                  onClick={() => setIsSidebarOpen(false)}
                   className={`flex items-center gap-4 px-5 py-4 rounded-2xl transition-all group ${
                     isActive 
                       ? "bg-yellow-400 text-black shadow-xl shadow-yellow-400/20 font-black" 
                       : "text-slate-400 hover:bg-slate-800 hover:text-white font-bold"
-                  }`}
+                  } ${isSidebarCollapsed ? "justify-center px-0 w-12 h-12" : ""}`}
+                  title={isSidebarCollapsed ? item.name : ""}
                 >
                   <item.icon size={20} className={isActive ? "text-black" : "text-slate-500 group-hover:text-white"} />
-                  <span className="text-sm uppercase tracking-widest">{item.name}</span>
+                  {!isSidebarCollapsed && <span className="text-sm uppercase tracking-widest truncate">{item.name}</span>}
                 </Link>
               );
             })}
@@ -130,10 +157,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <div className="pt-8 border-t border-slate-800">
             <button 
               onClick={() => signOut({ callbackUrl: "/" })}
-              className="flex items-center gap-4 px-5 py-4 w-full rounded-2xl text-slate-400 hover:bg-red-500/10 hover:text-red-500 transition-all font-bold group"
+              className={`flex items-center gap-4 px-5 py-4 w-full rounded-2xl text-slate-400 hover:bg-red-500/10 hover:text-red-500 transition-all font-bold group ${isSidebarCollapsed ? "justify-center px-0 w-12 h-12" : ""}`}
+              title={isSidebarCollapsed ? "Sign Out" : ""}
             >
-              <LogOut size={20} className="group-hover:translate-x-1 transition-transform" />
-              <span className="text-sm uppercase tracking-widest">Sign Out</span>
+              <LogOut size={20} className="group-hover:translate-x-1 transition-transform shrink-0" />
+              {!isSidebarCollapsed && <span className="text-sm uppercase tracking-widest truncate">Sign Out</span>}
             </button>
           </div>
         </div>
@@ -170,7 +198,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </header>
 
         {/* Page Content */}
-        <div className="p-8 lg:p-12 overflow-y-auto">
+        <div className="p-4 md:p-8 lg:p-12 overflow-y-auto">
           {children}
         </div>
       </main>

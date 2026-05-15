@@ -16,16 +16,52 @@ const handler = NextAuth({
       issuer: `https://login.microsoftonline.com/${process.env.AZURE_AD_TENANT_ID}/v2.0`,
     }),
     CredentialsProvider({
-      name: "Admin Login",
+      name: "Account",
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" }
       },
       async authorize(credentials) {
-        if (credentials?.email === "admin@eel-eventhub.com" && credentials?.password === "EEL-Admin-2026!") {
-          return { id: "1", name: "Super Admin", email: "admin@eel-eventhub.com", role: "admin" }
+        if (!credentials?.email || !credentials?.password) return null;
+
+        const email = credentials.email.toLowerCase();
+        const password = credentials.password;
+
+        // 1. Primary check: Query the database directly (Native & Reliable)
+        try {
+          const { default: sql } = await import("@/lib/db");
+          // Use the "user" table (quoted because it's a reserved keyword in Postgres)
+          const results = await sql`
+            SELECT id, email, password, role FROM "user" 
+            WHERE LOWER(email) = ${email} AND password = ${password}
+            LIMIT 1
+          `;
+
+          if (results && results.length > 0) {
+            const user = results[0];
+            return { 
+              id: user.id.toString(), 
+              email: user.email, 
+              role: user.role 
+            };
+          }
+        } catch (dbErr) {
+          console.error("Direct DB Auth Error:", dbErr);
         }
-        return null
+
+        // 2. Secondary fallback: Hardcoded accounts (Emergency access)
+        const hardcodedUsers = [
+          { email: "barton@bmdcomputing.com", password: "EEL-Admin-2026!", role: "admin" },
+          { email: "alareez@eelogistics.co.za", password: "EEL-Manager-2026!", role: "manager" },
+          { email: "lysander@eelogistics.co.za", password: "EEL-Staff-2026!", role: "staff" }
+        ];
+
+        const matchingHardcoded = hardcodedUsers.find(u => u.email === email && u.password === password);
+        if (matchingHardcoded) {
+          return { id: matchingHardcoded.email, email: matchingHardcoded.email, role: matchingHardcoded.role };
+        }
+        
+        return null;
       }
     })
   ],
