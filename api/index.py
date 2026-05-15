@@ -127,20 +127,32 @@ def get_event_registrations(event_id: int, session: Session = Depends(get_sessio
         } for reg, att in registrations
     ]
 
-@app.post("/api/py/register", response_model=Registration)
+@app.post("/api/py/register")
 def register_attendee(
     data: Dict[str, Any],
     session: Session = Depends(get_session)
 ):
+    from sqlalchemy import func
     event_id = data.get("event_id")
-    email = data.get("email")
-    first_name = data.get("first_name")
-    last_name = data.get("last_name")
-    company = data.get("company")
+    # Standardize email: lowercase and strip whitespace
+    raw_email = data.get("email", "")
+    email = raw_email.strip().lower()
+    
+    first_name = data.get("first_name", "").strip()
+    last_name = data.get("last_name", "").strip()
+    company = data.get("company", "").strip()
     custom_answers = data.get("custom_answers", {})
-    # Check if attendee exists
-    attendee = session.exec(select(Attendee).where(Attendee.email == email)).first()
+    is_attending = data.get("is_attending", True)
+    status = "confirmed" if is_attending else "declined"
+
+    message = "Your registration has been confirmed."
+    is_update = False
+
+    # 1. Handle Attendee Record (Case-insensitive lookup)
+    attendee = session.exec(select(Attendee).where(func.lower(Attendee.email) == email)).first()
+    
     if not attendee:
+        print(f"Creating new attendee for {email}")
         attendee = Attendee(
             email=email, 
             first_name=first_name, 
@@ -150,65 +162,88 @@ def register_attendee(
         session.add(attendee)
         session.commit()
         session.refresh(attendee)
+    else:
+        print(f"Found existing attendee {attendee.id} for {email}")
+        # Check if the name matches for duplicate detection
+        names_match = (
+            attendee.first_name.lower() == first_name.lower() and 
+            attendee.last_name.lower() == last_name.lower()
+        )
+        
+        if names_match:
+            message = "We've identified your existing profile. Your information has been synchronized."
+        else:
+            message = f"Registration updated for {first_name} {last_name}."
+            is_update = True
+            
+        # Sync latest info to existing attendee
+        attendee.first_name = first_name
+        attendee.last_name = last_name
+        attendee.company = company
+        session.add(attendee)
+        session.commit()
+        session.refresh(attendee)
     
-    # Check if already registered
-    existing_reg = session.exec(
+    # 2. Handle Registration
+    registration = session.exec(
         select(Registration)
         .where(Registration.event_id == event_id)
         .where(Registration.attendee_id == attendee.id)
     ).first()
     
-    if existing_reg:
-        return existing_reg
-    
-    # Generate a random 4-digit PIN for clearance_id
-    import random
-    pin = str(random.randint(1000, 9999))
-    
-    # Check for attendance status (RSVP)
-    # If they explicitly say they are not attending, we mark as declined
-    is_attending = data.get("is_attending", True)
-    status = "confirmed" if is_attending else "declined"
-
-    # Create registration
-    try:
-        registration = Registration(
-            event_id=event_id, 
-            attendee_id=attendee.id, 
-            custom_answers=custom_answers,
-            pin=pin,
-            status=status
-        )
+    if registration:
+        # Existing registration found
+        print(f"Updating existing registration {registration.id} for attendee {attendee.id}")
+        if not is_update:
+            message = "Duplicate detected: You are already registered for this event. Your record has been updated."
+        
+        registration.custom_answers = custom_answers
+        registration.status = status
         session.add(registration)
         session.commit()
         session.refresh(registration)
-        print(f"Successfully created registration {registration.id} with status {status}")
-    except Exception as e:
-        session.rollback()
-        print(f"FAILED to create registration: {e}")
-        raise HTTPException(status_code=500, detail=f"Database error: {e}")
+    else:
+        # New registration for this event
+        import random
+        pin = str(random.randint(1000, 9999))
+        print(f"Creating new registration for attendee {attendee.id} with PIN {pin}")
+        
+        try:
+            registration = Registration(
+                event_id=event_id, 
+                attendee_id=attendee.id, 
+                custom_answers=custom_answers,
+                pin=pin,
+                status=status
+            )
+            session.add(registration)
+            session.commit()
+            session.refresh(registration)
+        except Exception as e:
+            session.rollback()
+            print(f"Database error during registration: {e}")
+            raise HTTPException(status_code=500, detail=f"Database error: {e}")
 
-    # Send confirmation email ONLY if they are attending
+    # 3. Send confirmation email (ALWAYS trigger for confirmed status)
     if is_attending:
         try:
             event = session.get(Event, event_id)
             if event:
-                print(f"Attempting to send email to {attendee.email} for PIN {pin}")
-                res = send_confirmation_email(
+                print(f"Dispatching confirmation email to {attendee.email}")
+                send_confirmation_email(
                     to_email=attendee.email,
                     first_name=attendee.first_name,
                     event_title=event.title,
-                    clearance_id=pin
+                    clearance_id=registration.pin
                 )
-                print(f"Email dispatch triggered successfully. Resend ID: {res}")
         except Exception as e:
             print(f"Error triggering confirmation email: {e}")
-    else:
-        print(f"User declined attendance, skipping email.")
 
     return {
         "id": str(registration.id),
-        "pin": pin
+        "pin": registration.pin,
+        "message": message,
+        "version": "1.1-robust"
     }
 
 @app.post("/api/py/events/{event_id}/test-email")

@@ -33,6 +33,8 @@ export default function PublicRegistrationPage() {
   const [registeredPin, setRegisteredPin] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+
   const [formData, setFormData] = useState({
     first_name: "",
     last_name: "",
@@ -81,6 +83,7 @@ export default function PublicRegistrationPage() {
         const data = await response.json();
         setRegisteredId(data.id);
         setRegisteredPin(data.pin);
+        setStatusMessage(data.message);
       } else {
         alert("Failed to register. Please try again.");
       }
@@ -127,7 +130,7 @@ export default function PublicRegistrationPage() {
             <CheckCircle2 className="text-black" size={56} />
           </div>
           <h1 className="text-4xl font-black text-white mb-6 font-bricolage italic uppercase tracking-tight">
-            {isAttending ? "Access Granted." : "Response Recorded."}
+            {statusMessage || (isAttending ? "Access Granted." : "Response Recorded.")}
           </h1>
           <p className="text-zinc-400 mb-12 font-medium leading-relaxed">
             Your orchestration for <span className="text-white font-bold">{event.title}</span> is confirmed. 
