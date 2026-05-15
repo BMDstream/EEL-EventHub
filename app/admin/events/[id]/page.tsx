@@ -108,30 +108,62 @@ export default function EventDetailsPage() {
     }
   };
 
-  const exportToCSV = () => {
+  const exportToExcel = () => {
     if (registrations.length === 0) return;
+    
+    // Define headers
     const headers = [
-      "First Name", "Last Name", "Email", "Company", "Status", "Checked In", "Registered At",
+      "First Name", 
+      "Last Name", 
+      "Email", 
+      "Organization", 
+      "Status", 
+      "Checked In", 
+      "Registered At",
       ...(event?.custom_fields_schema || []).map(f => f.label)
     ];
-    const rows = registrations.map(reg => [
-      reg.attendee.first_name,
-      reg.attendee.last_name,
-      reg.attendee.email,
-      reg.attendee.company || "",
-      reg.status,
-      reg.checked_in ? "Yes" : "No",
-      new Date(reg.created_at).toLocaleString(),
-      ...(event?.custom_fields_schema || []).map(f => reg.custom_answers?.[f.id] || "")
-    ]);
+
+    // Helper to escape CSV values (wrap in quotes, escape existing quotes)
+    const escapeCSV = (val: any) => {
+      if (val === null || val === undefined) return "";
+      let str = String(val);
+      if (str.includes(",") || str.includes('"') || str.includes("\n")) {
+        return `"${str.replace(/"/g, '""')}"`;
+      }
+      return str;
+    };
+
+    const rows = registrations.map(reg => {
+      const basicInfo = [
+        escapeCSV(reg.attendee.first_name),
+        escapeCSV(reg.attendee.last_name),
+        escapeCSV(reg.attendee.email),
+        escapeCSV(reg.attendee.company || ""),
+        escapeCSV(reg.status),
+        escapeCSV(reg.checked_in ? "Yes" : "No"),
+        escapeCSV(new Date(reg.created_at).toLocaleString()),
+      ];
+
+      const customInfo = (event?.custom_fields_schema || []).map(f => {
+        const val = reg.custom_answers?.[f.id];
+        if (typeof val === "boolean") return val ? "Yes" : "No";
+        if (Array.isArray(val)) return escapeCSV(val.join(", "));
+        return escapeCSV(val || "");
+      });
+
+      return [...basicInfo, ...customInfo];
+    });
     
-    const csvContent = "data:text/csv;charset=utf-8," + 
-      [headers.join(","), ...rows.map(r => r.map(v => `"${v}"`).join(","))].join("\n");
+    const csvContent = [
+      headers.join(","),
+      ...rows.map(r => r.join(","))
+    ].join("\n");
     
-    const encodedUri = encodeURI(csvContent);
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `${event?.title?.replace(/\s+/g, '_') || 'event'}_manifest.csv`);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `registrants_${event?.title?.replace(/\s+/g, '_') || 'event'}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -267,12 +299,12 @@ export default function EventDetailsPage() {
               </div>
               <div className="flex flex-col gap-4 w-full md:w-auto">
                 <button
-                  onClick={exportToCSV}
+                  onClick={exportToExcel}
                   disabled={registrations.length === 0}
                   className="flex items-center justify-center gap-3 bg-[#0f172a] hover:bg-black disabled:bg-slate-200 text-white px-8 py-5 rounded-2xl font-black transition-all shadow-2xl shadow-slate-200 uppercase tracking-widest text-xs"
                 >
                   <Download size={20} />
-                  Export Manifest
+                  Export to Excel
                 </button>
                 <button
                   onClick={() => {
