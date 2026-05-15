@@ -49,3 +49,8 @@ class User(SQLModel, table=True):
     role: str = "staff" # admin, manager, staff
     is_active: bool = True
     created_at: datetime = Field(default_factory=datetime.utcnow)
+
+class SystemSetting(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    key: str = Field(unique=True, index=True)
+    value: Dict[str, Any] = Field(default={}, sa_column=Column(JSON))

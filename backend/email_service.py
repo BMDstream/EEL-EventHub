@@ -28,35 +28,53 @@ def generate_qr_base64(data: str):
     img.save(buffered, format="PNG")
     return base64.b64encode(buffered.getvalue()).decode()
 
-def send_confirmation_email(to_email: str, first_name: str, event_title: str, clearance_id: str, qr_code_url: str = None):
+def send_confirmation_email(to_email: str, first_name: str, event_title: str, clearance_id: str, qr_code_url: str = None, config: Dict[str, Any] = None):
     """Sends a registration confirmation email with an embedded QR code."""
     if not resend.api_key or MOCK_EMAIL_SERVICE:
         print(f"MOCK CONFIRMATION to {to_email}: Welcome to {event_title}! Your ID is {clearance_id}")
         return {"id": "mock-confirmation-id"}
 
+    if not config:
+        config = {
+            "primary_color": "#0f172a",
+            "accent_color": "#94a3b8",
+            "heading_text": "Access Granted.",
+            "body_text": "Your orchestration for **{event_title}** has been authorized. Below are your secure credentials for terminal verification.",
+            "footer_text": "Automated Event Management System\nSecurity Tier: Level 4 Authorized"
+        }
+
     qr_base64 = generate_qr_base64(clearance_id)
+    
+    # Process body text for basic bolding
+    body_html = config.get("body_text", "").replace("**{event_title}**", f"<strong>{event_title}</strong>").replace("{event_title}", event_title).replace("\n", "<br>")
+    footer_html = config.get("footer_text", "").replace("\n", "<br>")
+    primary_color = config.get("primary_color", "#0f172a")
+    accent_color = config.get("accent_color", "#94a3b8")
+    heading_text = config.get("heading_text", "Access Granted.")
 
     html_content = f"""
-    <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 40px auto; padding: 40px; border: 1px solid #f1f5f9; border-radius: 40px; background-color: #ffffff; color: #0f172a; box-shadow: 0 20px 50px rgba(0,0,0,0.05);">
+    <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 40px auto; padding: 40px; border: 1px solid #f1f5f9; border-radius: 40px; background-color: #ffffff; color: {primary_color}; box-shadow: 0 20px 50px rgba(0,0,0,0.05);">
         <div style="text-align: center; margin-bottom: 48px;">
-            <div style="display: inline-block; background: #0f172a; padding: 12px 28px; border-radius: 16px;">
+            <div style="display: inline-block; background: {primary_color}; padding: 12px 28px; border-radius: 16px;">
                 <span style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.4em; color: #ffffff;">Official Dispatch</span>
             </div>
         </div>
 
-        <h2 style="font-size: 38px; font-weight: 900; color: #0f172a; margin-bottom: 28px; text-transform: uppercase; font-style: italic; letter-spacing: -0.04em; line-height: 1;">Access <span style="color: #94a3b8;">Granted.</span></h2>
+        <h2 style="font-size: 38px; font-weight: 900; color: {primary_color}; margin-bottom: 28px; text-transform: uppercase; font-style: italic; letter-spacing: -0.04em; line-height: 1;">
+            {heading_text.split('.')[0]} <span style="color: {accent_color};">{heading_text.split('.')[1] if '.' in heading_text else ''}</span>
+        </h2>
         
         <p style="font-size: 17px; line-height: 1.7; margin-bottom: 40px; color: #475569;">
             Hello <strong>{first_name}</strong>,<br><br>
-            Your orchestration for <strong>{event_title}</strong> has been authorized. Below are your secure credentials for terminal verification.
+            {body_html}
         </p>
         
         <div style="background: #f8fafc; padding: 48px; border-radius: 32px; text-align: center; border: 1px solid #f1f5f9; margin-bottom: 40px; position: relative; overflow: hidden;">
             <div style="position: absolute; top: -10px; right: -10px; font-size: 120px; font-weight: 900; color: #000; opacity: 0.02; font-style: italic;">EEL</div>
             <img src="data:image/png;base64,{qr_base64}" width="200" height="200" alt="Clearance QR Code" style="margin-bottom: 32px; border-radius: 20px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.15);" />
             <p style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.3em; color: #64748b; margin-bottom: 16px;">Unique Clearance ID</p>
-            <div style="display: inline-block; background: #ffffff; padding: 16px 32px; border-radius: 20px; border: 2px solid #0f172a;">
-                <code style="font-size: 32px; font-weight: 900; color: #0f172a; letter-spacing: 0.25em;">{clearance_id}</code>
+            <div style="display: inline-block; background: #ffffff; padding: 16px 32px; border-radius: 20px; border: 2px solid {primary_color};">
+                <code style="font-size: 32px; font-weight: 900; color: {primary_color}; letter-spacing: 0.25em;">{clearance_id}</code>
             </div>
         </div>
 
@@ -70,8 +88,7 @@ def send_confirmation_email(to_email: str, first_name: str, event_title: str, cl
         
         <div style="text-align: center;">
             <p style="font-size: 11px; color: #94a3b8; margin-bottom: 32px; line-height: 1.6;">
-                Automated Event Management System<br>
-                Security Tier: Level 4 Authorized
+                {footer_html}
             </p>
             <p style="font-size: 9px; color: #cbd5e1; text-transform: uppercase; letter-spacing: 0.1em;">
                 Confidentiality Notice: This dispatch is intended solely for {to_email}.

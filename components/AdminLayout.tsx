@@ -71,6 +71,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { name: "Team", href: "/admin/users", icon: Users },
     { name: "Analytics", href: "/admin/analytics", icon: TrendingUp },
     { name: "Security", href: "/admin/security", icon: ShieldCheck },
+    { name: "Settings", href: "/admin/settings", icon: Settings },
   ];
 
   const navItems = allNavItems.filter(item => {

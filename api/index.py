@@ -28,6 +28,20 @@ def on_startup():
                 session.rollback()
                 print(f"Non-critical error dropping constraints: {e}")
 
+            # Initialize default email settings if not present
+            from backend.models import SystemSetting
+            default_email = session.exec(select(SystemSetting).where(SystemSetting.key == "email_config")).first()
+            if not default_email:
+                config = {
+                    "primary_color": "#0f172a",
+                    "accent_color": "#94a3b8",
+                    "heading_text": "Access Granted.",
+                    "body_text": "Your orchestration for **{event_title}** has been authorized. Below are your secure credentials for terminal verification.",
+                    "footer_text": "Automated Event Management System\nSecurity Tier: Level 4 Authorized"
+                }
+                session.add(SystemSetting(key="email_config", value=config))
+                session.commit()
+
             # For User table
             try:
                 session.execute(text("ALTER TABLE \"user\" ADD COLUMN password VARCHAR"))
@@ -66,6 +80,27 @@ def on_startup():
 @app.get("/api/py/healthcheck")
 def healthcheck():
     return {"status": "ok", "version": "1.3-robust"}
+
+@app.get("/api/py/settings/{key}")
+def get_setting(key: str, session: Session = Depends(get_session)):
+    from backend.models import SystemSetting
+    setting = session.exec(select(SystemSetting).where(SystemSetting.key == key)).first()
+    if not setting:
+        return {"key": key, "value": {}}
+    return setting
+
+@app.put("/api/py/settings/{key}")
+def update_setting(key: str, data: Dict[str, Any], session: Session = Depends(get_session)):
+    from backend.models import SystemSetting
+    setting = session.exec(select(SystemSetting).where(SystemSetting.key == key)).first()
+    if not setting:
+        setting = SystemSetting(key=key, value=data)
+    else:
+        setting.value = data
+    session.add(setting)
+    session.commit()
+    session.refresh(setting)
+    return setting
 
 @app.get("/api/py/events", response_model=List[Event])
 def read_events(session: Session = Depends(get_session)):
@@ -144,6 +179,7 @@ def register_attendee(
     session: Session = Depends(get_session)
 ):
     from sqlalchemy import func
+    from backend.models import SystemSetting
     event_id = data.get("event_id")
     # Standardize email: lowercase and strip whitespace
     raw_email = data.get("email", "")
@@ -236,11 +272,16 @@ def register_attendee(
         try:
             event = session.get(Event, event_id)
             if event:
+                # Get email config
+                email_setting = session.exec(select(SystemSetting).where(SystemSetting.key == "email_config")).first()
+                config = email_setting.value if email_setting else {}
+                
                 send_confirmation_email(
                     to_email=attendee.email,
                     first_name=attendee.first_name,
                     event_title=event.title,
-                    clearance_id=registration.pin
+                    clearance_id=registration.pin,
+                    config=config
                 )
         except Exception as e:
             print(f"Error triggering confirmation email: {e}")
