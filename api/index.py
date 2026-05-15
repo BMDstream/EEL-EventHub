@@ -17,6 +17,14 @@ def on_startup():
         # Add columns if they don't exist (lightweight migrations)
         from sqlalchemy import text
         with Session(engine) as session:
+            # Drop unique constraint on attendee email if it exists
+            try:
+                # Different DBs name this differently. attendee_email_key is common for unique fields
+                session.execute(text("ALTER TABLE attendee DROP CONSTRAINT IF EXISTS attendee_email_key"))
+                session.commit()
+            except Exception:
+                session.rollback()
+
             # For User table
             try:
                 session.execute(text("ALTER TABLE \"user\" ADD COLUMN password VARCHAR"))
@@ -145,14 +153,18 @@ def register_attendee(
     is_attending = data.get("is_attending", True)
     status = "confirmed" if is_attending else "declined"
 
+    # 1. Handle Attendee Record (Match by Email AND Name now)
+    attendee = session.exec(
+        select(Attendee)
+        .where(func.lower(Attendee.email) == email)
+        .where(func.lower(Attendee.first_name) == first_name.lower())
+        .where(func.lower(Attendee.last_name) == last_name.lower())
+    ).first()
+    
     message = "Your registration has been confirmed."
-    is_update = False
-
-    # 1. Handle Attendee Record (Case-insensitive lookup)
-    attendee = session.exec(select(Attendee).where(func.lower(Attendee.email) == email)).first()
     
     if not attendee:
-        print(f"Creating new attendee for {email}")
+        print(f"Creating new record for {first_name} {last_name} ({email})")
         attendee = Attendee(
             email=email, 
             first_name=first_name, 
@@ -163,22 +175,8 @@ def register_attendee(
         session.commit()
         session.refresh(attendee)
     else:
-        print(f"Found existing attendee {attendee.id} for {email}")
-        # Check if the name matches for duplicate detection
-        names_match = (
-            attendee.first_name.lower() == first_name.lower() and 
-            attendee.last_name.lower() == last_name.lower()
-        )
-        
-        if names_match:
-            message = "We've identified your existing profile. Your information has been synchronized."
-        else:
-            message = f"Registration updated for {first_name} {last_name}."
-            is_update = True
-            
-        # Sync latest info to existing attendee
-        attendee.first_name = first_name
-        attendee.last_name = last_name
+        print(f"Found exact match for {first_name} {last_name} ({email}) - updating profile.")
+        message = "We've identified your existing profile. Your information has been synchronized."
         attendee.company = company
         session.add(attendee)
         session.commit()
@@ -192,21 +190,18 @@ def register_attendee(
     ).first()
     
     if registration:
-        # Existing registration found
+        # Existing registration for this specific attendee
         print(f"Updating existing registration {registration.id} for attendee {attendee.id}")
-        if not is_update:
-            message = "Duplicate detected: You are already registered for this event. Your record has been updated."
-        
+        message = "Duplicate detected: You are already registered for this event. Your record has been updated."
         registration.custom_answers = custom_answers
         registration.status = status
         session.add(registration)
         session.commit()
         session.refresh(registration)
     else:
-        # New registration for this event
+        # New registration for this event (even if attendee exists from another event)
         import random
         pin = str(random.randint(1000, 9999))
-        print(f"Creating new registration for attendee {attendee.id} with PIN {pin}")
         
         try:
             registration = Registration(
@@ -221,15 +216,13 @@ def register_attendee(
             session.refresh(registration)
         except Exception as e:
             session.rollback()
-            print(f"Database error during registration: {e}")
             raise HTTPException(status_code=500, detail=f"Database error: {e}")
 
-    # 3. Send confirmation email (ALWAYS trigger for confirmed status)
+    # 3. Send confirmation email (ONLY if attending)
     if is_attending:
         try:
             event = session.get(Event, event_id)
             if event:
-                print(f"Dispatching confirmation email to {attendee.email}")
                 send_confirmation_email(
                     to_email=attendee.email,
                     first_name=attendee.first_name,
@@ -243,7 +236,7 @@ def register_attendee(
         "id": str(registration.id),
         "pin": registration.pin,
         "message": message,
-        "version": "1.1-robust"
+        "version": "1.2-multi-identity"
     }
 
 @app.post("/api/py/events/{event_id}/test-email")

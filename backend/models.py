@@ -22,7 +22,7 @@ class Event(SQLModel, table=True):
 
 class Attendee(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    email: str = Field(unique=True, index=True)
+    email: str = Field(index=True)
     first_name: str
     last_name: str
     company: Optional[str] = None
