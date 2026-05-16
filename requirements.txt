@@ -7,3 +7,5 @@ pydantic
 resend
 qrcode
 Pillow
+requests
+python-jose[cryptography]

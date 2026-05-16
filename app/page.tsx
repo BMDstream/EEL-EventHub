@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, Calendar, ShieldCheck, Zap } from "lucide-react";
+import { MSLoginHandler } from "@/components/MSLoginHandler";
+import { Suspense } from "react";
 
 export default function LandingPage() {
   return (
@@ -46,7 +48,18 @@ export default function LandingPage() {
               >
                 Go to Dashboard <ArrowRight size={24} />
               </Link>
+              <Link 
+                href="/api/py/auth/azure/login" 
+                className="bg-zinc-900 text-white px-12 py-6 rounded-2xl text-sm font-black hover:bg-white hover:text-black transition-all flex items-center justify-center gap-4 border border-white/5 uppercase tracking-[0.2em]"
+              >
+                <ShieldCheck size={24} className="text-yellow-500" />
+                Login with Microsoft
+              </Link>
             </div>
+            
+            <Suspense fallback={null}>
+              <MSLoginHandler />
+            </Suspense>
           </div>
 
           <div className="relative group">

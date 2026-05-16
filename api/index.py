@@ -4,9 +4,11 @@ from typing import List, Dict, Any
 from backend.database import get_session, init_db, engine
 from backend.models import Event, Attendee, Registration, User
 from backend.email_service import send_confirmation_email, send_broadcast_email
+from backend.routers import auth
 import uvicorn
 
 app = FastAPI(docs_url="/api/py/docs", openapi_url="/api/py/openapi.json")
+app.include_router(auth.router, prefix="/api/py/auth", tags=["auth"])
 
 @app.on_event("startup")
 def on_startup():

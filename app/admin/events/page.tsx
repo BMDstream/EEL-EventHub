@@ -145,7 +145,7 @@ export default function EventsListPage() {
                       <td className="px-10 py-8 text-right flex items-center justify-end gap-6">
                          <button 
                            onClick={() => {
-                             const url = `${window.location.origin}/${event.slug}`;
+                             const url = `${window.location.origin}/register/${event.slug}`;
                              navigator.clipboard.writeText(url);
                              alert("Registration link copied to clipboard!");
                            }}
