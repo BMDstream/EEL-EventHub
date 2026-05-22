@@ -62,7 +62,7 @@ Visit the **Command Analytics** page to see your platform's overall performance.
 ---
 
 ## 7. Restoration & Safety
-- **Stability Tag**: We have established a `v1.0-stable` restore point. If any technical issues arise after future updates, the system can be rolled back to this known working state.
+- **Stability Tag**: We have established a `v1.5-ms-auth-ready` restore point. This version includes the finalized Microsoft 365 OAuth integration and optimized routing architecture.
 - **Secure Access**: Ensure all staff use authorized credentials. Access to the Command Center is restricted to Admin, Manager, and Staff roles.
 
 ---

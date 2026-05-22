@@ -229,11 +229,11 @@ export default function EventDetailsPage() {
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mb-10 bg-slate-50 p-4 rounded-2xl border border-slate-100 group">
                    <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest ml-1">Public Link:</p>
                    <code className="text-xs font-bold text-[#0f172a] bg-white px-3 py-1 rounded-lg border border-slate-100 flex-1 truncate">
-                     {typeof window !== 'undefined' ? `${window.location.origin}/${event.slug}` : `/${event.slug}`}
+                     {typeof window !== 'undefined' ? `${window.location.origin}/register/${event.slug}` : `/register/${event.slug}`}
                    </code>
                    <button 
                      onClick={() => {
-                       const url = `${window.location.origin}/${event.slug}`;
+                       const url = `${window.location.origin}/register/${event.slug}`;
                        navigator.clipboard.writeText(url);
                        alert("Link copied!");
                      }}
@@ -242,7 +242,7 @@ export default function EventDetailsPage() {
                      Copy Link
                    </button>
                    <a 
-                     href={`/${event.slug}`} 
+                     href={`/register/${event.slug}`} 
                      target="_blank" 
                      className="p-2 text-slate-400 hover:text-[#0f172a] transition-all"
                    >
