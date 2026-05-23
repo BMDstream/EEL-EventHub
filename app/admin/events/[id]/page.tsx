@@ -16,6 +16,7 @@ import {
   Loader2,
   CheckCircle2,
   XCircle,
+  AlertCircle,
   MoreVertical,
   Settings,
   Sparkles,
@@ -71,6 +72,8 @@ export default function EventDetailsPage() {
   const [activeTab, setActiveTab] = useState<"registrants" | "form" | "scanner" | "communications">(initialTab as any || "registrants");
   const [pin, setPin] = useState("");
   const [pinLoading, setPinLoading] = useState(false);
+  const [pinStatus, setPinStatus] = useState<"idle" | "success" | "error" | "processing" | "warning">("idle");
+  const [pinMessage, setPinMessage] = useState("");
 
   useEffect(() => {
     const fetchData = async () => {
@@ -467,6 +470,7 @@ export default function EventDetailsPage() {
                         </td>
                         <td className="px-10 py-8 text-right flex items-center justify-end gap-3">
                           <button
+                            disabled={reg.status === "declined"}
                             onClick={async () => {
                               try {
                                 const res = await fetch(`/api/py/registrations/${reg.id}/checkin`, { method: "PUT" });
@@ -479,9 +483,11 @@ export default function EventDetailsPage() {
                               }
                             }}
                             className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${
-                              reg.checked_in 
-                                ? "bg-green-500 text-white shadow-lg shadow-green-500/20" 
-                                : "bg-slate-50 text-slate-400 hover:bg-slate-100"
+                              reg.status === "declined"
+                                ? "bg-slate-100 text-slate-300 cursor-not-allowed opacity-55"
+                                : reg.checked_in 
+                                  ? "bg-green-500 text-white shadow-lg shadow-green-500/20" 
+                                  : "bg-slate-50 text-slate-400 hover:bg-slate-100"
                             }`}
                           >
                             {reg.checked_in ? "Checked In" : "Check In"}
@@ -538,64 +544,103 @@ export default function EventDetailsPage() {
                        }
                        const updated = await res.json();
                        setRegistrations(prev => prev.map(r => r.id === regId ? { ...r, checked_in: updated.checked_in } : r));
-                     }} 
-                   />
-                 </div>
-               </div>
-
-               <div className="space-y-8">
-                 <div className="bg-slate-50 p-10 rounded-[2rem] border border-slate-100">
-                   <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 ml-1">Manual PIN Entry</h3>
-                   <div className="space-y-4">
-                     <input 
-                       type="text" 
-                       maxLength={4}
-                       placeholder="ENTER 4-DIGIT PIN"
-                       value={pin}
-                       onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
-                       className="w-full text-center text-2xl md:text-4xl font-black py-8 bg-white rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none text-[#0f172a] placeholder-slate-200 tracking-[0.2em] md:tracking-[0.5em]"
+                       }} 
                      />
-                     <button 
-                       onClick={async () => {
-                         if (pin.length !== 4) return alert("Please enter a 4-digit PIN");
-                         setPinLoading(true);
-                         try {
-                           const res = await fetch(`/api/py/events/${id}/checkin-by-pin`, {
-                             method: "POST",
-                             headers: { "Content-Type": "application/json" },
-                             body: JSON.stringify({ pin })
-                           });
-                           if (res.ok) {
-                             const updated = await res.json();
-                             setRegistrations(prev => prev.map(r => r.id === updated.id ? { ...r, checked_in: true } : r));
-                             alert(`Check-in Successful: ${updated.attendee?.first_name || 'Guest'}`);
-                             setPin("");
-                           } else {
-                             const err = await res.json();
-                             alert(err.detail || "Invalid PIN");
-                           }
-                         } catch (err) {
-                           alert("Verification error");
-                         } finally {
-                           setPinLoading(false);
-                         }
-                       }}
-                       disabled={pinLoading || pin.length !== 4}
-                       className="w-full bg-[#0f172a] hover:bg-black disabled:bg-slate-200 text-white font-black py-6 rounded-2xl transition-all uppercase tracking-widest text-xs"
-                     >
-                       {pinLoading ? <Loader2 size={18} className="animate-spin mx-auto" /> : "Verify & Check In"}
-                     </button>
                    </div>
                  </div>
 
-                 <div className="p-8 bg-yellow-400/5 rounded-[2rem] border border-yellow-400/10">
-                   <p className="text-[10px] font-medium text-yellow-600/70 leading-relaxed uppercase tracking-wider">
-                     Attendees can find their 4-digit Unique Clearance ID at the bottom of their confirmation email or below their QR code.
-                   </p>
+                 <div className="space-y-8">
+                   <div className="bg-slate-50 p-10 rounded-[2rem] border border-slate-100">
+                     <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 ml-1">Manual PIN Entry</h3>
+                     {pinStatus === "idle" ? (
+                       <div className="space-y-4">
+                         <input 
+                           type="text" 
+                           maxLength={4}
+                           placeholder="ENTER 4-DIGIT PIN"
+                           value={pin}
+                           onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
+                           className="w-full text-center text-2xl md:text-4xl font-black py-8 bg-white rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none text-[#0f172a] placeholder-slate-200 tracking-[0.2em] md:tracking-[0.5em]"
+                         />
+                         <button 
+                           onClick={async () => {
+                             if (pin.length !== 4) return;
+                             setPinStatus("processing");
+                             setPinMessage("Verifying PIN...");
+                             try {
+                               const res = await fetch(`/api/py/events/${id}/checkin-by-pin`, {
+                                 method: "POST",
+                                 headers: { "Content-Type": "application/json" },
+                                 body: JSON.stringify({ pin })
+                               });
+                               if (res.ok) {
+                                 const updated = await res.json();
+                                 setRegistrations(prev => prev.map(r => r.id === updated.id ? { ...r, checked_in: true } : r));
+                                 setPinStatus("success");
+                                 setPinMessage(`Check-in Successful: ${updated.attendee?.first_name || 'Guest'}`);
+                                 setPin("");
+                                 setTimeout(() => setPinStatus("idle"), 3000);
+                               } else {
+                                 const err = await res.json();
+                                 const errMsg = err.detail || "Invalid PIN";
+                                 if (errMsg.toLowerCase().includes("already checked in")) {
+                                   setPinStatus("warning");
+                                   setPinMessage("Already Checked In");
+                                 } else {
+                                   setPinStatus("error");
+                                   setPinMessage(errMsg);
+                                 }
+                                 setTimeout(() => setPinStatus("idle"), 4000);
+                               }
+                             } catch (err) {
+                               setPinStatus("error");
+                               setPinMessage("Verification error");
+                               setTimeout(() => setPinStatus("idle"), 4000);
+                             }
+                           }}
+                           disabled={pin.length !== 4}
+                           className="w-full bg-[#0f172a] hover:bg-black disabled:bg-slate-200 text-white font-black py-6 rounded-2xl transition-all uppercase tracking-widest text-xs"
+                         >
+                           Verify & Check In
+                         </button>
+                       </div>
+                     ) : (
+                       <div className={`flex flex-col items-center gap-6 p-8 rounded-[1.5rem] shadow-lg w-full animate-in zoom-in-95 duration-300 ${
+                         pinStatus === "success" ? "bg-green-500 text-white" : 
+                         pinStatus === "error" ? "bg-red-500 text-white" : 
+                         pinStatus === "warning" ? "bg-yellow-400 text-black" :
+                         "bg-[#0f172a] text-white"
+                       }`}>
+                         {pinStatus === "processing" && <Loader2 className="animate-spin" size={48} />}
+                         {pinStatus === "success" && <CheckCircle2 size={48} />}
+                         {pinStatus === "error" && <XCircle size={48} />}
+                         {pinStatus === "warning" && <AlertCircle size={48} />}
+                         
+                         <div className="text-center">
+                            <p className="text-xl font-black italic uppercase tracking-tighter font-bricolage leading-tight">{pinMessage}</p>
+                            {pinStatus !== "processing" && (
+                              <button 
+                                onClick={() => setPinStatus("idle")}
+                                className={`mt-6 px-8 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border ${
+                                  pinStatus === "warning" ? "bg-black/10 hover:bg-black/20 border-black/10" : "bg-white/20 hover:bg-white/30 border-white/10"
+                                }`}
+                              >
+                                Dismiss
+                              </button>
+                            )}
+                         </div>
+                       </div>
+                     )}
+                   </div>
+
+                   <div className="p-8 bg-yellow-400/5 rounded-[2rem] border border-yellow-400/10">
+                     <p className="text-[10px] font-medium text-yellow-600/70 leading-relaxed uppercase tracking-wider">
+                       Attendees can find their 4-digit Unique Clearance ID at the bottom of their confirmation email or below their QR code.
+                     </p>
+                   </div>
                  </div>
                </div>
           </div>
-        </div>
         ) : (
           <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 p-10 lg:p-24">
              <div className="max-w-2xl mx-auto mb-16">

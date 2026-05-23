@@ -246,6 +246,8 @@ def register_attendee(
             message = "Duplicate detected: You are already registered for this event. Your record has been updated."
             registration.custom_answers = custom_answers
             registration.status = status
+            if status == "declined":
+                registration.checked_in = False
             session.add(registration)
             session.commit()
             session.refresh(registration)
@@ -315,7 +317,11 @@ def test_email(event_id: str, data: dict, session: Session = Depends(get_session
             to_email=email,
             first_name="Test",
             event_title=event.title,
-            clearance_id="1234"
+            clearance_id="1234",
+            event_details={
+                "start_date": event.start_date,
+                "location": event.location
+            }
         )
         return {"ok": True, "resend_id": res}
     except Exception as e:
@@ -395,6 +401,9 @@ def toggle_checkin(registration_id: str, mode: str = "toggle", session: Session 
     if not registration:
         raise HTTPException(status_code=404, detail="Registration not found")
         
+    if registration.status == "declined":
+        raise HTTPException(status_code=400, detail="Declined registrations cannot be checked in")
+        
     if mode == "checkin" and registration.checked_in:
         raise HTTPException(status_code=400, detail="Attendee already checked in")
         
@@ -426,6 +435,9 @@ def checkin_by_pin(event_id: int, data: Dict[str, str], session: Session = Depen
     
     if registration.status == "declined":
         raise HTTPException(status_code=400, detail="This registration was declined and cannot be used for check-in")
+        
+    if registration.checked_in:
+        raise HTTPException(status_code=400, detail="Attendee already checked in")
         
     registration.checked_in = True
     session.add(registration)
@@ -489,7 +501,7 @@ def get_public_stats(slug: str, session: Session = Depends(get_session)):
 @app.get("/api/py/stats")
 def get_stats(session: Session = Depends(get_session)):
     events_count = len(session.exec(select(Event)).all())
-    registrations_count = len(session.exec(select(Registration)).all())
+    registrations_count = len(session.exec(select(Registration).where(Registration.status == "confirmed")).all())
     checked_in_count = len(session.exec(select(Registration).where(Registration.checked_in == True)).all())
     
     check_in_rate = 0

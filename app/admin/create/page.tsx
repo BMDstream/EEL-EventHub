@@ -47,15 +47,6 @@ export default function CreateEventPage() {
         return;
       }
 
-      let formattedDate;
-      try {
-        formattedDate = new Date(formData.start_date).toISOString();
-      } catch (dateErr) {
-        alert("Invalid date format. Please re-select the date and time.");
-        setLoading(false);
-        return;
-      }
-
       const response = await fetch("/api/py/events", {
         method: "POST",
         headers: {
@@ -63,7 +54,7 @@ export default function CreateEventPage() {
         },
         body: JSON.stringify({
           ...formData,
-          start_date: formattedDate,
+          start_date: formData.start_date,
         }),
       });
 

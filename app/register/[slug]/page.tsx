@@ -165,7 +165,7 @@ export default function PublicRegistrationPage() {
     <div className="min-h-screen bg-black font-outfit">
       <div className="grid grid-cols-1 lg:grid-cols-2 min-h-screen">
         {/* Left Side: Info */}
-        <div className="bg-black p-12 lg:p-24 flex flex-col justify-center text-white relative overflow-hidden">
+        <div className="bg-black p-12 lg:p-24 flex flex-col justify-between text-white relative overflow-hidden min-h-[50vh] lg:min-h-screen">
           {event.banner_url ? (
             <div 
               className="absolute inset-0 z-0 bg-cover bg-center" 
@@ -176,20 +176,17 @@ export default function PublicRegistrationPage() {
           ) : (
             <div className="absolute top-0 right-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,rgba(234,179,8,0.1),transparent_70%)]"></div>
           )}
-          <div className="relative z-10">
-            <div className="inline-flex items-center gap-3 px-4 py-2 bg-zinc-900 rounded-full mb-12 border border-white/5">
-              <span className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></span>
-              <span className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-400">Excellence Entertainment Logistics</span>
-            </div>
+          
+          <div className="relative z-10 my-auto py-12 lg:py-24">
             <h1 className="text-6xl lg:text-8xl font-black mb-10 leading-[0.9] tracking-tighter font-bricolage italic">{event.title}</h1>
-            <p className="text-xl text-zinc-500 mb-20 max-w-lg leading-relaxed font-medium">{event.description}</p>
+            <p className="text-xl text-zinc-300 mb-20 max-w-lg leading-relaxed font-medium">{event.description}</p>
             <div className="space-y-10">
               <div className="flex items-center gap-8 group">
                 <div className="bg-zinc-900 p-5 rounded-2xl border border-white/5 group-hover:border-yellow-500/50 transition-all">
                   <Calendar size={32} className="text-yellow-500" />
                 </div>
                 <div>
-                  <p className="text-zinc-600 text-[10px] font-black uppercase tracking-[0.3em] mb-2">Schedule</p>
+                  <p className="text-zinc-300 text-[10px] font-black uppercase tracking-[0.3em] mb-2">Schedule</p>
                   <p className="text-2xl font-black font-bricolage italic tracking-tight">{new Date(event.start_date).toLocaleDateString(undefined, { dateStyle: 'full' })}</p>
                 </div>
               </div>
@@ -198,10 +195,17 @@ export default function PublicRegistrationPage() {
                   <MapPin size={32} className="text-yellow-500" />
                 </div>
                 <div>
-                  <p className="text-zinc-600 text-[10px] font-black uppercase tracking-[0.3em] mb-2">Venue</p>
+                  <p className="text-zinc-300 text-[10px] font-black uppercase tracking-[0.3em] mb-2">Venue</p>
                   <p className="text-2xl font-black font-bricolage italic tracking-tight">{event.location}</p>
                 </div>
               </div>
+            </div>
+          </div>
+
+          <div className="relative z-10 mt-12 lg:mt-0">
+            <div className="inline-flex items-center gap-3 px-4 py-2 bg-zinc-900 rounded-full border border-white/5">
+              <span className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></span>
+              <span className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-400">Excellence Entertainment Logistics</span>
             </div>
           </div>
         </div>
@@ -259,7 +263,7 @@ export default function PublicRegistrationPage() {
               </div>
 
               {/* Dynamic Custom Fields */}
-              {event.custom_fields_schema?.map((field) => (
+              {isAttending && event.custom_fields_schema?.map((field) => (
                 <div key={field.id} className="space-y-3 animate-in fade-in slide-in-from-bottom-2">
                   <label className="text-[10px] font-black uppercase tracking-[0.3em] text-yellow-500/70 ml-1">
                     {field.label} {field.required && "*"}

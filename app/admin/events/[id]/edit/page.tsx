@@ -28,8 +28,7 @@ export default function EditEventPage() {
       })
       .then((data) => {
         // Format date for datetime-local input
-        const date = new Date(data.start_date);
-        const formattedDate = date.toISOString().slice(0, 16);
+        const formattedDate = data.start_date ? data.start_date.slice(0, 16) : "";
         
         setFormData({
           title: data.title,
@@ -60,7 +59,7 @@ export default function EditEventPage() {
         },
         body: JSON.stringify({
           ...formData,
-          start_date: new Date(formData.start_date).toISOString(),
+          start_date: formData.start_date,
         }),
       });
 
