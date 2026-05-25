@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status, BackgroundTasks
 from sqlmodel import Session, select
 from typing import List, Dict, Any
 from backend.database import get_session, init_db, engine
@@ -60,6 +60,12 @@ def on_startup():
             
             try:
                 session.execute(text("ALTER TABLE \"event\" ADD COLUMN banner_url VARCHAR"))
+                session.commit()
+            except Exception:
+                session.rollback()
+
+            try:
+                session.execute(text("ALTER TABLE \"event\" ADD COLUMN address VARCHAR"))
                 session.commit()
             except Exception:
                 session.rollback()
@@ -171,6 +177,7 @@ def get_event_registrations(event_id: int, session: Session = Depends(get_sessio
             "checked_in": reg.checked_in,
             "created_at": reg.created_at,
             "custom_answers": reg.custom_answers,
+            "pin": reg.pin,
             "attendee": att
         } for reg, att in registrations
     ]
@@ -287,7 +294,8 @@ def register_attendee(
                     clearance_id=registration.pin,
                     event_details={
                         "start_date": event.start_date,
-                        "location": event.location
+                        "location": event.location,
+                        "address": event.address
                     },
                     config=config
                 )
@@ -320,12 +328,107 @@ def test_email(event_id: str, data: dict, session: Session = Depends(get_session
             clearance_id="1234",
             event_details={
                 "start_date": event.start_date,
-                "location": event.location
+                "location": event.location,
+                "address": event.address
             }
         )
         return {"ok": True, "resend_id": res}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/py/registrations/{registration_id}/resend-email")
+def resend_registration_email(registration_id: str, session: Session = Depends(get_session)):
+    # Try looking up by UUID first
+    registration = None
+    try:
+        from uuid import UUID
+        val = UUID(registration_id, version=4)
+        registration = session.get(Registration, val)
+    except (ValueError, AttributeError):
+        pass
+    
+    if not registration:
+        registration = session.exec(
+            select(Registration).where(Registration.pin == registration_id)
+        ).first()
+        
+    if not registration:
+        raise HTTPException(status_code=404, detail="Registration not found")
+        
+    attendee = session.get(Attendee, registration.attendee_id)
+    if not attendee:
+        raise HTTPException(status_code=404, detail="Attendee not found")
+        
+    event = session.get(Event, registration.event_id)
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+        
+    # Get email config
+    from backend.models import SystemSetting
+    email_setting = session.exec(select(SystemSetting).where(SystemSetting.key == "email_config")).first()
+    config = email_setting.value if email_setting else {}
+    
+    try:
+        send_confirmation_email(
+            to_email=attendee.email,
+            first_name=attendee.first_name,
+            event_title=event.title,
+            clearance_id=registration.pin,
+            event_details={
+                "start_date": event.start_date,
+                "location": event.location,
+                "address": event.address
+            },
+            config=config
+        )
+        return {"ok": True, "message": "Email resent successfully."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to send email: {e}")
+
+def bulk_send_tickets_task(event_id: int, session_factory):
+    with Session(session_factory) as session:
+        event = session.get(Event, event_id)
+        if not event:
+            print(f"Bulk resend error: Event {event_id} not found")
+            return
+            
+        # Get email config
+        from backend.models import SystemSetting
+        email_setting = session.exec(select(SystemSetting).where(SystemSetting.key == "email_config")).first()
+        config = email_setting.value if email_setting else {}
+        
+        # Get all confirmed registrations
+        registrations = session.exec(
+            select(Registration, Attendee)
+            .join(Attendee)
+            .where(Registration.event_id == event_id)
+            .where(Registration.status == "confirmed")
+        ).all()
+        
+        print(f"Starting bulk send for {len(registrations)} confirmed attendees of event {event.title}")
+        for reg, att in registrations:
+            try:
+                send_confirmation_email(
+                    to_email=att.email,
+                    first_name=att.first_name,
+                    event_title=event.title,
+                    clearance_id=reg.pin,
+                    event_details={
+                        "start_date": event.start_date,
+                        "location": event.location,
+                        "address": event.address
+                    },
+                    config=config
+                )
+                print(f"Successfully resent ticket to {att.email}")
+            except Exception as e:
+                print(f"Failed to resend ticket to {att.email}: {e}")
+
+@app.post("/api/py/events/{event_id}/resend-all-tickets")
+def resend_all_tickets(event_id: int, background_tasks: BackgroundTasks):
+    background_tasks.add_task(bulk_send_tickets_task, event_id, engine)
+    return {"ok": True, "message": "Bulk ticket dispatch started in the background."}
+
 
 @app.delete("/api/py/registrations/{registration_id}")
 def delete_registration(registration_id: str, session: Session = Depends(get_session)):

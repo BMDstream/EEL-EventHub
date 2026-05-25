@@ -10,6 +10,7 @@ class Event(SQLModel, table=True):
     description: str
     start_date: datetime
     location: str
+    address: Optional[str] = None
     capacity: int
     banner_url: Optional[str] = None
     

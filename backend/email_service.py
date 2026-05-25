@@ -70,6 +70,15 @@ def send_confirmation_email(to_email: str, first_name: str, event_title: str, cl
             date_str = str(event_details.get('start_date'))
             time_str = "TBA"
 
+        address_html = ""
+        if event_details.get('address'):
+            address_html = f"""
+            <div style="margin-top: 20px;">
+                <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin: 0 0 4px 0;">Address</p>
+                <p style="font-size: 16px; font-weight: 700; color: #0f172a; margin: 0;">{event_details.get('address')}</p>
+            </div>
+            """
+
         details_html = f"""
         <div style="background: #ffffff; padding: 32px; border: 1px solid #f1f5f9; border-radius: 32px; margin-bottom: 40px;">
             <p style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.3em; color: {accent_color}; margin-bottom: 24px;">Engagement Details</p>
@@ -84,10 +93,11 @@ def send_confirmation_email(to_email: str, first_name: str, event_title: str, cl
                 <p style="font-size: 16px; font-weight: 700; color: #0f172a; margin: 0;">{date_str} @ {time_str}</p>
             </div>
 
-            <div>
+            <div style="margin-bottom: 20px;">
                 <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin: 0 0 4px 0;">Venue</p>
                 <p style="font-size: 16px; font-weight: 700; color: #0f172a; margin: 0;">{event_details.get('location', 'TBA')}</p>
             </div>
+            {address_html}
         </div>
         """
 

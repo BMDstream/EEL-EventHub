@@ -13,6 +13,7 @@ interface Event {
   description: string;
   start_date: string;
   location: string;
+  address?: string;
   capacity: number;
 }
 
@@ -125,10 +126,15 @@ export default function EventsListPage() {
                                <Calendar size={14} className="text-slate-300" />
                                {new Date(event.start_date).toLocaleDateString(undefined, { dateStyle: 'medium' })}
                             </div>
-                            <div className="flex items-center gap-2 text-xs font-bold text-slate-400">
-                               <MapPin size={14} className="text-slate-300" />
-                               {event.location}
+                            <div className="flex items-center gap-2 text-xs font-bold text-slate-400" title={event.location}>
+                               <MapPin size={14} className="text-slate-300 shrink-0" />
+                               <span className="truncate max-w-[150px]">{event.location}</span>
                             </div>
+                            {event.address && (
+                              <div className="text-[10px] font-medium text-slate-300 pl-5 truncate max-w-[150px]" title={event.address}>
+                                 {event.address}
+                              </div>
+                            )}
                          </div>
                       </td>
                       <td className="px-10 py-8">

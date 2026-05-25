@@ -26,6 +26,7 @@ interface Event {
   description: string;
   start_date: string;
   location: string;
+  address?: string;
   capacity: number;
 }
 
@@ -177,9 +178,16 @@ export default function AdminDashboard() {
                           <Calendar size={14} className="text-slate-400" />
                           {new Date(event.start_date).toLocaleDateString(undefined, { dateStyle: 'medium' })}
                         </div>
-                        <div className="flex items-center gap-3 text-slate-500 text-xs font-medium">
-                          <MapPin size={14} className="text-slate-400" />
-                          {event.location}
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-3 text-slate-500 text-xs font-medium">
+                            <MapPin size={14} className="text-slate-400 shrink-0" />
+                            <span className="truncate max-w-[220px]">{event.location}</span>
+                          </div>
+                          {event.address && (
+                            <div className="text-[10px] font-medium text-slate-400 pl-[26px] truncate max-w-[220px] dark:text-slate-500">
+                              {event.address}
+                            </div>
+                          )}
                         </div>
                       </div>
                       <Link 

@@ -20,6 +20,7 @@ interface Event {
   title: string;
   start_date: string;
   location: string;
+  address?: string;
 }
 
 export default function FormsHubPage() {

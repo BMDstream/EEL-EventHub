@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Trash2, GripVertical, Type, List, CheckSquare, Save, Loader2, Sparkles } from "lucide-react";
+import { Plus, Trash2, GripVertical, Type, List, CheckSquare, Save, Loader2, Sparkles, ArrowUp, ArrowDown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface FormField {
@@ -10,11 +10,72 @@ interface FormField {
   type: "text" | "select" | "checkbox";
   required: boolean;
   options?: string[]; // For select type
+  dependsOn?: {
+    fieldId: string;
+    value: string;
+  };
 }
 
 export default function FormBuilder({ eventId, initialSchema, onSave }: { eventId: string, initialSchema: FormField[], onSave: (schema: FormField[]) => void }) {
   const [fields, setFields] = useState<FormField[]>(initialSchema || []);
   const [saving, setSaving] = useState(false);
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragAllowed, setDragAllowed] = useState(false);
+
+  const handleDragStart = (index: number) => {
+    setDraggedIndex(index);
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === index) return;
+    
+    const reorderedFields = [...fields];
+    const [draggedItem] = reorderedFields.splice(draggedIndex, 1);
+    reorderedFields.splice(index, 0, draggedItem);
+    setDraggedIndex(index);
+    setFields(reorderedFields);
+  };
+
+  const handleDragEnd = () => {
+    // Validate dependencies: if a parent is now placed after a child, remove the child's dependency
+    const validatedFields = fields.map((field, idx) => {
+      if (field.dependsOn) {
+        const precedingIds = fields.slice(0, idx).map(f => f.id);
+        if (!precedingIds.includes(field.dependsOn.fieldId)) {
+          const { dependsOn, ...rest } = field;
+          return rest;
+        }
+      }
+      return field;
+    });
+    setFields(validatedFields);
+    setDraggedIndex(null);
+    setDragAllowed(false);
+  };
+
+  const moveField = (index: number, direction: "up" | "down") => {
+    const newIndex = direction === "up" ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= fields.length) return;
+    
+    const reorderedFields = [...fields];
+    const [item] = reorderedFields.splice(index, 1);
+    reorderedFields.splice(newIndex, 0, item);
+    
+    // Validate dependencies
+    const validatedFields = reorderedFields.map((field, idx) => {
+      if (field.dependsOn) {
+        const precedingIds = reorderedFields.slice(0, idx).map(f => f.id);
+        if (!precedingIds.includes(field.dependsOn.fieldId)) {
+          const { dependsOn, ...rest } = field;
+          return rest;
+        }
+      }
+      return field;
+    });
+    
+    setFields(validatedFields);
+  };
 
   const addField = (type: "text" | "select" | "checkbox") => {
     const newField: FormField = {
@@ -28,7 +89,14 @@ export default function FormBuilder({ eventId, initialSchema, onSave }: { eventI
   };
 
   const removeField = (id: string) => {
-    setFields(fields.filter(f => f.id !== id));
+    // Filter out the field and clean up any field dependencies pointing to it
+    setFields(fields.filter(f => f.id !== id).map(f => {
+      if (f.dependsOn?.fieldId === id) {
+        const { dependsOn, ...rest } = f;
+        return rest;
+      }
+      return f;
+    }));
   };
 
   const updateField = (id: string, updates: Partial<FormField>) => {
@@ -124,18 +192,48 @@ export default function FormBuilder({ eventId, initialSchema, onSave }: { eventI
                     layout
                     className="space-y-6"
                   >
-                     {fields.map((field, index) => (
-                       <motion.div 
-                         layout
-                         initial={{ opacity: 0, x: 20 }}
-                         animate={{ opacity: 1, x: 0 }}
-                         exit={{ opacity: 0, scale: 0.95 }}
-                         key={field.id} 
-                         className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100 flex gap-6"
-                       >
-                          <div className="pt-2 text-slate-200 cursor-grab">
-                             <GripVertical size={20} />
-                          </div>
+                      {fields.map((field, index) => (
+                        <motion.div 
+                          layout
+                          initial={{ opacity: 0, x: 20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, scale: 0.95 }}
+                          key={field.id} 
+                          draggable={dragAllowed}
+                          onDragStart={() => handleDragStart(index)}
+                          onDragOver={(e) => handleDragOver(e, index)}
+                          onDragEnd={handleDragEnd}
+                          className={`bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100 flex gap-6 transition-all duration-200 ${
+                            draggedIndex === index ? "opacity-40 border-yellow-400 border-2" : ""
+                          }`}
+                        >
+                           <div 
+                             onMouseEnter={() => setDragAllowed(true)}
+                             onMouseLeave={() => setDragAllowed(false)}
+                             className="flex flex-col items-center gap-1 text-slate-200 select-none"
+                           >
+                              <div className="cursor-grab active:cursor-grabbing p-1 hover:text-[#0f172a] transition-colors">
+                                 <GripVertical size={20} />
+                              </div>
+                              <button 
+                                type="button" 
+                                disabled={index === 0}
+                                onClick={() => moveField(index, "up")}
+                                className="text-slate-300 hover:text-[#0f172a] disabled:text-slate-100 disabled:hover:text-slate-100 transition-colors p-1"
+                                title="Move Up"
+                              >
+                                 <ArrowUp size={14} />
+                              </button>
+                              <button 
+                                type="button" 
+                                disabled={index === fields.length - 1}
+                                onClick={() => moveField(index, "down")}
+                                className="text-slate-300 hover:text-[#0f172a] disabled:text-slate-100 disabled:hover:text-slate-100 transition-colors p-1"
+                                title="Move Down"
+                              >
+                                 <ArrowDown size={14} />
+                              </button>
+                           </div>
                           <div className="flex-1 space-y-6">
                              <div className="flex flex-col md:flex-row gap-6">
                                 <div className="flex-1 space-y-2">
@@ -170,6 +268,101 @@ export default function FormBuilder({ eventId, initialSchema, onSave }: { eventI
                                   />
                                </div>
                              )}
+
+                             {(() => {
+                                const precedingFields = fields.slice(0, index).filter(
+                                  f => f.type === "select" || f.type === "checkbox"
+                                );
+                                if (precedingFields.length === 0) return null;
+
+                                return (
+                                  <div className="space-y-4 pt-4 border-t border-slate-50">
+                                     <div className="flex items-center justify-between">
+                                        <label className="flex items-center gap-3 cursor-pointer group">
+                                           <input 
+                                             type="checkbox" 
+                                             checked={!!field.dependsOn}
+                                             onChange={(e) => {
+                                               if (e.target.checked) {
+                                                 const parent = precedingFields[0];
+                                                 const defaultValue = parent.type === "checkbox" ? "true" : (parent.options?.[0] || "");
+                                                 updateField(field.id, { 
+                                                   dependsOn: { fieldId: parent.id, value: defaultValue } 
+                                                 });
+                                               } else {
+                                                 updateField(field.id, { dependsOn: undefined });
+                                               }
+                                             }}
+                                             className="w-5 h-5 rounded-lg border-2 border-slate-200 checked:bg-yellow-400 checked:border-yellow-400 transition-all outline-none" 
+                                           />
+                                           <span className="text-xs font-black text-slate-400 uppercase tracking-widest group-hover:text-[#0f172a] transition-colors">Show conditionally based on another answer</span>
+                                        </label>
+                                     </div>
+
+                                     {field.dependsOn && (
+                                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50 p-6 rounded-2xl border border-slate-100 animate-in fade-in slide-in-from-top-2">
+                                          <div className="space-y-2">
+                                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Select Question</label>
+                                             <select 
+                                               value={field.dependsOn.fieldId}
+                                               onChange={(e) => {
+                                                 const parent = precedingFields.find(p => p.id === e.target.value);
+                                                 if (parent) {
+                                                   const defaultValue = parent.type === "checkbox" ? "true" : (parent.options?.[0] || "");
+                                                   updateField(field.id, {
+                                                     dependsOn: { fieldId: parent.id, value: defaultValue }
+                                                   });
+                                                 }
+                                               }}
+                                               className="w-full px-6 py-4 bg-white rounded-xl border border-slate-100 outline-none font-bold text-[#0f172a] focus:ring-2 focus:ring-yellow-400"
+                                             >
+                                               {precedingFields.map(p => (
+                                                 <option key={p.id} value={p.id}>{p.label}</option>
+                                               ))}
+                                             </select>
+                                          </div>
+
+                                          <div className="space-y-2">
+                                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Trigger Value</label>
+                                             {(() => {
+                                               const parent = precedingFields.find(p => p.id === field.dependsOn?.fieldId);
+                                               if (!parent || !field.dependsOn) return null;
+                                               
+                                               if (parent.type === "checkbox") {
+                                                 return (
+                                                   <select 
+                                                     value={field.dependsOn.value}
+                                                     onChange={(e) => updateField(field.id, {
+                                                       dependsOn: { ...field.dependsOn!, value: e.target.value }
+                                                     })}
+                                                     className="w-full px-6 py-4 bg-white rounded-xl border border-slate-100 outline-none font-bold text-[#0f172a] focus:ring-2 focus:ring-yellow-400"
+                                                   >
+                                                     <option value="true">Checked (Yes)</option>
+                                                     <option value="false">Unchecked (No)</option>
+                                                   </select>
+                                                 );
+                                               } else {
+                                                 return (
+                                                   <select 
+                                                     value={field.dependsOn.value}
+                                                     onChange={(e) => updateField(field.id, {
+                                                       dependsOn: { ...field.dependsOn!, value: e.target.value }
+                                                     })}
+                                                     className="w-full px-6 py-4 bg-white rounded-xl border border-slate-100 outline-none font-bold text-[#0f172a] focus:ring-2 focus:ring-yellow-400"
+                                                   >
+                                                     {parent.options?.map(opt => (
+                                                       <option key={opt} value={opt}>{opt}</option>
+                                                     ))}
+                                                   </select>
+                                                 );
+                                               }
+                                             })()}
+                                          </div>
+                                       </div>
+                                     )}
+                                  </div>
+                                );
+                              })()}
 
                              <div className="flex items-center justify-between pt-4 border-t border-slate-50">
                                 <label className="flex items-center gap-3 cursor-pointer group">

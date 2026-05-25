@@ -16,6 +16,7 @@ export default function EditEventPage() {
     description: "",
     start_date: "",
     location: "",
+    address: "",
     capacity: 100,
     banner_url: "",
   });
@@ -36,6 +37,7 @@ export default function EditEventPage() {
           description: data.description,
           start_date: formattedDate,
           location: data.location,
+          address: data.address || "",
           capacity: data.capacity,
           banner_url: data.banner_url || "",
         });
@@ -177,12 +179,24 @@ export default function EditEventPage() {
               </div>
 
               <div className="space-y-3">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Location</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Venue</label>
                 <input
                   required
                   type="text"
                   name="location"
                   value={formData.location}
+                  onChange={handleChange}
+                  className="w-full px-5 py-4 rounded-2xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-slate-700 bg-slate-50/50"
+                />
+              </div>
+
+              <div className="space-y-3">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Address</label>
+                <input
+                  required
+                  type="text"
+                  name="address"
+                  value={formData.address}
                   onChange={handleChange}
                   className="w-full px-5 py-4 rounded-2xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-slate-700 bg-slate-50/50"
                 />

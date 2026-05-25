@@ -41,6 +41,7 @@ interface Registration {
   checked_in: boolean;
   created_at: string;
   custom_answers?: Record<string, any>;
+  pin?: string;
   attendee: Attendee;
 }
 
@@ -51,6 +52,7 @@ interface Event {
   description: string;
   start_date: string;
   location: string;
+  address?: string;
   capacity: number;
   custom_fields_schema: any[];
 }
@@ -74,6 +76,56 @@ export default function EventDetailsPage() {
   const [pinLoading, setPinLoading] = useState(false);
   const [pinStatus, setPinStatus] = useState<"idle" | "success" | "error" | "processing" | "warning">("idle");
   const [pinMessage, setPinMessage] = useState("");
+  const [resendingRegId, setResendingRegId] = useState<string | null>(null);
+  const [bulkResending, setBulkResending] = useState(false);
+
+  const handleResendEmail = async (regId: string) => {
+    setResendingRegId(regId);
+    try {
+      const res = await fetch(`/api/py/registrations/${regId}/resend-email`, {
+        method: "POST",
+      });
+      if (res.ok) {
+        alert("Confirmation email containing PIN and QR code has been resent!");
+      } else {
+        const err = await res.json();
+        alert(`Failed to resend: ${err.detail || "Unknown error"}`);
+      }
+    } catch (err) {
+      alert("Error resending email");
+    } finally {
+      setResendingRegId(null);
+    }
+  };
+
+  const handleBulkResend = async () => {
+    if (!event) return;
+    const confirmedCount = registrations.filter(r => r.status === "confirmed").length;
+    if (confirmedCount === 0) {
+      alert("There are no confirmed registrants to send tickets to.");
+      return;
+    }
+    if (!confirm(`Are you sure you want to resend credentials & QR codes to all ${confirmedCount} confirmed attendees? This will run in the background.`)) {
+      return;
+    }
+    
+    setBulkResending(true);
+    try {
+      const res = await fetch(`/api/py/events/${event.id}/resend-all-tickets`, {
+        method: "POST",
+      });
+      if (res.ok) {
+        alert("Bulk ticket dispatch started successfully in the background.");
+      } else {
+        const err = await res.json();
+        alert(`Failed to start bulk dispatch: ${err.detail || "Unknown error"}`);
+      }
+    } catch (err) {
+      alert("Error starting bulk ticket dispatch");
+    } finally {
+      setBulkResending(false);
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -267,8 +319,11 @@ export default function EventDetailsPage() {
                       <MapPin size={22} />
                     </div>
                     <div>
-                      <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Location</p>
-                      <p className="font-bold text-[#0f172a] truncate max-w-[150px]">{event.location}</p>
+                      <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Venue</p>
+                      <p className="font-bold text-[#0f172a] truncate max-w-[150px]" title={event.location}>{event.location}</p>
+                      {event.address && (
+                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest truncate max-w-[150px]" title={event.address}>{event.address}</p>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
@@ -648,7 +703,7 @@ export default function EventDetailsPage() {
                 <p className="text-slate-500 font-medium text-center">Send updates or reminders to all {registrations.length} confirmed attendees.</p>
              </div>
 
-             <div className="max-w-xl mx-auto">
+             <div className="max-w-xl mx-auto space-y-12">
                 <form 
                   onSubmit={async (e) => {
                     e.preventDefault();
@@ -694,6 +749,23 @@ export default function EventDetailsPage() {
                       Dispatch Broadcast
                    </button>
                 </form>
+
+                <div className="pt-12 border-t border-slate-100 space-y-6">
+                    <h3 className="text-xl font-black text-[#0f172a] font-bricolage italic uppercase tracking-tight">Bulk Credential Dispatch</h3>
+                    <p className="text-slate-500 font-medium text-sm">
+                       This will resend individual registration confirmation emails (including their unique PIN and QR code) to all confirmed attendees of this event. 
+                       Recommended to do a few days before the event as a credentials reminder.
+                    </p>
+                    <button 
+                       type="button"
+                       onClick={handleBulkResend}
+                       disabled={bulkResending}
+                       className="w-full flex items-center justify-center gap-3 bg-yellow-400 hover:bg-yellow-500 disabled:bg-slate-200 text-[#0f172a] font-black py-6 rounded-[2rem] transition-all uppercase tracking-widest text-xs"
+                    >
+                       {bulkResending ? <Loader2 size={18} className="animate-spin" /> : null}
+                       Resend Tickets to All Confirmed Guests
+                    </button>
+                 </div>
              </div>
           </div>
         )}
@@ -735,6 +807,10 @@ export default function EventDetailsPage() {
                        <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">Registered On</p>
                        <p className="font-bold text-[#0f172a]">{new Date(selectedReg.created_at).toLocaleString()}</p>
                     </div>
+                    <div>
+                       <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">Clearance ID (PIN)</p>
+                       <p className="font-mono font-bold text-[#0f172a] bg-slate-50 px-3 py-1 rounded border border-slate-100 inline-block text-lg tracking-wider">{selectedReg.pin || "—"}</p>
+                    </div>
                  </div>
 
                  <div className="pt-8 border-t border-slate-50">
@@ -753,7 +829,15 @@ export default function EventDetailsPage() {
                     </div>
                  </div>
               </div>
-              <div className="p-10 bg-slate-50 border-t border-slate-100 flex justify-end">
+              <div className="p-10 bg-slate-50 border-t border-slate-100 flex justify-between items-center">
+                 <button 
+                   onClick={() => handleResendEmail(selectedReg.id)}
+                   disabled={resendingRegId === selectedReg.id}
+                   className="px-6 py-4 bg-yellow-400 hover:bg-yellow-500 disabled:bg-slate-200 text-[#0f172a] text-[10px] font-black uppercase tracking-widest rounded-2xl transition-all flex items-center gap-2"
+                 >
+                    {resendingRegId === selectedReg.id ? <Loader2 size={14} className="animate-spin" /> : null}
+                    Resend Ticket Email
+                 </button>
                  <button 
                    onClick={() => setSelectedReg(null)}
                    className="px-8 py-4 bg-[#0f172a] text-white text-[10px] font-black uppercase tracking-widest rounded-2xl hover:bg-black transition-all shadow-xl shadow-slate-200"

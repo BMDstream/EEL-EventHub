@@ -32,6 +32,7 @@ export default function CreateEventPage() {
     description: "",
     start_date: "",
     location: "",
+    address: "",
     capacity: 100,
   });
 
@@ -163,51 +164,66 @@ export default function CreateEventPage() {
                  <MapPin size={16} /> Logistics & Scheduling
               </h3>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-                 <div className="space-y-3">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
-                       <Calendar size={14} /> Start Date
-                    </label>
-                    <input
-                      required
-                      type="datetime-local"
-                      name="start_date"
-                      value={formData.start_date}
-                      onChange={handleChange}
-                      className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a] transition-all"
-                    />
-                    <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest ml-1">Note: Please select both date and time</p>
-                 </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                  <div className="space-y-3">
+                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                        <Calendar size={14} /> Start Date
+                     </label>
+                     <input
+                       required
+                       type="datetime-local"
+                       name="start_date"
+                       value={formData.start_date}
+                       onChange={handleChange}
+                       className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a] transition-all"
+                     />
+                     <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest ml-1">Note: Please select both date and time</p>
+                  </div>
 
-                 <div className="space-y-3">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
-                       <MapPin size={14} /> Venue
-                    </label>
-                    <input
-                      required
-                      type="text"
-                      name="location"
-                      value={formData.location}
-                      onChange={handleChange}
-                      placeholder="e.g. Metropolitan Hall"
-                      className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a] transition-all"
-                    />
-                 </div>
+                  <div className="space-y-3">
+                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                        <Users size={14} /> Capacity
+                     </label>
+                     <input
+                       required
+                       type="number"
+                       name="capacity"
+                       value={formData.capacity}
+                       onChange={handleChange}
+                       className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a] transition-all"
+                     />
+                  </div>
 
-                 <div className="space-y-3">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
-                       <Users size={14} /> Capacity
-                    </label>
-                    <input
-                      required
-                      type="number"
-                      name="capacity"
-                      value={formData.capacity}
-                      onChange={handleChange}
-                      className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a] transition-all"
-                    />
-                 </div>
-              </div>
+                  <div className="space-y-3">
+                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                        <MapPin size={14} /> Venue
+                     </label>
+                     <input
+                       required
+                       type="text"
+                       name="location"
+                       value={formData.location}
+                       onChange={handleChange}
+                       placeholder="e.g. Metropolitan Hall"
+                       className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a] transition-all"
+                     />
+                  </div>
+
+                  <div className="space-y-3">
+                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                        <MapPin size={14} /> Address
+                     </label>
+                     <input
+                       required
+                       type="text"
+                       name="address"
+                       value={formData.address}
+                       onChange={handleChange}
+                       placeholder="e.g. 12 Main Street, Washington"
+                       className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a] transition-all"
+                     />
+                  </div>
+               </div>
            </div>
 
            <div className="flex gap-6">

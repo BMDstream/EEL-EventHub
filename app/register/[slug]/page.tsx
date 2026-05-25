@@ -11,6 +11,10 @@ interface FormField {
   type: "text" | "select" | "checkbox";
   required: boolean;
   options?: string[];
+  dependsOn?: {
+    fieldId: string;
+    value: string;
+  };
 }
 
 interface Event {
@@ -19,6 +23,7 @@ interface Event {
   description: string;
   start_date: string;
   location: string;
+  address?: string;
   capacity: number;
   banner_url?: string;
   custom_fields_schema?: FormField[];
@@ -39,10 +44,35 @@ export default function PublicRegistrationPage() {
     first_name: "",
     last_name: "",
     email: "",
-    company: "",
   });
 
   const [customAnswers, setCustomAnswers] = useState<Record<string, any>>({});
+
+  // Prune any custom answers for fields that are hidden because of conditional branching
+  useEffect(() => {
+    if (!event?.custom_fields_schema) return;
+    
+    let changed = false;
+    const newAnswers = { ...customAnswers };
+    
+    for (const field of event.custom_fields_schema) {
+      if (field.dependsOn) {
+        const parentVal = newAnswers[field.dependsOn.fieldId];
+        const parentValStr = typeof parentVal === "boolean" ? String(parentVal) : parentVal;
+        
+        if (parentValStr !== field.dependsOn.value) {
+          if (newAnswers[field.id] !== undefined) {
+            delete newAnswers[field.id];
+            changed = true;
+          }
+        }
+      }
+    }
+    
+    if (changed) {
+      setCustomAnswers(newAnswers);
+    }
+  }, [customAnswers, event?.custom_fields_schema]);
   const [isAttending, setIsAttending] = useState<boolean>(true);
 
   useEffect(() => {
@@ -187,16 +217,19 @@ export default function PublicRegistrationPage() {
                 </div>
                 <div>
                   <p className="text-zinc-300 text-[10px] font-black uppercase tracking-[0.3em] mb-2">Schedule</p>
-                  <p className="text-2xl font-black font-bricolage italic tracking-tight">{new Date(event.start_date).toLocaleDateString(undefined, { dateStyle: 'full' })}</p>
+                  <p className="text-2xl font-black font-bricolage italic tracking-tight">{new Date(event.start_date).toLocaleString(undefined, { dateStyle: 'full', timeStyle: 'short' })}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-8 group">
-                <div className="bg-zinc-900 p-5 rounded-2xl border border-white/5 group-hover:border-yellow-500/50 transition-all">
+              <div className="flex items-start gap-8 group">
+                <div className="bg-zinc-900 p-5 rounded-2xl border border-white/5 group-hover:border-yellow-500/50 transition-all mt-1">
                   <MapPin size={32} className="text-yellow-500" />
                 </div>
                 <div>
                   <p className="text-zinc-300 text-[10px] font-black uppercase tracking-[0.3em] mb-2">Venue</p>
                   <p className="text-2xl font-black font-bricolage italic tracking-tight">{event.location}</p>
+                  {event.address && (
+                    <p className="text-zinc-400 text-sm font-medium leading-relaxed max-w-sm mt-1">{event.address}</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -236,10 +269,7 @@ export default function PublicRegistrationPage() {
                 <input required type="email" name="email" value={formData.email} onChange={handleChange} placeholder="jane.doe@company.com" className="w-full px-6 py-5 rounded-[1.5rem] bg-zinc-950 border border-white/20 focus:border-yellow-500 focus:ring-4 focus:ring-yellow-500/10 outline-none transition-all font-bold text-white placeholder-zinc-600" />
               </div>
 
-              <div className="space-y-3">
-                <label className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500 ml-1">Organization</label>
-                <input type="text" name="company" value={formData.company} onChange={handleChange} placeholder="Global Enterprises Inc." className="w-full px-6 py-5 rounded-[1.5rem] bg-zinc-950 border border-white/20 focus:border-yellow-500 focus:ring-4 focus:ring-yellow-500/10 outline-none transition-all font-bold text-white placeholder-zinc-600" />
-              </div>
+
 
               {/* RSVP Question */}
               <div className="py-6 border-y border-white/5 space-y-4">
@@ -263,47 +293,57 @@ export default function PublicRegistrationPage() {
               </div>
 
               {/* Dynamic Custom Fields */}
-              {isAttending && event.custom_fields_schema?.map((field) => (
-                <div key={field.id} className="space-y-3 animate-in fade-in slide-in-from-bottom-2">
-                  <label className="text-[10px] font-black uppercase tracking-[0.3em] text-yellow-500/70 ml-1">
-                    {field.label} {field.required && "*"}
-                  </label>
-                  
-                  {field.type === "text" && (
-                    <input
-                      required={field.required}
-                      type="text"
-                      onChange={(e) => handleCustomChange(field.id, e.target.value)}
-                      className="w-full px-6 py-5 rounded-[1.5rem] bg-zinc-950 border border-white/20 focus:border-yellow-500 focus:ring-4 focus:ring-yellow-500/10 outline-none transition-all font-bold text-white placeholder-zinc-600"
-                    />
-                  )}
+              {isAttending && event.custom_fields_schema?.map((field) => {
+                if (field.dependsOn) {
+                  const parentVal = customAnswers[field.dependsOn.fieldId];
+                  const parentValStr = typeof parentVal === "boolean" ? String(parentVal) : parentVal;
+                  if (parentValStr !== field.dependsOn.value) {
+                    return null;
+                  }
+                }
 
-                  {field.type === "select" && (
-                    <div className="relative">
-                      <select
-                        required={field.required}
-                        onChange={(e) => handleCustomChange(field.id, e.target.value)}
-                        className="w-full px-6 py-5 rounded-[1.5rem] bg-zinc-950 border border-white/20 focus:border-yellow-500 focus:ring-4 focus:ring-yellow-500/10 outline-none transition-all font-bold text-white appearance-none cursor-pointer"
-                      >
-                        <option value="">Select Option</option>
-                        {field.options?.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                      </select>
-                      <ChevronDown className="absolute right-6 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" size={20} />
-                    </div>
-                  )}
-
-                  {field.type === "checkbox" && (
-                    <label className="flex items-center gap-4 cursor-pointer group p-5 bg-zinc-950 rounded-[1.5rem] border border-white/20 hover:border-yellow-500/30 transition-all">
-                       <input 
-                         type="checkbox" 
-                         onChange={(e) => handleCustomChange(field.id, e.target.checked)}
-                         className="w-6 h-6 rounded-lg bg-zinc-900 border-white/10 checked:bg-yellow-500 transition-all" 
-                       />
-                       <span className="text-xs font-bold text-zinc-400 group-hover:text-white">Yes, I agree / confirm</span>
+                return (
+                  <div key={field.id} className="space-y-3 animate-in fade-in slide-in-from-bottom-2">
+                    <label className="text-[10px] font-black uppercase tracking-[0.3em] text-yellow-500/70 ml-1">
+                      {field.label} {field.required && "*"}
                     </label>
-                  )}
-                </div>
-              ))}
+                    
+                    {field.type === "text" && (
+                      <input
+                        required={field.required}
+                        type="text"
+                        onChange={(e) => handleCustomChange(field.id, e.target.value)}
+                        className="w-full px-6 py-5 rounded-[1.5rem] bg-zinc-950 border border-white/20 focus:border-yellow-500 focus:ring-4 focus:ring-yellow-500/10 outline-none transition-all font-bold text-white placeholder-zinc-600"
+                      />
+                    )}
+
+                    {field.type === "select" && (
+                      <div className="relative">
+                        <select
+                          required={field.required}
+                          onChange={(e) => handleCustomChange(field.id, e.target.value)}
+                          className="w-full px-6 py-5 rounded-[1.5rem] bg-zinc-950 border border-white/20 focus:border-yellow-500 focus:ring-4 focus:ring-yellow-500/10 outline-none transition-all font-bold text-white appearance-none cursor-pointer"
+                        >
+                          <option value="">Select Option</option>
+                          {field.options?.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                        </select>
+                        <ChevronDown className="absolute right-6 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" size={20} />
+                      </div>
+                    )}
+
+                    {field.type === "checkbox" && (
+                      <label className="flex items-center gap-4 cursor-pointer group p-5 bg-zinc-950 rounded-[1.5rem] border border-white/20 hover:border-yellow-500/30 transition-all">
+                         <input 
+                           type="checkbox" 
+                           onChange={(e) => handleCustomChange(field.id, e.target.checked)}
+                           className="w-6 h-6 rounded-lg bg-zinc-900 border-white/10 checked:bg-yellow-500 transition-all" 
+                         />
+                         <span className="text-xs font-bold text-zinc-400 group-hover:text-white">Yes, I agree / confirm</span>
+                      </label>
+                    )}
+                  </div>
+                );
+              })}
 
               <div className="pt-8">
                 <button type="submit" disabled={registering} className="w-full bg-yellow-500 hover:bg-white disabled:bg-zinc-800 text-black font-black py-6 rounded-[2rem] shadow-2xl shadow-yellow-500/10 transition-all flex items-center justify-center gap-4 uppercase tracking-[0.3em] text-xs">
