@@ -3,13 +3,14 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Save, Loader2, Trash2 } from "lucide-react";
+import { ArrowLeft, Save, Loader2, Trash2, Building2 } from "lucide-react";
 
 export default function EditEventPage() {
   const { id } = useParams();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [clients, setClients] = useState<any[]>([]);
   const [formData, setFormData] = useState({
     title: "",
     slug: "",
@@ -19,7 +20,15 @@ export default function EditEventPage() {
     address: "",
     capacity: 100,
     banner_url: "",
+    client_id: "",
   });
+
+  useEffect(() => {
+    fetch("/api/py/clients")
+      .then((res) => res.json())
+      .then((data) => setClients(data))
+      .catch((err) => console.error("Failed to fetch clients", err));
+  }, []);
 
   useEffect(() => {
     fetch(`/api/py/events/id/${id}`)
@@ -40,6 +49,7 @@ export default function EditEventPage() {
           address: data.address || "",
           capacity: data.capacity,
           banner_url: data.banner_url || "",
+          client_id: data.client_id ? data.client_id.toString() : "",
         });
         setLoading(false);
       })
@@ -61,6 +71,7 @@ export default function EditEventPage() {
         },
         body: JSON.stringify({
           ...formData,
+          client_id: formData.client_id ? parseInt(formData.client_id) : null,
           start_date: formData.start_date,
         }),
       });
@@ -98,7 +109,7 @@ export default function EditEventPage() {
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
@@ -165,7 +176,21 @@ export default function EditEventPage() {
                   className="w-full px-5 py-4 rounded-2xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-slate-700 bg-slate-50/50"
                 />
               </div>
-
+              <div className="space-y-3">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                  <Building2 size={14} /> Brand Client
+                </label>
+                <select
+                  name="client_id"
+                  value={formData.client_id}
+                  onChange={handleChange}
+                  className="w-full px-5 py-4 rounded-2xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-slate-700 bg-slate-50/50 appearance-none cursor-pointer"
+                >
+                  {clients.map((c) => (
+                    <option key={c.id} value={c.id.toString()}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
               <div className="space-y-3">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Date & Time</label>
                 <input

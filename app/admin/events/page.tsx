@@ -15,6 +15,7 @@ interface Event {
   location: string;
   address?: string;
   capacity: number;
+  client?: any;
 }
 
 export default function EventsListPage() {
@@ -117,7 +118,15 @@ export default function EventsListPage() {
                       <td className="px-10 py-8">
                          <div>
                             <p className="text-lg font-black text-[#0f172a] dark:text-white group-hover:text-yellow-500 transition-colors">{event.title}</p>
-                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1 dark:text-slate-500">Slug: {event.slug}</p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest dark:text-slate-500">Slug: {event.slug}</span>
+                              {event.client && (
+                                <>
+                                  <span className="text-slate-200 dark:text-slate-700">•</span>
+                                  <span className="text-[9px] bg-slate-50 border border-slate-100 text-slate-400 font-extrabold uppercase px-2 py-0.5 rounded dark:bg-slate-800 dark:border-slate-700">{event.client.name}</span>
+                                </>
+                              )}
+                            </div>
                          </div>
                       </td>
                       <td className="px-10 py-8">

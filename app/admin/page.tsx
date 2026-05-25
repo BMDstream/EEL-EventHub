@@ -28,6 +28,7 @@ interface Event {
   location: string;
   address?: string;
   capacity: number;
+  client?: any;
 }
 
 export default function AdminDashboard() {
@@ -166,7 +167,12 @@ export default function AdminDashboard() {
                       className="group bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-100 hover:shadow-2xl transition-all dark:bg-[#0f172a] dark:border-slate-800"
                     >
                       <div className="flex justify-between items-start mb-6">
-                        <span className="px-3 py-1 bg-green-50 text-green-600 text-[10px] font-black uppercase tracking-[0.15em] rounded-lg border border-green-100">Live</span>
+                        <div className="flex flex-col gap-1 items-start">
+                          <span className="px-3 py-1 bg-green-50 text-green-600 text-[10px] font-black uppercase tracking-[0.15em] rounded-lg border border-green-100">Live</span>
+                          {event.client && (
+                            <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wider mt-1">{event.client.name}</span>
+                          )}
+                        </div>
                         <div className="flex -space-x-2">
                            {[1,2,3].map(i => <div key={i} className="w-6 h-6 rounded-full border-2 border-white bg-slate-200"></div>)}
                            <div className="w-6 h-6 rounded-full border-2 border-white bg-slate-100 text-[8px] flex items-center justify-center font-bold">+12</div>

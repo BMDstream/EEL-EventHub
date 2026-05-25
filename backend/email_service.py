@@ -149,15 +149,27 @@ def send_confirmation_email(to_email: str, first_name: str, event_title: str, cl
     """
 
     try:
-        r = resend.Emails.send({
-            "from": "EEL-EventHub <events@eelogistics.co.za>",
+        sender_name = config.get("sender_name") if config else None
+        if not sender_name:
+            sender_name = "EEL-EventHub"
+            
+        from_address = f"{sender_name} <events@eelogistics.co.za>"
+        
+        email_params = {
+            "from": from_address,
             "to": to_email,
             "subject": f"Access Granted: {event_title}",
             "html": html_content,
             "headers": {
                 "X-Entity-Ref-ID": clearance_id
             }
-        })
+        }
+        
+        reply_to = config.get("reply_to") if config else None
+        if reply_to:
+            email_params["reply_to"] = reply_to
+            
+        r = resend.Emails.send(email_params)
         print(f"RESEND SUCCESS: {r}")
         return r
     except Exception as e:
@@ -210,13 +222,25 @@ def send_broadcast_email(to_emails: List[str], subject: str, body: str, event_ti
     """
 
     try:
+        sender_name = config.get("sender_name") if config else None
+        if not sender_name:
+            sender_name = "EEL-EventHub"
+            
+        from_address = f"{sender_name} <events@eelogistics.co.za>"
+        
         for email in to_emails:
-            resend.Emails.send({
-                "from": "EEL-EventHub <events@eelogistics.co.za>",
+            email_params = {
+                "from": from_address,
                 "to": email,
                 "subject": subject,
                 "html": html_content
-            })
+            }
+            
+            reply_to = config.get("reply_to") if config else None
+            if reply_to:
+                email_params["reply_to"] = reply_to
+                
+            resend.Emails.send(email_params)
         return True
     except Exception as e:
         print(f"Failed to send broadcast: {e}")

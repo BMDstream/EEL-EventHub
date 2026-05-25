@@ -55,6 +55,7 @@ interface Event {
   address?: string;
   capacity: number;
   custom_fields_schema: any[];
+  client?: any;
 }
 
 export default function EventDetailsPage() {
@@ -274,12 +275,17 @@ export default function EventDetailsPage() {
           <div className="p-10 lg:p-14">
             <div className="flex flex-col md:flex-row justify-between items-start gap-12">
               <div className="flex-1">
-                <div className="flex items-center gap-3 mb-6">
-                   <span className="px-3 py-1 bg-yellow-400/10 text-yellow-600 text-[10px] font-black uppercase tracking-[0.2em] rounded-lg border border-yellow-400/20">
-                     Command Panel
-                   </span>
-                   <span className="text-[10px] font-mono text-slate-300">ID: {id}</span>
-                </div>
+                 <div className="flex items-center gap-3 mb-6">
+                    {event.client?.logo_url && (
+                      <div className="h-6 w-6 bg-slate-50 border border-slate-100 rounded-lg overflow-hidden flex items-center justify-center">
+                        <img src={event.client.logo_url} alt={event.client.name} className="w-full h-full object-cover" />
+                      </div>
+                    )}
+                    <span className="px-3 py-1 bg-yellow-400/10 text-yellow-600 text-[10px] font-black uppercase tracking-[0.2em] rounded-lg border border-yellow-400/20">
+                      {event.client?.name || "Command Panel"}
+                    </span>
+                    <span className="text-[10px] font-mono text-slate-300">ID: {id}</span>
+                 </div>
                 <h1 className="text-3xl md:text-5xl font-black text-[#0f172a] mb-6 tracking-tighter italic font-bricolage leading-none">{event.title}</h1>
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mb-10 bg-slate-50 p-4 rounded-2xl border border-slate-100 group">
                    <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest ml-1">Public Link:</p>

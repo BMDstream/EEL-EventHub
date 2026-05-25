@@ -15,7 +15,8 @@ import {
   Sun,
   Moon,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Building2
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { signOut, useSession } from "next-auth/react";
@@ -67,6 +68,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   const allNavItems = [
     { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
+    { name: "Clients", href: "/admin/clients", icon: Building2 },
     { name: "Events", href: "/admin/events", icon: Calendar },
     { name: "Team", href: "/admin/users", icon: Users },
     { name: "Analytics", href: "/admin/analytics", icon: TrendingUp },

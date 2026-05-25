@@ -2,7 +2,7 @@ from fastapi import FastAPI, Depends, HTTPException, status, BackgroundTasks
 from sqlmodel import Session, select
 from typing import List, Dict, Any
 from backend.database import get_session, init_db, engine
-from backend.models import Event, Attendee, Registration, User
+from backend.models import Event, Attendee, Registration, User, Client
 from backend.email_service import send_confirmation_email, send_broadcast_email
 from backend.routers import auth
 import uvicorn
@@ -82,6 +82,60 @@ def on_startup():
                 session.commit()
             except Exception:
                 session.rollback()
+
+            # Create Client table if not exists
+            try:
+                session.execute(text("""
+                    CREATE TABLE IF NOT EXISTS "client" (
+                        id SERIAL PRIMARY KEY,
+                        name VARCHAR NOT NULL,
+                        slug VARCHAR UNIQUE NOT NULL,
+                        logo_url TEXT,
+                        sender_name VARCHAR,
+                        reply_to VARCHAR,
+                        primary_color VARCHAR DEFAULT '#0f172a',
+                        accent_color VARCHAR DEFAULT '#94a3b8',
+                        heading_text VARCHAR DEFAULT 'Access Granted.',
+                        body_text TEXT DEFAULT 'Your orchestration for **{event_title}** has been authorized. Below are your secure credentials for terminal verification.',
+                        footer_text TEXT DEFAULT 'Automated Event Management System\nSecurity Tier: Level 4 Authorized',
+                        created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                    )
+                """))
+                session.commit()
+            except Exception as e:
+                print(f"Failed to create client table: {e}")
+                session.rollback()
+
+            # Add client_id column to event table
+            try:
+                session.execute(text('ALTER TABLE "event" ADD COLUMN client_id INTEGER REFERENCES "client" (id)'))
+                session.commit()
+            except Exception:
+                session.rollback()
+
+            # Seed default client if it doesn't exist
+            try:
+                default_client = session.exec(select(Client).where(Client.slug == "eel")).first()
+                if not default_client:
+                    default_client = Client(
+                        name="Excellence Entertainment Logistics",
+                        slug="eel",
+                        primary_color="#0f172a",
+                        accent_color="#94a3b8",
+                        heading_text="Access Granted.",
+                        body_text="Your orchestration for **{event_title}** has been authorized. Below are your secure credentials for terminal verification.",
+                        footer_text="Automated Event Management System\nSecurity Tier: Level 4 Authorized"
+                    )
+                    session.add(default_client)
+                    session.commit()
+                    session.refresh(default_client)
+                
+                # Update events that have null client_id to point to default client
+                session.execute(text(f'UPDATE "event" SET client_id = {default_client.id} WHERE client_id IS NULL'))
+                session.commit()
+            except Exception as e:
+                print(f"Failed to seed default client or update event references: {e}")
+                session.rollback()
     except Exception as e:
         print(f"Database initialization failed: {e}")
 
@@ -110,10 +164,16 @@ def update_setting(key: str, data: Dict[str, Any], session: Session = Depends(ge
     session.refresh(setting)
     return setting
 
-@app.get("/api/py/events", response_model=List[Event])
+@app.get("/api/py/events")
 def read_events(session: Session = Depends(get_session)):
     events = session.exec(select(Event)).all()
-    return events
+    result = []
+    for event in events:
+        client = session.get(Client, event.client_id) if event.client_id else None
+        event_dict = event.dict()
+        event_dict["client"] = client.dict() if client else None
+        result.append(event_dict)
+    return result
 
 @app.post("/api/py/events", response_model=Event)
 def create_event(event: Event, session: Session = Depends(get_session)):
@@ -122,19 +182,25 @@ def create_event(event: Event, session: Session = Depends(get_session)):
     session.refresh(event)
     return event
 
-@app.get("/api/py/events/{slug}", response_model=Event)
+@app.get("/api/py/events/{slug}")
 def read_event(slug: str, session: Session = Depends(get_session)):
     event = session.exec(select(Event).where(Event.slug == slug)).first()
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
-    return event
+    client = session.get(Client, event.client_id) if event.client_id else None
+    event_dict = event.dict()
+    event_dict["client"] = client.dict() if client else None
+    return event_dict
 
-@app.get("/api/py/events/id/{event_id}", response_model=Event)
+@app.get("/api/py/events/id/{event_id}")
 def read_event_by_id(event_id: int, session: Session = Depends(get_session)):
     event = session.get(Event, event_id)
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
-    return event
+    client = session.get(Client, event.client_id) if event.client_id else None
+    event_dict = event.dict()
+    event_dict["client"] = client.dict() if client else None
+    return event_dict
 
 @app.put("/api/py/events/{event_id}", response_model=Event)
 def update_event(event_id: int, event_data: Event, session: Session = Depends(get_session)):
@@ -181,6 +247,26 @@ def get_event_registrations(event_id: int, session: Session = Depends(get_sessio
             "attendee": att
         } for reg, att in registrations
     ]
+
+def get_event_email_config(event, session: Session):
+    client = session.get(Client, event.client_id) if event.client_id else None
+    if client:
+        return {
+            "primary_color": client.primary_color,
+            "accent_color": client.accent_color,
+            "heading_text": client.heading_text,
+            "body_text": client.body_text,
+            "footer_text": client.footer_text,
+            "sender_name": client.sender_name or client.name,
+            "reply_to": client.reply_to
+        }
+    
+    from backend.models import SystemSetting
+    email_setting = session.exec(select(SystemSetting).where(SystemSetting.key == "email_config")).first()
+    config = email_setting.value if email_setting else {}
+    if not config.get("sender_name"):
+        config["sender_name"] = "EEL-EventHub"
+    return config
 
 @app.post("/api/py/register")
 def register_attendee(
@@ -284,8 +370,7 @@ def register_attendee(
             event = session.get(Event, event_id)
             if event:
                 # Get email config
-                email_setting = session.exec(select(SystemSetting).where(SystemSetting.key == "email_config")).first()
-                config = email_setting.value if email_setting else {}
+                config = get_event_email_config(event, session)
                 
                 send_confirmation_email(
                     to_email=attendee.email,
@@ -321,6 +406,7 @@ def test_email(event_id: str, data: dict, session: Session = Depends(get_session
         
     try:
         from backend.email_service import send_confirmation_email
+        config = get_event_email_config(event, session)
         res = send_confirmation_email(
             to_email=email,
             first_name="Test",
@@ -330,7 +416,8 @@ def test_email(event_id: str, data: dict, session: Session = Depends(get_session
                 "start_date": event.start_date,
                 "location": event.location,
                 "address": event.address
-            }
+            },
+            config=config
         )
         return {"ok": True, "resend_id": res}
     except Exception as e:
@@ -364,9 +451,7 @@ def resend_registration_email(registration_id: str, session: Session = Depends(g
         raise HTTPException(status_code=404, detail="Event not found")
         
     # Get email config
-    from backend.models import SystemSetting
-    email_setting = session.exec(select(SystemSetting).where(SystemSetting.key == "email_config")).first()
-    config = email_setting.value if email_setting else {}
+    config = get_event_email_config(event, session)
     
     try:
         send_confirmation_email(
@@ -393,9 +478,7 @@ def bulk_send_tickets_task(event_id: int, session_factory):
             return
             
         # Get email config
-        from backend.models import SystemSetting
-        email_setting = session.exec(select(SystemSetting).where(SystemSetting.key == "email_config")).first()
-        config = email_setting.value if email_setting else {}
+        config = get_event_email_config(event, session)
         
         # Get all confirmed registrations
         registrations = session.exec(
@@ -573,9 +656,7 @@ def broadcast_to_attendees(
     emails = [att.email for reg, att in registrations]
     
     # Get email config
-    from backend.models import SystemSetting
-    email_setting = session.exec(select(SystemSetting).where(SystemSetting.key == "email_config")).first()
-    config = email_setting.value if email_setting else {}
+    config = get_event_email_config(event, session)
     
     success = send_broadcast_email(emails, subject, body, event.title, signature, config)
     
@@ -617,6 +698,62 @@ def get_stats(session: Session = Depends(get_session)):
         "check_in_rate": f"{check_in_rate}%",
         "revenue": "R0.00" # Placeholder for now as no payment integration exists
     }
+
+# Client CRUD Endpoints
+@app.get("/api/py/clients", response_model=List[Client])
+def get_clients(session: Session = Depends(get_session)):
+    return session.exec(select(Client)).all()
+
+@app.post("/api/py/clients", response_model=Client)
+def create_client(client: Client, session: Session = Depends(get_session)):
+    existing = session.exec(select(Client).where(Client.slug == client.slug)).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Client slug already exists")
+    session.add(client)
+    session.commit()
+    session.refresh(client)
+    return client
+
+@app.get("/api/py/clients/{client_id}", response_model=Client)
+def get_client_by_id(client_id: int, session: Session = Depends(get_session)):
+    client = session.get(Client, client_id)
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    return client
+
+@app.put("/api/py/clients/{client_id}", response_model=Client)
+def update_client(client_id: int, client_data: Client, session: Session = Depends(get_session)):
+    db_client = session.get(Client, client_id)
+    if not db_client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    
+    if client_data.slug != db_client.slug:
+        existing = session.exec(select(Client).where(Client.slug == client_data.slug)).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="Client slug already exists")
+            
+    client_dict = client_data.dict(exclude_unset=True)
+    for key, value in client_dict.items():
+        setattr(db_client, key, value)
+        
+    session.add(db_client)
+    session.commit()
+    session.refresh(db_client)
+    return db_client
+
+@app.delete("/api/py/clients/{client_id}")
+def delete_client(client_id: int, session: Session = Depends(get_session)):
+    db_client = session.get(Client, client_id)
+    if not db_client:
+        raise HTTPException(status_code=404, detail="Client not found")
+        
+    events_count = len(session.exec(select(Event).where(Event.client_id == client_id)).all())
+    if events_count > 0:
+        raise HTTPException(status_code=400, detail=f"Cannot delete client with {events_count} associated events")
+        
+    session.delete(db_client)
+    session.commit()
+    return {"ok": True}
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)

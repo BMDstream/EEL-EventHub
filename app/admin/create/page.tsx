@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { ArrowLeft, Save, Loader2, Sparkles, Globe, Calendar, MapPin, Users, FileText, Lock } from "lucide-react";
+import { ArrowLeft, Save, Loader2, Sparkles, Globe, Calendar, MapPin, Users, FileText, Lock, Building2 } from "lucide-react";
 import Link from "next/link";
 import AdminLayout from "@/components/AdminLayout";
 
@@ -26,6 +26,7 @@ export default function CreateEventPage() {
       </AdminLayout>
     );
   }
+  const [clients, setClients] = useState<any[]>([]);
   const [formData, setFormData] = useState({
     title: "",
     slug: "",
@@ -34,7 +35,23 @@ export default function CreateEventPage() {
     location: "",
     address: "",
     capacity: 100,
+    client_id: "",
   });
+
+  useEffect(() => {
+    fetch("/api/py/clients")
+      .then((res) => res.json())
+      .then((data) => {
+        setClients(data);
+        if (data.length > 0) {
+          setFormData((prev) => ({
+            ...prev,
+            client_id: data[0].id.toString(),
+          }));
+        }
+      })
+      .catch((err) => console.error("Failed to fetch clients", err));
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,6 +72,7 @@ export default function CreateEventPage() {
         },
         body: JSON.stringify({
           ...formData,
+          client_id: formData.client_id ? parseInt(formData.client_id) : null,
           start_date: formData.start_date,
         }),
       });
@@ -79,7 +97,7 @@ export default function CreateEventPage() {
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
@@ -114,35 +132,51 @@ export default function CreateEventPage() {
                  <FileText size={16} /> Core Information
               </h3>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                 <div className="space-y-3">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Event Title</label>
-                    <input
-                      required
-                      type="text"
-                      name="title"
-                      value={formData.title}
-                      onChange={handleChange}
-                      placeholder="e.g. Excellence Gala 2026"
-                      className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a] transition-all"
-                    />
-                 </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+                  <div className="space-y-3">
+                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Event Title</label>
+                     <input
+                       required
+                       type="text"
+                       name="title"
+                       value={formData.title}
+                       onChange={handleChange}
+                       placeholder="e.g. Excellence Gala 2026"
+                       className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a] transition-all"
+                     />
+                  </div>
 
-                 <div className="space-y-3">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
-                       <Globe size={14} /> URL Slug
-                    </label>
-                    <input
-                      required
-                      type="text"
-                      name="slug"
-                      value={formData.slug}
-                      onChange={handleChange}
-                      placeholder="excellence-gala-2026"
-                      className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a] transition-all"
-                    />
-                 </div>
-              </div>
+                  <div className="space-y-3">
+                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                        <Globe size={14} /> URL Slug
+                     </label>
+                     <input
+                       required
+                       type="text"
+                       name="slug"
+                       value={formData.slug}
+                       onChange={handleChange}
+                       placeholder="excellence-gala-2026"
+                       className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a] transition-all"
+                     />
+                  </div>
+
+                  <div className="space-y-3">
+                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                        <Building2 size={14} /> Brand Client
+                     </label>
+                     <select
+                       name="client_id"
+                       value={formData.client_id}
+                       onChange={handleChange}
+                       className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a] transition-all appearance-none cursor-pointer"
+                     >
+                       {clients.map((c) => (
+                         <option key={c.id} value={c.id.toString()}>{c.name}</option>
+                       ))}
+                     </select>
+                  </div>
+               </div>
 
               <div className="mt-10 space-y-3">
                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Manifesto (Description)</label>
