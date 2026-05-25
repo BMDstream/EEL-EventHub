@@ -1,11 +1,59 @@
-from fastapi import FastAPI, Depends, HTTPException, status, BackgroundTasks
+from fastapi import FastAPI, Depends, HTTPException, status, BackgroundTasks, Header
 from sqlmodel import Session, select
-from typing import List, Dict, Any
+from sqlalchemy import text
+from typing import List, Dict, Any, Optional
 from backend.database import get_session, init_db, engine
-from backend.models import Event, Attendee, Registration, User, Client
+from backend.models import Event, Attendee, Registration, User, Client, UserEventLink
 from backend.email_service import send_confirmation_email, send_broadcast_email
 from backend.routers import auth
 import uvicorn
+
+def get_current_user_from_request(
+    x_user_email: Optional[str] = Header(None),
+    email: Optional[str] = None,
+    session: Session = Depends(get_session)
+):
+    user_email = x_user_email or email
+    if not user_email:
+        return None
+    user = session.exec(select(User).where(User.email == user_email.lower())).first()
+    return user
+
+def verify_client_access(user: Optional[User], client_id: Optional[int], session: Session):
+    if not user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    if user.role == "admin":
+        return True
+    if not client_id:
+        raise HTTPException(status_code=403, detail="Forbidden: Resource has no associated client")
+        
+    from sqlalchemy import text
+    link_exists = session.execute(
+        text('SELECT 1 FROM "userclientlink" WHERE user_id = :user_id AND client_id = :client_id'),
+        {"user_id": user.id, "client_id": client_id}
+    ).first()
+    
+    if not link_exists:
+        raise HTTPException(status_code=403, detail="Forbidden: Access to this client's resources is denied")
+    return True
+
+def verify_event_access(user: Optional[User], event: Event, session: Session):
+    if not user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    if user.role == "admin":
+        return True
+    if user.role == "manager":
+        return verify_client_access(user, event.client_id, session)
+        
+    # staff role check event assignment
+    from sqlalchemy import text
+    link_exists = session.execute(
+        text('SELECT 1 FROM "usereventlink" WHERE user_id = :user_id AND event_id = :event_id'),
+        {"user_id": user.id, "event_id": event.id}
+    ).first()
+    if not link_exists:
+        raise HTTPException(status_code=403, detail="Forbidden: You are not assigned to this event")
+    return True
 
 app = FastAPI(docs_url="/api/py/docs", openapi_url="/api/py/openapi.json")
 app.include_router(auth.router, prefix="/api/py/auth", tags=["auth"])
@@ -106,6 +154,34 @@ def on_startup():
                 print(f"Failed to create client table: {e}")
                 session.rollback()
 
+            # Create userclientlink table if not exists
+            try:
+                session.execute(text("""
+                    CREATE TABLE IF NOT EXISTS "userclientlink" (
+                        user_id INTEGER NOT NULL REFERENCES "user" (id) ON DELETE CASCADE,
+                        client_id INTEGER NOT NULL REFERENCES "client" (id) ON DELETE CASCADE,
+                        PRIMARY KEY (user_id, client_id)
+                    )
+                """))
+                session.commit()
+            except Exception as e:
+                print(f"Failed to create userclientlink table: {e}")
+                session.rollback()
+
+            # Create usereventlink table if not exists
+            try:
+                session.execute(text("""
+                    CREATE TABLE IF NOT EXISTS "usereventlink" (
+                        user_id INTEGER NOT NULL REFERENCES "user" (id) ON DELETE CASCADE,
+                        event_id INTEGER NOT NULL REFERENCES "event" (id) ON DELETE CASCADE,
+                        PRIMARY KEY (user_id, event_id)
+                    )
+                """))
+                session.commit()
+            except Exception as e:
+                print(f"Failed to create usereventlink table: {e}")
+                session.rollback()
+
             # Add client_id column to event table
             try:
                 session.execute(text('ALTER TABLE "event" ADD COLUMN client_id INTEGER REFERENCES "client" (id)'))
@@ -113,15 +189,20 @@ def on_startup():
             except Exception:
                 session.rollback()
 
-            # Seed default client if it doesn't exist
+            # ---------------------------------------------------------------
+            # Seed default BMD client if it doesn't exist yet.
+            # NOTE: We do NOT migrate or rename any other clients.
+            # The old eel→bmd migration code has been removed permanently
+            # to prevent destroying user-created clients on cold starts.
+            # ---------------------------------------------------------------
             try:
-                default_client = session.exec(select(Client).where(Client.slug == "eel")).first()
+                default_client = session.exec(select(Client).where(Client.slug == "bmd")).first()
                 if not default_client:
                     default_client = Client(
-                        name="Excellence Entertainment Logistics",
-                        slug="eel",
-                        primary_color="#0f172a",
-                        accent_color="#94a3b8",
+                        name="BMD Computing",
+                        slug="bmd",
+                        primary_color="#25678e",
+                        accent_color="#1d2a33",
                         heading_text="Access Granted.",
                         body_text="Your orchestration for **{event_title}** has been authorized. Below are your secure credentials for terminal verification.",
                         footer_text="Automated Event Management System\nSecurity Tier: Level 4 Authorized"
@@ -129,12 +210,9 @@ def on_startup():
                     session.add(default_client)
                     session.commit()
                     session.refresh(default_client)
-                
-                # Update events that have null client_id to point to default client
-                session.execute(text(f'UPDATE "event" SET client_id = {default_client.id} WHERE client_id IS NULL'))
-                session.commit()
+                    print(f"Seeded default BMD client with id={default_client.id}")
             except Exception as e:
-                print(f"Failed to seed default client or update event references: {e}")
+                print(f"Failed to seed default client: {e}")
                 session.rollback()
     except Exception as e:
         print(f"Database initialization failed: {e}")
@@ -165,8 +243,30 @@ def update_setting(key: str, data: Dict[str, Any], session: Session = Depends(ge
     return setting
 
 @app.get("/api/py/events")
-def read_events(session: Session = Depends(get_session)):
-    events = session.exec(select(Event)).all()
+def read_events(
+    session: Session = Depends(get_session),
+    current_user: Optional[User] = Depends(get_current_user_from_request)
+):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+        
+    if current_user.role == "admin":
+        events = session.exec(select(Event)).all()
+    elif current_user.role == "manager":
+        from sqlalchemy import text
+        stmt = text('SELECT client_id FROM "userclientlink" WHERE user_id = :user_id')
+        rows = session.execute(stmt, {"user_id": current_user.id}).all()
+        allowed_client_ids = [row[0] for row in rows]
+        events = session.exec(select(Event).where(Event.client_id.in_(allowed_client_ids))).all()
+    elif current_user.role == "staff":
+        from sqlalchemy import text
+        stmt = text('SELECT event_id FROM "usereventlink" WHERE user_id = :user_id')
+        rows = session.execute(stmt, {"user_id": current_user.id}).all()
+        allowed_event_ids = [row[0] for row in rows]
+        events = session.exec(select(Event).where(Event.id.in_(allowed_event_ids))).all()
+    else:
+        events = []
+        
     result = []
     for event in events:
         client = session.get(Client, event.client_id) if event.client_id else None
@@ -176,7 +276,15 @@ def read_events(session: Session = Depends(get_session)):
     return result
 
 @app.post("/api/py/events", response_model=Event)
-def create_event(event: Event, session: Session = Depends(get_session)):
+def create_event(
+    event: Event, 
+    session: Session = Depends(get_session),
+    current_user: Optional[User] = Depends(get_current_user_from_request)
+):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    verify_client_access(current_user, event.client_id, session)
+    
     session.add(event)
     session.commit()
     session.refresh(event)
@@ -193,20 +301,34 @@ def read_event(slug: str, session: Session = Depends(get_session)):
     return event_dict
 
 @app.get("/api/py/events/id/{event_id}")
-def read_event_by_id(event_id: int, session: Session = Depends(get_session)):
+def read_event_by_id(
+    event_id: int, 
+    session: Session = Depends(get_session),
+    current_user: Optional[User] = Depends(get_current_user_from_request)
+):
     event = session.get(Event, event_id)
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
+    verify_event_access(current_user, event, session)
+    
     client = session.get(Client, event.client_id) if event.client_id else None
     event_dict = event.dict()
     event_dict["client"] = client.dict() if client else None
     return event_dict
 
 @app.put("/api/py/events/{event_id}", response_model=Event)
-def update_event(event_id: int, event_data: Event, session: Session = Depends(get_session)):
+def update_event(
+    event_id: int, 
+    event_data: Event, 
+    session: Session = Depends(get_session),
+    current_user: Optional[User] = Depends(get_current_user_from_request)
+):
     db_event = session.get(Event, event_id)
     if not db_event:
         raise HTTPException(status_code=404, detail="Event not found")
+    verify_client_access(current_user, db_event.client_id, session)
+    if event_data.client_id != db_event.client_id:
+        verify_client_access(current_user, event_data.client_id, session)
     
     event_dict = event_data.dict(exclude_unset=True)
     for key, value in event_dict.items():
@@ -217,17 +339,52 @@ def update_event(event_id: int, event_data: Event, session: Session = Depends(ge
     session.refresh(db_event)
     return db_event
 
+@app.put("/api/py/events/{event_id}/form-schema")
+def update_event_form_schema(
+    event_id: int, 
+    payload: Dict[str, Any], 
+    session: Session = Depends(get_session),
+    current_user: Optional[User] = Depends(get_current_user_from_request)
+):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    db_event = session.get(Event, event_id)
+    if not db_event:
+        raise HTTPException(status_code=404, detail="Event not found")
+    verify_client_access(current_user, db_event.client_id, session)
+    
+    db_event.custom_fields_schema = payload.get("custom_fields_schema", [])
+    session.add(db_event)
+    session.commit()
+    session.refresh(db_event)
+    return db_event
+
 @app.delete("/api/py/events/{event_id}")
-def delete_event(event_id: int, session: Session = Depends(get_session)):
+def delete_event(
+    event_id: int, 
+    session: Session = Depends(get_session),
+    current_user: Optional[User] = Depends(get_current_user_from_request)
+):
     event = session.get(Event, event_id)
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
+    verify_client_access(current_user, event.client_id, session)
+    
     session.delete(event)
     session.commit()
     return {"ok": True}
 
 @app.get("/api/py/events/{event_id}/registrations")
-def get_event_registrations(event_id: int, session: Session = Depends(get_session)):
+def get_event_registrations(
+    event_id: int, 
+    session: Session = Depends(get_session),
+    current_user: Optional[User] = Depends(get_current_user_from_request)
+):
+    event = session.get(Event, event_id)
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+    verify_event_access(current_user, event, session)
+    
     # This join will give us the registrations with attendee info
     registrations = session.exec(
         select(Registration, Attendee)
@@ -265,7 +422,7 @@ def get_event_email_config(event, session: Session):
     email_setting = session.exec(select(SystemSetting).where(SystemSetting.key == "email_config")).first()
     config = email_setting.value if email_setting else {}
     if not config.get("sender_name"):
-        config["sender_name"] = "EEL-EventHub"
+        config["sender_name"] = "BMD-EventHub"
     return config
 
 @app.post("/api/py/register")
@@ -522,10 +679,16 @@ def delete_registration(registration_id: str, session: Session = Depends(get_ses
     session.commit()
     return {"ok": True}
 
-@app.get("/api/py/users", response_model=List[User])
+@app.get("/api/py/users")
 def read_users(session: Session = Depends(get_session)):
     users = session.exec(select(User)).all()
-    return users
+    result = []
+    for user in users:
+        u_dict = user.dict()
+        u_dict["password"] = None  # Security check: redact passwords
+        u_dict["clients"] = [c.dict() for c in user.clients]
+        result.append(u_dict)
+    return result
 
 @app.post("/api/py/users", response_model=User)
 def create_user(user: User, session: Session = Depends(get_session)):
@@ -536,6 +699,41 @@ def create_user(user: User, session: Session = Depends(get_session)):
     session.commit()
     session.refresh(user)
     return user
+
+@app.post("/api/py/users/bulk")
+def create_users_bulk(
+    users_data: List[User], 
+    session: Session = Depends(get_session),
+    current_user: Optional[User] = Depends(get_current_user_from_request)
+):
+    if current_user and current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Forbidden: Only administrators can create users")
+        
+    created = []
+    errors = []
+    for user_data in users_data:
+        if not user_data.email:
+            errors.append("Missing email for one of the rows")
+            continue
+        user_email = user_data.email.lower().strip()
+        existing = session.exec(select(User).where(User.email == user_email)).first()
+        if existing:
+            errors.append(f"User {user_email} already exists")
+            continue
+        try:
+            new_user = User(
+                email=user_email,
+                password=user_data.password,
+                role=user_data.role or "staff",
+                is_active=True
+            )
+            session.add(new_user)
+            created.append(user_email)
+        except Exception as e:
+            errors.append(f"Error creating {user_email}: {str(e)}")
+            
+    session.commit()
+    return {"created": created, "errors": errors}
 
 @app.get("/api/py/users/me", response_model=User)
 def get_current_user(email: str, session: Session = Depends(get_session)):
@@ -674,35 +872,101 @@ def get_public_stats(slug: str, session: Session = Depends(get_session)):
     declined_count = len([r for r in registrations if r.status == "declined"])
     checked_in_count = len([r for r in registrations if r.checked_in])
     
+    client_data = None
+    if event.client_id:
+        client = session.get(Client, event.client_id)
+        if client:
+            client_data = {
+                "name": client.name,
+                "primary_color": client.primary_color,
+                "accent_color": client.accent_color,
+                "logo_url": client.logo_url
+            }
+    
     return {
         "title": event.title,
         "rsvp": rsvp_count,
         "declined": declined_count,
         "checked_in": checked_in_count,
-        "total": len(registrations)
+        "total": len(registrations),
+        "client": client_data
     }
 
 @app.get("/api/py/stats")
-def get_stats(session: Session = Depends(get_session)):
-    events_count = len(session.exec(select(Event)).all())
-    registrations_count = len(session.exec(select(Registration).where(Registration.status == "confirmed")).all())
-    checked_in_count = len(session.exec(select(Registration).where(Registration.checked_in == True)).all())
+def get_stats(
+    session: Session = Depends(get_session),
+    current_user: Optional[User] = Depends(get_current_user_from_request)
+):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+        
+    if current_user.role == "admin":
+        events = session.exec(select(Event)).all()
+        clients_count = len(session.exec(select(Client)).all())
+    elif current_user.role == "manager":
+        from sqlalchemy import text
+        stmt = text('SELECT client_id FROM "userclientlink" WHERE user_id = :user_id')
+        rows = session.execute(stmt, {"user_id": current_user.id}).all()
+        allowed_client_ids = [row[0] for row in rows]
+        events = session.exec(select(Event).where(Event.client_id.in_(allowed_client_ids))).all()
+        clients_count = len(allowed_client_ids)
+    elif current_user.role == "staff":
+        from sqlalchemy import text
+        stmt = text('SELECT event_id FROM "usereventlink" WHERE user_id = :user_id')
+        rows = session.execute(stmt, {"user_id": current_user.id}).all()
+        allowed_event_ids = [row[0] for row in rows]
+        events = session.exec(select(Event).where(Event.id.in_(allowed_event_ids))).all()
+        
+        allowed_client_ids = list(set([e.client_id for e in events if e.client_id]))
+        clients_count = len(allowed_client_ids)
+    else:
+        events = []
+        clients_count = 0
+        
+    event_ids = [e.id for e in events]
+    if not event_ids:
+        return {
+            "events": 0,
+            "registrations": 0,
+            "check_in_rate": "0%",
+            "revenue": "R0.00",
+            "clients": clients_count
+        }
+        
+    registrations_count = len(session.exec(
+        select(Registration)
+        .where(Registration.event_id.in_(event_ids))
+        .where(Registration.status == "confirmed")
+    ).all())
+    checked_in_count = len(session.exec(
+        select(Registration)
+        .where(Registration.event_id.in_(event_ids))
+        .where(Registration.checked_in == True)
+    ).all())
     
     check_in_rate = 0
     if registrations_count > 0:
         check_in_rate = round((checked_in_count / registrations_count) * 100, 1)
         
     return {
-        "events": events_count,
+        "events": len(events),
         "registrations": registrations_count,
         "check_in_rate": f"{check_in_rate}%",
-        "revenue": "R0.00" # Placeholder for now as no payment integration exists
+        "revenue": "R0.00",
+        "clients": clients_count
     }
 
 # Client CRUD Endpoints
 @app.get("/api/py/clients", response_model=List[Client])
-def get_clients(session: Session = Depends(get_session)):
-    return session.exec(select(Client)).all()
+def get_clients(
+    session: Session = Depends(get_session),
+    current_user: Optional[User] = Depends(get_current_user_from_request)
+):
+    if not current_user:
+        return session.exec(select(Client)).all()
+    if current_user.role == "admin":
+        return session.exec(select(Client)).all()
+    return current_user.clients
 
 @app.post("/api/py/clients", response_model=Client)
 def create_client(client: Client, session: Session = Depends(get_session)):
@@ -752,6 +1016,121 @@ def delete_client(client_id: int, session: Session = Depends(get_session)):
         raise HTTPException(status_code=400, detail=f"Cannot delete client with {events_count} associated events")
         
     session.delete(db_client)
+    session.commit()
+    return {"ok": True}
+
+@app.get("/api/py/users/{user_id}/clients", response_model=List[Client])
+def get_user_clients(user_id: int, session: Session = Depends(get_session)):
+    user = session.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user.clients
+
+@app.post("/api/py/users/{user_id}/clients")
+def sync_user_clients(user_id: int, payload: Dict[str, Any], session: Session = Depends(get_session)):
+    user = session.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Accept both {"client_ids": [...]} and a raw list for backward compat
+    client_ids = payload.get("client_ids", [])
+    if not isinstance(client_ids, list):
+        raise HTTPException(status_code=422, detail="client_ids must be a list")
+    
+    # Delete existing mappings
+    session.execute(text('DELETE FROM "userclientlink" WHERE user_id = :user_id'), {"user_id": user_id})
+    session.commit()
+    
+    # Bulk insert new mappings
+    for c_id in client_ids:
+        client = session.get(Client, c_id)
+        if client:
+            session.execute(
+                text('INSERT INTO "userclientlink" (user_id, client_id) VALUES (:user_id, :client_id)'),
+                {"user_id": user_id, "client_id": c_id}
+            )
+    session.commit()
+    return {"ok": True}
+
+@app.get("/api/py/events/{event_id}/staff")
+def get_event_staff(
+    event_id: int, 
+    session: Session = Depends(get_session),
+    current_user: Optional[User] = Depends(get_current_user_from_request)
+):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+        
+    event = session.get(Event, event_id)
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+        
+    verify_client_access(current_user, event.client_id, session)
+    
+    # 1. Fetch all users associated with this event's client (non-admin)
+    from sqlalchemy import text
+    stmt = text("""
+        SELECT u.id, u.email, u.role 
+        FROM "user" u
+        JOIN "userclientlink" l ON l.user_id = u.id
+        WHERE l.client_id = :client_id AND u.role != 'admin'
+    """)
+    rows = session.execute(stmt, {"client_id": event.client_id}).all()
+    
+    # 2. Fetch currently assigned users for this event
+    stmt_assigned = text('SELECT user_id FROM "usereventlink" WHERE event_id = :event_id')
+    assigned_rows = session.execute(stmt_assigned, {"event_id": event_id}).all()
+    assigned_ids = {row[0] for row in assigned_rows}
+    
+    # 3. Build response list
+    result = []
+    for row in rows:
+        result.append({
+            "id": row[0],
+            "email": row[1],
+            "role": row[2],
+            "assigned": row[0] in assigned_ids
+        })
+    return result
+
+@app.post("/api/py/events/{event_id}/staff")
+def update_event_staff(
+    event_id: int,
+    payload: Dict[str, Any],
+    session: Session = Depends(get_session),
+    current_user: Optional[User] = Depends(get_current_user_from_request)
+):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+        
+    event = session.get(Event, event_id)
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+        
+    verify_client_access(current_user, event.client_id, session)
+    
+    user_ids = payload.get("user_ids", [])
+    if not isinstance(user_ids, list):
+        raise HTTPException(status_code=422, detail="user_ids must be a list")
+        
+    from sqlalchemy import text
+    # Delete existing mappings for this event
+    session.execute(text('DELETE FROM "usereventlink" WHERE event_id = :event_id'), {"event_id": event_id})
+    session.commit()
+    
+    # Insert new assignments
+    for u_id in user_ids:
+        # Verify the user is linked to the event's client
+        link_exists = session.execute(
+            text('SELECT 1 FROM "userclientlink" WHERE user_id = :user_id AND client_id = :client_id'),
+            {"user_id": u_id, "client_id": event.client_id}
+        ).first()
+        if link_exists:
+            session.execute(
+                text('INSERT INTO "usereventlink" (user_id, event_id) VALUES (:user_id, :event_id)'),
+                {"user_id": u_id, "event_id": event_id}
+            )
+            
     session.commit()
     return {"ok": True}
 

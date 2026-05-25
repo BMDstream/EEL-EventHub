@@ -2,8 +2,26 @@
 
 import AdminLayout from "@/components/AdminLayout";
 import { TrendingUp, Lock, Rocket } from "lucide-react";
+import { useSession } from "next-auth/react";
 
 export default function AnalyticsPlaceholder() {
+  const { data: session } = useSession();
+  const userRole = (session?.user as any)?.role || "staff";
+
+  if (userRole === "staff") {
+    return (
+      <AdminLayout>
+        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-6">
+          <div className="w-24 h-24 bg-red-50 rounded-full flex items-center justify-center mb-8">
+            <Lock className="text-red-500" size={48} />
+          </div>
+          <h1 className="text-4xl font-black text-[#0f172a] mb-4 uppercase italic font-bricolage tracking-tight dark:text-white">Access <span className="text-red-500">Restricted</span></h1>
+          <p className="text-slate-500 font-medium max-w-md">You do not have the clearance level required to view system analytics.</p>
+        </div>
+      </AdminLayout>
+    );
+  }
+
   return (
     <AdminLayout>
       <div className="max-w-4xl mx-auto py-20 text-center">

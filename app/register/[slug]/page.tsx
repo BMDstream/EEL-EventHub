@@ -289,23 +289,23 @@ export default function PublicRegistrationPage() {
                   {/* Default Fields */}
                   <div className="grid grid-cols-2 gap-6">
                     <div className="space-y-3">
-                      <label className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500 ml-1">First Name</label>
+                      <label className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-400 ml-1">First Name</label>
                       <input required type="text" name="first_name" value={formData.first_name} onChange={handleChange} className="w-full px-6 py-5 rounded-[1.5rem] bg-zinc-950 border border-white/20 client-input-focus outline-none transition-all font-bold text-white placeholder-zinc-600" placeholder="Jane" />
                     </div>
                     <div className="space-y-3">
-                      <label className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500 ml-1">Last Name</label>
+                      <label className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-400 ml-1">Last Name</label>
                       <input required type="text" name="last_name" value={formData.last_name} onChange={handleChange} className="w-full px-6 py-5 rounded-[1.5rem] bg-zinc-950 border border-white/20 client-input-focus outline-none transition-all font-bold text-white placeholder-zinc-600" placeholder="Doe" />
                     </div>
                   </div>
 
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500 ml-1">Intelligence / Email</label>
+                    <label className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-400 ml-1">Intelligence / Email</label>
                     <input required type="email" name="email" value={formData.email} onChange={handleChange} placeholder="jane.doe@company.com" className="w-full px-6 py-5 rounded-[1.5rem] bg-zinc-950 border border-white/20 client-input-focus outline-none transition-all font-bold text-white placeholder-zinc-600" />
                   </div>
 
                   {/* RSVP Question */}
                   <div className="py-6 border-y border-white/5 space-y-4">
-                    <label className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500 ml-1">Attendance Status</label>
+                    <label className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-400 ml-1">Attendance Status</label>
                     <div className="grid grid-cols-2 gap-4">
                       <button
                         type="button"
@@ -325,6 +325,11 @@ export default function PublicRegistrationPage() {
                   </div>
 
                   {/* Dynamic Custom Fields */}
+                  {isAttending && event.custom_fields_schema && event.custom_fields_schema.length > 0 && (
+                    <div className="pt-4 pb-2 border-b border-white/5">
+                      <p className="text-[10px] font-black uppercase tracking-[0.3em] client-text-accent">Additional Details</p>
+                    </div>
+                  )}
                   {isAttending && event.custom_fields_schema?.map((field) => {
                     if (field.dependsOn) {
                       const parentVal = customAnswers[field.dependsOn.fieldId];
@@ -336,8 +341,8 @@ export default function PublicRegistrationPage() {
 
                     return (
                       <div key={field.id} className="space-y-3 animate-in fade-in slide-in-from-bottom-2">
-                        <label className="text-[10px] font-black uppercase tracking-[0.3em] client-text-accent/70 ml-1">
-                          {field.label} {field.required && "*"}
+                        <label className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-200 ml-1">
+                          {field.label} {field.required && <span className="client-text-accent ml-0.5 font-bold">*</span>}
                         </label>
                         
                         {field.type === "text" && (

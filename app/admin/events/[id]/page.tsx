@@ -26,6 +26,7 @@ import {
 import AdminLayout from "@/components/AdminLayout";
 import FormBuilder from "@/components/FormBuilder";
 import QRScanner from "@/components/QRScanner";
+import StaffAssignment from "@/components/StaffAssignment";
 
 interface Attendee {
   id: number;
@@ -72,7 +73,7 @@ export default function EventDetailsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const { data: session } = useSession();
   const userRole = (session?.user as any)?.role || "staff";
-  const [activeTab, setActiveTab] = useState<"registrants" | "form" | "scanner" | "communications">(initialTab as any || "registrants");
+  const [activeTab, setActiveTab] = useState<"registrants" | "form" | "scanner" | "communications" | "staff">(initialTab as any || "registrants");
   const [pin, setPin] = useState("");
   const [pinLoading, setPinLoading] = useState(false);
   const [pinStatus, setPinStatus] = useState<"idle" | "success" | "error" | "processing" | "warning">("idle");
@@ -129,14 +130,19 @@ export default function EventDetailsPage() {
   };
 
   useEffect(() => {
+    if (!session?.user?.email) return;
     const fetchData = async () => {
       try {
-        const eventRes = await fetch(`/api/py/events/id/${id}`);
+        const eventRes = await fetch(`/api/py/events/id/${id}`, {
+          headers: { "x-user-email": session.user.email || "" }
+        });
         if (!eventRes.ok) throw new Error("Event not found");
         const eventData = await eventRes.json();
         setEvent(eventData);
 
-        const regRes = await fetch(`/api/py/events/${id}/registrations`);
+        const regRes = await fetch(`/api/py/events/${id}/registrations`, {
+          headers: { "x-user-email": session.user.email || "" }
+        });
         const regData = await regRes.json();
         setRegistrations(regData);
       } catch (err) {
@@ -147,7 +153,7 @@ export default function EventDetailsPage() {
     };
 
     fetchData();
-  }, [id]);
+  }, [id, session]);
 
   const handleDeleteRegistration = async (regId: string) => {
     if (!confirm("Are you sure you want to remove this registrant?")) return;
@@ -286,30 +292,32 @@ export default function EventDetailsPage() {
                     </span>
                     <span className="text-[10px] font-mono text-slate-300">ID: {id}</span>
                  </div>
-                <h1 className="text-3xl md:text-5xl font-black text-[#0f172a] mb-6 tracking-tighter italic font-bricolage leading-none">{event.title}</h1>
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mb-10 bg-slate-50 p-4 rounded-2xl border border-slate-100 group">
-                   <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest ml-1">Public Link:</p>
-                   <code className="text-xs font-bold text-[#0f172a] bg-white px-3 py-1 rounded-lg border border-slate-100 flex-1 truncate">
-                     {typeof window !== 'undefined' ? `${window.location.origin}/register/${event.slug}` : `/register/${event.slug}`}
-                   </code>
-                   <button 
-                     onClick={() => {
-                       const url = `${window.location.origin}/register/${event.slug}`;
-                       navigator.clipboard.writeText(url);
-                       alert("Link copied!");
-                     }}
-                     className="px-4 py-2 bg-[#0f172a] text-white text-[9px] font-black uppercase tracking-widest rounded-xl hover:bg-black transition-all"
-                   >
-                     Copy Link
-                   </button>
-                   <a 
-                     href={`/register/${event.slug}`} 
-                     target="_blank" 
-                     className="p-2 text-slate-400 hover:text-[#0f172a] transition-all"
-                   >
-                     <ArrowUpRight size={16} />
-                   </a>
-                </div>
+                <h1 className={`text-3xl md:text-5xl font-black text-[#0f172a] tracking-tighter italic font-bricolage leading-none ${(userRole === "admin" || userRole === "manager") ? "mb-6" : "mb-10"}`}>{event.title}</h1>
+                {(userRole === "admin" || userRole === "manager") && (
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mb-10 bg-slate-50 p-4 rounded-2xl border border-slate-100 group">
+                     <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest ml-1">Public Link:</p>
+                     <code className="text-xs font-bold text-[#0f172a] bg-white px-3 py-1 rounded-lg border border-slate-100 flex-1 truncate">
+                       {typeof window !== 'undefined' ? `${window.location.origin}/register/${event.slug}` : `/register/${event.slug}`}
+                     </code>
+                     <button 
+                       onClick={() => {
+                         const url = `${window.location.origin}/register/${event.slug}`;
+                         navigator.clipboard.writeText(url);
+                         alert("Link copied!");
+                       }}
+                       className="px-4 py-2 bg-[#0f172a] text-white text-[9px] font-black uppercase tracking-widest rounded-xl hover:bg-black transition-all"
+                     >
+                       Copy Link
+                     </button>
+                     <a 
+                       href={`/register/${event.slug}`} 
+                       target="_blank" 
+                       className="p-2 text-slate-400 hover:text-[#0f172a] transition-all"
+                     >
+                       <ArrowUpRight size={16} />
+                     </a>
+                  </div>
+                )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
                   <div className="flex items-center gap-4">
                     <div className="p-3 bg-slate-50 text-[#0f172a] rounded-2xl">
@@ -361,60 +369,58 @@ export default function EventDetailsPage() {
                   </div>
                 </div>
               </div>
-              <div className="flex flex-col gap-4 w-full md:w-auto">
-                <button
-                  onClick={exportToExcel}
-                  disabled={registrations.length === 0}
-                  className="flex items-center justify-center gap-3 bg-[#0f172a] hover:bg-black disabled:bg-slate-200 text-white px-8 py-5 rounded-2xl font-black transition-all shadow-2xl shadow-slate-200 uppercase tracking-widest text-xs"
-                >
-                  <Download size={20} />
-                  Export to Excel
-                </button>
-                <button
-                  onClick={() => {
-                    const url = `${window.location.origin}/view/${event.slug}`;
-                    navigator.clipboard.writeText(url);
-                    alert("Client dashboard link copied to clipboard!");
-                  }}
-                  className="flex items-center justify-center gap-3 bg-white hover:bg-slate-50 text-[#0f172a] px-8 py-5 rounded-2xl font-black transition-all border border-slate-200 uppercase tracking-widest text-xs"
-                >
-                  <Eye size={20} />
-                  Share Client Link
-                </button>
-                {(userRole === "admin" || userRole === "manager") && (
-                   <>
-                    <Link
-                      href={`/admin/events/${id}/edit`}
-                      className="flex items-center justify-center gap-3 bg-white hover:bg-slate-50 text-[#0f172a] px-8 py-5 rounded-2xl font-black transition-all border border-slate-200 uppercase tracking-widest text-xs"
-                    >
-                      Edit Configuration
-                    </Link>
-                    <button
-                       onClick={async () => {
-                         const email = prompt("Enter test email address:");
-                         if (!email) return;
-                         try {
-                           const res = await fetch(`/api/py/events/${id}/test-email`, {
-                             method: "POST",
-                             headers: { "Content-Type": "application/json" },
-                             body: JSON.stringify({ email })
-                           });
-                           if (res.ok) alert("Test email dispatched!");
-                           else {
-                             const err = await res.json();
-                             alert(`Failed: ${err.detail || "Unknown error"}`);
-                           }
-                         } catch (err) {
-                           alert("Error sending test email");
-                         }
-                       }}
-                       className="flex items-center justify-center gap-3 bg-slate-50 hover:bg-slate-100 text-[#0f172a] px-8 py-5 rounded-2xl font-black transition-all border border-slate-100 uppercase tracking-widest text-xs"
-                     >
-                       Test Email Service
-                     </button>
-                   </>
-                )}
-              </div>
+              {(userRole === "admin" || userRole === "manager") && (
+                <div className="flex flex-col gap-4 w-full md:w-auto">
+                  <button
+                    onClick={exportToExcel}
+                    disabled={registrations.length === 0}
+                    className="flex items-center justify-center gap-3 bg-[#0f172a] hover:bg-black disabled:bg-slate-200 text-white px-8 py-5 rounded-2xl font-black transition-all shadow-2xl shadow-slate-200 uppercase tracking-widest text-xs"
+                  >
+                    <Download size={20} />
+                    Export to Excel
+                  </button>
+                  <button
+                    onClick={() => {
+                      const url = `${window.location.origin}/view/${event.slug}`;
+                      navigator.clipboard.writeText(url);
+                      alert("Client dashboard link copied to clipboard!");
+                    }}
+                    className="flex items-center justify-center gap-3 bg-white hover:bg-slate-50 text-[#0f172a] px-8 py-5 rounded-2xl font-black transition-all border border-slate-200 uppercase tracking-widest text-xs"
+                  >
+                    <Eye size={20} />
+                    Share Client Link
+                  </button>
+                  <Link
+                    href={`/admin/events/${id}/edit`}
+                    className="flex items-center justify-center gap-3 bg-white hover:bg-slate-50 text-[#0f172a] px-8 py-5 rounded-2xl font-black transition-all border border-slate-200 uppercase tracking-widest text-xs"
+                  >
+                    Edit Configuration
+                  </Link>
+                  <button
+                    onClick={async () => {
+                      const email = prompt("Enter test email address:");
+                      if (!email) return;
+                      try {
+                        const res = await fetch(`/api/py/events/${id}/test-email`, {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ email })
+                        });
+                        if (res.ok) alert("Test email dispatched!");
+                        else {
+                          const err = await res.json();
+                          alert(`Failed: ${err.detail || "Unknown error"}`);
+                        }
+                      } catch (err) {
+                        alert("Error sending test email");
+                      }
+                    }}
+                    className="flex items-center justify-center gap-3 bg-slate-50 hover:bg-slate-100 text-[#0f172a] px-8 py-5 rounded-2xl font-black transition-all border border-slate-100 uppercase tracking-widest text-xs"
+                  >
+                    Test Email Service
+                  </button>
+                </div>
+              )}
             </div>
           </div>
           
@@ -446,6 +452,14 @@ export default function EventDetailsPage() {
                   className={`px-6 md:px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2 shrink-0 ${activeTab === "communications" ? "border-yellow-400 text-[#0f172a]" : "border-transparent text-slate-400"}`}
                 >
                   Communications
+               </button>
+             )}
+             {(userRole === "admin" || userRole === "manager") && (
+                <button 
+                  onClick={() => setActiveTab("staff")}
+                  className={`px-6 md:px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2 shrink-0 ${activeTab === "staff" ? "border-yellow-400 text-[#0f172a]" : "border-transparent text-slate-400"}`}
+                >
+                  Staff Assignment
                </button>
              )}
           </div>
@@ -669,7 +683,7 @@ export default function EventDetailsPage() {
                        <div className={`flex flex-col items-center gap-6 p-8 rounded-[1.5rem] shadow-lg w-full animate-in zoom-in-95 duration-300 ${
                          pinStatus === "success" ? "bg-green-500 text-white" : 
                          pinStatus === "error" ? "bg-red-500 text-white" : 
-                         pinStatus === "warning" ? "bg-yellow-400 text-black" :
+                         pinStatus === "warning" ? "bg-amber-400 text-black" :
                          "bg-[#0f172a] text-white"
                        }`}>
                          {pinStatus === "processing" && <Loader2 className="animate-spin" size={48} />}
@@ -701,6 +715,13 @@ export default function EventDetailsPage() {
                    </div>
                  </div>
                </div>
+          </div>
+        ) : activeTab === "staff" ? (
+          <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 p-10 lg:p-14">
+             <StaffAssignment 
+               eventId={id as string} 
+               clientId={event.client?.id}
+             />
           </div>
         ) : (
           <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 p-10 lg:p-24">
@@ -749,7 +770,7 @@ export default function EventDetailsPage() {
                    </div>
                     <div className="space-y-3">
                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Signature (Optional)</label>
-                       <textarea name="signature" rows={2} placeholder="Kind regards, EEL Team" className="w-full px-6 py-4 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a] resize-none text-sm" />
+                       <textarea name="signature" rows={2} placeholder="Kind regards, BMD Team" className="w-full px-6 py-4 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a] resize-none text-sm" />
                     </div>
                    <button type="submit" className="w-full bg-[#0f172a] hover:bg-black text-white font-black py-6 rounded-[2rem] shadow-2xl shadow-slate-200 transition-all uppercase tracking-[0.3em] text-xs">
                       Dispatch Broadcast

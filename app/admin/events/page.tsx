@@ -26,7 +26,10 @@ export default function EventsListPage() {
   const userRole = (session?.user as any)?.role || "staff";
 
   useEffect(() => {
-    fetch("/api/py/events")
+    if (!session?.user?.email) return;
+    fetch("/api/py/events", {
+      headers: { "x-user-email": session.user.email }
+    })
       .then((res) => res.json())
       .then((data) => {
         setEvents(data);
@@ -36,7 +39,7 @@ export default function EventsListPage() {
         console.error(err);
         setLoading(false);
       });
-  }, []);
+  }, [session]);
 
   const filteredEvents = events.filter(e => {
     const matchesSearch = e.title.toLowerCase().includes(search.toLowerCase()) || 

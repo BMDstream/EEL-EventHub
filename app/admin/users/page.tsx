@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Users, Plus, Shield, Mail, Trash2, Loader2, CheckCircle2, Lock } from "lucide-react";
+import { Users, Plus, Shield, Mail, Trash2, Loader2, CheckCircle2, Lock, Building2, X, Key, Upload, Download } from "lucide-react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import AdminLayout from "@/components/AdminLayout";
@@ -11,6 +11,7 @@ interface User {
   email: string;
   role: string;
   is_active: boolean;
+  clients?: Array<{ id: number; name: string; slug: string }>;
 }
 
 export default function UserManagementPage() {
@@ -25,11 +26,33 @@ export default function UserManagementPage() {
   const [newRole, setNewRole] = useState("staff");
   const [saving, setSaving] = useState(false);
 
+  // Client Assignment States
+  const [allClients, setAllClients] = useState<any[]>([]);
+  const [selectedUserForClientModal, setSelectedUserForClientModal] = useState<User | null>(null);
+  const [modalClientIds, setModalClientIds] = useState<number[]>([]);
+  const [syncingClients, setSyncingClients] = useState(false);
+
+  // Bulk Upload States
+  const [showBulkModal, setShowBulkModal] = useState(false);
+  const [parsedUsers, setParsedUsers] = useState<any[]>([]);
+  const [bulkSaving, setBulkSaving] = useState(false);
+
   useEffect(() => {
     if (userRole === "admin") {
       fetchUsers();
+      fetchClients();
     }
   }, [userRole]);
+
+  const fetchClients = async () => {
+    try {
+      const res = await fetch("/api/py/clients");
+      const data = await res.json();
+      setAllClients(data);
+    } catch (err) {
+      console.error("Failed to fetch clients", err);
+    }
+  };
 
   if (userRole !== "admin") {
     return (
@@ -88,10 +111,175 @@ export default function UserManagementPage() {
   const handleDeleteUser = async (userId: number) => {
     if (!confirm("Are you sure you want to remove this user's access?")) return;
     try {
-      await fetch(`/api/py/users/${userId}`, { method: "DELETE" });
+      await fetch(`/api/py/users/${userId}`, { 
+        method: "DELETE",
+        headers: { "x-user-email": session?.user?.email || "" }
+      });
       fetchUsers();
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleRoleChange = async (userId: number, newRole: string) => {
+    const userToUpdate = users.find(u => u.id === userId);
+    if (!userToUpdate) return;
+    
+    if (userToUpdate.email.toLowerCase() === session?.user?.email?.toLowerCase()) {
+      alert("You cannot change your own role to prevent administrative lockout.");
+      return;
+    }
+
+    // Optimistically update local state
+    setUsers(prev => prev.map(u => u.id === userId ? { ...u, role: newRole } : u));
+    
+    try {
+      const res = await fetch(`/api/py/users/${userId}`, {
+        method: "PUT",
+        headers: { 
+          "Content-Type": "application/json",
+          "x-user-email": session?.user?.email || ""
+        },
+        body: JSON.stringify({ 
+          email: userToUpdate.email,
+          role: newRole,
+          is_active: userToUpdate.is_active
+        }),
+      });
+      if (!res.ok) {
+        // Revert on error
+        setUsers(prev => prev.map(u => u.id === userId ? { ...u, role: userToUpdate.role } : u));
+        alert("Failed to update user role.");
+      }
+    } catch (err) {
+      console.error(err);
+      // Revert on error
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, role: userToUpdate.role } : u));
+      alert("Failed to update user role.");
+    }
+  };
+
+  const downloadExcelTemplate = () => {
+    import("xlsx").then((XLSX) => {
+      const data = [
+        { email: "admin.user@bmdcomputing.com", password: "securePass123", role: "admin" },
+        { email: "manager.user@eelogistics.co.za", password: "managerPass456", role: "manager" },
+        { email: "staff.user@eelogistics.co.za", password: "staffPass789", role: "staff" }
+      ];
+      const worksheet = XLSX.utils.json_to_sheet(data);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Teammates Import Template");
+      worksheet["!cols"] = [
+        { wch: 35 },
+        { wch: 15 },
+        { wch: 10 }
+      ];
+      XLSX.writeFile(workbook, "bmd_users_import_template.xlsx");
+    });
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const data = evt.target?.result;
+        import("xlsx").then((XLSX) => {
+          const workbook = XLSX.read(data, { type: "array" });
+          const firstSheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[firstSheetName];
+          const jsonData = XLSX.utils.sheet_to_json<any>(worksheet);
+
+          const parsed = jsonData.map((row: any) => {
+            const email = row.email || row.Email || row.EMAIL || "";
+            const password = row.password || row.Password || row.PASSWORD || "";
+            const role = row.role || row.Role || row.ROLE || "staff";
+            
+            return {
+              email: email.toString().trim(),
+              password: password.toString().trim(),
+              role: role.toString().trim().toLowerCase()
+            };
+          }).filter(u => u.email !== "");
+
+          if (parsed.length === 0) {
+            alert("No valid rows found. Make sure headers are email, password, role.");
+            return;
+          }
+
+          setParsedUsers(parsed);
+        });
+      } catch (err) {
+        console.error(err);
+        alert("Failed to parse file. Make sure it is a valid CSV or Excel file.");
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
+  const handleBulkImportConfirm = async () => {
+    if (!parsedUsers.length) return;
+    setBulkSaving(true);
+    try {
+      const res = await fetch("/api/py/users/bulk", {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "x-user-email": session?.user?.email || ""
+        },
+        body: JSON.stringify(parsedUsers)
+      });
+      if (res.ok) {
+        const result = await res.json();
+        alert(`Successfully imported ${result.created.length} users.${result.errors.length ? `\nErrors:\n${result.errors.join('\n')}` : ""}`);
+        setShowBulkModal(false);
+        setParsedUsers([]);
+        fetchUsers();
+      } else {
+        alert("Failed to import users. Check file permissions or backend response.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error uploading users.");
+    } finally {
+      setBulkSaving(false);
+    }
+  };
+
+  const handleOpenClientModal = (user: User) => {
+    setSelectedUserForClientModal(user);
+    setModalClientIds(user.clients?.map(c => c.id) || []);
+  };
+
+  const handleToggleClientCheckbox = (clientId: number) => {
+    setModalClientIds(prev => 
+      prev.includes(clientId) 
+        ? prev.filter(id => id !== clientId)
+        : [...prev, clientId]
+    );
+  };
+
+  const handleSaveUserClients = async () => {
+    if (!selectedUserForClientModal) return;
+    setSyncingClients(true);
+    try {
+      const res = await fetch(`/api/py/users/${selectedUserForClientModal.id}/clients`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ client_ids: modalClientIds })
+      });
+      if (res.ok) {
+        setSelectedUserForClientModal(null);
+        fetchUsers();
+      } else {
+        alert("Failed to update company access mapping.");
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSyncingClients(false);
     }
   };
 
@@ -104,13 +292,22 @@ export default function UserManagementPage() {
             <h1 className="text-5xl font-black text-[#0f172a] tracking-tighter font-bricolage italic uppercase">TEAM <span className="text-slate-300">MANAGEMENT</span></h1>
             <p className="text-slate-500 font-medium text-lg">Orchestrate permissions and access levels for Excellence Entertainment Logistics.</p>
           </div>
-          <button 
-            onClick={() => setShowAddModal(true)}
-            className="flex items-center gap-3 bg-[#0f172a] hover:bg-black text-white px-8 py-4 rounded-2xl font-black transition-all shadow-2xl shadow-slate-200 uppercase tracking-widest text-xs"
-          >
-            <Plus size={18} />
-            Invite Member
-          </button>
+          <div className="flex flex-wrap gap-4">
+            <button 
+              onClick={() => setShowBulkModal(true)}
+              className="flex items-center gap-3 bg-white border border-slate-200 hover:border-slate-300 text-slate-700 px-6 py-4 rounded-2xl font-black transition-all uppercase tracking-widest text-xs shadow-sm"
+            >
+              <Upload size={18} />
+              Bulk Import
+            </button>
+            <button 
+              onClick={() => setShowAddModal(true)}
+              className="flex items-center gap-3 bg-[#0f172a] hover:bg-black text-white px-8 py-4 rounded-2xl font-black transition-all shadow-2xl shadow-slate-200 uppercase tracking-widest text-xs"
+            >
+              <Plus size={18} />
+              Invite Member
+            </button>
+          </div>
         </div>
 
         {/* Users Table */}
@@ -133,6 +330,7 @@ export default function UserManagementPage() {
                 <tr className="bg-slate-50/50">
                   <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">User Details</th>
                   <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Security Role</th>
+                  <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Assigned Companies</th>
                   <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Status</th>
                   <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 text-right">Actions</th>
                 </tr>
@@ -152,10 +350,37 @@ export default function UserManagementPage() {
                       </div>
                     </td>
                     <td className="px-8 py-6">
-                      <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-700 rounded-lg text-[10px] font-black uppercase tracking-widest border border-blue-100">
-                        <Shield size={12} />
-                        {user.role}
-                      </div>
+                      {user.email.toLowerCase() === session?.user?.email?.toLowerCase() ? (
+                        <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-700 rounded-lg text-[10px] font-black uppercase tracking-widest border border-blue-100 cursor-not-allowed select-none">
+                          <Shield size={12} />
+                          {user.role} (You)
+                        </div>
+                      ) : (
+                        <select
+                          value={user.role}
+                          onChange={(e) => handleRoleChange(user.id, e.target.value)}
+                          className="bg-white border border-slate-200 hover:border-slate-300 text-slate-700 rounded-lg px-2.5 py-1.5 text-[10px] font-black uppercase tracking-widest outline-none transition-all cursor-pointer focus:ring-2 focus:ring-slate-100"
+                        >
+                          <option value="admin">Admin</option>
+                          <option value="manager">Manager</option>
+                          <option value="staff">Staff</option>
+                        </select>
+                      )}
+                    </td>
+                    <td className="px-8 py-6">
+                      {user.role === "admin" ? (
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest italic">All Clients (Admin)</span>
+                      ) : user.clients && user.clients.length > 0 ? (
+                        <div className="flex flex-wrap gap-1.5 max-w-[200px]">
+                          {user.clients.map(c => (
+                            <span key={c.id} className="inline-block px-2.5 py-1 bg-slate-50 text-slate-500 rounded-md text-[9px] font-bold border border-slate-100 uppercase tracking-wide">
+                              {c.name}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-[10px] font-bold text-red-500 uppercase tracking-widest italic">No access assigned</span>
+                      )}
                     </td>
                     <td className="px-8 py-6">
                       <div className="flex items-center gap-2 text-green-600 text-[10px] font-black uppercase tracking-widest">
@@ -164,6 +389,15 @@ export default function UserManagementPage() {
                       </div>
                     </td>
                     <td className="px-8 py-6 text-right">
+                      {user.role !== "admin" && (
+                        <button 
+                          onClick={() => handleOpenClientModal(user)}
+                          className="p-2 text-slate-300 hover:text-yellow-500 transition-colors mr-3"
+                          title="Manage Company Access"
+                        >
+                          <Building2 size={18} />
+                        </button>
+                      )}
                       <button 
                         onClick={() => handleDeleteUser(user.id)}
                         className="p-2 text-slate-300 hover:text-red-500 transition-colors"
@@ -184,7 +418,7 @@ export default function UserManagementPage() {
             <div className="bg-white rounded-[3rem] shadow-2xl max-w-md w-full p-12 relative overflow-hidden">
               <div className="absolute top-0 left-0 w-full h-2 bg-[#0f172a]"></div>
               <h2 className="text-3xl font-black text-[#0f172a] mb-2 font-bricolage italic uppercase tracking-tight">Add Member</h2>
-              <p className="text-slate-500 font-medium mb-10">Create a new account for EEL-EventHub.</p>
+              <p className="text-slate-500 font-medium mb-10">Create a new account for BMD-EventHub.</p>
               
               <form onSubmit={handleAddUser} className="space-y-6">
                 <div className="space-y-2">
@@ -248,6 +482,181 @@ export default function UserManagementPage() {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* Bulk Upload Modal */}
+        {showBulkModal && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-6">
+            <div className="bg-white rounded-[3rem] shadow-2xl max-w-2xl w-full p-12 relative overflow-hidden dark:bg-[#0f172a] dark:border dark:border-slate-800">
+              <div className="absolute top-0 left-0 w-full h-2 bg-[#0f172a]"></div>
+              <button 
+                onClick={() => {
+                  setShowBulkModal(false);
+                  setParsedUsers([]);
+                }}
+                className="absolute right-8 top-8 p-3 text-slate-400 hover:bg-slate-50 rounded-2xl transition-all dark:hover:bg-slate-800"
+              >
+                <X size={20} />
+              </button>
+
+              <h2 className="text-3xl font-black text-[#0f172a] mb-2 font-bricolage italic uppercase tracking-tight dark:text-white flex items-center gap-3">
+                <Upload className="text-[#0f172a] dark:text-white" size={28} />
+                Bulk User Import
+              </h2>
+              <p className="text-slate-500 font-medium mb-6 dark:text-slate-400">
+                Upload a CSV or Excel (.xlsx/.xls) file containing teammate login accounts.
+              </p>
+
+              <div className="bg-slate-50 p-6 rounded-2xl mb-8 border border-slate-100 dark:bg-slate-800/50 dark:border-slate-800">
+                <h4 className="text-xs font-black uppercase tracking-wider text-slate-400 mb-2">Required Columns & Format</h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
+                  The file must contain headers: <code className="bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded font-bold">email</code>, <code className="bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded font-bold">password</code>, and <code className="bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded font-bold">role</code> (allowed values: <code className="text-blue-500 font-bold">admin</code>, <code className="text-blue-500 font-bold">manager</code>, <code className="text-blue-500 font-bold">staff</code>).
+                </p>
+                <button
+                  onClick={downloadExcelTemplate}
+                  className="flex items-center gap-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all dark:bg-slate-800 dark:border-slate-700 dark:text-white dark:hover:bg-slate-700"
+                >
+                  <Download size={14} />
+                  Download Excel Template
+                </button>
+              </div>
+
+              {!parsedUsers.length ? (
+                <div className="border-2 border-dashed border-slate-200 hover:border-[#0f172a] rounded-3xl p-12 text-center transition-all cursor-pointer relative bg-slate-50/30 hover:bg-slate-50/50 dark:border-slate-800 dark:hover:border-slate-700 dark:bg-transparent">
+                  <input
+                    type="file"
+                    accept=".csv, .xlsx, .xls"
+                    onChange={handleFileUpload}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  />
+                  <Upload className="mx-auto text-slate-300 mb-4" size={48} />
+                  <p className="text-sm font-bold text-[#0f172a] dark:text-white">Choose a file or drag it here</p>
+                  <p className="text-xs text-slate-400 mt-1">Supports CSV, XLSX, and XLS formats</p>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-black text-slate-400 uppercase tracking-widest">Parsed Accounts ({parsedUsers.length})</span>
+                    <button 
+                      onClick={() => setParsedUsers([])}
+                      className="text-xs font-bold text-red-500 hover:underline uppercase"
+                    >
+                      Clear File
+                    </button>
+                  </div>
+                  
+                  <div className="max-h-[220px] overflow-y-auto pr-2 border border-slate-100 rounded-2xl divide-y divide-slate-100 dark:border-slate-800 dark:divide-slate-800">
+                    {parsedUsers.map((u, index) => (
+                      <div key={index} className="p-4 flex items-center justify-between hover:bg-slate-50/50 dark:hover:bg-slate-800/30">
+                        <div>
+                          <p className="font-bold text-sm text-[#0f172a] dark:text-white">{u.email}</p>
+                          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Pass: {u.password ? "••••••••" : "[Empty]"}</p>
+                        </div>
+                        <span className={`px-2.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider ${u.role === 'admin' ? 'bg-red-50 text-red-600 border border-red-100' : u.role === 'manager' ? 'bg-blue-50 text-blue-600 border border-blue-100' : 'bg-slate-50 text-slate-600 border border-slate-100'}`}>
+                          {u.role}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex gap-4 pt-4">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowBulkModal(false);
+                        setParsedUsers([]);
+                      }}
+                      className="flex-1 px-8 py-5 rounded-2xl font-black text-slate-400 hover:text-[#0f172a] transition-colors uppercase tracking-widest text-xs dark:text-white"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      disabled={bulkSaving}
+                      onClick={handleBulkImportConfirm}
+                      className="flex-1 bg-[#0f172a] hover:bg-black text-white px-8 py-5 rounded-2xl font-black transition-all flex items-center justify-center gap-3 shadow-2xl shadow-slate-200 uppercase tracking-widest text-xs dark:bg-yellow-400 dark:text-black dark:shadow-none"
+                    >
+                      {bulkSaving ? <Loader2 className="animate-spin" size={18} /> : <CheckCircle2 size={18} />}
+                      {bulkSaving ? "Importing..." : "Confirm & Import"}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Manage Company Access Modal */}
+        {selectedUserForClientModal && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-6">
+            <div className="bg-white rounded-[3rem] shadow-2xl max-w-lg w-full p-12 relative overflow-hidden dark:bg-[#0f172a] dark:border dark:border-slate-800">
+              <div className="absolute top-0 left-0 w-full h-2 bg-yellow-400"></div>
+              <button 
+                onClick={() => setSelectedUserForClientModal(null)}
+                className="absolute right-8 top-8 p-3 text-slate-400 hover:bg-slate-50 rounded-2xl transition-all dark:hover:bg-slate-800"
+              >
+                <X size={20} />
+              </button>
+
+              <h2 className="text-3xl font-black text-[#0f172a] mb-2 font-bricolage italic uppercase tracking-tight dark:text-white flex items-center gap-3">
+                <Building2 className="text-yellow-400" size={28} />
+                Access Control
+              </h2>
+              <p className="text-slate-500 font-medium mb-8 dark:text-slate-400">
+                Configure authorized companies for <span className="font-bold text-[#0f172a] dark:text-white">{selectedUserForClientModal.email}</span>.
+              </p>
+
+              <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2 mb-8">
+                {allClients.map((client) => {
+                  const isChecked = modalClientIds.includes(client.id);
+                  return (
+                    <div 
+                      key={client.id}
+                      onClick={() => handleToggleClientCheckbox(client.id)}
+                      className={`flex items-center justify-between p-5 rounded-2xl border-2 transition-all cursor-pointer ${isChecked ? 'border-yellow-400 bg-yellow-500/5' : 'border-slate-100 hover:border-slate-200 dark:border-slate-800 dark:hover:border-slate-700 bg-transparent'}`}
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center border border-slate-100 overflow-hidden dark:bg-slate-800 dark:border-slate-700">
+                          {client.logo_url ? (
+                            <img src={client.logo_url} alt={client.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <Building2 size={18} className="text-slate-300 dark:text-slate-600" />
+                          )}
+                        </div>
+                        <div>
+                          <p className="font-bold text-[#0f172a] text-sm dark:text-white">{client.name}</p>
+                          <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">slug: {client.slug}</p>
+                        </div>
+                      </div>
+                      <input 
+                        type="checkbox"
+                        checked={isChecked}
+                        readOnly
+                        className="w-5 h-5 rounded-lg border-slate-300 text-yellow-400 focus:ring-yellow-400"
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="flex gap-4">
+                <button
+                  type="button"
+                  onClick={() => setSelectedUserForClientModal(null)}
+                  className="flex-1 px-8 py-5 rounded-2xl font-black text-slate-400 hover:text-[#0f172a] transition-colors uppercase tracking-widest text-xs dark:text-white dark:hover:text-yellow-400"
+                >
+                  Cancel
+                </button>
+                <button
+                  disabled={syncingClients}
+                  onClick={handleSaveUserClients}
+                  className="flex-1 bg-[#0f172a] hover:bg-black text-white px-8 py-5 rounded-2xl font-black transition-all flex items-center justify-center gap-3 shadow-2xl shadow-slate-200 uppercase tracking-widest text-xs dark:bg-yellow-400 dark:text-black dark:shadow-none"
+                >
+                  {syncingClients ? <Loader2 className="animate-spin" size={18} /> : <CheckCircle2 size={18} />}
+                  {syncingClients ? "Saving..." : "Save Access"}
+                </button>
+              </div>
             </div>
           </div>
         )}

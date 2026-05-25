@@ -3,11 +3,16 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Save, Loader2, Trash2, Building2 } from "lucide-react";
+import { ArrowLeft, Save, Loader2, Trash2, Building2, Lock } from "lucide-react";
+import { useSession } from "next-auth/react";
+import AdminLayout from "@/components/AdminLayout";
 
 export default function EditEventPage() {
   const { id } = useParams();
   const router = useRouter();
+  const { data: session } = useSession();
+  const userRole = (session?.user as any)?.role || "staff";
+  
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [clients, setClients] = useState<any[]>([]);
@@ -24,14 +29,34 @@ export default function EditEventPage() {
   });
 
   useEffect(() => {
-    fetch("/api/py/clients")
+    if (!session?.user?.email) return;
+    fetch("/api/py/clients", {
+      headers: { "x-user-email": session.user.email }
+    })
       .then((res) => res.json())
       .then((data) => setClients(data))
       .catch((err) => console.error("Failed to fetch clients", err));
-  }, []);
+  }, [session]);
+
+  if (userRole === "staff") {
+    return (
+      <AdminLayout>
+        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-6">
+          <div className="w-24 h-24 bg-red-50 rounded-full flex items-center justify-center mb-8">
+            <Lock className="text-red-500" size={48} />
+          </div>
+          <h1 className="text-4xl font-black text-[#0f172a] mb-4 uppercase italic font-bricolage tracking-tight dark:text-white">Access <span className="text-red-500">Restricted</span></h1>
+          <p className="text-slate-500 font-medium max-w-md dark:text-slate-400">You do not have the clearance level required to edit events. Please contact a system administrator.</p>
+        </div>
+      </AdminLayout>
+    );
+  }
 
   useEffect(() => {
-    fetch(`/api/py/events/id/${id}`)
+    if (!session?.user?.email) return;
+    fetch(`/api/py/events/id/${id}`, {
+      headers: { "x-user-email": session.user.email }
+    })
       .then((res) => {
         if (!res.ok) throw new Error("Event not found");
         return res.json();
@@ -57,7 +82,7 @@ export default function EditEventPage() {
         console.error("Failed to fetch event", err);
         setLoading(false);
       });
-  }, [id]);
+  }, [id, session]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,6 +93,7 @@ export default function EditEventPage() {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
+          "x-user-email": session?.user?.email || "",
         },
         body: JSON.stringify({
           ...formData,

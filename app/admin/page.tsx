@@ -13,7 +13,8 @@ import {
   ArrowUpRight,
   Activity,
   CheckCircle2,
-  ShieldCheck
+  ShieldCheck,
+  Building
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSession } from "next-auth/react";
@@ -39,11 +40,16 @@ export default function AdminDashboard() {
   const userRole = (session?.user as any)?.role || "staff";
 
   useEffect(() => {
+    if (!session?.user?.email) return;
     const fetchData = async () => {
       try {
         const [eventsRes, statsRes] = await Promise.all([
-          fetch("/api/py/events"),
-          fetch("/api/py/stats")
+          fetch("/api/py/events", {
+            headers: { "x-user-email": session.user.email || "" }
+          }),
+          fetch("/api/py/stats", {
+            headers: { "x-user-email": session.user.email || "" }
+          })
         ]);
         const eventsData = await eventsRes.json();
         const sData = await statsRes.json();
@@ -56,13 +62,17 @@ export default function AdminDashboard() {
       }
     };
     fetchData();
-  }, []);
+  }, [session]);
 
   const stats = [
     { name: "Total Events", value: statsData?.events || 0, icon: Calendar, change: "+0%", color: "text-blue-600", bg: "bg-blue-50" },
     { name: "Total Registrations", value: statsData?.registrations || 0, icon: Users, change: "+0%", color: "text-green-600", bg: "bg-green-50" },
     { name: "Check-in Rate", value: statsData?.check_in_rate || "0%", icon: CheckCircle2, change: "+0%", color: "text-yellow-600", bg: "bg-yellow-50" },
-    { name: "Digital Clearance", value: "Level 4", icon: ShieldCheck, change: "Active", color: "text-purple-600", bg: "bg-purple-50" },
+    ...(userRole === "admin" ? [
+      { name: "Total Clients", value: statsData?.clients || 0, icon: Building, change: "Active", color: "text-purple-600", bg: "bg-purple-50" }
+    ] : [
+      { name: "Digital Clearance", value: "Level 4", icon: ShieldCheck, change: "Active", color: "text-purple-600", bg: "bg-purple-50" }
+    ])
   ];
 
   const containerVariants = {
@@ -91,7 +101,7 @@ export default function AdminDashboard() {
         >
           <div>
             <h1 className="text-3xl md:text-5xl font-black text-[#0f172a] tracking-tighter font-bricolage italic mb-2 uppercase dark:text-white">COMMAND <span className="text-slate-300 dark:text-slate-600">CENTER</span></h1>
-            <p className="text-slate-500 font-medium text-base md:text-lg dark:text-slate-400">Welcome back. Here is what's happening across your EEL events today.</p>
+            <p className="text-slate-500 font-medium text-base md:text-lg dark:text-slate-400">Welcome back. Here is what's happening across your events today.</p>
           </div>
           {(userRole === "admin" || userRole === "manager") && (
             <Link 

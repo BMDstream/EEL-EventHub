@@ -5,11 +5,53 @@ import { Suspense } from "react";
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-black text-white selection:bg-yellow-500/30 font-outfit">
+    <div className="min-h-screen bg-black text-white selection:bg-yellow-500/30 font-outfit relative overflow-hidden">
+      <style dangerouslySetInnerHTML={{__html: `
+        @keyframes float-1 {
+          0% { transform: translate(0px, 0px) scale(1); }
+          33% { transform: translate(70px, -100px) scale(1.2); }
+          66% { transform: translate(-50px, 50px) scale(0.85); }
+          100% { transform: translate(0px, 0px) scale(1); }
+        }
+        @keyframes float-2 {
+          0% { transform: translate(0px, 0px) scale(1); }
+          50% { transform: translate(-100px, 100px) scale(1.25); }
+          100% { transform: translate(0px, 0px) scale(1); }
+        }
+        @keyframes float-3 {
+          0% { transform: translate(0px, 0px) scale(1); }
+          33% { transform: translate(-60px, -80px) scale(0.8); }
+          66% { transform: translate(80px, 60px) scale(1.2); }
+          100% { transform: translate(0px, 0px) scale(1); }
+        }
+        .animate-blob-1 {
+          animation: float-1 20s infinite alternate ease-in-out;
+          background-color: rgba(250, 204, 21, 0.22);
+          filter: blur(120px);
+        }
+        .animate-blob-2 {
+          animation: float-2 25s infinite alternate ease-in-out;
+          background-color: rgba(59, 130, 246, 0.25);
+          filter: blur(140px);
+        }
+        .animate-blob-3 {
+          animation: float-3 22s infinite alternate ease-in-out;
+          background-color: rgba(168, 85, 247, 0.22);
+          filter: blur(130px);
+        }
+      `}} />
+
+      {/* Moving Background Blobs */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+        <div className="absolute top-[10%] left-[5%] w-[500px] h-[500px] rounded-full animate-blob-1"></div>
+        <div className="absolute top-[40%] right-[5%] w-[600px] h-[600px] rounded-full animate-blob-2"></div>
+        <div className="absolute bottom-[10%] left-[20%] w-[550px] h-[550px] rounded-full animate-blob-3"></div>
+      </div>
+
       {/* Navigation */}
-      <nav className="flex items-center justify-between px-12 py-8 max-w-7xl mx-auto">
+      <nav className="flex items-center justify-between px-12 py-8 max-w-7xl mx-auto relative z-10">
         <div className="text-3xl font-black tracking-tighter font-bricolage">
-          EEL<span className="text-yellow-500">-</span>EVENT<span className="text-yellow-500">HUB</span>
+          BMD<span className="text-yellow-500">-</span>EVENT<span className="text-yellow-500">HUB</span>
         </div>
         <div className="flex items-center gap-10">
           <Link href="/admin" className="text-xs font-black uppercase tracking-[0.3em] hover:text-yellow-500 transition-colors">
@@ -25,13 +67,13 @@ export default function LandingPage() {
       </nav>
 
       {/* Hero Section */}
-      <main className="max-w-7xl mx-auto px-12 pt-24 pb-40">
+      <main className="max-w-7xl mx-auto px-12 pt-24 pb-40 relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-24 items-center">
           <div className="relative z-10">
             <div className="inline-flex items-center gap-3 px-4 py-2 bg-zinc-900 rounded-full mb-10 border border-white/5">
               <span className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></span>
               <span className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-400">
-                Excellence Entertainment Logistics
+                BMD Computing
               </span>
             </div>
             <h1 className="text-7xl lg:text-9xl font-black tracking-tighter leading-[0.85] mb-10 font-bricolage italic">
@@ -103,9 +145,9 @@ export default function LandingPage() {
       </main>
       
       {/* Footer Branding */}
-      <footer className="max-w-7xl mx-auto px-12 py-20 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-8 opacity-40">
+      <footer className="max-w-7xl mx-auto px-12 py-20 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-8 opacity-40 relative z-10">
         <div className="text-sm font-black tracking-widest uppercase">
-          © 2026 Excellence Entertainment Logistics
+          © 2026 BMD Computing
         </div>
         <div className="flex gap-10 text-[10px] font-black uppercase tracking-[0.4em]">
           <span>Security</span>

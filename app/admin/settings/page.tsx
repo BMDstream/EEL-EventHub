@@ -10,11 +10,16 @@ import {
   Layout, 
   Loader2, 
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Lock
 } from "lucide-react";
 import { motion } from "framer-motion";
+import { useSession } from "next-auth/react";
 
 export default function SettingsPage() {
+  const { data: session } = useSession();
+  const userRole = (session?.user as any)?.role || "staff";
+
   const [config, setConfig] = useState({
     primary_color: "#0f172a",
     accent_color: "#94a3b8",
@@ -25,6 +30,20 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  if (userRole === "staff") {
+    return (
+      <AdminLayout>
+        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-6">
+          <div className="w-24 h-24 bg-red-50 rounded-full flex items-center justify-center mb-8">
+            <Lock className="text-red-500" size={48} />
+          </div>
+          <h1 className="text-4xl font-black text-[#0f172a] mb-4 uppercase italic font-bricolage tracking-tight dark:text-white">Access <span className="text-red-500">Restricted</span></h1>
+          <p className="text-slate-500 font-medium max-w-md">You do not have the clearance level required to view settings.</p>
+        </div>
+      </AdminLayout>
+    );
+  }
 
   useEffect(() => {
     async function fetchSettings() {

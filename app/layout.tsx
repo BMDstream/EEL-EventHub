@@ -14,7 +14,7 @@ const outfit = Outfit({
 });
 
 export const metadata: Metadata = {
-  title: "EEL-EventHub | Excellence Entertainment Logistics",
+  title: "BMD-EventHub | BMD Computing",
   description: "Professional event management and logistics platform.",
 };
 

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Plus, Trash2, GripVertical, Type, List, CheckSquare, Save, Loader2, Sparkles, ArrowUp, ArrowDown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useSession } from "next-auth/react";
 
 interface FormField {
   id: string;
@@ -17,6 +18,7 @@ interface FormField {
 }
 
 export default function FormBuilder({ eventId, initialSchema, onSave }: { eventId: string, initialSchema: FormField[], onSave: (schema: FormField[]) => void }) {
+  const { data: session } = useSession();
   const [fields, setFields] = useState<FormField[]>(initialSchema || []);
   const [saving, setSaving] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
@@ -106,17 +108,24 @@ export default function FormBuilder({ eventId, initialSchema, onSave }: { eventI
   const handleSave = async () => {
     setSaving(true);
     try {
-      const res = await fetch(`/api/py/events/${eventId}`, {
+      const res = await fetch(`/api/py/events/${eventId}/form-schema`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "x-user-email": session?.user?.email || ""
+        },
         body: JSON.stringify({ custom_fields_schema: fields })
       });
       if (res.ok) {
         onSave(fields);
         alert("Form schema saved successfully!");
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        alert(`Failed to save form schema: ${errorData.detail || "Server error"}`);
       }
     } catch (err) {
       console.error(err);
+      alert("An unexpected error occurred while saving.");
     } finally {
       setSaving(false);
     }

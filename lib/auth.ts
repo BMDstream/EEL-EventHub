@@ -25,7 +25,8 @@ export const authOptions: NextAuthOptions = {
               return { 
                 id: user.sub, 
                 email: user.email, 
-                role: user.role 
+                role: user.role,
+                allowed_clients: user.allowed_clients || []
               };
             }
           } catch (err) {
@@ -45,8 +46,12 @@ export const authOptions: NextAuthOptions = {
           const { default: sql } = await import("@/lib/db");
           
           const results = await sql`
-            SELECT id, email, password, role FROM "user" 
-            WHERE LOWER(email) = ${email} AND password = ${password}
+            SELECT u.id, u.email, u.password, u.role, ARRAY_AGG(c.slug) FILTER (WHERE c.slug IS NOT NULL) as allowed_clients
+            FROM "user" u
+            LEFT JOIN userclientlink l ON l.user_id = u.id
+            LEFT JOIN client c ON c.id = l.client_id
+            WHERE LOWER(u.email) = ${email} AND u.password = ${password}
+            GROUP BY u.id
             LIMIT 1
           `;
 
@@ -55,7 +60,8 @@ export const authOptions: NextAuthOptions = {
             return { 
               id: user.id.toString(), 
               email: user.email, 
-              role: user.role 
+              role: user.role,
+              allowed_clients: user.allowed_clients || []
             };
           }
         } catch (dbErr) {
@@ -71,7 +77,12 @@ export const authOptions: NextAuthOptions = {
 
         const matchingHardcoded = hardcodedUsers.find(u => u.email === email && u.password === password);
         if (matchingHardcoded) {
-          return { id: matchingHardcoded.email, email: matchingHardcoded.email, role: matchingHardcoded.role };
+          return { 
+            id: matchingHardcoded.email, 
+            email: matchingHardcoded.email, 
+            role: matchingHardcoded.role,
+            allowed_clients: matchingHardcoded.role === "admin" ? [] : ["bmd"]
+          };
         }
         
         return null;
@@ -82,17 +93,24 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.role = (user as any).role;
+        token.allowed_clients = (user as any).allowed_clients || [];
       }
       
-      if (!token.role && token.email) {
+      if (token.email) {
         try {
-          // Use the internal API or DB to get the role
           const { default: sql } = await import("@/lib/db");
           const results = await sql`
-            SELECT role FROM "user" WHERE LOWER(email) = ${token.email.toLowerCase()} LIMIT 1
+            SELECT u.role, ARRAY_AGG(c.slug) FILTER (WHERE c.slug IS NOT NULL) as allowed_clients
+            FROM "user" u
+            LEFT JOIN userclientlink l ON l.user_id = u.id
+            LEFT JOIN client c ON c.id = l.client_id
+            WHERE LOWER(u.email) = ${token.email.toLowerCase()}
+            GROUP BY u.id
+            LIMIT 1
           `;
           if (results && results.length > 0) {
             token.role = results[0].role;
+            token.allowed_clients = results[0].allowed_clients || [];
           }
         } catch (err) {
           console.error("Failed to fetch user role from DB in JWT callback", err);
@@ -105,6 +123,7 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         (session.user as any).id = token.sub;
         (session.user as any).role = token.role || "staff";
+        (session.user as any).allowed_clients = token.allowed_clients || [];
       }
       return session;
     },

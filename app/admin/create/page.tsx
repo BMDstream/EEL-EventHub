@@ -39,7 +39,12 @@ export default function CreateEventPage() {
   });
 
   useEffect(() => {
-    fetch("/api/py/clients")
+    if (!session?.user?.email) return;
+    fetch("/api/py/clients", {
+      headers: {
+        "x-user-email": session.user.email
+      }
+    })
       .then((res) => res.json())
       .then((data) => {
         setClients(data);
@@ -51,7 +56,7 @@ export default function CreateEventPage() {
         }
       })
       .catch((err) => console.error("Failed to fetch clients", err));
-  }, []);
+  }, [session]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,6 +74,7 @@ export default function CreateEventPage() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "x-user-email": session?.user?.email || "",
         },
         body: JSON.stringify({
           ...formData,

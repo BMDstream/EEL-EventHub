@@ -19,3 +19,388 @@
     @apply transition-colors duration-500;
   }
 }
+
+@layer utilities {
+  /* Override Tailwind's default yellow classes for the brand main color #25678e (blue) */
+  .bg-yellow-400 {
+    background-color: #25678e;
+  }
+  .bg-yellow-500 {
+    background-color: #1d5373;
+  }
+  .bg-yellow-50 {
+    background-color: #f0f7fa;
+  }
+  .bg-yellow-100 {
+    background-color: #e1eef4;
+  }
+  .bg-yellow-400\/10 {
+    background-color: rgba(37, 103, 142, 0.1);
+  }
+  .bg-yellow-400\/5 {
+    background-color: rgba(37, 103, 142, 0.05);
+  }
+  .bg-yellow-500\/10 {
+    background-color: rgba(37, 103, 142, 0.1);
+  }
+  .bg-yellow-500\/30 {
+    background-color: rgba(37, 103, 142, 0.3);
+  }
+  .hover\:bg-yellow-500:hover {
+    background-color: #1d5373;
+  }
+  .hover\:bg-yellow-400:hover {
+    background-color: #25678e;
+  }
+  .text-yellow-400 {
+    color: #25678e;
+  }
+  .text-yellow-500 {
+    color: #25678e;
+  }
+  .text-yellow-600 {
+    color: #153e57;
+  }
+  .text-yellow-600\/70 {
+    color: rgba(21, 62, 87, 0.7);
+  }
+  .border-yellow-400 {
+    border-color: #25678e;
+  }
+  .border-yellow-400\/20 {
+    border-color: rgba(37, 103, 142, 0.2);
+  }
+  .border-yellow-400\/10 {
+    border-color: rgba(37, 103, 142, 0.1);
+  }
+  .focus\:ring-yellow-400\/20:focus {
+    --tw-ring-color: rgba(37, 103, 142, 0.2);
+  }
+  .focus\:ring-2:focus {
+    --tw-ring-color: #25678e;
+  }
+  .dark\:bg-yellow-400:is(.dark *) {
+    background-color: #25678e;
+  }
+  .dark\:text-yellow-500:is(.dark *) {
+    color: #25678e;
+  }
+  .group-hover\:text-yellow-500:hover {
+    color: #25678e;
+  }
+  .dark\:text-yellow-400:is(.dark *) {
+    color: #25678e;
+  }
+  .dark\:shadow-yellow-400\/20:is(.dark *) {
+    --tw-shadow-color: rgba(37, 103, 142, 0.2);
+  }
+  .selection\:bg-yellow-500\/30 *::selection,
+  .selection\:bg-yellow-500\/30::selection {
+    background-color: rgba(37, 103, 142, 0.3);
+  }
+
+  /* Override hardcoded #0f172a (slate-900) classes for the brand secondary #1d2a33 (dark slate) */
+  .bg-\[\#0f172a\] {
+    background-color: #1d2a33;
+  }
+  .text-\[\#0f172a\] {
+    color: #1d2a33;
+  }
+  .border-\[\#0f172a\] {
+    border-color: #1d2a33;
+  }
+  .ring-\[\#0f172a\] {
+    --tw-ring-color: #1d2a33;
+  }
+  .hover\:bg-\[\#0f172a\]:hover {
+    background-color: #121c22;
+  }
+  .hover\:text-\[\#0f172a\]:hover {
+    color: #1d2a33;
+  }
+  .dark\:bg-\[\#0f172a\]:is(.dark *) {
+    background-color: #1d2a33;
+  }
+  .dark\:border-\[\#0f172a\]:is(.dark *) {
+    border-color: #1d2a33;
+  }
+  .dark\:text-\[\#0f172a\]:is(.dark *) {
+    color: #1d2a33;
+  }
+  .hover\:bg-black:hover {
+    background-color: #121c22;
+  }
+  .border-slate-900 {
+    border-color: #1d2a33;
+  }
+  .bg-slate-900 {
+    background-color: #1d2a33;
+  }
+  .text-slate-900 {
+    color: #1d2a33;
+  }
+}
+
+/* ==========================================================================
+   Premium Enterprise Theme Overrides (BMD-EventHub)
+   ========================================================================== */
+
+/* Modern scrollbars */
+.bmd-admin-layout ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.bmd-admin-layout ::-webkit-scrollbar-track {
+  background: transparent;
+}
+.bmd-admin-layout ::-webkit-scrollbar-thumb {
+  background: rgba(15, 23, 42, 0.15);
+  border-radius: 9999px;
+}
+.dark.bmd-admin-layout ::-webkit-scrollbar-thumb,
+.dark .bmd-admin-layout ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* Card overrides for dark mode & elevation */
+.bmd-admin-layout .bg-white {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.dark.bmd-admin-layout .bg-white,
+.dark .bmd-admin-layout .bg-white,
+.dark.bmd-admin-layout [class*="bg-white"],
+.dark .bmd-admin-layout [class*="bg-white"] {
+  background-color: #1d2a33 !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Form Builder Canvas overrides */
+.dark.bmd-admin-layout .bg-slate-50\/50,
+.dark .bmd-admin-layout .bg-slate-50\/50 {
+  background-color: rgba(29, 42, 51, 0.4) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Text visibility overrides in dark mode cards */
+.dark.bmd-admin-layout .text-slate-400,
+.dark .bmd-admin-layout .text-slate-400,
+.dark.bmd-admin-layout .text-slate-500,
+.dark .bmd-admin-layout .text-slate-500 {
+  color: #cbd5e1 !important; /* Lighter color for better reading contrast */
+}
+.dark.bmd-admin-layout .text-slate-300,
+.dark .bmd-admin-layout .text-slate-300 {
+  color: #cbd5e1 !important;
+}
+.dark.bmd-admin-layout .text-\[\#0f172a\],
+.dark .bmd-admin-layout .text-\[\#0f172a\],
+.dark.bmd-admin-layout .text-slate-900,
+.dark .bmd-admin-layout .text-slate-900 {
+  color: #ffffff !important;
+}
+
+.dark.bmd-admin-layout .text-yellow-600,
+.dark .bmd-admin-layout .text-yellow-600 {
+  color: #a5f3fc !important; /* light cyan-blue for client sub-badge text */
+}
+
+/* Scoped primary button overrides mapping bg-[#0f172a] to brand blue #25678e in dark mode */
+.dark.bmd-admin-layout button.bg-\[\#0f172a\],
+.dark .bmd-admin-layout button.bg-\[\#0f172a\],
+.dark.bmd-admin-layout a.bg-\[\#0f172a\],
+.dark .bmd-admin-layout a.bg-\[\#0f172a\],
+.bmd-login-layout button.bg-\[\#0f172a\],
+.bmd-login-layout a.bg-\[\#0f172a\] {
+  background-color: #25678e !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+}
+.dark.bmd-admin-layout button.bg-\[\#0f172a\]:hover,
+.dark .bmd-admin-layout button.bg-\[\#0f172a\]:hover,
+.dark.bmd-admin-layout a.bg-\[\#0f172a\]:hover,
+.dark .bmd-admin-layout a.bg-\[\#0f172a\]:hover,
+.bmd-login-layout button.bg-\[\#0f172a\]:hover,
+.bmd-login-layout a.bg-\[\#0f172a\]:hover {
+  background-color: #1d5373 !important;
+  box-shadow: 0 0 15px rgba(37, 103, 142, 0.4) !important;
+}
+
+/* Scoped secondary button overrides mapping bg-white to transparent-gray with visible border in dark mode */
+.dark.bmd-admin-layout button.bg-white,
+.dark .bmd-admin-layout button.bg-white,
+.dark.bmd-admin-layout a.bg-white,
+.dark .bmd-admin-layout a.bg-white {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.25) !important;
+  color: #ffffff !important;
+}
+.dark.bmd-admin-layout button.bg-white:hover,
+.dark .bmd-admin-layout button.bg-white:hover,
+.dark.bmd-admin-layout a.bg-white:hover,
+.dark .bmd-admin-layout a.bg-white:hover {
+  background-color: rgba(255, 255, 255, 0.15) !important;
+  border-color: rgba(255, 255, 255, 0.35) !important;
+}
+
+/* Scoped code block overrides in dark mode */
+.dark.bmd-admin-layout code.bg-white,
+.dark .bmd-admin-layout code.bg-white {
+  background-color: #121c22 !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.15) !important;
+  color: #ffffff !important;
+}
+
+.bmd-login-layout button[type="submit"] {
+  background-color: #25678e !important;
+  color: #ffffff !important;
+}
+.bmd-login-layout button[type="submit"]:hover {
+  background-color: #1d5373 !important;
+}
+
+/* High contrast inputs and textareas */
+.bmd-admin-layout input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="file"]):not([type="range"]):not([type="submit"]):not([type="button"]):not([type="reset"]),
+.bmd-admin-layout textarea, 
+.bmd-admin-layout select,
+.bmd-login-layout input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="file"]):not([type="range"]):not([type="submit"]):not([type="button"]):not([type="reset"]), 
+.bmd-login-layout textarea, 
+.bmd-login-layout select {
+  background-color: #ffffff !important;
+  border: 1.5px solid #cbd5e1 !important;
+  color: #0f172a !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.bmd-admin-layout input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="file"]):not([type="range"]):not([type="submit"]):not([type="button"]):not([type="reset"]):focus, 
+.bmd-admin-layout textarea:focus, 
+.bmd-admin-layout select:focus,
+.bmd-login-layout input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="file"]):not([type="range"]):not([type="submit"]):not([type="button"]):not([type="reset"]):focus, 
+.bmd-login-layout textarea:focus, 
+.bmd-login-layout select:focus {
+  border-color: #25678e !important;
+  box-shadow: 0 0 0 3px rgba(37, 103, 142, 0.25) !important;
+  outline: none !important;
+}
+
+.dark.bmd-admin-layout input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="file"]):not([type="range"]):not([type="submit"]):not([type="button"]):not([type="reset"]), 
+.dark .bmd-admin-layout input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="file"]):not([type="range"]):not([type="submit"]):not([type="button"]):not([type="reset"]), 
+.dark.bmd-admin-layout textarea, 
+.dark .bmd-admin-layout textarea, 
+.dark.bmd-admin-layout select,
+.dark .bmd-admin-layout select,
+.bmd-login-layout input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="file"]):not([type="range"]):not([type="submit"]):not([type="button"]):not([type="reset"]), 
+.bmd-login-layout textarea, 
+.bmd-login-layout select {
+  background-color: #121c22 !important; /* distinctly darker than #1d2a33 card */
+  border: 1.5px solid rgba(255, 255, 255, 0.25) !important;
+  color: #ffffff !important;
+}
+
+.dark.bmd-admin-layout input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="file"]):not([type="range"]):not([type="submit"]):not([type="button"]):not([type="reset"]):focus, 
+.dark .bmd-admin-layout input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="file"]):not([type="range"]):not([type="submit"]):not([type="button"]):not([type="reset"]):focus, 
+.dark.bmd-admin-layout textarea:focus, 
+.dark .bmd-admin-layout textarea:focus, 
+.dark.bmd-admin-layout select:focus,
+.dark .bmd-admin-layout select:focus,
+.bmd-login-layout input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="file"]):not([type="range"]):not([type="submit"]):not([type="button"]):not([type="reset"]):focus, 
+.bmd-login-layout textarea:focus, 
+.bmd-login-layout select:focus {
+  border-color: #25678e !important;
+  box-shadow: 0 0 0 3px rgba(37, 103, 142, 0.4) !important;
+}
+
+/* Secondary Button overrides (prevent blending in dark mode) */
+.dark.bmd-admin-layout .bg-slate-50,
+.dark .bmd-admin-layout .bg-slate-50,
+.dark.bmd-admin-layout .bg-slate-100,
+.dark .bmd-admin-layout .bg-slate-100,
+.dark.bmd-admin-layout [class*="bg-slate-50"],
+.dark .bmd-admin-layout [class*="bg-slate-50"],
+.dark.bmd-admin-layout [class*="bg-slate-100"],
+.dark .bmd-admin-layout [class*="bg-slate-100"] {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  color: #ffffff !important;
+}
+.dark.bmd-admin-layout .bg-slate-50:hover,
+.dark .bmd-admin-layout .bg-slate-50:hover,
+.dark.bmd-admin-layout .bg-slate-100:hover,
+.dark .bmd-admin-layout .bg-slate-100:hover,
+.dark.bmd-admin-layout [class*="bg-slate-50"]:hover,
+.dark .bmd-admin-layout [class*="bg-slate-50"]:hover,
+.dark.bmd-admin-layout [class*="bg-slate-100"]:hover,
+.dark .bmd-admin-layout [class*="bg-slate-100"]:hover {
+  background-color: rgba(255, 255, 255, 0.15) !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+/* Buttons with bg-yellow-400 (which is primary brand blue) contrast fixes */
+.bmd-admin-layout .bg-yellow-400,
+.bmd-admin-layout .bg-yellow-500,
+.bmd-admin-layout .dark\:bg-yellow-400,
+.bmd-login-layout .bg-yellow-400,
+.bmd-login-layout .bg-yellow-500 {
+  color: #ffffff !important; /* Force high contrast white text */
+}
+.bmd-admin-layout .bg-yellow-400 svg,
+.bmd-admin-layout .bg-yellow-500 svg,
+.bmd-admin-layout .dark\:bg-yellow-400 svg,
+.bmd-login-layout .bg-yellow-400 svg {
+  stroke: #ffffff !important; /* Force icons to be white too */
+}
+.bmd-admin-layout .bg-yellow-400:hover,
+.bmd-admin-layout .bg-yellow-500:hover,
+.bmd-login-layout .bg-yellow-400:hover {
+  filter: brightness(1.1);
+  box-shadow: 0 0 15px rgba(37, 103, 142, 0.4) !important;
+}
+
+/* Active navigation link inside AdminLayout */
+.bmd-admin-layout .bg-yellow-400.text-black {
+  color: #ffffff !important;
+  background-color: #25678e !important;
+}
+
+/* Active sidebar indicator */
+.bmd-admin-layout nav a.bg-yellow-400 svg {
+  color: #ffffff !important;
+  stroke: #ffffff !important;
+}
+
+/* Table visibility improvements */
+.dark.bmd-admin-layout table th,
+.dark .bmd-admin-layout table th {
+  border-bottom: 2px solid rgba(255, 255, 255, 0.12) !important;
+  color: #cbd5e1 !important;
+}
+.dark.bmd-admin-layout table td,
+.dark .bmd-admin-layout table td {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+.dark.bmd-admin-layout table tr:hover,
+.dark .bmd-admin-layout table tr:hover {
+  background-color: rgba(255, 255, 255, 0.03) !important;
+}
+
+/* Navigation items in light mode / dark mode */
+.dark.bmd-admin-layout nav a:not(.bg-yellow-400),
+.dark .bmd-admin-layout nav a:not(.bg-yellow-400) {
+  color: #cbd5e1 !important;
+}
+.dark.bmd-admin-layout nav a:not(.bg-yellow-400):hover,
+.dark .bmd-admin-layout nav a:not(.bg-yellow-400):hover {
+  background-color: rgba(255, 255, 255, 0.06) !important;
+  color: #ffffff !important;
+}
+
+/* Tab button visibility fixes */
+.bmd-admin-layout button[class*="border-yellow-400"] {
+  border-bottom-width: 3px !important;
+  border-bottom-color: #25678e !important;
+  color: #25678e !important;
+}
+.dark.bmd-admin-layout button[class*="border-yellow-400"],
+.dark .bmd-admin-layout button[class*="border-yellow-400"] {
+  color: #ffffff !important;
+}
+

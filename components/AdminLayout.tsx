@@ -21,27 +21,75 @@ import {
 import { useState, useEffect } from "react";
 import { signOut, useSession } from "next-auth/react";
 
+interface ClientBranding {
+  id: number;
+  name: string;
+  slug: string;
+  logo_url?: string;
+  primary_color: string;
+  accent_color: string;
+}
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [logo, setLogo] = useState<string | null>(null);
   const [theme, setTheme] = useState<"dark" | "light">("light");
+  const [primaryClient, setPrimaryClient] = useState<ClientBranding | null>(null);
+
+  const { data: session } = useSession();
+  const userRole = (session?.user as any)?.role || "staff";
+  const userEmail = session?.user?.email || "";
+
+  // Derive a friendly first name from the email (part before @, capitalize first letter)
+  const firstName = userEmail
+    ? userEmail.split("@")[0].split(/[._-]/)[0]
+        .replace(/^\w/, (c) => c.toUpperCase())
+    : "User";
+
+  // Initials for the avatar (up to 2 chars)
+  const initials = userEmail
+    ? userEmail.substring(0, 2).toUpperCase()
+    : "??";
 
   useEffect(() => {
-    const savedLogo = localStorage.getItem("eel-logo");
-    if (savedLogo) setLogo(savedLogo);
-
     const savedTheme = localStorage.getItem("eel-theme") as "dark" | "light";
     if (savedTheme) {
       setTheme(savedTheme);
       document.documentElement.classList.toggle("dark", savedTheme === "dark");
     } else {
-      // Default to dark for premium feel if not set
       setTheme("dark");
       document.documentElement.classList.add("dark");
     }
   }, []);
+
+  // Fetch primary client for non-admin users to show their branding in the sidebar
+  useEffect(() => {
+    if (!session?.user?.email) return;
+    if (userRole === "admin") {
+      // Admins see the default BMD branding — no fetch needed
+      setPrimaryClient(null);
+      return;
+    }
+    const fetchMyClients = async () => {
+      try {
+        const res = await fetch("/api/py/clients", {
+          headers: { "x-user-email": session.user?.email || "" }
+        });
+        if (res.ok) {
+          const clients: ClientBranding[] = await res.json();
+          if (clients && clients.length > 0) {
+            // Show the first assigned client as the primary branding
+            setPrimaryClient(clients[0]);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch client branding", err);
+      }
+    };
+    fetchMyClients();
+  }, [session, userRole]);
 
   const toggleTheme = () => {
     const newTheme = theme === "dark" ? "light" : "dark";
@@ -63,9 +111,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     }
   };
 
-  const { data: session } = useSession();
-  const userRole = (session?.user as any)?.role || "staff";
-
   const allNavItems = [
     { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
     { name: "Clients", href: "/admin/clients", icon: Building2 },
@@ -81,13 +126,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       return item.name === "Dashboard" || item.name === "Events";
     }
     if (userRole === "manager") {
-      return item.name !== "Team" && item.name !== "Security";
+      return item.name !== "Team" && item.name !== "Security" && item.name !== "Clients";
     }
     return true; // admin
   });
 
+  // Determine sidebar branding: use assigned client branding for non-admins
+  const sidebarClientName = primaryClient?.name ?? "BMD Computing";
+  const sidebarClientLogo = primaryClient?.logo_url ?? logo;
+  const sidebarInitial = primaryClient
+    ? primaryClient.name.charAt(0).toUpperCase()
+    : "B";
+
   return (
-    <div className="min-h-screen bg-[#f1f5f9] flex font-outfit transition-colors duration-500 dark:bg-[#020617]">
+    <div className="min-h-screen bg-[#f1f5f9] flex font-outfit transition-colors duration-500 dark:bg-[#020617] bmd-admin-layout">
       {/* Mobile Backdrop */}
       {isSidebarOpen && (
         <div 
@@ -112,23 +164,50 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </button>
 
         <div className={`h-full flex flex-col p-8 transition-all ${isSidebarCollapsed ? "items-center px-4" : ""}`}>
-          {/* Logo Section */}
+          {/* Logo / Client Branding Section */}
           <div className={`flex items-center gap-3 mb-12 group relative ${isSidebarCollapsed ? "justify-center" : ""}`}>
-            <label className="cursor-pointer relative overflow-hidden w-10 h-10 bg-yellow-400 rounded-2xl flex items-center justify-center rotate-3 transition-transform hover:scale-110">
-              {logo ? (
-                <img src={logo} alt="Logo" className="w-full h-full object-cover -rotate-3" />
-              ) : (
-                <span className="text-black font-black text-xl font-bricolage italic">E</span>
-              )}
-              <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
-              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                <span className="text-[8px] font-black uppercase">Edit</span>
+            {/* Logo — clickable to upload only for admins */}
+            {userRole === "admin" ? (
+              <label className="cursor-pointer relative overflow-hidden w-10 h-10 bg-yellow-400 rounded-2xl flex items-center justify-center rotate-3 transition-transform hover:scale-110 shrink-0">
+                {sidebarClientLogo ? (
+                  <img src={sidebarClientLogo} alt="Logo" className="w-full h-full object-cover -rotate-3" />
+                ) : (
+                  <span className="text-black font-black text-xl font-bricolage italic">{sidebarInitial}</span>
+                )}
+                <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                  <span className="text-[8px] font-black uppercase">Edit</span>
+                </div>
+              </label>
+            ) : (
+              <div className="relative overflow-hidden w-10 h-10 bg-yellow-400 rounded-2xl flex items-center justify-center rotate-3 shrink-0">
+                {sidebarClientLogo ? (
+                  <img src={sidebarClientLogo} alt="Logo" className="w-full h-full object-cover -rotate-3" />
+                ) : (
+                  <span className="text-black font-black text-xl font-bricolage italic">{sidebarInitial}</span>
+                )}
               </div>
-            </label>
+            )}
+
             {!isSidebarCollapsed && (
-              <div className="transition-opacity duration-300">
-                <h1 className="text-xl font-black font-bricolage italic tracking-tight leading-none uppercase">EEL-<span className="text-yellow-400">EventHub</span></h1>
-                <p className="text-[8px] font-black uppercase tracking-[0.3em] text-slate-500">Excellence Logistics</p>
+              <div className="transition-opacity duration-300 min-w-0">
+                {primaryClient ? (
+                  <>
+                    <h1 className="text-base font-black font-bricolage italic tracking-tight leading-tight uppercase truncate text-white">
+                      {primaryClient.name}
+                    </h1>
+                    <p className="text-[8px] font-black uppercase tracking-[0.25em] text-slate-500">
+                      BMD-EventHub
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <h1 className="text-xl font-black font-bricolage italic tracking-tight leading-none uppercase">
+                      BMD-<span className="text-yellow-400">EventHub</span>
+                    </h1>
+                    <p className="text-[8px] font-black uppercase tracking-[0.3em] text-slate-500">BMD Computing</p>
+                  </>
+                )}
               </div>
             )}
           </div>
@@ -156,8 +235,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             })}
           </nav>
 
-          {/* Footer / Profile */}
-          <div className="pt-8 border-t border-slate-800">
+          {/* Footer: User info + Sign Out */}
+          <div className="pt-6 border-t border-slate-800 space-y-3">
+            {/* Logged-in user info */}
+            {!isSidebarCollapsed && (
+              <div className="flex items-center gap-3 px-2 py-3">
+                <div className="w-8 h-8 rounded-xl bg-yellow-400/10 border border-yellow-400/20 flex items-center justify-center shrink-0">
+                  <span className="text-[10px] font-black text-yellow-400 uppercase">{initials}</span>
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-black text-white truncate">{firstName}</p>
+                  <p className="text-[9px] text-slate-500 truncate uppercase tracking-wider font-bold">{userRole}</p>
+                </div>
+              </div>
+            )}
             <button 
               onClick={() => signOut({ callbackUrl: "/" })}
               className={`flex items-center gap-4 px-5 py-4 w-full rounded-2xl text-slate-400 hover:bg-red-500/10 hover:text-red-500 transition-all font-bold group ${isSidebarCollapsed ? "justify-center px-0 w-12 h-12" : ""}`}
@@ -174,14 +265,21 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top Header */}
         <header className="h-20 bg-white/80 backdrop-blur-md border-b border-slate-200 px-8 flex items-center justify-between sticky top-0 z-40 transition-colors dark:bg-[#0f172a]/80 dark:border-slate-800">
-           <button 
-             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-             className="lg:hidden p-2 text-slate-500"
-           >
-             {isSidebarOpen ? <X /> : <Menu />}
-           </button>
+           <div className="flex items-center gap-4">
+             <button 
+               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+               className="lg:hidden p-2 text-slate-500"
+             >
+               {isSidebarOpen ? <X /> : <Menu />}
+             </button>
+             {/* Welcome message */}
+             <div className="hidden sm:flex flex-col">
+               <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Welcome back</span>
+               <span className="text-sm font-black text-[#0f172a] dark:text-white tracking-tight">{firstName} 👋</span>
+             </div>
+           </div>
            
-           <div className="flex items-center gap-6">
+           <div className="flex items-center gap-4">
               <button 
                 onClick={toggleTheme}
                 className="p-3 rounded-2xl bg-slate-50 text-slate-500 hover:bg-slate-100 transition-all dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700"
@@ -189,6 +287,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
               </button>
 
+              {/* System status */}
               <div className="hidden md:flex flex-col text-right">
                 <span className="text-xs font-black text-slate-400 uppercase tracking-widest">System Status</span>
                 <span className="text-[10px] text-green-500 font-bold flex items-center gap-1 justify-end">
@@ -196,7 +295,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                    Operational
                 </span>
               </div>
-              <div className="w-10 h-10 bg-slate-100 rounded-full border border-slate-200 dark:bg-slate-800 dark:border-slate-700"></div>
+
+              {/* User avatar with initials */}
+              <div 
+                className="w-10 h-10 bg-[#25678e] rounded-full border-2 border-[#25678e]/30 flex items-center justify-center"
+                title={userEmail}
+              >
+                <span className="text-[11px] font-black text-white uppercase">{initials}</span>
+              </div>
            </div>
         </header>
 

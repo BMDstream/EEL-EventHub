@@ -3,6 +3,14 @@ from typing import Optional, List, Dict, Any
 from uuid import UUID, uuid4
 from datetime import datetime
 
+class UserClientLink(SQLModel, table=True):
+    user_id: int = Field(foreign_key="user.id", primary_key=True)
+    client_id: int = Field(foreign_key="client.id", primary_key=True)
+
+class UserEventLink(SQLModel, table=True):
+    user_id: int = Field(foreign_key="user.id", primary_key=True)
+    event_id: int = Field(foreign_key="event.id", primary_key=True)
+
 class Client(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     name: str = Field(index=True)
@@ -16,6 +24,8 @@ class Client(SQLModel, table=True):
     body_text: str = "Your orchestration for **{event_title}** has been authorized. Below are your secure credentials for terminal verification."
     footer_text: str = "Automated Event Management System\nSecurity Tier: Level 4 Authorized"
     created_at: datetime = Field(default_factory=datetime.utcnow)
+    
+    users: List["User"] = Relationship(back_populates="clients", link_model=UserClientLink)
 
 class Event(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -65,6 +75,8 @@ class User(SQLModel, table=True):
     role: str = "staff" # admin, manager, staff
     is_active: bool = True
     created_at: datetime = Field(default_factory=datetime.utcnow)
+    
+    clients: List[Client] = Relationship(back_populates="users", link_model=UserClientLink)
 
 class SystemSetting(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)

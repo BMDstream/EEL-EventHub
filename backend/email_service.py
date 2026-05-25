@@ -121,7 +121,7 @@ def send_confirmation_email(to_email: str, first_name: str, event_title: str, cl
         {details_html}
 
         <div style="background: #f8fafc; padding: 48px; border-radius: 32px; text-align: center; border: 1px solid #f1f5f9; margin-bottom: 40px; position: relative; overflow: hidden;">
-            <div style="position: absolute; top: -10px; right: -10px; font-size: 120px; font-weight: 900; color: #000; opacity: 0.02; font-style: italic;">EEL</div>
+            <div style="position: absolute; top: -10px; right: -10px; font-size: 120px; font-weight: 900; color: #000; opacity: 0.02; font-style: italic;">BMD</div>
             <img src="data:image/png;base64,{qr_base64}" width="200" height="200" alt="Clearance QR Code" style="margin-bottom: 32px; border-radius: 20px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.15);" />
             <p style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.3em; color: #64748b; margin-bottom: 16px;">Unique Clearance ID</p>
             <div style="display: inline-block; background: #ffffff; padding: 16px 32px; border-radius: 20px; border: 2px solid {primary_color};">
@@ -151,7 +151,7 @@ def send_confirmation_email(to_email: str, first_name: str, event_title: str, cl
     try:
         sender_name = config.get("sender_name") if config else None
         if not sender_name:
-            sender_name = "EEL-EventHub"
+            sender_name = "BMD-EventHub"
             
         from_address = f"{sender_name} <events@eelogistics.co.za>"
         
@@ -224,7 +224,7 @@ def send_broadcast_email(to_emails: List[str], subject: str, body: str, event_ti
     try:
         sender_name = config.get("sender_name") if config else None
         if not sender_name:
-            sender_name = "EEL-EventHub"
+            sender_name = "BMD-EventHub"
             
         from_address = f"{sender_name} <events@eelogistics.co.za>"
         

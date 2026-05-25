@@ -58,13 +58,31 @@ export default function ClientsPage() {
     footer_text: "Automated Event Management System\nSecurity Tier: Level 4 Authorized"
   });
 
+  // Fetch on mount and whenever session becomes available
   useEffect(() => {
-    fetchClients();
-  }, []);
+    if (session?.user?.email) {
+      fetchClients();
+    }
+  }, [session]);
+
+  // Also re-fetch whenever the page becomes visible again (e.g. navigating back)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && session?.user?.email) {
+        fetchClients();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, [session]);
 
   const fetchClients = async () => {
     try {
-      const res = await fetch("/api/py/clients");
+      const res = await fetch("/api/py/clients", {
+        headers: {
+          "x-user-email": session?.user?.email || ""
+        }
+      });
       if (res.ok) {
         const data = await res.json();
         setClients(data);
@@ -142,7 +160,10 @@ export default function ClientsPage() {
 
       const res = await fetch(url, {
         method,
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "x-user-email": session?.user?.email || ""
+        },
         body: JSON.stringify(payload)
       });
 
@@ -181,7 +202,7 @@ export default function ClientsPage() {
     }
   };
 
-  if (userRole === "staff") {
+  if (userRole !== "admin") {
     return (
       <AdminLayout>
         <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-6">
@@ -247,7 +268,7 @@ export default function ClientsPage() {
                       >
                         <Edit size={14} />
                       </button>
-                      {client.slug !== "eel" && (
+                      {client.slug !== "bmd" && (
                         <button 
                           onClick={() => handleDelete(client.id, client.name)}
                           className="p-3 bg-slate-50 text-slate-400 rounded-xl hover:bg-red-500 hover:text-white transition-all dark:bg-slate-800 dark:hover:bg-red-500"
@@ -342,7 +363,7 @@ export default function ClientsPage() {
                         </label>
                         <input 
                           required
-                          disabled={!!editingClient && editingClient.slug === "eel"}
+                          disabled={!!editingClient && editingClient.slug === "bmd"}
                           type="text" 
                           placeholder="e.g. gold-medal-padel"
                           value={formData.slug}

@@ -31,7 +31,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white selection:bg-yellow-500/30 font-outfit flex flex-col items-center justify-center p-6">
+    <div className="min-h-screen bg-black text-white selection:bg-yellow-500/30 font-outfit flex flex-col items-center justify-center p-6 bmd-login-layout">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-yellow-500/10 rounded-full blur-[120px] opacity-50 animate-pulse"></div>
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-zinc-800/20 rounded-full blur-[120px] opacity-50"></div>
@@ -41,7 +41,7 @@ export default function LoginPage() {
         {/* Logo */}
         <Link href="/" className="flex flex-col items-center mb-12 group">
           <div className="text-4xl font-black tracking-tighter font-bricolage mb-2">
-            EEL<span className="text-yellow-500">-</span>EVENT<span className="text-yellow-500">HUB</span>
+            BMD<span className="text-yellow-500">-</span>EVENT<span className="text-yellow-500">HUB</span>
           </div>
           <div className="text-[10px] font-black uppercase tracking-[0.5em] text-zinc-500 group-hover:text-yellow-500 transition-colors">
             Security Gateway
@@ -54,9 +54,9 @@ export default function LoginPage() {
           {/* Microsoft Login Button */}
           <Link 
             href="/api/py/auth/azure/login" 
-            className="w-full bg-white text-black py-5 rounded-2xl font-black flex items-center justify-center gap-4 hover:bg-yellow-500 transition-all uppercase tracking-widest text-xs mb-8 group"
+            className="w-full bg-[#25678e] text-white py-5 rounded-2xl font-black flex items-center justify-center gap-4 hover:bg-[#1d5373] transition-all uppercase tracking-widest text-xs mb-8 group shadow-lg shadow-[#25678e]/30"
           >
-            <ShieldCheck size={20} className="text-zinc-600 group-hover:text-black transition-colors" />
+            <ShieldCheck size={20} className="text-white/80 group-hover:text-white transition-colors" />
             Login with Microsoft
           </Link>
 
@@ -78,7 +78,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="w-full bg-black/50 border border-white/5 rounded-xl px-5 py-4 text-sm focus:outline-none focus:border-yellow-500/50 transition-all font-medium"
+                className="w-full bg-zinc-800 border-2 border-zinc-600 rounded-xl px-5 py-4 text-sm text-white placeholder-zinc-400 focus:outline-none focus:border-[#25678e] focus:shadow-[0_0_0_3px_rgba(37,103,142,0.4)] transition-all font-medium"
                 placeholder="Enter email..."
               />
             </div>
@@ -89,7 +89,7 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="w-full bg-black/50 border border-white/5 rounded-xl px-5 py-4 text-sm focus:outline-none focus:border-yellow-500/50 transition-all font-medium"
+                className="w-full bg-zinc-800 border-2 border-zinc-600 rounded-xl px-5 py-4 text-sm text-white placeholder-zinc-400 focus:outline-none focus:border-[#25678e] focus:shadow-[0_0_0_3px_rgba(37,103,142,0.4)] transition-all font-medium"
                 placeholder="Enter password..."
               />
             </div>
@@ -104,7 +104,7 @@ export default function LoginPage() {
             <button 
               type="submit" 
               disabled={loading}
-              className="w-full bg-zinc-800 text-white py-5 rounded-2xl font-black flex items-center justify-center gap-4 hover:bg-white hover:text-black transition-all uppercase tracking-widest text-xs disabled:opacity-50"
+              className="w-full bg-[#25678e] text-white py-5 rounded-2xl font-black flex items-center justify-center gap-4 hover:bg-[#1d5373] transition-all uppercase tracking-widest text-xs disabled:opacity-50 shadow-lg shadow-[#25678e]/30"
             >
               {loading ? "Authenticating..." : "Sign In"} <ArrowRight size={18} />
             </button>

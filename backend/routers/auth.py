@@ -102,10 +102,12 @@ async def azure_callback(code: str, session: Session = Depends(get_session)):
 
     # 4. Generate Local JWT Token
     expire = datetime.utcnow() + timedelta(hours=24)
+    client_slugs = [c.slug for c in user.clients]
     to_encode = {
         "sub": str(user.id),
         "email": user.email,
         "role": user.role,
+        "allowed_clients": client_slugs,
         "exp": expire
     }
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)

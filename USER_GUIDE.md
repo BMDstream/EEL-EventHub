@@ -1,6 +1,6 @@
-# EEL-EventHub: User & Operational Guide
+# BMD-EventHub: User & Operational Guide
 
-Welcome to the Excellence Entertainment Logistics Event Hub. This guide will walk you through the core workflows of the platform, from initializing an event to live on-site operations.
+Welcome to the BMD Computing Event Hub. This guide will walk you through the core workflows of the platform, from initializing an event to live on-site operations.
 
 ---
 
@@ -67,5 +67,5 @@ Visit the **Command Analytics** page to see your platform's overall performance.
 
 ---
 
-**Excellence Entertainment Logistics**
+**BMD Computing**
 *Redefining Event Orchestration.*
