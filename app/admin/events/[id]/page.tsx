@@ -598,7 +598,7 @@ export default function EventDetailsPage() {
                                         const res = await fetch(`/api/py/registrations/${reg.id}/checkin?day=${dayNum}`, { method: "PUT" });
                                         if (res.ok) {
                                           const updated = await res.json();
-                                          setRegistrations(prev => prev.map(r => r.id === reg.id ? { ...r, checked_in: updated.checked_in, checked_in_days: updated.checked_in_days } : r));
+                                          setRegistrations(prev => prev.map(r => r.id === reg.id ? { ...r, checked_in: updated.checked_in, checked_in_days: updated.checked_in_days ?? [] } : r));
                                         }
                                       } catch (err) {
                                         console.error(err);
@@ -625,7 +625,7 @@ export default function EventDetailsPage() {
                                   const res = await fetch(`/api/py/registrations/${reg.id}/checkin`, { method: "PUT" });
                                   if (res.ok) {
                                     const updated = await res.json();
-                                    setRegistrations(prev => prev.map(r => r.id === reg.id ? { ...r, checked_in: updated.checked_in, checked_in_days: updated.checked_in_days } : r));
+                                    setRegistrations(prev => prev.map(r => r.id === reg.id ? { ...r, checked_in: updated.checked_in, checked_in_days: updated.checked_in_days ?? [] } : r));
                                   }
                                 } catch (err) {
                                   console.error(err);
@@ -716,7 +716,7 @@ export default function EventDetailsPage() {
                          throw new Error(error.detail || "Authentication Failed");
                        }
                        const updated = await res.json();
-                       setRegistrations(prev => prev.map(r => r.id === regId ? { ...r, checked_in: updated.checked_in, checked_in_days: updated.checked_in_days } : r));
+                       setRegistrations(prev => prev.map(r => r.id === updated.id ? { ...r, checked_in: updated.checked_in, checked_in_days: updated.checked_in_days ?? [] } : r));
                      }} 
                    />
                  </div>
@@ -752,7 +752,7 @@ export default function EventDetailsPage() {
                              });
                              if (res.ok) {
                                const updated = await res.json();
-                               setRegistrations(prev => prev.map(r => r.id === updated.id ? { ...r, checked_in: updated.checked_in, checked_in_days: updated.checked_in_days } : r));
+                               setRegistrations(prev => prev.map(r => r.id === updated.id ? { ...r, checked_in: updated.checked_in, checked_in_days: updated.checked_in_days ?? [] } : r));
                                setPinStatus("success");
                                setPinMessage(`Check-in Successful: ${updated.attendee?.first_name || 'Guest'}`);
                                setPin("");

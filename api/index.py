@@ -416,7 +416,7 @@ def get_event_registrations(
             "id": reg.id,
             "status": reg.status,
             "checked_in": reg.checked_in,
-            "checked_in_days": reg.checked_in_days,
+            "checked_in_days": reg.checked_in_days if isinstance(reg.checked_in_days, list) else [],
             "created_at": reg.created_at,
             "custom_answers": reg.custom_answers,
             "pin": reg.pin,
@@ -834,7 +834,7 @@ def perform_checkin_logic(registration: Registration, day: Optional[int], mode: 
     registration.checked_in = len(registration.checked_in_days) > 0
     return registration
 
-@app.put("/api/py/registrations/{registration_id}/checkin", response_model=Registration)
+@app.put("/api/py/registrations/{registration_id}/checkin")
 def toggle_checkin(
     registration_id: str,
     mode: str = "toggle",
@@ -862,11 +862,21 @@ def toggle_checkin(
         raise HTTPException(status_code=400, detail="Declined registrations cannot be checked in")
         
     registration = perform_checkin_logic(registration, day, mode, session)
-        
+    
     session.add(registration)
     session.commit()
     session.refresh(registration)
-    return registration
+    
+    # Return explicit dict so checked_in_days is always a list, never null
+    return {
+        "id": str(registration.id),
+        "status": registration.status,
+        "checked_in": registration.checked_in,
+        "checked_in_days": registration.checked_in_days if isinstance(registration.checked_in_days, list) else [],
+        "created_at": registration.created_at,
+        "custom_answers": registration.custom_answers,
+        "pin": registration.pin,
+    }
 
 @app.post("/api/py/events/{event_id}/checkin-by-pin")
 def checkin_by_pin(
@@ -907,7 +917,7 @@ def checkin_by_pin(
         "id": str(registration.id),
         "status": registration.status,
         "checked_in": registration.checked_in,
-        "checked_in_days": registration.checked_in_days,
+        "checked_in_days": registration.checked_in_days if isinstance(registration.checked_in_days, list) else [],
         "created_at": registration.created_at,
         "custom_answers": registration.custom_answers,
         "pin": registration.pin,
