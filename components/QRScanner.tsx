@@ -58,7 +58,7 @@ export default function QRScanner({ onScan }: QRScannerProps) {
               const errMsg = err instanceof Error ? err.message : "Invalid or already used credential";
               if (errMsg.toLowerCase().includes("already checked in")) {
                 setStatus("warning");
-                setMessage("Already Checked In");
+                setMessage(errMsg);
               } else {
                 setStatus("error");
                 setMessage(errMsg);

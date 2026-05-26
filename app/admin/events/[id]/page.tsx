@@ -776,7 +776,7 @@ export default function EventDetailsPage() {
                            }
                          }}
                          disabled={pin.length !== 4}
-                         className="w-full bg-[#0f172a] hover:bg-black disabled:bg-slate-200 text-white font-black py-6 rounded-2xl transition-all uppercase tracking-widest text-xs"
+                        className="w-full bg-[#0f172a] hover:bg-black disabled:bg-slate-200 text-white font-black py-6 rounded-2xl transition-all uppercase tracking-widest text-xs"
                        >
                          Verify & Check In
                        </button>
@@ -785,7 +785,7 @@ export default function EventDetailsPage() {
                      <div className={`flex flex-col items-center gap-6 p-8 rounded-[1.5rem] shadow-lg w-full animate-in zoom-in-95 duration-300 ${
                        pinStatus === "success" ? "bg-green-500 text-white" : 
                        pinStatus === "error" ? "bg-red-500 text-white" : 
-                       pinStatus === "warning" ? "bg-amber-400 text-black" :
+                       pinStatus === "warning" ? "bg-yellow-400 text-black" :
                        "bg-[#0f172a] text-white"
                      }`}>
                        {pinStatus === "processing" && <Loader2 className="animate-spin" size={48} />}
