@@ -139,7 +139,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     : "B";
 
   return (
-    <div className="min-h-screen bg-[#f1f5f9] flex font-outfit transition-colors duration-500 dark:bg-[#020617] bmd-admin-layout">
+    <div className="min-h-screen bg-[#f8fafc] flex font-outfit transition-colors duration-500 dark:bg-[#090d16] bmd-admin-layout">
       {/* Mobile Backdrop */}
       {isSidebarOpen && (
         <div 
@@ -150,7 +150,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       {/* Sidebar */}
       <aside className={`
-        fixed inset-y-0 left-0 z-50 bg-[#0f172a] text-white transition-all duration-500 ease-in-out transform 
+        fixed inset-y-0 left-0 z-50 bg-[#0a0d14] text-white border-r border-white/5 transition-all duration-500 ease-in-out transform 
         ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"} 
         lg:relative lg:translate-x-0
         ${isSidebarCollapsed ? "lg:w-24" : "lg:w-80"}
@@ -168,7 +168,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <div className={`flex items-center gap-3 mb-12 group relative ${isSidebarCollapsed ? "justify-center" : ""}`}>
             {/* Logo — clickable to upload only for admins */}
             {userRole === "admin" ? (
-              <label className="cursor-pointer relative overflow-hidden w-10 h-10 bg-yellow-400 rounded-2xl flex items-center justify-center rotate-3 transition-transform hover:scale-110 shrink-0">
+              <label className="cursor-pointer relative overflow-hidden w-10 h-10 bg-gradient-to-br from-yellow-400 to-amber-500 rounded-2xl flex items-center justify-center rotate-3 transition-all hover:scale-110 hover:rotate-6 shrink-0 shadow-lg shadow-yellow-500/20">
                 {sidebarClientLogo ? (
                   <img src={sidebarClientLogo} alt="Logo" className="w-full h-full object-cover -rotate-3" />
                 ) : (
@@ -180,7 +180,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 </div>
               </label>
             ) : (
-              <div className="relative overflow-hidden w-10 h-10 bg-yellow-400 rounded-2xl flex items-center justify-center rotate-3 shrink-0">
+              <div className="relative overflow-hidden w-10 h-10 bg-gradient-to-br from-yellow-400 to-amber-500 rounded-2xl flex items-center justify-center rotate-3 shrink-0 shadow-lg shadow-yellow-500/20">
                 {sidebarClientLogo ? (
                   <img src={sidebarClientLogo} alt="Logo" className="w-full h-full object-cover -rotate-3" />
                 ) : (
@@ -221,14 +221,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   key={item.name}
                   href={item.href}
                   onClick={() => setIsSidebarOpen(false)}
-                  className={`flex items-center gap-4 px-5 py-4 rounded-2xl transition-all group ${
+                  className={`flex items-center gap-4 px-5 py-4 rounded-2xl transition-all duration-300 group ${
                     isActive 
-                      ? "bg-yellow-400 text-black shadow-xl shadow-yellow-400/20 font-black" 
-                      : "text-slate-400 hover:bg-slate-800 hover:text-white font-bold"
+                      ? "bg-gradient-to-r from-yellow-400 to-amber-500 text-slate-950 shadow-lg shadow-yellow-500/10 font-black scale-[1.02]" 
+                      : "text-slate-400 hover:bg-slate-900/60 hover:text-white font-bold hover:translate-x-1"
                   } ${isSidebarCollapsed ? "justify-center px-0 w-12 h-12" : ""}`}
                   title={isSidebarCollapsed ? item.name : ""}
                 >
-                  <item.icon size={20} className={isActive ? "text-black" : "text-slate-500 group-hover:text-white"} />
+                  <item.icon size={20} className={isActive ? "text-slate-950" : "text-slate-500 group-hover:text-white transition-colors duration-300"} />
                   {!isSidebarCollapsed && <span className="text-sm uppercase tracking-widest truncate">{item.name}</span>}
                 </Link>
               );
@@ -264,7 +264,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top Header */}
-        <header className="h-20 bg-white/80 backdrop-blur-md border-b border-slate-200 px-8 flex items-center justify-between sticky top-0 z-40 transition-colors dark:bg-[#0f172a]/80 dark:border-slate-800">
+        <header className="h-20 bg-white/40 backdrop-blur-md border-b border-slate-100 px-8 flex items-center justify-between sticky top-0 z-40 transition-all duration-500 dark:bg-[#090d16]/40 dark:border-white/5">
            <div className="flex items-center gap-4">
              <button 
                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -280,12 +280,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
            </div>
            
            <div className="flex items-center gap-4">
-              <button 
-                onClick={toggleTheme}
-                className="p-3 rounded-2xl bg-slate-50 text-slate-500 hover:bg-slate-100 transition-all dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700"
-              >
-                {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
-              </button>
+               <button 
+                 onClick={toggleTheme}
+                 className="p-3 rounded-2xl bg-slate-50 text-slate-500 hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all dark:bg-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:border dark:border-white/5"
+               >
+                 {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
+               </button>
 
               {/* System status */}
               <div className="hidden md:flex flex-col text-right">
@@ -296,13 +296,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 </span>
               </div>
 
-              {/* User avatar with initials */}
-              <div 
-                className="w-10 h-10 bg-[#25678e] rounded-full border-2 border-[#25678e]/30 flex items-center justify-center"
-                title={userEmail}
-              >
-                <span className="text-[11px] font-black text-white uppercase">{initials}</span>
-              </div>
+               {/* User avatar with initials */}
+               <div 
+                 className="w-10 h-10 bg-gradient-to-br from-[#25678e] to-[#1e4e6d] rounded-2xl border border-white/10 flex items-center justify-center shadow-md hover:scale-105 transition-transform"
+                 title={userEmail}
+               >
+                 <span className="text-[11px] font-black text-white uppercase">{initials}</span>
+               </div>
            </div>
         </header>
 
