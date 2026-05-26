@@ -36,6 +36,7 @@ export default function CreateEventPage() {
     address: "",
     capacity: 100,
     client_id: "",
+    collect_company: true,
   });
 
   useEffect(() => {
@@ -104,10 +105,11 @@ export default function CreateEventPage() {
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
+    const { name, value, type } = e.target;
+    const checked = (e.target as HTMLInputElement).checked;
     setFormData((prev) => ({
       ...prev,
-      [name]: name === "capacity" ? parseInt(value) : value,
+      [name]: type === "checkbox" ? checked : (name === "capacity" ? parseInt(value) : value),
     }));
   };
 
@@ -195,6 +197,19 @@ export default function CreateEventPage() {
                     placeholder="Describe the vision and scope of this event..."
                     className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a] transition-all resize-none"
                  />
+              </div>
+
+              <div className="mt-8">
+                 <label className="flex items-center gap-4 p-5 bg-slate-50 rounded-2xl border-none cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      name="collect_company" 
+                      checked={formData.collect_company} 
+                      onChange={handleChange}
+                      className="w-5 h-5 rounded border-slate-300 text-[#0f172a] focus:ring-yellow-400/20" 
+                    />
+                    <span className="text-xs font-bold text-[#0f172a]">Collect Organization / Company name from guests</span>
+                 </label>
               </div>
            </div>
 

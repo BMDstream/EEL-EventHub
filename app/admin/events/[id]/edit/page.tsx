@@ -26,6 +26,7 @@ export default function EditEventPage() {
     capacity: 100,
     banner_url: "",
     client_id: "",
+    collect_company: true,
   });
 
   useEffect(() => {
@@ -75,6 +76,7 @@ export default function EditEventPage() {
           capacity: data.capacity,
           banner_url: data.banner_url || "",
           client_id: data.client_id ? data.client_id.toString() : "",
+          collect_company: data.collect_company !== false,
         });
         setLoading(false);
       })
@@ -136,10 +138,11 @@ export default function EditEventPage() {
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
+    const { name, value, type } = e.target;
+    const checked = (e.target as HTMLInputElement).checked;
     setFormData((prev) => ({
       ...prev,
-      [name]: name === "capacity" ? parseInt(value) : value,
+      [name]: type === "checkbox" ? checked : (name === "capacity" ? parseInt(value) : value),
     }));
   };
 
@@ -310,6 +313,20 @@ export default function EditEventPage() {
                 rows={4}
                 className="w-full px-5 py-4 rounded-2xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-slate-700 bg-slate-50/50 resize-none"
               />
+            </div>
+
+            <div className="space-y-3">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Registration Options</label>
+              <label className="flex items-center gap-4 p-5 bg-slate-50/50 rounded-2xl border border-slate-100 cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  name="collect_company" 
+                  checked={formData.collect_company} 
+                  onChange={handleChange}
+                  className="w-5 h-5 rounded border-slate-300 text-[#1e293b] focus:ring-[#1e293b]/5" 
+                />
+                <span className="text-xs font-bold text-slate-600">Collect Organization / Company name from guests</span>
+              </label>
             </div>
 
             <div className="pt-6">

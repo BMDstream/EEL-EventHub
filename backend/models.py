@@ -38,6 +38,7 @@ class Event(SQLModel, table=True):
     capacity: int
     banner_url: Optional[str] = None
     client_id: Optional[int] = Field(default=None, foreign_key="client.id")
+    collect_company: bool = Field(default=True)
     
     custom_fields_schema: Optional[List[Dict[str, Any]]] = Field(default=[], sa_column=Column(JSON))
     

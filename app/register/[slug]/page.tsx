@@ -42,6 +42,7 @@ interface Event {
   banner_url?: string;
   custom_fields_schema?: FormField[];
   client?: Client;
+  collect_company?: boolean;
 }
 
 export default function PublicRegistrationPage() {
@@ -59,6 +60,7 @@ export default function PublicRegistrationPage() {
     first_name: "",
     last_name: "",
     email: "",
+    company: "",
   });
 
   const [customAnswers, setCustomAnswers] = useState<Record<string, any>>({});
@@ -302,6 +304,13 @@ export default function PublicRegistrationPage() {
                     <label className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-400 ml-1">Intelligence / Email</label>
                     <input required type="email" name="email" value={formData.email} onChange={handleChange} placeholder="jane.doe@company.com" className="w-full px-6 py-5 rounded-[1.5rem] bg-zinc-950 border border-white/20 client-input-focus outline-none transition-all font-bold text-white placeholder-zinc-600" />
                   </div>
+
+                  {event.collect_company !== false && (
+                    <div className="space-y-3">
+                      <label className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-400 ml-1">Organization</label>
+                      <input type="text" name="company" value={formData.company} onChange={handleChange} placeholder="Global Enterprises Inc." className="w-full px-6 py-5 rounded-[1.5rem] bg-zinc-950 border border-white/20 client-input-focus outline-none transition-all font-bold text-white placeholder-zinc-600" />
+                    </div>
+                  )}
 
                   {/* RSVP Question */}
                   <div className="py-6 border-y border-white/5 space-y-4">

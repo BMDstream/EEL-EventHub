@@ -117,6 +117,12 @@ def on_startup():
                 session.commit()
             except Exception:
                 session.rollback()
+
+            try:
+                session.execute(text("ALTER TABLE \"event\" ADD COLUMN collect_company BOOLEAN DEFAULT TRUE"))
+                session.commit()
+            except Exception:
+                session.rollback()
  
             # For Registration table
             try:
