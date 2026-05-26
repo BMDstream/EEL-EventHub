@@ -416,6 +416,7 @@ def get_event_registrations(
             "id": reg.id,
             "status": reg.status,
             "checked_in": reg.checked_in,
+            "checked_in_days": reg.checked_in_days,
             "created_at": reg.created_at,
             "custom_answers": reg.custom_answers,
             "pin": reg.pin,
@@ -809,9 +810,7 @@ def perform_checkin_logic(registration: Registration, day: Optional[int], mode: 
     else:
         target_day = 1
         
-    days = registration.checked_in_days
-    if not isinstance(days, list):
-        days = []
+    days = list(registration.checked_in_days) if isinstance(registration.checked_in_days, list) else []
         
     if mode == "checkin" and target_day in days:
         raise HTTPException(
@@ -830,6 +829,8 @@ def perform_checkin_logic(registration: Registration, day: Optional[int], mode: 
             days.append(target_day)
             
     registration.checked_in_days = sorted(list(set(days)))
+    from sqlalchemy.orm.attributes import flag_modified
+    flag_modified(registration, "checked_in_days")
     registration.checked_in = len(registration.checked_in_days) > 0
     return registration
 
@@ -901,7 +902,17 @@ def checkin_by_pin(
     session.add(registration)
     session.commit()
     session.refresh(registration)
-    return registration
+    
+    return {
+        "id": str(registration.id),
+        "status": registration.status,
+        "checked_in": registration.checked_in,
+        "checked_in_days": registration.checked_in_days,
+        "created_at": registration.created_at,
+        "custom_answers": registration.custom_answers,
+        "pin": registration.pin,
+        "attendee": registration.attendee
+    }
 
 @app.post("/api/py/events/{event_id}/broadcast")
 def broadcast_to_attendees(
