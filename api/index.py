@@ -428,6 +428,7 @@ def get_event_email_config(event, session: Session):
 @app.post("/api/py/register")
 def register_attendee(
     data: Dict[str, Any],
+    background_tasks: BackgroundTasks,
     session: Session = Depends(get_session)
 ):
     from sqlalchemy import func
@@ -529,7 +530,8 @@ def register_attendee(
                 # Get email config
                 config = get_event_email_config(event, session)
                 
-                send_confirmation_email(
+                background_tasks.add_task(
+                    send_confirmation_email,
                     to_email=attendee.email,
                     first_name=attendee.first_name,
                     event_title=event.title,
@@ -542,7 +544,7 @@ def register_attendee(
                     config=config
                 )
         except Exception as e:
-            print(f"Error triggering confirmation email: {e}")
+            print(f"Error queuing confirmation email: {e}")
 
     return {
         "id": str(registration.id),
@@ -833,6 +835,7 @@ def checkin_by_pin(event_id: int, data: Dict[str, str], session: Session = Depen
 def broadcast_to_attendees(
     event_id: int,
     data: Dict[str, str],
+    background_tasks: BackgroundTasks,
     session: Session = Depends(get_session)
 ):
     event = session.get(Event, event_id)
@@ -856,9 +859,17 @@ def broadcast_to_attendees(
     # Get email config
     config = get_event_email_config(event, session)
     
-    success = send_broadcast_email(emails, subject, body, event.title, signature, config)
+    background_tasks.add_task(
+        send_broadcast_email,
+        emails,
+        subject,
+        body,
+        event.title,
+        signature,
+        config
+    )
     
-    return {"ok": success, "sent": len(emails)}
+    return {"ok": True, "sent": len(emails), "message": "Broadcast queued in background"}
 
 @app.get("/api/py/events/{slug}/public-stats")
 def get_public_stats(slug: str, session: Session = Depends(get_session)):
