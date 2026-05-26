@@ -183,7 +183,11 @@ export default function EventDetailsPage() {
       "Email", 
       "Organization", 
       "Status", 
-      "Checked In", 
+      "Checked In (Any)", 
+      ...(event?.duration_days && event.duration_days > 1
+        ? ["Checked In Days", ...Array.from({ length: event.duration_days }, (_, i) => `Day ${i + 1} Check In`)]
+        : []
+      ),
       "Registered At",
       ...(event?.custom_fields_schema || []).map(f => f.label)
     ];
@@ -199,6 +203,17 @@ export default function EventDetailsPage() {
     };
 
     const rows = registrations.map(reg => {
+      const checkedInDaysStr = reg.checked_in_days && reg.checked_in_days.length > 0
+        ? reg.checked_in_days.map(d => `Day ${d}`).join(", ")
+        : "None";
+
+      const dailyCheckIns = event?.duration_days && event.duration_days > 1
+        ? Array.from({ length: event.duration_days }, (_, i) => {
+            const dayNum = i + 1;
+            return reg.checked_in_days?.includes(dayNum) ? "Yes" : "No";
+          })
+        : [];
+
       const basicInfo = [
         escapeCSV(reg.attendee.first_name),
         escapeCSV(reg.attendee.last_name),
@@ -206,6 +221,10 @@ export default function EventDetailsPage() {
         escapeCSV(reg.attendee.company || ""),
         escapeCSV(reg.status),
         escapeCSV(reg.checked_in ? "Yes" : "No"),
+        ...(event?.duration_days && event.duration_days > 1
+          ? [escapeCSV(checkedInDaysStr), ...dailyCheckIns]
+          : []
+        ),
         escapeCSV(new Date(reg.created_at).toLocaleString()),
       ];
 
