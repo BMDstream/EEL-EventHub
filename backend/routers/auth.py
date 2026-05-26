@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from sqlmodel import Session, select
+from sqlalchemy import func
 from backend.database import get_session
 from backend.models import User
 import os
@@ -85,7 +86,7 @@ async def azure_callback(code: str, session: Session = Depends(get_session)):
         raise HTTPException(status_code=400, detail="Email not found in Microsoft profile")
 
     # 3. Match with Local DB
-    user = session.exec(select(User).where(User.email == email.lower())).first()
+    user = session.exec(select(User).where(func.lower(User.email) == email.lower())).first()
     
     if not user:
         # Optionally create user if not exists, but usually for admin panels 

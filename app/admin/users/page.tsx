@@ -46,9 +46,13 @@ export default function UserManagementPage() {
 
   const fetchClients = async () => {
     try {
-      const res = await fetch("/api/py/clients");
-      const data = await res.json();
-      setAllClients(data);
+      const res = await fetch("/api/py/clients", {
+        headers: {
+          "x-user-email": session?.user?.email || ""
+        }
+      });
+      const data = res.ok ? await res.json() : [];
+      setAllClients(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error("Failed to fetch clients", err);
     }

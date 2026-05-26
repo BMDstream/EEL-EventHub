@@ -79,12 +79,12 @@ export default function AdminDashboard() {
             headers: { "x-user-email": session.user.email || "" }
           })
         ]);
-        const eventsData = await eventsRes.json();
-        const sData = await statsRes.json();
-        const aData = await activitiesRes.json();
-        setEvents(eventsData);
+        const eventsData = eventsRes.ok ? await eventsRes.json() : [];
+        const sData = statsRes.ok ? await statsRes.json() : null;
+        const aData = activitiesRes.ok ? await activitiesRes.json() : [];
+        setEvents(Array.isArray(eventsData) ? eventsData : []);
         setStatsData(sData);
-        setActivities(aData);
+        setActivities(Array.isArray(aData) ? aData : []);
       } catch (err) {
         console.error("Failed to fetch dashboard data", err);
       } finally {

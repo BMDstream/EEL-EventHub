@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Depends, HTTPException, status, BackgroundTasks, Header
 from sqlmodel import Session, select
-from sqlalchemy import text
+from sqlalchemy import text, func
 from typing import List, Dict, Any, Optional
 from backend.database import get_session, init_db, engine
 from backend.models import Event, Attendee, Registration, User, Client, UserEventLink
@@ -16,7 +16,7 @@ def get_current_user_from_request(
     user_email = x_user_email or email
     if not user_email:
         return None
-    user = session.exec(select(User).where(User.email == user_email.lower())).first()
+    user = session.exec(select(User).where(func.lower(User.email) == user_email.lower())).first()
     return user
 
 def verify_client_access(user: Optional[User], client_id: Optional[int], session: Session):
@@ -700,7 +700,7 @@ def read_users(session: Session = Depends(get_session)):
 
 @app.post("/api/py/users", response_model=User)
 def create_user(user: User, session: Session = Depends(get_session)):
-    existing = session.exec(select(User).where(User.email == user.email)).first()
+    existing = session.exec(select(User).where(func.lower(User.email) == user.email.lower())).first()
     if existing:
         raise HTTPException(status_code=400, detail="User already exists")
     session.add(user)
@@ -724,7 +724,7 @@ def create_users_bulk(
             errors.append("Missing email for one of the rows")
             continue
         user_email = user_data.email.lower().strip()
-        existing = session.exec(select(User).where(User.email == user_email)).first()
+        existing = session.exec(select(User).where(func.lower(User.email) == user_email)).first()
         if existing:
             errors.append(f"User {user_email} already exists")
             continue
@@ -745,7 +745,7 @@ def create_users_bulk(
 
 @app.get("/api/py/users/me", response_model=User)
 def get_current_user(email: str, session: Session = Depends(get_session)):
-    user = session.exec(select(User).where(User.email == email)).first()
+    user = session.exec(select(User).where(func.lower(User.email) == email.lower())).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return user
@@ -1194,7 +1194,7 @@ def get_clients(
     current_user: Optional[User] = Depends(get_current_user_from_request)
 ):
     if not current_user:
-        return session.exec(select(Client)).all()
+        raise HTTPException(status_code=401, detail="Authentication required")
     if current_user.role == "admin":
         return session.exec(select(Client)).all()
     return current_user.clients
