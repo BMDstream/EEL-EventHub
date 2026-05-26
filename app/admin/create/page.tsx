@@ -35,6 +35,7 @@ export default function CreateEventPage() {
     location: "",
     address: "",
     capacity: 100,
+    duration_days: 1,
     client_id: "",
     collect_company: true,
   });
@@ -109,7 +110,7 @@ export default function CreateEventPage() {
     const checked = (e.target as HTMLInputElement).checked;
     setFormData((prev) => ({
       ...prev,
-      [name]: type === "checkbox" ? checked : (name === "capacity" ? parseInt(value) : value),
+      [name]: type === "checkbox" ? checked : (name === "capacity" || name === "duration_days" ? parseInt(value) : value),
     }));
   };
 
@@ -275,6 +276,21 @@ export default function CreateEventPage() {
                        value={formData.address}
                        onChange={handleChange}
                        placeholder="e.g. 12 Main Street, Washington"
+                       className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a] transition-all"
+                     />
+                  </div>
+
+                  <div className="space-y-3">
+                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                        <Calendar size={14} /> Duration (Days)
+                     </label>
+                     <input
+                       required
+                       type="number"
+                       min={1}
+                       name="duration_days"
+                       value={formData.duration_days}
+                       onChange={handleChange}
                        className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a] transition-all"
                      />
                   </div>

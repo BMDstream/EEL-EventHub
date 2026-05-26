@@ -39,6 +39,7 @@ class Event(SQLModel, table=True):
     banner_url: Optional[str] = None
     client_id: Optional[int] = Field(default=None, foreign_key="client.id")
     collect_company: bool = Field(default=True)
+    duration_days: int = Field(default=1)
     
     custom_fields_schema: Optional[List[Dict[str, Any]]] = Field(default=[], sa_column=Column(JSON))
     
@@ -65,6 +66,7 @@ class Registration(SQLModel, table=True):
     checked_in: bool = False
     created_at: datetime = Field(default_factory=datetime.utcnow)
     custom_answers: Optional[Dict[str, Any]] = Field(default={}, sa_column=Column(JSON))
+    checked_in_days: Optional[List[int]] = Field(default=[], sa_column=Column(JSON))
     
     event: Event = Relationship(back_populates="registrations")
     attendee: Attendee = Relationship(back_populates="registrations")

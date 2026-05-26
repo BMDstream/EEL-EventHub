@@ -24,6 +24,7 @@ export default function EditEventPage() {
     location: "",
     address: "",
     capacity: 100,
+    duration_days: 1,
     banner_url: "",
     client_id: "",
     collect_company: true,
@@ -74,6 +75,7 @@ export default function EditEventPage() {
           location: data.location,
           address: data.address || "",
           capacity: data.capacity,
+          duration_days: data.duration_days || 1,
           banner_url: data.banner_url || "",
           client_id: data.client_id ? data.client_id.toString() : "",
           collect_company: data.collect_company !== false,
@@ -142,7 +144,7 @@ export default function EditEventPage() {
     const checked = (e.target as HTMLInputElement).checked;
     setFormData((prev) => ({
       ...prev,
-      [name]: type === "checkbox" ? checked : (name === "capacity" ? parseInt(value) : value),
+      [name]: type === "checkbox" ? checked : (name === "capacity" || name === "duration_days" ? parseInt(value) : value),
     }));
   };
 
@@ -263,6 +265,19 @@ export default function EditEventPage() {
                   type="number"
                   name="capacity"
                   value={formData.capacity}
+                  onChange={handleChange}
+                  className="w-full px-5 py-4 rounded-2xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-slate-700 bg-slate-50/50"
+                />
+              </div>
+
+              <div className="space-y-3">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Duration (Days)</label>
+                <input
+                  required
+                  type="number"
+                  min={1}
+                  name="duration_days"
+                  value={formData.duration_days}
                   onChange={handleChange}
                   className="w-full px-5 py-4 rounded-2xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-slate-700 bg-slate-50/50"
                 />

@@ -137,6 +137,18 @@ def on_startup():
             except Exception:
                 session.rollback()
 
+            try:
+                session.execute(text("ALTER TABLE \"event\" ADD COLUMN duration_days INTEGER DEFAULT 1"))
+                session.commit()
+            except Exception:
+                session.rollback()
+
+            try:
+                session.execute(text("ALTER TABLE \"registration\" ADD COLUMN checked_in_days JSON DEFAULT '[]'"))
+                session.commit()
+            except Exception:
+                session.rollback()
+
             # Create Client table if not exists
             try:
                 session.execute(text("""
@@ -781,8 +793,53 @@ def delete_user(user_id: int, session: Session = Depends(get_session)):
     session.commit()
     return {"ok": True}
 
+def perform_checkin_logic(registration: Registration, day: Optional[int], mode: str, session: Session):
+    event = session.get(Event, registration.event_id)
+    duration = event.duration_days if event else 1
+    
+    # Calculate day number
+    if day is not None:
+        target_day = day
+    elif event:
+        from datetime import datetime
+        now_date = datetime.utcnow().date()
+        start_date = event.start_date.date()
+        calculated_day = (now_date - start_date).days + 1
+        target_day = max(1, min(calculated_day, duration))
+    else:
+        target_day = 1
+        
+    days = registration.checked_in_days
+    if not isinstance(days, list):
+        days = []
+        
+    if mode == "checkin" and target_day in days:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Attendee already checked in for Day {target_day}" if duration > 1 else "Attendee already checked in"
+        )
+        
+    if mode == "checkin":
+        if target_day not in days:
+            days.append(target_day)
+    else:
+        # Toggle mode
+        if target_day in days:
+            days.remove(target_day)
+        else:
+            days.append(target_day)
+            
+    registration.checked_in_days = sorted(list(set(days)))
+    registration.checked_in = len(registration.checked_in_days) > 0
+    return registration
+
 @app.put("/api/py/registrations/{registration_id}/checkin", response_model=Registration)
-def toggle_checkin(registration_id: str, mode: str = "toggle", session: Session = Depends(get_session)):
+def toggle_checkin(
+    registration_id: str,
+    mode: str = "toggle",
+    day: Optional[int] = None,
+    session: Session = Depends(get_session)
+):
     # Try looking up by UUID first
     registration = None
     try:
@@ -803,14 +860,7 @@ def toggle_checkin(registration_id: str, mode: str = "toggle", session: Session 
     if registration.status == "declined":
         raise HTTPException(status_code=400, detail="Declined registrations cannot be checked in")
         
-    if mode == "checkin" and registration.checked_in:
-        raise HTTPException(status_code=400, detail="Attendee already checked in")
-        
-    if mode == "checkin":
-        registration.checked_in = True
-    else:
-        # Default is toggle for manual admin control
-        registration.checked_in = not registration.checked_in
+    registration = perform_checkin_logic(registration, day, mode, session)
         
     session.add(registration)
     session.commit()
@@ -818,8 +868,19 @@ def toggle_checkin(registration_id: str, mode: str = "toggle", session: Session 
     return registration
 
 @app.post("/api/py/events/{event_id}/checkin-by-pin")
-def checkin_by_pin(event_id: int, data: Dict[str, str], session: Session = Depends(get_session)):
+def checkin_by_pin(
+    event_id: int,
+    data: Dict[str, Any],
+    session: Session = Depends(get_session)
+):
     pin = data.get("pin")
+    day = data.get("day")
+    if day is not None:
+        try:
+            day = int(day)
+        except (ValueError, TypeError):
+            day = None
+            
     if not pin:
         raise HTTPException(status_code=400, detail="PIN is required")
     
@@ -835,10 +896,8 @@ def checkin_by_pin(event_id: int, data: Dict[str, str], session: Session = Depen
     if registration.status == "declined":
         raise HTTPException(status_code=400, detail="This registration was declined and cannot be used for check-in")
         
-    if registration.checked_in:
-        raise HTTPException(status_code=400, detail="Attendee already checked in")
+    registration = perform_checkin_logic(registration, day, "checkin", session)
         
-    registration.checked_in = True
     session.add(registration)
     session.commit()
     session.refresh(registration)
