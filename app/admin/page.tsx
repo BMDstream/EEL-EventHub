@@ -35,6 +35,7 @@ interface Event {
 export default function AdminDashboard() {
   const [events, setEvents] = useState<Event[]>([]);
   const [statsData, setStatsData] = useState<any>(null);
+  const [activities, setActivities] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const { data: session } = useSession();
   const userRole = (session?.user as any)?.role || "staff";
@@ -43,18 +44,23 @@ export default function AdminDashboard() {
     if (!session?.user?.email) return;
     const fetchData = async () => {
       try {
-        const [eventsRes, statsRes] = await Promise.all([
+        const [eventsRes, statsRes, activitiesRes] = await Promise.all([
           fetch("/api/py/events", {
             headers: { "x-user-email": session.user.email || "" }
           }),
           fetch("/api/py/stats", {
             headers: { "x-user-email": session.user.email || "" }
+          }),
+          fetch("/api/py/activities", {
+            headers: { "x-user-email": session.user.email || "" }
           })
         ]);
         const eventsData = await eventsRes.json();
         const sData = await statsRes.json();
+        const aData = await activitiesRes.json();
         setEvents(eventsData);
         setStatsData(sData);
+        setActivities(aData);
       } catch (err) {
         console.error("Failed to fetch dashboard data", err);
       } finally {
@@ -63,6 +69,39 @@ export default function AdminDashboard() {
     };
     fetchData();
   }, [session]);
+
+  const formatRelativeTime = (dateString: string) => {
+    if (!dateString) return "Recently";
+    try {
+      const date = new Date(dateString);
+      const now = new Date();
+      const diffMs = now.getTime() - date.getTime();
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMins / 60);
+      const diffDays = Math.floor(diffHours / 24);
+
+      if (diffMins < 1) return "Just now";
+      if (diffMins < 60) return `${diffMins}m ago`;
+      if (diffHours < 24) return `${diffHours}h ago`;
+      return `${diffDays}d ago`;
+    } catch (e) {
+      return "Recently";
+    }
+  };
+
+  const getActivityIcon = (type: string) => {
+    switch (type) {
+      case "registration":
+        return Users;
+      case "checkin":
+        return Activity;
+      case "security":
+      case "system":
+        return ShieldCheck;
+      default:
+        return Plus;
+    }
+  };
 
   const stats = [
     { name: "Total Events", value: statsData?.events || 0, icon: Calendar, change: "+0%", color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-50 dark:bg-blue-950/30" },
@@ -235,27 +274,30 @@ export default function AdminDashboard() {
                className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 p-8 space-y-8 relative overflow-hidden dark:bg-[#0a0f1d]/40 dark:backdrop-blur-md dark:border-white/5 hover:shadow-xl hover:shadow-slate-100 dark:hover:shadow-[0_0_25px_-5px_rgba(234,179,8,0.05)] transition-all duration-300"
              >
                 <div className="absolute top-0 left-0 w-1.5 h-full bg-gradient-to-b from-yellow-400 to-amber-500"></div>
-                {[
-                  { user: "Barton D.", action: "created new event", time: "2m ago", icon: Plus },
-                  { user: "Sarah L.", action: "registered for Gala", time: "15m ago", icon: Activity },
-                  { user: "System", action: "database backup complete", time: "1h ago", icon: TrendingUp },
-                ].map((activity, i) => (
-                  <motion.div 
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.5 + (i * 0.1) }}
-                    key={i} 
-                    className="flex gap-4 relative"
-                  >
-                    <div className="w-10 h-10 bg-slate-50 rounded-2xl flex items-center justify-center text-[#0f172a] dark:bg-slate-900 dark:text-slate-300 dark:border dark:border-white/5">
-                      <activity.icon size={18} />
-                    </div>
-                    <div>
-                      <p className="text-xs text-[#0f172a] font-bold dark:text-white"><span className="text-slate-400 dark:text-slate-500">{activity.user}</span> {activity.action}</p>
-                      <p className="text-[10px] text-slate-400 font-medium uppercase tracking-widest mt-1 dark:text-yellow-400/60">{activity.time}</p>
-                    </div>
-                  </motion.div>
-                ))}
+                {activities.map((activity, i) => {
+                  const Icon = getActivityIcon(activity.type);
+                  return (
+                    <motion.div 
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.5 + (i * 0.1) }}
+                      key={i} 
+                      className="flex gap-4 relative"
+                    >
+                      <div className="w-10 h-10 bg-slate-50 rounded-2xl flex items-center justify-center text-[#0f172a] dark:bg-slate-900 dark:text-slate-300 dark:border dark:border-white/5 shrink-0">
+                        <Icon size={18} />
+                      </div>
+                      <div>
+                        <p className="text-xs text-[#0f172a] font-bold dark:text-white">
+                          <span className="text-slate-400 dark:text-slate-500">{activity.user}</span> {activity.action}
+                        </p>
+                        <p className="text-[10px] text-slate-400 font-medium uppercase tracking-widest mt-1 dark:text-yellow-400/60">
+                          {formatRelativeTime(activity.time)}
+                        </p>
+                      </div>
+                    </motion.div>
+                  );
+                })}
                 {userRole === "admin" && (
                   <button className="w-full py-4 bg-slate-50 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-all dark:bg-slate-900/60 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-yellow-400 dark:border dark:border-white/5">
                     View Full Audit Log
