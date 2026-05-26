@@ -62,6 +62,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       setTheme("dark");
       document.documentElement.classList.add("dark");
     }
+
+    const savedLogo = localStorage.getItem("eel-logo");
+    if (savedLogo) {
+      setLogo(savedLogo);
+    }
   }, []);
 
   // Fetch primary client for non-admin users to show their branding in the sidebar
@@ -168,9 +173,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <div className={`flex items-center gap-3 mb-12 group relative ${isSidebarCollapsed ? "justify-center" : ""}`}>
             {/* Logo — clickable to upload only for admins */}
             {userRole === "admin" ? (
-              <label className="cursor-pointer relative overflow-hidden w-10 h-10 bg-gradient-to-br from-yellow-400 to-amber-500 rounded-2xl flex items-center justify-center rotate-3 transition-all hover:scale-110 hover:rotate-6 shrink-0 shadow-lg shadow-yellow-500/20">
+              <label className={`cursor-pointer relative overflow-hidden w-10 h-10 rounded-2xl flex items-center justify-center transition-all hover:scale-110 shrink-0 ${
+                sidebarClientLogo 
+                  ? "bg-transparent" 
+                  : "bg-gradient-to-br from-yellow-400 to-amber-500 rotate-3 hover:rotate-6 shadow-lg shadow-yellow-500/20"
+              }`}>
                 {sidebarClientLogo ? (
-                  <img src={sidebarClientLogo} alt="Logo" className="w-full h-full object-cover -rotate-3" />
+                  <img src={sidebarClientLogo} alt="Logo" className="w-full h-full object-cover" />
                 ) : (
                   <span className="text-black font-black text-xl font-bricolage italic">{sidebarInitial}</span>
                 )}
@@ -180,9 +189,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 </div>
               </label>
             ) : (
-              <div className="relative overflow-hidden w-10 h-10 bg-gradient-to-br from-yellow-400 to-amber-500 rounded-2xl flex items-center justify-center rotate-3 shrink-0 shadow-lg shadow-yellow-500/20">
+              <div className={`relative overflow-hidden w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${
+                sidebarClientLogo 
+                  ? "bg-transparent" 
+                  : "bg-gradient-to-br from-yellow-400 to-amber-500 rotate-3 shadow-lg shadow-yellow-500/20"
+              }`}>
                 {sidebarClientLogo ? (
-                  <img src={sidebarClientLogo} alt="Logo" className="w-full h-full object-cover -rotate-3" />
+                  <img src={sidebarClientLogo} alt="Logo" className="w-full h-full object-cover" />
                 ) : (
                   <span className="text-black font-black text-xl font-bricolage italic">{sidebarInitial}</span>
                 )}
