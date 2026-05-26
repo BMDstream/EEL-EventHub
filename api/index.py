@@ -560,7 +560,14 @@ def register_attendee(
     }
 
 @app.post("/api/py/events/{event_id}/test-email")
-def test_email(event_id: str, data: dict, session: Session = Depends(get_session)):
+def test_email(
+    event_id: str,
+    data: dict,
+    session: Session = Depends(get_session),
+    current_user: Optional[User] = Depends(get_current_user_from_request)
+):
+    if not current_user or current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Forbidden: Only administrators can send test emails")
     email = data.get("email")
     if not email:
         raise HTTPException(status_code=400, detail="Email required")
