@@ -14,7 +14,9 @@ import {
   Activity,
   CheckCircle2,
   ShieldCheck,
-  Building
+  Building,
+  X,
+  Search
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSession } from "next-auth/react";
@@ -37,8 +39,30 @@ export default function AdminDashboard() {
   const [statsData, setStatsData] = useState<any>(null);
   const [activities, setActivities] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isAuditLogOpen, setIsAuditLogOpen] = useState(false);
+  const [auditLogs, setAuditLogs] = useState<any[]>([]);
+  const [auditLoading, setAuditLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const { data: session } = useSession();
   const userRole = (session?.user as any)?.role || "staff";
+
+  const openAuditLog = async () => {
+    setIsAuditLogOpen(true);
+    setAuditLoading(true);
+    try {
+      const res = await fetch("/api/py/activities?limit=50", {
+        headers: { "x-user-email": session?.user?.email || "" }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAuditLogs(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch full audit log", err);
+    } finally {
+      setAuditLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!session?.user?.email) return;
@@ -299,7 +323,10 @@ export default function AdminDashboard() {
                   );
                 })}
                 {userRole === "admin" && (
-                  <button className="w-full py-4 bg-slate-50 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-all dark:bg-slate-900/60 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-yellow-400 dark:border dark:border-white/5">
+                  <button 
+                    onClick={openAuditLog}
+                    className="w-full py-4 bg-slate-50 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-all dark:bg-slate-900/60 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-yellow-400 dark:border dark:border-white/5"
+                  >
                     View Full Audit Log
                   </button>
                 )}
@@ -307,6 +334,111 @@ export default function AdminDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Sliding Audit Log Drawer */}
+      <AnimatePresence>
+        {isAuditLogOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.6 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsAuditLogOpen(false)}
+              className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 cursor-pointer"
+            />
+
+            {/* Panel */}
+            <motion.div
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="fixed right-0 top-0 bottom-0 w-full max-w-lg bg-white dark:bg-[#0a0d14] border-l border-slate-100 dark:border-white/5 shadow-2xl p-8 z-50 flex flex-col font-outfit overflow-hidden"
+            >
+              {/* Header */}
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h3 className="text-2xl font-black font-bricolage italic text-[#0f172a] dark:text-white uppercase tracking-tight">System Audit Log</h3>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Live tracking database & network activities</p>
+                </div>
+                <button
+                  onClick={() => setIsAuditLogOpen(false)}
+                  className="p-2.5 rounded-xl bg-slate-50 text-slate-500 hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all dark:bg-slate-900/ text-slate-400 dark:hover:bg-slate-800 border dark:border-white/5"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Search Bar */}
+              <div className="relative mb-6">
+                <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search logs by guest or action..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-12 pr-4 py-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100/50 dark:border-white/5 text-sm font-medium text-[#0f172a] dark:text-white placeholder-slate-400 focus:outline-none focus:border-yellow-500/50 transition-colors"
+                />
+              </div>
+
+              {/* Log List */}
+              <div className="flex-1 overflow-y-auto space-y-4 pr-1.5 scrollbar-none">
+                {auditLoading ? (
+                  <div className="flex flex-col justify-center items-center h-48">
+                    <Loader2 className="animate-spin text-yellow-500 mb-3" size={32} />
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 animate-pulse">Syncing Log Archive...</p>
+                  </div>
+                ) : (() => {
+                  const filteredLogs = auditLogs.filter(log => 
+                    log.user.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    log.action.toLowerCase().includes(searchQuery.toLowerCase())
+                  );
+
+                  if (filteredLogs.length === 0) {
+                    return (
+                      <div className="text-center py-12 border border-dashed border-slate-100 dark:border-white/5 rounded-2xl">
+                        <ShieldCheck className="mx-auto mb-4 text-slate-300 dark:text-slate-700" size={32} />
+                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">No activities match search criteria</p>
+                      </div>
+                    );
+                  }
+
+                  return filteredLogs.map((activity, i) => {
+                    const Icon = getActivityIcon(activity.type);
+                    return (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: i * 0.03 }}
+                        key={i}
+                        className="flex gap-4 p-4 rounded-2xl bg-slate-50/50 dark:bg-slate-900/20 border border-slate-100/30 dark:border-white/5 hover:border-yellow-500/20 transition-all duration-300"
+                      >
+                        <div className="w-10 h-10 bg-slate-50 rounded-2xl flex items-center justify-center text-[#0f172a] dark:bg-slate-900 dark:text-slate-300 dark:border dark:border-white/5 shrink-0">
+                          <Icon size={18} />
+                        </div>
+                        <div>
+                          <p className="text-xs text-[#0f172a] font-bold dark:text-white">
+                            <span className="text-slate-400 dark:text-slate-500">{activity.user}</span> {activity.action}
+                          </p>
+                          <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-1 dark:text-yellow-400/60">
+                            {formatRelativeTime(activity.time)}
+                          </p>
+                        </div>
+                      </motion.div>
+                    );
+                  });
+                })()}
+              </div>
+
+              {/* Footer */}
+              <div className="pt-6 border-t border-slate-100 dark:border-white/5 text-center">
+                <span className="text-[8px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-[0.3em]">Authorized Session Security Tier Level 4</span>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </AdminLayout>
   );
 }

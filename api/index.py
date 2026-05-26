@@ -992,6 +992,7 @@ def get_stats(
 
 @app.get("/api/py/activities")
 def get_recent_activities(
+    limit: int = 10,
     session: Session = Depends(get_session),
     current_user: Optional[User] = Depends(get_current_user_from_request)
 ):
@@ -1023,7 +1024,7 @@ def get_recent_activities(
         select(Registration)
         .where(Registration.event_id.in_(event_ids))
         .order_by(Registration.created_at.desc())
-        .limit(10)
+        .limit(limit)
     ).all()
     
     activities = []
