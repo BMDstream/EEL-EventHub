@@ -834,7 +834,7 @@ def checkin_by_pin(event_id: int, data: Dict[str, str], session: Session = Depen
 @app.post("/api/py/events/{event_id}/broadcast")
 def broadcast_to_attendees(
     event_id: int,
-    data: Dict[str, str],
+    data: Dict[str, Any],
     background_tasks: BackgroundTasks,
     session: Session = Depends(get_session)
 ):
@@ -845,8 +845,9 @@ def broadcast_to_attendees(
     subject = data.get("subject", f"Reminder: {event.title}")
     body = data.get("body", "")
     signature = data.get("signature", "")
+    attachments = data.get("attachments", [])
     
-    # Get all registrant emails
+    # Get all registrant data
     registrations = session.exec(
         select(Registration, Attendee)
         .join(Attendee)
@@ -854,22 +855,38 @@ def broadcast_to_attendees(
         .where(Registration.status == "confirmed")
     ).all()
     
-    emails = [att.email for reg, att in registrations]
-    
+    registrations_data = []
+    for reg, att in registrations:
+        registrations_data.append({
+            "email": att.email,
+            "first_name": att.first_name,
+            "last_name": att.last_name,
+            "pin": reg.pin
+        })
+        
     # Get email config
     config = get_event_email_config(event, session)
     
+    # Prepare event details for templates
+    event_details = {
+        "start_date": event.start_date,
+        "location": event.location,
+        "address": event.address
+    }
+    
     background_tasks.add_task(
         send_broadcast_email,
-        emails,
-        subject,
-        body,
-        event.title,
-        signature,
-        config
+        registrations_data=registrations_data,
+        subject=subject,
+        body=body,
+        event_title=event.title,
+        signature=signature,
+        config=config,
+        attachments=attachments,
+        event_details=event_details
     )
     
-    return {"ok": True, "sent": len(emails), "message": "Broadcast queued in background"}
+    return {"ok": True, "sent": len(registrations_data), "message": "Broadcast queued in background"}
 
 @app.get("/api/py/events/{slug}/public-stats")
 def get_public_stats(slug: str, session: Session = Depends(get_session)):

@@ -739,17 +739,40 @@ export default function EventDetailsPage() {
                     const body = target.body.value;
                     const signature = target.signature.value;
                     
+                    const fileInput = document.getElementById("attachments") as HTMLInputElement;
+                    const files = fileInput?.files ? Array.from(fileInput.files) : [];
+                    
+                    const readAsBase64 = (file: File): Promise<string> => {
+                      return new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.readAsDataURL(file);
+                        reader.onload = () => {
+                          const base64String = reader.result?.toString().split(",")[1] || "";
+                          resolve(base64String);
+                        };
+                        reader.onerror = (error) => reject(error);
+                      });
+                    };
+                    
                     if (!confirm(`Are you sure you want to send this broadcast to ${registrations.length} attendees?`)) return;
                     
                     try {
+                      const attachments = await Promise.all(
+                        files.map(async (file) => ({
+                          filename: file.name,
+                          content: await readAsBase64(file)
+                        }))
+                      );
+                      
                       const res = await fetch(`/api/py/events/${id}/broadcast`, {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ subject, body, signature })
+                        body: JSON.stringify({ subject, body, signature, attachments })
                       });
                       if (res.ok) {
-                        alert("Broadcast dispatched successfully!");
+                        alert("Broadcast successfully queued in the background!");
                         target.reset();
+                        if (fileInput) fileInput.value = "";
                       } else {
                         alert("Failed to send broadcast. Ensure RESEND_API_KEY is configured.");
                       }
@@ -760,6 +783,20 @@ export default function EventDetailsPage() {
                   }}
                   className="space-y-8"
                 >
+                   {/* Personalization Help card */}
+                   <div className="bg-slate-50/50 border border-slate-100 rounded-3xl p-6 lg:p-8 space-y-4">
+                      <h4 className="text-[10px] font-black text-[#0f172a] uppercase tracking-widest">Personalization Tags</h4>
+                      <p className="text-slate-400 font-medium text-xs leading-relaxed">
+                         Use these tags to dynamically customize the email for each guest:
+                      </p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-bold">
+                         <div className="text-slate-600"><code className="bg-white border border-slate-200/60 px-1.5 py-0.5 rounded text-yellow-600">{"{first_name}"}</code> - Guest's first name</div>
+                         <div className="text-slate-600"><code className="bg-white border border-slate-200/60 px-1.5 py-0.5 rounded text-yellow-600">{"{last_name}"}</code> - Guest's last name</div>
+                         <div className="text-slate-600"><code className="bg-white border border-slate-200/60 px-1.5 py-0.5 rounded text-yellow-600">{"{pin}"}</code> - Guest's unique 4-digit PIN</div>
+                         <div className="text-slate-600"><code className="bg-white border border-slate-200/60 px-1.5 py-0.5 rounded text-yellow-600">{"{qr_code}"}</code> - Unique Check-in QR code</div>
+                      </div>
+                   </div>
+
                    <div className="space-y-3">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Subject Line</label>
                       <input required name="subject" placeholder={`Update for ${event.title}`} className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a]" />
@@ -768,6 +805,18 @@ export default function EventDetailsPage() {
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Message Body</label>
                       <textarea required name="body" rows={6} placeholder="Type your message here..." className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a] resize-none" />
                    </div>
+                   
+                   <div className="space-y-3">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">File Attachments (Optional)</label>
+                      <input 
+                        type="file" 
+                        id="attachments" 
+                        multiple 
+                        className="w-full px-6 py-4 bg-slate-50 rounded-2xl border-none outline-none font-bold text-slate-500 text-xs file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-black file:bg-[#0f172a] file:text-white hover:file:bg-black cursor-pointer"
+                      />
+                      <p className="text-[10px] text-slate-400 font-medium ml-1">Attach documents or media directly to the email body.</p>
+                   </div>
+
                     <div className="space-y-3">
                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Signature (Optional)</label>
                        <textarea name="signature" rows={2} placeholder="Kind regards, BMD Team" className="w-full px-6 py-4 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a] resize-none text-sm" />

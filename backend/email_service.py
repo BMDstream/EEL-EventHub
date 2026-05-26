@@ -176,10 +176,21 @@ def send_confirmation_email(to_email: str, first_name: str, event_title: str, cl
         print(f"Failed to send email: {e}")
         return None
 
-def send_broadcast_email(to_emails: List[str], subject: str, body: str, event_title: str, signature: str = None, config: Dict[str, Any] = None):
-    """Sends a broadcast email to multiple attendees with premium styling."""
+def send_broadcast_email(
+    registrations_data: List[Dict[str, Any]], 
+    subject: str, 
+    body: str, 
+    event_title: str, 
+    signature: str = None, 
+    config: Dict[str, Any] = None,
+    attachments: List[Dict[str, Any]] = None,
+    event_details: Dict[str, Any] = None
+):
+    """Sends a personalized broadcast email to multiple attendees with premium styling and optional attachments."""
     if not resend.api_key or MOCK_EMAIL_SERVICE:
-        print(f"MOCK BROADCAST to {len(to_emails)} users: {subject}")
+        print(f"MOCK BROADCAST to {len(registrations_data)} users: {subject}")
+        for reg in registrations_data:
+            print(f"  -> MOCK SEND to {reg['email']} | Hello {reg['first_name']} {reg['last_name']}! Pin is {reg['pin']}. Attachments: {len(attachments) if attachments else 0}")
         return True
 
     if not config:
@@ -191,57 +202,117 @@ def send_broadcast_email(to_emails: List[str], subject: str, body: str, event_ti
     primary_color = config.get("primary_color", "#0f172a")
     accent_color = config.get("accent_color", "#94a3b8")
 
-    signature_html = f'<div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #f1f5f9; font-style: italic; color: #64748b; font-size: 14px;">{signature.replace("\r\n", "<br>").replace("\n", "<br>")}</div>' if signature else ""
+    sender_name = config.get("sender_name") if config else None
+    if not sender_name:
+        sender_name = "BMD-EventHub"
+        
+    from_address = f"{sender_name} <events@eelogistics.co.za>"
+    reply_to = config.get("reply_to") if config else None
 
-    html_content = f"""
-    <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 40px auto; padding: 40px; border: 1px solid #f1f5f9; border-radius: 40px; background-color: #ffffff; color: {primary_color}; box-shadow: 0 20px 50px rgba(0,0,0,0.05);">
-        <div style="text-align: center; margin-bottom: 48px;">
-            <div style="display: inline-block; background: {primary_color}; padding: 12px 28px; border-radius: 16px;">
-                <span style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.4em; color: #ffffff;">Broadcast Dispatch</span>
+    # Handle event details formatting
+    date_str = "TBA"
+    time_str = "TBA"
+    location_str = "TBA"
+    if event_details:
+        location_str = event_details.get('location', 'TBA')
+        from datetime import datetime
+        try:
+            dt_raw = event_details.get('start_date')
+            if isinstance(dt_raw, str):
+                dt = datetime.fromisoformat(dt_raw.replace('Z', '+00:00'))
+            else:
+                dt = dt_raw
+            date_str = dt.strftime("%A, %B %d, %Y")
+            time_str = dt.strftime("%I:%M %p")
+        except:
+            date_str = str(event_details.get('start_date', 'TBA'))
+
+    for reg in registrations_data:
+        to_email = reg["email"]
+        first_name = reg["first_name"]
+        last_name = reg["last_name"]
+        pin = reg["pin"]
+
+        # Compile personalized subject and body
+        p_subject = (
+            subject.replace("{first_name}", first_name)
+            .replace("{last_name}", last_name)
+            .replace("{pin}", pin)
+            .replace("{event_title}", event_title)
+            .replace("{location}", location_str)
+            .replace("{start_date}", f"{date_str} @ {time_str}")
+        )
+
+        p_body = (
+            body.replace("{first_name}", first_name)
+            .replace("{last_name}", last_name)
+            .replace("{pin}", pin)
+            .replace("{event_title}", event_title)
+            .replace("{location}", location_str)
+            .replace("{start_date}", f"{date_str} @ {time_str}")
+        )
+
+        # Inject QR Code if requested
+        if "{qr_code}" in p_body:
+            qr_base64 = generate_qr_base64(pin)
+            qr_code_html = f"""
+            <div style="background: #f8fafc; padding: 32px; border-radius: 24px; text-align: center; border: 1px solid #e2e8f0; margin: 24px auto; max-width: 240px; box-shadow: 0 10px 25px rgba(0,0,0,0.03);">
+                <img src="data:image/png;base64,{qr_base64}" width="160" height="160" alt="Clearance QR Code" style="border-radius: 12px; display: block; margin: 0 auto 16px auto;" />
+                <p style="font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.25em; color: #64748b; margin: 0 0 6px 0;">Clearance ID</p>
+                <div style="display: inline-block; background: #ffffff; padding: 8px 18px; border-radius: 12px; border: 1.5px solid {primary_color};">
+                    <code style="font-size: 20px; font-weight: 900; color: {primary_color}; letter-spacing: 0.15em;">{pin}</code>
+                </div>
+            </div>
+            """
+            p_body = p_body.replace("{qr_code}", qr_code_html)
+
+        signature_html = f'<div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #f1f5f9; font-style: italic; color: #64748b; font-size: 14px;">{signature.replace("\r\n", "<br>").replace("\n", "<br>")}</div>' if signature else ""
+
+        html_content = f"""
+        <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 40px auto; padding: 40px; border: 1px solid #f1f5f9; border-radius: 40px; background-color: #ffffff; color: {primary_color}; box-shadow: 0 20px 50px rgba(0,0,0,0.05);">
+            <div style="text-align: center; margin-bottom: 48px;">
+                <div style="display: inline-block; background: {primary_color}; padding: 12px 28px; border-radius: 16px;">
+                    <span style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.4em; color: #ffffff;">Broadcast Dispatch</span>
+                </div>
+            </div>
+
+            <h2 style="font-size: 32px; font-weight: 900; color: {primary_color}; margin-bottom: 28px; text-transform: uppercase; font-style: italic; letter-spacing: -0.04em; line-height: 1.1;">
+                Update: <span style="color: {accent_color};">{event_title}</span>
+            </h2>
+            
+            <div style="font-size: 16px; line-height: 1.8; color: #334155; margin-bottom: 40px;">
+                {p_body.replace("\r\n", "<br>").replace("\n", "<br>")}
+            </div>
+
+            {signature_html}
+            
+            <hr style="border: 0; border-top: 1px solid #f1f5f9; margin: 40px 0;" />
+            
+            <div style="text-align: center;">
+                <p style="font-size: 10px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.2em;">
+                    Automated Event Management System • Security Tier 4
+                </p>
             </div>
         </div>
+        """
 
-        <h2 style="font-size: 32px; font-weight: 900; color: {primary_color}; margin-bottom: 28px; text-transform: uppercase; font-style: italic; letter-spacing: -0.04em; line-height: 1.1;">
-            Update: <span style="color: {accent_color};">{event_title}</span>
-        </h2>
+        email_params = {
+            "from": from_address,
+            "to": to_email,
+            "subject": p_subject,
+            "html": html_content
+        }
         
-        <div style="font-size: 16px; line-height: 1.8; color: #334155; margin-bottom: 40px;">
-            {body.replace("\r\n", "<br>").replace("\n", "<br>")}
-        </div>
-
-        {signature_html}
-        
-        <hr style="border: 0; border-top: 1px solid #f1f5f9; margin: 40px 0;" />
-        
-        <div style="text-align: center;">
-            <p style="font-size: 10px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.2em;">
-                Automated Event Management System • Security Tier 4
-            </p>
-        </div>
-    </div>
-    """
-
-    try:
-        sender_name = config.get("sender_name") if config else None
-        if not sender_name:
-            sender_name = "BMD-EventHub"
+        if reply_to:
+            email_params["reply_to"] = reply_to
             
-        from_address = f"{sender_name} <events@eelogistics.co.za>"
-        
-        for email in to_emails:
-            email_params = {
-                "from": from_address,
-                "to": email,
-                "subject": subject,
-                "html": html_content
-            }
+        if attachments:
+            email_params["attachments"] = attachments
             
-            reply_to = config.get("reply_to") if config else None
-            if reply_to:
-                email_params["reply_to"] = reply_to
-                
+        try:
             resend.Emails.send(email_params)
-        return True
-    except Exception as e:
-        print(f"Failed to send broadcast: {e}")
-        return False
+            print(f"Personalized broadcast email sent successfully to {to_email}")
+        except Exception as e:
+            print(f"Failed to send personalized broadcast email to {to_email}: {e}")
+
+    return True
