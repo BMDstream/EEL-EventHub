@@ -785,7 +785,7 @@ export default function EventDetailsPage() {
                      <div className={`flex flex-col items-center gap-6 p-8 rounded-[1.5rem] shadow-lg w-full animate-in zoom-in-95 duration-300 ${
                        pinStatus === "success" ? "bg-green-500 text-white" : 
                        pinStatus === "error" ? "bg-red-500 text-white" : 
-                       pinStatus === "warning" ? "bg-yellow-400 text-black" :
+                       pinStatus === "warning" ? "bg-red-500 text-white" :
                        "bg-[#0f172a] text-white"
                      }`}>
                        {pinStatus === "processing" && <Loader2 className="animate-spin" size={48} />}
@@ -799,7 +799,7 @@ export default function EventDetailsPage() {
                             <button 
                               onClick={() => setPinStatus("idle")}
                               className={`mt-6 px-8 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border ${
-                                pinStatus === "warning" ? "bg-black/10 hover:bg-black/20 border-black/10" : "bg-white/20 hover:bg-white/30 border-white/10"
+                                pinStatus === "warning" ? "bg-white/20 hover:bg-white/30 border-white/10" : "bg-white/20 hover:bg-white/30 border-white/10"
                               }`}
                             >
                               Dismiss

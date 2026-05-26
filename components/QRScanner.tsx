@@ -150,7 +150,7 @@ export default function QRScanner({ onScan }: QRScannerProps) {
         <div className={`flex flex-col items-center gap-6 p-12 rounded-[3rem] shadow-2xl w-full max-w-md animate-in zoom-in-95 duration-300 ${
           status === "success" ? "bg-green-500 text-white" : 
           status === "error" ? "bg-red-500 text-white" : 
-          status === "warning" ? "bg-yellow-400 text-black" :
+          status === "warning" ? "bg-red-500 text-white" :
           "bg-[#0f172a] text-white"
         }`}>
           {status === "processing" && <Loader2 className="animate-spin" size={64} />}
@@ -164,7 +164,7 @@ export default function QRScanner({ onScan }: QRScannerProps) {
                <button 
                  onClick={() => setStatus("idle")}
                  className={`mt-8 px-10 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border ${
-                   status === "warning" ? "bg-black/10 hover:bg-black/20 border-black/10" : "bg-white/20 hover:bg-white/30 border-white/10"
+                   status === "warning" ? "bg-white/20 hover:bg-white/30 border-white/10" : "bg-white/20 hover:bg-white/30 border-white/10"
                  }`}
                >
                  Dismiss
