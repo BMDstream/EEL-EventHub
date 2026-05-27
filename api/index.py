@@ -762,6 +762,8 @@ def create_registrations_bulk(
 ):
     if not current_user:
         raise HTTPException(status_code=401, detail="Authentication required")
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Forbidden: Only administrators can import registrants in bulk")
         
     event = session.get(Event, event_id)
     if not event:

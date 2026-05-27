@@ -661,7 +661,7 @@ export default function EventDetailsPage() {
             <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
               <div className="px-10 py-8 border-b border-slate-50 flex justify-between items-center bg-slate-50/30">
                 <h2 className="text-xl font-black text-[#0f172a] font-bricolage italic uppercase tracking-tight">Active <span className="text-slate-300">Registrants</span></h2>
-                {(userRole === "admin" || userRole === "manager") && (
+                {userRole === "admin" && (
                   <button 
                     onClick={() => setIsImportModalOpen(true)}
                     className="flex items-center gap-2 bg-[#0f172a] hover:bg-black text-white px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all"
