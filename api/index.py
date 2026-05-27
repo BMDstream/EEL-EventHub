@@ -240,7 +240,13 @@ def healthcheck():
     return {"status": "ok", "version": "1.3-robust"}
 
 @app.get("/api/py/settings/{key}")
-def get_setting(key: str, session: Session = Depends(get_session)):
+def get_setting(
+    key: str,
+    session: Session = Depends(get_session),
+    current_user: Optional[User] = Depends(get_current_user_from_request)
+):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Authentication required")
     from backend.models import SystemSetting
     setting = session.exec(select(SystemSetting).where(SystemSetting.key == key)).first()
     if not setting:
@@ -248,7 +254,14 @@ def get_setting(key: str, session: Session = Depends(get_session)):
     return setting
 
 @app.put("/api/py/settings/{key}")
-def update_setting(key: str, data: Dict[str, Any], session: Session = Depends(get_session)):
+def update_setting(
+    key: str,
+    data: Dict[str, Any],
+    session: Session = Depends(get_session),
+    current_user: Optional[User] = Depends(get_current_user_from_request)
+):
+    if not current_user or current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only admins can update settings")
     from backend.models import SystemSetting
     setting = session.exec(select(SystemSetting).where(SystemSetting.key == key)).first()
     if not setting:
@@ -609,7 +622,13 @@ def test_email(
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/py/registrations/{registration_id}/resend-email")
-def resend_registration_email(registration_id: str, session: Session = Depends(get_session)):
+def resend_registration_email(
+    registration_id: str,
+    session: Session = Depends(get_session),
+    current_user: Optional[User] = Depends(get_current_user_from_request)
+):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Authentication required")
     # Try looking up by UUID first
     registration = None
     try:
@@ -693,14 +712,33 @@ def bulk_send_tickets_task(event_id: int, session_factory):
                 print(f"Failed to resend ticket to {att.email}: {e}")
 
 @app.post("/api/py/events/{event_id}/resend-all-tickets")
-def resend_all_tickets(event_id: int, background_tasks: BackgroundTasks):
+def resend_all_tickets(
+    event_id: int,
+    background_tasks: BackgroundTasks,
+    current_user: Optional[User] = Depends(get_current_user_from_request)
+):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Authentication required")
     background_tasks.add_task(bulk_send_tickets_task, event_id, engine)
     return {"ok": True, "message": "Bulk ticket dispatch started in the background."}
 
 
 @app.delete("/api/py/registrations/{registration_id}")
-def delete_registration(registration_id: str, session: Session = Depends(get_session)):
-    registration = session.get(Registration, registration_id)
+def delete_registration(
+    registration_id: str,
+    session: Session = Depends(get_session),
+    current_user: Optional[User] = Depends(get_current_user_from_request)
+):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    # Safely parse UUID to avoid 500 on malformed IDs
+    registration = None
+    try:
+        from uuid import UUID
+        val = UUID(registration_id, version=4)
+        registration = session.get(Registration, val)
+    except (ValueError, AttributeError):
+        pass
     if not registration:
         raise HTTPException(status_code=404, detail="Registration not found")
     session.delete(registration)
@@ -708,7 +746,12 @@ def delete_registration(registration_id: str, session: Session = Depends(get_ses
     return {"ok": True}
 
 @app.get("/api/py/users")
-def read_users(session: Session = Depends(get_session)):
+def read_users(
+    session: Session = Depends(get_session),
+    current_user: Optional[User] = Depends(get_current_user_from_request)
+):
+    if not current_user or current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only admins can view users")
     users = session.exec(select(User)).all()
     result = []
     for user in users:
@@ -719,7 +762,13 @@ def read_users(session: Session = Depends(get_session)):
     return result
 
 @app.post("/api/py/users", response_model=User)
-def create_user(user: User, session: Session = Depends(get_session)):
+def create_user(
+    user: User,
+    session: Session = Depends(get_session),
+    current_user: Optional[User] = Depends(get_current_user_from_request)
+):
+    if not current_user or current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only admins can create users")
     existing = session.exec(select(User).where(func.lower(User.email) == user.email.lower())).first()
     if existing:
         raise HTTPException(status_code=400, detail="User already exists")
@@ -771,7 +820,14 @@ def get_current_user(email: str, session: Session = Depends(get_session)):
     return user
 
 @app.put("/api/py/users/{user_id}", response_model=User)
-def update_user(user_id: int, user_data: User, session: Session = Depends(get_session)):
+def update_user(
+    user_id: int,
+    user_data: User,
+    session: Session = Depends(get_session),
+    current_user: Optional[User] = Depends(get_current_user_from_request)
+):
+    if not current_user or current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only admins can update users")
     db_user = session.get(User, user_id)
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -786,7 +842,13 @@ def update_user(user_id: int, user_data: User, session: Session = Depends(get_se
     return db_user
 
 @app.delete("/api/py/users/{user_id}")
-def delete_user(user_id: int, session: Session = Depends(get_session)):
+def delete_user(
+    user_id: int,
+    session: Session = Depends(get_session),
+    current_user: Optional[User] = Depends(get_current_user_from_request)
+):
+    if not current_user or current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only admins can delete users")
     user = session.get(User, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -1106,23 +1168,24 @@ def get_recent_activities(
     event_ids = [e.id for e in events]
     if not event_ids:
         return []
-        
-    recent_registrations = session.exec(
-        select(Registration)
+
+    # Single JOIN query — eliminates the N+1 lazy-load of attendee + event per row
+    recent_results = session.exec(
+        select(Registration, Attendee, Event)
+        .join(Attendee, Registration.attendee_id == Attendee.id)
+        .join(Event, Registration.event_id == Event.id)
         .where(Registration.event_id.in_(event_ids))
         .order_by(Registration.created_at.desc())
         .limit(limit)
     ).all()
-    
+
     activities = []
-    for reg in recent_registrations:
-        attendee = reg.attendee
-        event = reg.event
+    for reg, attendee, event in recent_results:
         if not attendee or not event:
             continue
-            
+
         name = f"{attendee.first_name} {attendee.last_name[0]}."
-        
+
         if reg.checked_in:
             activities.append({
                 "user": name,
@@ -1194,73 +1257,111 @@ def get_analytics(
                 "clients": clients_count
             }
         }
-        
-    registrations = session.exec(
-        select(Registration)
+
+    import datetime as dt
+
+    # --- Summary counts: pure SQL, zero rows loaded into Python memory ---
+    summary_row = session.execute(
+        select(
+            func.count().label("total"),
+            func.count().filter(Registration.checked_in == True).label("checked_in")
+        )
         .where(Registration.event_id.in_(event_ids))
         .where(Registration.status == "confirmed")
-    ).all()
-    
-    total_registrations = len(registrations)
-    checked_in = len([r for r in registrations if r.checked_in])
-    
-    check_in_rate = 0
-    if total_registrations > 0:
-        check_in_rate = round((checked_in / total_registrations) * 100, 1)
-        
-    import datetime as dt
-    from collections import defaultdict
-    
-    reg_by_day = defaultdict(int)
+    ).one()
+
+    total_registrations = summary_row.total or 0
+    checked_in = summary_row.checked_in or 0
+    check_in_rate = round((checked_in / total_registrations) * 100, 1) if total_registrations > 0 else 0
+
+    # --- Registrations by day (last 7 days): SQL GROUP BY ---
     today = dt.date.today()
-    for i in range(6, -1, -1):
-        day = today - dt.timedelta(days=i)
-        reg_by_day[day.isoformat()] = 0
-        
-    for r in registrations:
-        if r.created_at:
-            day_str = r.created_at.date().isoformat()
-            if day_str in reg_by_day:
-                reg_by_day[day_str] += 1
-                
-    registrations_by_day = [
-        {"date": date, "count": count}
-        for date, count in sorted(reg_by_day.items())
-    ]
-    
+    seven_days_ago = today - dt.timedelta(days=6)
+    reg_by_day = {(today - dt.timedelta(days=i)).isoformat(): 0 for i in range(6, -1, -1)}
+
+    day_rows = session.execute(
+        select(
+            func.date(Registration.created_at).label("day"),
+            func.count().label("count")
+        )
+        .where(Registration.event_id.in_(event_ids))
+        .where(Registration.status == "confirmed")
+        .where(func.date(Registration.created_at) >= seven_days_ago)
+        .group_by(func.date(Registration.created_at))
+    ).all()
+
+    for row in day_rows:
+        day_str = str(row.day)
+        if day_str in reg_by_day:
+            reg_by_day[day_str] = row.count
+
+    registrations_by_day = [{"date": d, "count": c} for d, c in sorted(reg_by_day.items())]
+
+    # --- Event breakdown: SQL GROUP BY ---
+    event_agg_rows = session.execute(
+        select(
+            Registration.event_id,
+            func.count().label("total"),
+            func.count().filter(Registration.checked_in == True).label("checked_in_count")
+        )
+        .where(Registration.event_id.in_(event_ids))
+        .where(Registration.status == "confirmed")
+        .group_by(Registration.event_id)
+    ).all()
+
+    event_agg = {row.event_id: (row.total, row.checked_in_count) for row in event_agg_rows}
+
     event_breakdown = []
     for e in events:
-        e_regs = [r for r in registrations if r.event_id == e.id]
-        e_checked = len([r for r in e_regs if r.checked_in])
+        total, chk = event_agg.get(e.id, (0, 0))
         event_breakdown.append({
             "id": e.id,
             "title": e.title,
             "capacity": e.capacity,
-            "registrations": len(e_regs),
-            "checked_in": e_checked,
-            "check_in_rate": f"{round((e_checked / len(e_regs)) * 100, 1) if len(e_regs) > 0 else 0}%"
+            "registrations": total,
+            "checked_in": chk,
+            "check_in_rate": f"{round((chk / total) * 100, 1) if total > 0 else 0}%"
         })
-        
-    client_breakdown = []
+
+    # --- Client breakdown: SQL GROUP BY ---
+    allowed_client_ids_for_breakdown = []
     if current_user.role == "admin":
         clients = session.exec(select(Client)).all()
     elif current_user.role == "manager":
         clients = session.exec(select(Client).where(Client.id.in_(allowed_client_ids))).all()
+        allowed_client_ids_for_breakdown = allowed_client_ids
     else:
-        allowed_client_ids = list(set([e.client_id for e in events if e.client_id]))
-        clients = session.exec(select(Client).where(Client.id.in_(allowed_client_ids))).all()
-        
+        allowed_client_ids_for_breakdown = list(set([e.client_id for e in events if e.client_id]))
+        clients = session.exec(select(Client).where(Client.id.in_(allowed_client_ids_for_breakdown))).all()
+
+    client_event_map = {}
+    for e in events:
+        if e.client_id:
+            client_event_map.setdefault(e.client_id, []).append(e.id)
+
+    client_agg_rows = session.execute(
+        select(
+            Event.client_id,
+            func.count(Registration.id).label("reg_count")
+        )
+        .join(Event, Registration.event_id == Event.id)
+        .where(Registration.event_id.in_(event_ids))
+        .where(Registration.status == "confirmed")
+        .group_by(Event.client_id)
+    ).all()
+
+    client_agg = {row.client_id: row.reg_count for row in client_agg_rows}
+
+    client_breakdown = []
     for c in clients:
-        c_events = [e for e in events if e.client_id == c.id]
-        c_event_ids = [e.id for e in c_events]
-        c_regs = [r for r in registrations if r.event_id in c_event_ids]
+        c_event_ids = client_event_map.get(c.id, [])
         client_breakdown.append({
             "id": c.id,
             "name": c.name,
-            "events_count": len(c_events),
-            "registrations_count": len(c_regs)
+            "events_count": len(c_event_ids),
+            "registrations_count": client_agg.get(c.id, 0)
         })
-        
+
     return {
         "registrations_by_day": registrations_by_day,
         "event_breakdown": event_breakdown,

@@ -53,6 +53,7 @@ export default function PublicRegistrationPage() {
   const [registeredId, setRegisteredId] = useState<string | null>(null);
   const [registeredPin, setRegisteredPin] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
@@ -132,11 +133,12 @@ export default function PublicRegistrationPage() {
         setRegisteredPin(data.pin);
         setStatusMessage(data.message);
       } else {
-        alert("Failed to register. Please try again.");
+        const errData = await response.json().catch(() => ({}));
+        setSubmitError(errData.detail || "Registration failed. Please check your details and try again.");
       }
     } catch (err) {
       console.error(err);
-      alert("An unexpected error occurred.");
+      setSubmitError("An unexpected error occurred. Please try again.");
     } finally {
       setRegistering(false);
     }
@@ -207,7 +209,7 @@ export default function PublicRegistrationPage() {
                 <div className="flex justify-center mb-4">
                   <div className="bg-white p-2 rounded-xl">
                     <QRCodeSVG 
-                      value={registeredId || ""} 
+                      value={registeredPin || registeredId || ""} 
                       size={160}
                       level="M"
                     />
@@ -392,6 +394,12 @@ export default function PublicRegistrationPage() {
                   })}
 
                   <div className="pt-8">
+                    {submitError && (
+                      <div className="mb-4 px-5 py-4 rounded-2xl bg-red-950/60 border border-red-500/40 flex items-start gap-3">
+                        <span className="text-red-400 mt-0.5 shrink-0">✕</span>
+                        <p className="text-red-300 text-sm font-medium leading-snug">{submitError}</p>
+                      </div>
+                    )}
                     <button type="submit" disabled={registering} className="w-full client-bg-accent hover:bg-white disabled:bg-zinc-800 text-black font-black py-6 rounded-[2rem] shadow-2xl client-shadow-accent transition-all flex items-center justify-center gap-4 uppercase tracking-[0.3em] text-xs">
                       {registering ? <Loader2 className="animate-spin" size={20} /> : null}
                       {registering ? "Dispatching..." : "Submit Registration"}
