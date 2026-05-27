@@ -68,52 +68,40 @@ export const authOptions: NextAuthOptions = {
           console.error("Direct DB Auth Error:", dbErr);
         }
 
-        // 2. Secondary fallback: Hardcoded accounts
-        const hardcodedUsers = [
-          { email: "barton@bmdcomputing.com", password: "EEL-Admin-2026!", role: "admin" },
-          { email: "alareez@eelogistics.co.za", password: "EEL-Manager-2026!", role: "manager" },
-          { email: "lysander@eelogistics.co.za", password: "EEL-Staff-2026!", role: "staff" }
-        ];
-
-        const matchingHardcoded = hardcodedUsers.find(u => u.email === email && u.password === password);
-        if (matchingHardcoded) {
-          return { 
-            id: matchingHardcoded.email, 
-            email: matchingHardcoded.email, 
-            role: matchingHardcoded.role,
-            allowed_clients: matchingHardcoded.role === "admin" ? [] : ["bmd"]
-          };
-        }
-        
+        // 2. No hardcoded fallback — all users must exist in the database.
+        // To add a user: insert them via /admin/users or the seed script.
         return null;
       }
     })
   ],
   callbacks: {
     async jwt({ token, user }) {
+      // Only query the DB on initial sign-in (when `user` is present).
+      // Subsequent requests reuse the token — no extra DB hit per request.
       if (user) {
         token.role = (user as any).role;
         token.allowed_clients = (user as any).allowed_clients || [];
-      }
-      
-      if (token.email) {
-        try {
-          const { default: sql } = await import("@/lib/db");
-          const results = await sql`
-            SELECT u.role, ARRAY_AGG(c.slug) FILTER (WHERE c.slug IS NOT NULL) as allowed_clients
-            FROM "user" u
-            LEFT JOIN userclientlink l ON l.user_id = u.id
-            LEFT JOIN client c ON c.id = l.client_id
-            WHERE LOWER(u.email) = ${token.email.toLowerCase()}
-            GROUP BY u.id
-            LIMIT 1
-          `;
-          if (results && results.length > 0) {
-            token.role = results[0].role;
-            token.allowed_clients = results[0].allowed_clients || [];
+
+        // Refresh from DB on first sign-in to get the latest role/clients
+        if (token.email) {
+          try {
+            const { default: sql } = await import("@/lib/db");
+            const results = await sql`
+              SELECT u.role, ARRAY_AGG(c.slug) FILTER (WHERE c.slug IS NOT NULL) as allowed_clients
+              FROM "user" u
+              LEFT JOIN userclientlink l ON l.user_id = u.id
+              LEFT JOIN client c ON c.id = l.client_id
+              WHERE LOWER(u.email) = ${token.email.toLowerCase()}
+              GROUP BY u.id
+              LIMIT 1
+            `;
+            if (results && results.length > 0) {
+              token.role = results[0].role;
+              token.allowed_clients = results[0].allowed_clients || [];
+            }
+          } catch (err) {
+            console.error("Failed to fetch user role from DB in JWT callback", err);
           }
-        } catch (err) {
-          console.error("Failed to fetch user role from DB in JWT callback", err);
         }
       }
       
@@ -135,7 +123,7 @@ export const authOptions: NextAuthOptions = {
   pages: {
     signIn: "/login",
   },
-  debug: true,
+  debug: process.env.NODE_ENV !== "production",
 };
 
 if (!process.env.NEXTAUTH_SECRET) {

@@ -1287,7 +1287,15 @@ def get_clients(
     return current_user.clients
 
 @app.post("/api/py/clients", response_model=Client)
-def create_client(client: Client, session: Session = Depends(get_session)):
+def create_client(
+    client: Client, 
+    session: Session = Depends(get_session),
+    current_user: Optional[User] = Depends(get_current_user_from_request)
+):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only admins can create clients")
     existing = session.exec(select(Client).where(Client.slug == client.slug)).first()
     if existing:
         raise HTTPException(status_code=400, detail="Client slug already exists")
