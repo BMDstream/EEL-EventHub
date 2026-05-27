@@ -74,9 +74,13 @@ export default function UserManagementPage() {
 
   const fetchUsers = async () => {
     try {
-      const res = await fetch("/api/py/users");
-      const data = await res.json();
-      setUsers(data);
+      const res = await fetch("/api/py/users", {
+        headers: {
+          "x-user-email": session?.user?.email || ""
+        }
+      });
+      const data = res.ok ? await res.json() : [];
+      setUsers(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error("Failed to fetch users", err);
     } finally {
@@ -90,7 +94,10 @@ export default function UserManagementPage() {
     try {
       const res = await fetch("/api/py/users", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "x-user-email": session?.user?.email || ""
+        },
         body: JSON.stringify({ 
           email: newEmail, 
           password: newPassword,
@@ -271,7 +278,10 @@ export default function UserManagementPage() {
     try {
       const res = await fetch(`/api/py/users/${selectedUserForClientModal.id}/clients`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "x-user-email": session?.user?.email || ""
+        },
         body: JSON.stringify({ client_ids: modalClientIds })
       });
       if (res.ok) {

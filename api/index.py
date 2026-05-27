@@ -1493,14 +1493,27 @@ def delete_client(client_id: int, session: Session = Depends(get_session)):
     return {"ok": True}
 
 @app.get("/api/py/users/{user_id}/clients", response_model=List[Client])
-def get_user_clients(user_id: int, session: Session = Depends(get_session)):
+def get_user_clients(
+    user_id: int, 
+    session: Session = Depends(get_session),
+    current_user: Optional[User] = Depends(get_current_user_from_request)
+):
+    if not current_user or current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only admins can view user client links")
     user = session.get(User, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return user.clients
 
 @app.post("/api/py/users/{user_id}/clients")
-def sync_user_clients(user_id: int, payload: Dict[str, Any], session: Session = Depends(get_session)):
+def sync_user_clients(
+    user_id: int, 
+    payload: Dict[str, Any], 
+    session: Session = Depends(get_session),
+    current_user: Optional[User] = Depends(get_current_user_from_request)
+):
+    if not current_user or current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only admins can modify user client links")
     user = session.get(User, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
