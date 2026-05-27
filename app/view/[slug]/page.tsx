@@ -9,7 +9,8 @@ import {
   BarChart3, 
   Loader2,
   Calendar,
-  ShieldCheck
+  ShieldCheck,
+  RefreshCw
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -31,23 +32,27 @@ export default function ClientViewPage() {
   const { slug } = useParams();
   const [stats, setStats] = useState<PublicStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchStats = async (showGlobalLoading = false) => {
+    if (showGlobalLoading) setLoading(true);
+    else setRefreshing(true);
+    try {
+      const res = await fetch(`/api/py/events/${slug}/public-stats`);
+      if (res.ok) {
+        const data = await res.json();
+        setStats(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch public stats", err);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const res = await fetch(`/api/py/events/${slug}/public-stats`);
-        if (res.ok) {
-          const data = await res.json();
-          setStats(data);
-        }
-      } catch (err) {
-        console.error("Failed to fetch public stats", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (slug) fetchStats();
+    if (slug) fetchStats(true);
   }, [slug]);
 
   if (loading) {
@@ -171,6 +176,14 @@ export default function ClientViewPage() {
                 <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1">Live Sync Status</p>
                 <p className="text-xl font-black italic font-bricolage tracking-tight">CONNECTED</p>
               </div>
+              <button 
+                onClick={() => fetchStats(false)}
+                disabled={refreshing}
+                className="p-4 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-2xl transition-all disabled:opacity-50 text-white flex items-center justify-center"
+                title="Refresh Stats"
+              >
+                <RefreshCw size={18} className={refreshing ? "animate-spin" : ""} />
+              </button>
             </motion.div>
           </header>
 
