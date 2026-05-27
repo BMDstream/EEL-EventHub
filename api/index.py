@@ -2,6 +2,7 @@ from fastapi import FastAPI, Depends, HTTPException, status, BackgroundTasks, He
 from sqlmodel import Session, select
 from sqlalchemy import text, func
 from typing import List, Dict, Any, Optional
+from pydantic import BaseModel
 from backend.database import get_session, init_db, engine
 from backend.models import Event, Attendee, Registration, User, Client, UserEventLink
 from backend.email_service import send_confirmation_email, send_broadcast_email
@@ -742,6 +743,120 @@ def resend_all_tickets(
         raise HTTPException(status_code=401, detail="Authentication required")
     background_tasks.add_task(bulk_send_tickets_task, event_id, engine)
     return {"ok": True, "message": "Bulk ticket dispatch started in the background."}
+
+
+class BulkRegistrantItem(BaseModel):
+    email: str
+    first_name: str
+    last_name: str
+    company: Optional[str] = None
+    custom_answers: Optional[Dict[str, Any]] = None
+
+@app.post("/api/py/events/{event_id}/registrations/bulk")
+def create_registrations_bulk(
+    event_id: int,
+    registrants_data: List[BulkRegistrantItem],
+    background_tasks: BackgroundTasks,
+    session: Session = Depends(get_session),
+    current_user: Optional[User] = Depends(get_current_user_from_request)
+):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+        
+    event = session.get(Event, event_id)
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+        
+    config = get_event_email_config(event, session)
+    
+    created = []
+    errors = []
+    
+    for item in registrants_data:
+        email = item.email.strip().lower()
+        first_name = item.first_name.strip()
+        last_name = item.last_name.strip()
+        company = item.company.strip() if item.company else None
+        custom_answers = item.custom_answers or {}
+        
+        if not email or not first_name or not last_name:
+            errors.append("Row missing required fields (email, first_name, or last_name)")
+            continue
+            
+        try:
+            # 1. Look up or create attendee matching single registration strategy
+            attendee = session.exec(
+                select(Attendee)
+                .where(func.lower(Attendee.email) == email)
+                .where(func.lower(Attendee.first_name) == first_name.lower())
+                .where(func.lower(Attendee.last_name) == last_name.lower())
+            ).first()
+            
+            if not attendee:
+                attendee = Attendee(
+                    email=email,
+                    first_name=first_name,
+                    last_name=last_name,
+                    company=company
+                )
+                session.add(attendee)
+                session.commit()
+                session.refresh(attendee)
+            else:
+                if company:
+                    attendee.company = company
+                    session.add(attendee)
+                    session.commit()
+                    session.refresh(attendee)
+            
+            # 2. Look up or create registration
+            registration = session.exec(
+                select(Registration)
+                .where(Registration.event_id == event_id)
+                .where(Registration.attendee_id == attendee.id)
+            ).first()
+            
+            if registration:
+                registration.custom_answers = custom_answers
+                registration.status = "confirmed"
+                session.add(registration)
+                session.commit()
+                session.refresh(registration)
+            else:
+                import random
+                pin = str(random.randint(1000, 9999))
+                registration = Registration(
+                    event_id=event_id,
+                    attendee_id=attendee.id,
+                    custom_answers=custom_answers,
+                    pin=pin,
+                    status="confirmed"
+                )
+                session.add(registration)
+                session.commit()
+                session.refresh(registration)
+            
+            # 3. Add background task to send confirmation email
+            background_tasks.add_task(
+                send_confirmation_email,
+                to_email=attendee.email,
+                first_name=attendee.first_name,
+                event_title=event.title,
+                clearance_id=registration.pin,
+                event_details={
+                    "start_date": event.start_date,
+                    "location": event.location,
+                    "address": event.address
+                },
+                config=config
+            )
+            created.append(email)
+            
+        except Exception as e:
+            session.rollback()
+            errors.append(f"Error registering {email}: {str(e)}")
+            
+    return {"created": created, "errors": errors}
 
 
 @app.delete("/api/py/registrations/{registration_id}")

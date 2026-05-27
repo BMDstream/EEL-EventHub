@@ -21,7 +21,9 @@ import {
   Settings,
   Sparkles,
   ArrowUpRight,
-  Eye
+  Eye,
+  Upload,
+  X
 } from "lucide-react";
 import AdminLayout from "@/components/AdminLayout";
 import FormBuilder from "@/components/FormBuilder";
@@ -83,6 +85,132 @@ export default function EventDetailsPage() {
   const [resendingRegId, setResendingRegId] = useState<string | null>(null);
   const [bulkResending, setBulkResending] = useState(false);
   const [selectedScanDay, setSelectedScanDay] = useState<number | "auto">("auto");
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [parsedRegistrants, setParsedRegistrants] = useState<any[]>([]);
+  const [importing, setImporting] = useState(false);
+
+  const downloadRegistrantTemplate = () => {
+    import("xlsx").then((XLSX) => {
+      const headers = ["first_name", "last_name", "email", "company"];
+      const data = [
+        {
+          first_name: "John",
+          last_name: "Doe",
+          email: "john.doe@example.com",
+          company: "Acme Corp"
+        },
+        {
+          first_name: "Jane",
+          last_name: "Smith",
+          email: "jane.smith@example.com",
+          company: "Innovate LLC"
+        }
+      ];
+      
+      const worksheet = XLSX.utils.json_to_sheet(data, { header: headers });
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "RegistrantsTemplate");
+      
+      worksheet["!cols"] = [
+        { wch: 15 },
+        { wch: 15 },
+        { wch: 25 },
+        { wch: 20 }
+      ];
+      
+      XLSX.writeFile(workbook, `registrants_import_template.xlsx`);
+    });
+  };
+
+  const handleImportFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const data = evt.target?.result;
+        import("xlsx").then((XLSX) => {
+          const workbook = XLSX.read(data, { type: "array" });
+          const firstSheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[firstSheetName];
+          const jsonData = XLSX.utils.sheet_to_json<any>(worksheet);
+
+          const parsed = jsonData.map((row: any) => {
+            const email = row.email || row.Email || row.EMAIL || "";
+            const first_name = row.first_name || row.First_Name || row.first_name || row.firstName || row.FirstName || "";
+            const last_name = row.last_name || row.Last_Name || row.last_name || row.lastName || row.LastName || "";
+            const company = row.company || row.Company || row.COMPANY || "";
+            
+            // Gather any extra fields for custom_answers
+            const standardKeys = ["email", "first_name", "last_name", "company", "Email", "First_Name", "Last_Name", "Company", "EMAIL", "COMPANY", "firstName", "lastName", "FirstName", "LastName"];
+            const custom_answers: Record<string, any> = {};
+            Object.keys(row).forEach(key => {
+              if (!standardKeys.includes(key)) {
+                custom_answers[key] = row[key];
+              }
+            });
+
+            return {
+              email: email.toString().trim(),
+              first_name: first_name.toString().trim(),
+              last_name: last_name.toString().trim(),
+              company: company.toString().trim(),
+              custom_answers
+            };
+          }).filter(u => u.email !== "");
+
+          if (parsed.length === 0) {
+            alert("No valid rows found. Make sure headers are: email, first_name, last_name, company.");
+            return;
+          }
+
+          setParsedRegistrants(parsed);
+        });
+      } catch (err) {
+        console.error(err);
+        alert("Failed to parse file. Make sure it is a valid CSV or Excel file.");
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
+  const handleBulkRegistrantsImport = async () => {
+    if (!parsedRegistrants.length || !event) return;
+    setImporting(true);
+    try {
+      const res = await fetch(`/api/py/events/${event.id}/registrations/bulk`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-email": session?.user?.email || ""
+        },
+        body: JSON.stringify(parsedRegistrants)
+      });
+      if (res.ok) {
+        const result = await res.json();
+        alert(`Successfully imported ${result.created.length} registrants! Errors: ${result.errors.length}`);
+        
+        // Refresh registrants list
+        const regRes = await fetch(`/api/py/events/${id}/registrations`, {
+          headers: { "x-user-email": session?.user?.email || "" }
+        });
+        const regData = await regRes.json();
+        setRegistrations(regData);
+        
+        setIsImportModalOpen(false);
+        setParsedRegistrants([]);
+      } else {
+        const err = await res.json();
+        alert(`Import failed: ${err.detail || "Unknown error"}`);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error importing registrants");
+    } finally {
+      setImporting(false);
+    }
+  };
 
   const handleResendEmail = async (regId: string) => {
     setResendingRegId(regId);
@@ -533,6 +661,15 @@ export default function EventDetailsPage() {
             <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
               <div className="px-10 py-8 border-b border-slate-50 flex justify-between items-center bg-slate-50/30">
                 <h2 className="text-xl font-black text-[#0f172a] font-bricolage italic uppercase tracking-tight">Active <span className="text-slate-300">Registrants</span></h2>
+                {(userRole === "admin" || userRole === "manager") && (
+                  <button 
+                    onClick={() => setIsImportModalOpen(true)}
+                    className="flex items-center gap-2 bg-[#0f172a] hover:bg-black text-white px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all"
+                  >
+                    <Upload size={14} />
+                    Import Registrants
+                  </button>
+                )}
               </div>
               <div className="overflow-x-auto pb-4">
                 <table className="w-full text-left min-w-[1100px]">
@@ -1027,6 +1164,112 @@ export default function EventDetailsPage() {
                  >
                     Close Review
                  </button>
+              </div>
+            </div>
+          </div>
+        )}
+        {/* Bulk Import Modal */}
+        {isImportModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+            <div className="bg-white rounded-[2.5rem] shadow-2xl border border-slate-100 w-full max-w-2xl overflow-hidden flex flex-col max-h-[85vh] animate-in fade-in zoom-in-95 duration-200">
+              <div className="px-10 py-8 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
+                 <div>
+                   <h3 className="text-xl font-black text-[#0f172a] font-bricolage italic uppercase tracking-tight">Bulk Import <span className="text-slate-300">Registrants</span></h3>
+                   <p className="text-slate-400 font-bold uppercase tracking-widest text-[9px] mt-1">Upload CSV or Excel file</p>
+                 </div>
+                 <button 
+                   onClick={() => {
+                     setIsImportModalOpen(false);
+                     setParsedRegistrants([]);
+                   }}
+                   className="w-10 h-10 bg-slate-100 hover:bg-slate-200 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors"
+                 >
+                   <X size={20} />
+                 </button>
+              </div>
+
+              <div className="p-10 overflow-y-auto space-y-6 flex-1">
+                <p className="text-slate-500 font-medium text-sm">
+                  Import a bulk register of attendees. The system will automatically add them, generate a unique 4-digit PIN, create a QR code, and send the registration confirmation email.
+                </p>
+
+                <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
+                  <h4 className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-2">Supported Columns</h4>
+                  <p className="text-xs text-slate-500 mb-4 leading-relaxed">
+                    Must contain headers: <code className="bg-slate-200/60 px-1.5 py-0.5 rounded font-bold">first_name</code>, <code className="bg-slate-200/60 px-1.5 py-0.5 rounded font-bold">last_name</code>, <code className="bg-slate-200/60 px-1.5 py-0.5 rounded font-bold">email</code>, and <code className="bg-slate-200/60 px-1.5 py-0.5 rounded font-bold">company</code>. Additional columns are automatically parsed as custom responses.
+                  </p>
+                  <button
+                    onClick={downloadRegistrantTemplate}
+                    className="flex items-center gap-2 bg-white border border-slate-200 hover:bg-slate-50 text-[#0f172a] px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all"
+                  >
+                    <Download size={14} />
+                    Download Excel Template
+                  </button>
+                </div>
+
+                {!parsedRegistrants.length ? (
+                  <div className="border-2 border-dashed border-slate-200 hover:border-yellow-400 rounded-3xl p-12 text-center transition-all cursor-pointer relative bg-slate-50/30 hover:bg-slate-50/50">
+                    <input
+                      type="file"
+                      accept=".csv, .xlsx, .xls"
+                      onChange={handleImportFileUpload}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    />
+                    <Upload className="mx-auto text-slate-300 mb-4" size={48} />
+                    <p className="text-sm font-bold text-[#0f172a]">Choose a file or drag it here</p>
+                    <p className="text-xs text-slate-400 mt-1">Supports CSV, XLSX, and XLS formats</p>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Parsed Attendees ({parsedRegistrants.length})</span>
+                      <button 
+                        onClick={() => setParsedRegistrants([])}
+                        className="text-xs font-bold text-red-500 hover:underline uppercase"
+                      >
+                        Clear File
+                      </button>
+                    </div>
+                    
+                    <div className="max-h-[220px] overflow-y-auto pr-2 border border-slate-100 rounded-2xl divide-y divide-slate-100">
+                      {parsedRegistrants.map((u, index) => (
+                        <div key={index} className="p-4 flex items-center justify-between hover:bg-slate-50/50">
+                          <div>
+                            <p className="font-bold text-sm text-[#0f172a]">{u.first_name} {u.last_name}</p>
+                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{u.email}</p>
+                          </div>
+                          {u.company && (
+                            <span className="px-2.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider bg-slate-50 text-slate-600 border border-slate-100">
+                              {u.company}
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="p-10 bg-slate-50 border-t border-slate-100 flex justify-between items-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsImportModalOpen(false);
+                    setParsedRegistrants([]);
+                  }}
+                  className="px-8 py-4 bg-white border border-slate-200 text-slate-500 text-[10px] font-black uppercase tracking-widest rounded-2xl hover:bg-slate-50 transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleBulkRegistrantsImport}
+                  disabled={!parsedRegistrants.length || importing}
+                  className="px-8 py-4 bg-[#0f172a] text-white text-[10px] font-black uppercase tracking-widest rounded-2xl hover:bg-black transition-all disabled:bg-slate-200 flex items-center gap-2 shadow-xl shadow-slate-200"
+                >
+                  {importing ? <Loader2 size={14} className="animate-spin" /> : null}
+                  Confirm & Sync Attendees
+                </button>
               </div>
             </div>
           </div>
