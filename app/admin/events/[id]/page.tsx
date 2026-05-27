@@ -893,6 +893,7 @@ export default function EventDetailsPage() {
                        }
                        const updated = await res.json();
                        setRegistrations(prev => prev.map(r => r.id === updated.id ? { ...r, checked_in: updated.checked_in, checked_in_days: updated.checked_in_days ?? [] } : r));
+                       return updated;
                      }} 
                    />
                  </div>

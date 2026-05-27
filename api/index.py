@@ -1083,6 +1083,13 @@ def toggle_checkin(
         "created_at": registration.created_at,
         "custom_answers": registration.custom_answers,
         "pin": registration.pin,
+        "attendee": {
+            "id": registration.attendee.id,
+            "first_name": registration.attendee.first_name,
+            "last_name": registration.attendee.last_name,
+            "email": registration.attendee.email,
+            "company": registration.attendee.company,
+        }
     }
 
 @app.post("/api/py/events/{event_id}/checkin-by-pin")

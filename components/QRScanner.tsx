@@ -5,13 +5,14 @@ import { Html5Qrcode } from "html5-qrcode";
 import { CheckCircle2, XCircle, Camera, Loader2, AlertCircle } from "lucide-react";
 
 interface QRScannerProps {
-  onScan: (decodedText: string) => Promise<void>;
+  onScan: (decodedText: string) => Promise<any>;
 }
 
 export default function QRScanner({ onScan }: QRScannerProps) {
   const [scanning, setScanning] = useState(false);
   const [status, setStatus] = useState<"idle" | "success" | "error" | "processing" | "loading" | "warning">("idle");
   const [message, setMessage] = useState("");
+  const [attendeeName, setAttendeeName] = useState<string | null>(null);
   const scannerRef = useRef<Html5Qrcode | null>(null);
 
   useEffect(() => {
@@ -50,12 +51,21 @@ export default function QRScanner({ onScan }: QRScannerProps) {
             setMessage("Authenticating credential...");
             
             try {
-              await onScan(decodedText);
+              const res = await onScan(decodedText);
               setStatus("success");
               setMessage("Check-in Successful");
-              setTimeout(() => setStatus("idle"), 3000);
+              if (res && res.attendee) {
+                setAttendeeName(`${res.attendee.first_name} ${res.attendee.last_name}`);
+              } else {
+                setAttendeeName(null);
+              }
+              setTimeout(() => {
+                setStatus("idle");
+                setAttendeeName(null);
+              }, 4500);
             } catch (err) {
               const errMsg = err instanceof Error ? err.message : "Invalid or already used credential";
+              setAttendeeName(null);
               if (errMsg.toLowerCase().includes("already checked in")) {
                 setStatus("warning");
                 setMessage(errMsg);
@@ -63,7 +73,7 @@ export default function QRScanner({ onScan }: QRScannerProps) {
                 setStatus("error");
                 setMessage(errMsg);
               }
-              setTimeout(() => setStatus("idle"), 4000);
+              setTimeout(() => setStatus("idle"), 5000);
             }
           },
           (errorMessage) => {
@@ -158,8 +168,13 @@ export default function QRScanner({ onScan }: QRScannerProps) {
           {status === "error" && <XCircle size={64} />}
           {status === "warning" && <AlertCircle size={64} />}
           
-          <div className="text-center">
+          <div className="text-center space-y-3">
              <p className="text-2xl font-black italic uppercase tracking-tighter font-bricolage leading-tight">{message}</p>
+             {status === "success" && attendeeName && (
+               <p className="text-lg font-bold tracking-wide border-t border-white/20 pt-3 animate-in fade-in slide-in-from-top-1">
+                 {attendeeName}
+               </p>
+             )}
              {status !== "processing" && (
                <button 
                  onClick={() => setStatus("idle")}
