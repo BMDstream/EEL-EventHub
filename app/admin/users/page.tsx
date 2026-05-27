@@ -37,6 +37,11 @@ export default function UserManagementPage() {
   const [parsedUsers, setParsedUsers] = useState<any[]>([]);
   const [bulkSaving, setBulkSaving] = useState(false);
 
+  // Password Update States
+  const [selectedUserForPasswordModal, setSelectedUserForPasswordModal] = useState<User | null>(null);
+  const [changePasswordVal, setChangePasswordVal] = useState("");
+  const [updatingPassword, setUpdatingPassword] = useState(false);
+
   useEffect(() => {
     if (userRole === "admin") {
       fetchUsers();
@@ -297,6 +302,42 @@ export default function UserManagementPage() {
     }
   };
 
+  const handleOpenPasswordModal = (user: User) => {
+    setSelectedUserForPasswordModal(user);
+    setChangePasswordVal("");
+  };
+
+  const handleSavePassword = async () => {
+    if (!selectedUserForPasswordModal) return;
+    setUpdatingPassword(true);
+    try {
+      const res = await fetch(`/api/py/users/${selectedUserForPasswordModal.id}`, {
+        method: "PUT",
+        headers: { 
+          "Content-Type": "application/json",
+          "x-user-email": session?.user?.email || ""
+        },
+        body: JSON.stringify({ 
+          email: selectedUserForPasswordModal.email,
+          password: changePasswordVal,
+          role: selectedUserForPasswordModal.role,
+          is_active: selectedUserForPasswordModal.is_active
+        })
+      });
+      if (res.ok) {
+        setSelectedUserForPasswordModal(null);
+        alert("Password updated successfully.");
+      } else {
+        alert("Failed to update password.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error updating password.");
+    } finally {
+      setUpdatingPassword(false);
+    }
+  };
+
   return (
     <AdminLayout>
       <div className="max-w-6xl mx-auto font-outfit">
@@ -403,6 +444,13 @@ export default function UserManagementPage() {
                       </div>
                     </td>
                     <td className="px-8 py-6 text-right">
+                      <button 
+                        onClick={() => handleOpenPasswordModal(user)}
+                        className="p-2 text-slate-300 hover:text-blue-500 transition-colors mr-3"
+                        title="Change Password"
+                      >
+                        <Key size={18} />
+                      </button>
                       {user.role !== "admin" && (
                         <button 
                           onClick={() => handleOpenClientModal(user)}
@@ -669,6 +717,60 @@ export default function UserManagementPage() {
                 >
                   {syncingClients ? <Loader2 className="animate-spin" size={18} /> : <CheckCircle2 size={18} />}
                   {syncingClients ? "Saving..." : "Save Access"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Change Password Modal */}
+        {selectedUserForPasswordModal && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-6">
+            <div className="bg-white rounded-[3rem] shadow-2xl max-w-md w-full p-12 relative overflow-hidden dark:bg-[#0f172a] dark:border dark:border-slate-800">
+              <div className="absolute top-0 left-0 w-full h-2 bg-blue-500"></div>
+              <button 
+                onClick={() => setSelectedUserForPasswordModal(null)}
+                className="absolute right-8 top-8 p-3 text-slate-400 hover:bg-slate-50 rounded-2xl transition-all dark:hover:bg-slate-800"
+              >
+                <X size={20} />
+              </button>
+
+              <h2 className="text-3xl font-black text-[#0f172a] mb-2 font-bricolage italic uppercase tracking-tight dark:text-white flex items-center gap-3">
+                <Key className="text-blue-500" size={28} />
+                Set Password
+              </h2>
+              <p className="text-slate-500 font-medium mb-8 dark:text-slate-400">
+                Update password for <span className="font-bold text-[#0f172a] dark:text-white">{selectedUserForPasswordModal.email}</span>.
+              </p>
+
+              <div className="space-y-6 mb-8">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">New Password</label>
+                  <input
+                    type="password"
+                    value={changePasswordVal}
+                    onChange={(e) => setChangePasswordVal(e.target.value)}
+                    placeholder="Enter new password"
+                    className="w-full px-6 py-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none font-bold text-[#0f172a] focus:ring-2 focus:ring-blue-500 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-4">
+                <button
+                  type="button"
+                  onClick={() => setSelectedUserForPasswordModal(null)}
+                  className="flex-1 px-8 py-5 rounded-2xl font-black text-slate-400 hover:text-[#0f172a] transition-colors uppercase tracking-widest text-xs dark:text-white dark:hover:text-blue-500"
+                >
+                  Cancel
+                </button>
+                <button
+                  disabled={updatingPassword || !changePasswordVal}
+                  onClick={handleSavePassword}
+                  className="flex-1 bg-[#0f172a] hover:bg-black text-white px-8 py-5 rounded-2xl font-black transition-all flex items-center justify-center gap-3 shadow-2xl shadow-slate-200 uppercase tracking-widest text-xs dark:bg-blue-500 dark:text-white dark:shadow-none"
+                >
+                  {updatingPassword ? <Loader2 className="animate-spin" size={18} /> : <CheckCircle2 size={18} />}
+                  {updatingPassword ? "Updating..." : "Save Password"}
                 </button>
               </div>
             </div>
