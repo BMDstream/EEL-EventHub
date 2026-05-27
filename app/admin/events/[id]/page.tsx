@@ -23,7 +23,8 @@ import {
   ArrowUpRight,
   Eye,
   Upload,
-  X
+  X,
+  RefreshCw
 } from "lucide-react";
 import AdminLayout from "@/components/AdminLayout";
 import FormBuilder from "@/components/FormBuilder";
@@ -291,6 +292,24 @@ export default function EventDetailsPage() {
       alert("Error starting bulk ticket dispatch");
     } finally {
       setBulkResending(false);
+    }
+  };
+
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchRegistrations = async () => {
+    if (!session?.user?.email) return;
+    setRefreshing(true);
+    try {
+      const regRes = await fetch(`/api/py/events/${id}/registrations`, {
+        headers: { "x-user-email": session.user.email || "" }
+      });
+      const regData = await regRes.json();
+      setRegistrations(regData);
+    } catch (err) {
+      console.error("Failed to refresh registrations", err);
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -686,10 +705,20 @@ export default function EventDetailsPage() {
                     className="w-full pl-16 pr-8 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a] placeholder-slate-300 transition-all"
                   />
                </div>
-               <div className="flex items-center gap-4 px-6 py-4 bg-slate-50 rounded-2xl">
-                  <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Showing:</span>
-                  <span className="text-xs font-black text-[#0f172a]">{filteredRegistrations.length} Registrants</span>
-               </div>
+               <div className="flex items-center gap-3">
+                   <button 
+                     onClick={fetchRegistrations}
+                     disabled={refreshing}
+                     className="px-5 py-4 bg-slate-50 hover:bg-slate-100 rounded-2xl transition-all text-[#0f172a] disabled:text-slate-400 flex items-center justify-center border border-slate-100 hover:border-slate-200"
+                     title="Refresh List"
+                   >
+                      <RefreshCw size={18} className={refreshing ? "animate-spin" : ""} />
+                   </button>
+                   <div className="flex items-center gap-4 px-6 py-4 bg-slate-50 rounded-2xl">
+                      <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Showing:</span>
+                      <span className="text-xs font-black text-[#0f172a]">{filteredRegistrations.length} Registrants</span>
+                   </div>
+                </div>
             </div>
 
             <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
