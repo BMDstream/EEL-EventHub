@@ -188,7 +188,10 @@ export default function ClientsPage() {
     }
     try {
       const res = await fetch(`/api/py/clients/${id}`, {
-        method: "DELETE"
+        method: "DELETE",
+        headers: {
+          "x-user-email": session?.user?.email || ""
+        }
       });
       if (res.ok) {
         fetchClients();

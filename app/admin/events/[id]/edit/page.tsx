@@ -126,6 +126,9 @@ export default function EditEventPage() {
     try {
       const response = await fetch(`/api/py/events/${id}`, {
         method: "DELETE",
+        headers: {
+          "x-user-email": session?.user?.email || "",
+        }
       });
 
       if (response.ok) {

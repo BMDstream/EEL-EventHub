@@ -417,6 +417,9 @@ def delete_event(
         raise HTTPException(status_code=404, detail="Event not found")
     verify_client_access(current_user, event.client_id, session)
     
+    # Clean up usereventlink entries first to prevent foreign key errors
+    session.execute(text('DELETE FROM "usereventlink" WHERE event_id = :event_id'), {"event_id": event_id})
+    
     session.delete(event)
     session.commit()
     return {"ok": True}
@@ -1479,7 +1482,14 @@ def update_client(client_id: int, client_data: Client, session: Session = Depend
     return db_client
 
 @app.delete("/api/py/clients/{client_id}")
-def delete_client(client_id: int, session: Session = Depends(get_session)):
+def delete_client(
+    client_id: int, 
+    session: Session = Depends(get_session),
+    current_user: Optional[User] = Depends(get_current_user_from_request)
+):
+    if not current_user or current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only admins can delete clients")
+        
     db_client = session.get(Client, client_id)
     if not db_client:
         raise HTTPException(status_code=404, detail="Client not found")

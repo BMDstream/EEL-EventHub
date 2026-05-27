@@ -162,7 +162,12 @@ export default function EventDetailsPage() {
     if (!confirm("Are you sure you want to remove this registrant?")) return;
     setDeletingId(regId);
     try {
-      const res = await fetch(`/api/py/registrations/${regId}`, { method: "DELETE" });
+      const res = await fetch(`/api/py/registrations/${regId}`, { 
+        method: "DELETE",
+        headers: {
+          "x-user-email": session?.user?.email || ""
+        }
+      });
       if (res.ok) {
         setRegistrations(prev => prev.filter(r => r.id !== regId));
       }
