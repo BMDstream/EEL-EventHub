@@ -23,21 +23,26 @@ def seed_users():
     ]
 
     with Session(engine) as session:
+        import bcrypt
         for u_data in users_to_create:
             # Check if user already exists
             statement = select(User).where(User.email == u_data["email"])
             existing_user = session.exec(statement).first()
             
+            # Hash the password using bcrypt
+            salt = bcrypt.gensalt()
+            hashed_password = bcrypt.hashpw(u_data["password"].encode("utf-8"), salt).decode("utf-8")
+            
             if existing_user:
                 print(f"User {u_data['email']} already exists. Updating password/role.")
-                existing_user.password = u_data["password"]
+                existing_user.password = hashed_password
                 existing_user.role = u_data["role"]
                 session.add(existing_user)
             else:
                 print(f"Creating user {u_data['email']}...")
                 user = User(
                     email=u_data["email"],
-                    password=u_data["password"],
+                    password=hashed_password,
                     role=u_data["role"],
                     is_active=True,
                     created_at=datetime.datetime.utcnow()

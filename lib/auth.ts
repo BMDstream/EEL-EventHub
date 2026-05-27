@@ -50,19 +50,53 @@ export const authOptions: NextAuthOptions = {
             FROM "user" u
             LEFT JOIN userclientlink l ON l.user_id = u.id
             LEFT JOIN client c ON c.id = l.client_id
-            WHERE LOWER(u.email) = ${email} AND u.password = ${password}
+            WHERE LOWER(u.email) = ${email}
             GROUP BY u.id
             LIMIT 1
           `;
 
           if (results && results.length > 0) {
             const user = results[0];
-            return { 
-              id: user.id.toString(), 
-              email: user.email, 
-              role: user.role,
-              allowed_clients: user.allowed_clients || []
-            };
+            let isMatch = false;
+
+            if (user.password) {
+              const bcrypt = await import("bcryptjs");
+              // Check if it's a bcrypt hash
+              if (
+                user.password.startsWith("$2a$") ||
+                user.password.startsWith("$2b$") ||
+                user.password.startsWith("$2y$")
+              ) {
+                isMatch = await bcrypt.compare(password, user.password);
+              } else {
+                // Fallback to plain-text check for legacy passwords
+                isMatch = user.password === password;
+                if (isMatch) {
+                  // Migrate legacy plain-text password to bcrypt hash on the fly
+                  try {
+                    const salt = await bcrypt.genSalt(10);
+                    const hashedPassword = await bcrypt.hash(password, salt);
+                    await sql`
+                      UPDATE "user"
+                      SET password = ${hashedPassword}
+                      WHERE id = ${user.id}
+                    `;
+                    console.log(`Successfully migrated password to bcrypt hash for user: ${email}`);
+                  } catch (migrationErr) {
+                    console.error("Failed to migrate legacy password to bcrypt hash:", migrationErr);
+                  }
+                }
+              }
+            }
+
+            if (isMatch) {
+              return { 
+                id: user.id.toString(), 
+                email: user.email, 
+                role: user.role,
+                allowed_clients: user.allowed_clients || []
+              };
+            }
           }
         } catch (dbErr) {
           console.error("Direct DB Auth Error:", dbErr);

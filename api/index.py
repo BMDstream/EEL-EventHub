@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, status, BackgroundTasks, Header
+from fastapi import FastAPI, Depends, HTTPException, status, BackgroundTasks, Header, Request
 from sqlmodel import Session, select
 from sqlalchemy import text, func
 from typing import List, Dict, Any, Optional
@@ -6,7 +6,12 @@ from backend.database import get_session, init_db, engine
 from backend.models import Event, Attendee, Registration, User, Client, UserEventLink
 from backend.email_service import send_confirmation_email, send_broadcast_email
 from backend.routers import auth
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 import uvicorn
+
+limiter = Limiter(key_func=get_remote_address)
 
 def get_current_user_from_request(
     x_user_email: Optional[str] = Header(None),
@@ -18,6 +23,15 @@ def get_current_user_from_request(
         return None
     user = session.exec(select(User).where(func.lower(User.email) == user_email.lower())).first()
     return user
+
+def hash_password(password: str) -> str:
+    if not password:
+        return password
+    if password.startswith("$2a$") or password.startswith("$2b$") or password.startswith("$2y$"):
+        return password
+    import bcrypt
+    salt = bcrypt.gensalt()
+    return bcrypt.hashpw(password.encode("utf-8"), salt).decode("utf-8")
 
 def verify_client_access(user: Optional[User], client_id: Optional[int], session: Session):
     if not user:
@@ -56,6 +70,8 @@ def verify_event_access(user: Optional[User], event: Event, session: Session):
     return True
 
 app = FastAPI(docs_url="/api/py/docs", openapi_url="/api/py/openapi.json")
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.include_router(auth.router, prefix="/api/py/auth", tags=["auth"])
 
 @app.on_event("startup")
@@ -458,7 +474,9 @@ def get_event_email_config(event, session: Session):
     return config
 
 @app.post("/api/py/register")
+@limiter.limit("30/minute")
 def register_attendee(
+    request: Request,
     data: Dict[str, Any],
     background_tasks: BackgroundTasks,
     session: Session = Depends(get_session)
@@ -772,6 +790,8 @@ def create_user(
     existing = session.exec(select(User).where(func.lower(User.email) == user.email.lower())).first()
     if existing:
         raise HTTPException(status_code=400, detail="User already exists")
+    if user.password:
+        user.password = hash_password(user.password)
     session.add(user)
     session.commit()
     session.refresh(user)
@@ -798,9 +818,10 @@ def create_users_bulk(
             errors.append(f"User {user_email} already exists")
             continue
         try:
+            hashed_password = hash_password(user_data.password) if user_data.password else None
             new_user = User(
                 email=user_email,
-                password=user_data.password,
+                password=hashed_password,
                 role=user_data.role or "staff",
                 is_active=True
             )
@@ -834,6 +855,8 @@ def update_user(
     
     user_dict = user_data.dict(exclude_unset=True)
     for key, value in user_dict.items():
+        if key == "password" and value:
+            value = hash_password(value)
         setattr(db_user, key, value)
     
     session.add(db_user)
@@ -897,7 +920,9 @@ def perform_checkin_logic(registration: Registration, day: Optional[int], mode: 
     return registration
 
 @app.put("/api/py/registrations/{registration_id}/checkin")
+@limiter.limit("60/minute")
 def toggle_checkin(
+    request: Request,
     registration_id: str,
     mode: str = "toggle",
     day: Optional[int] = None,
@@ -941,7 +966,9 @@ def toggle_checkin(
     }
 
 @app.post("/api/py/events/{event_id}/checkin-by-pin")
+@limiter.limit("60/minute")
 def checkin_by_pin(
+    request: Request,
     event_id: int,
     data: Dict[str, Any],
     session: Session = Depends(get_session)
