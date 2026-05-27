@@ -91,32 +91,55 @@ export default function EventDetailsPage() {
 
   const downloadRegistrantTemplate = () => {
     import("xlsx").then((XLSX) => {
-      const headers = ["first_name", "last_name", "email", "company"];
-      const data = [
-        {
-          first_name: "John",
-          last_name: "Doe",
-          email: "john.doe@example.com",
-          company: "Acme Corp"
-        },
-        {
-          first_name: "Jane",
-          last_name: "Smith",
-          email: "jane.smith@example.com",
-          company: "Innovate LLC"
+      const customFields = event?.custom_fields_schema || [];
+      const customHeaders = customFields.map(f => f.label || f.id);
+      const headers = ["first_name", "last_name", "email", "company", ...customHeaders];
+      
+      const sampleRow1: any = {
+        first_name: "John",
+        last_name: "Doe",
+        email: "john.doe@example.com",
+        company: "Acme Corp"
+      };
+      
+      const sampleRow2: any = {
+        first_name: "Jane",
+        last_name: "Smith",
+        email: "jane.smith@example.com",
+        company: "Innovate LLC"
+      };
+      
+      // Add blank or option hints for custom questions
+      customFields.forEach(f => {
+        const headerName = f.label || f.id;
+        if (f.type === "select" && f.options && f.options.length > 0) {
+          sampleRow1[headerName] = f.options[0];
+          sampleRow2[headerName] = f.options[1] || f.options[0];
+        } else if (f.type === "checkbox") {
+          sampleRow1[headerName] = "True";
+          sampleRow2[headerName] = "False";
+        } else {
+          sampleRow1[headerName] = "";
+          sampleRow2[headerName] = "";
         }
-      ];
+      });
+      
+      const data = [sampleRow1, sampleRow2];
       
       const worksheet = XLSX.utils.json_to_sheet(data, { header: headers });
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "RegistrantsTemplate");
       
-      worksheet["!cols"] = [
+      const cols = [
         { wch: 15 },
         { wch: 15 },
         { wch: 25 },
         { wch: 20 }
       ];
+      customHeaders.forEach(() => {
+        cols.push({ wch: 25 });
+      });
+      worksheet["!cols"] = cols;
       
       XLSX.writeFile(workbook, `registrants_import_template.xlsx`);
     });
@@ -136,18 +159,29 @@ export default function EventDetailsPage() {
           const worksheet = workbook.Sheets[firstSheetName];
           const jsonData = XLSX.utils.sheet_to_json<any>(worksheet);
 
+          const customFields = event?.custom_fields_schema || [];
+
           const parsed = jsonData.map((row: any) => {
             const email = row.email || row.Email || row.EMAIL || "";
             const first_name = row.first_name || row.First_Name || row.first_name || row.firstName || row.FirstName || "";
             const last_name = row.last_name || row.Last_Name || row.last_name || row.lastName || row.LastName || "";
             const company = row.company || row.Company || row.COMPANY || "";
             
-            // Gather any extra fields for custom_answers
+            // Gather custom field answers, mapping the spreadsheet headers to standard schema field IDs
             const standardKeys = ["email", "first_name", "last_name", "company", "Email", "First_Name", "Last_Name", "Company", "EMAIL", "COMPANY", "firstName", "lastName", "FirstName", "LastName"];
             const custom_answers: Record<string, any> = {};
             Object.keys(row).forEach(key => {
               if (!standardKeys.includes(key)) {
-                custom_answers[key] = row[key];
+                // Check if key matches a label or ID in event.custom_fields_schema
+                const matchedField = customFields.find(
+                  f => (f.label || "").toLowerCase().trim() === key.toLowerCase().trim() ||
+                       f.id.toLowerCase().trim() === key.toLowerCase().trim()
+                );
+                if (matchedField) {
+                  custom_answers[matchedField.id] = row[key];
+                } else {
+                  custom_answers[key] = row[key];
+                }
               }
             });
 
