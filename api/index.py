@@ -1076,11 +1076,29 @@ def get_public_stats(slug: str, session: Session = Depends(get_session)):
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
     
-    registrations = session.exec(select(Registration).where(Registration.event_id == event.id)).all()
+    from sqlalchemy import func
+    rsvp_count = session.exec(
+        select(func.count(Registration.id))
+        .where(Registration.event_id == event.id)
+        .where(Registration.status == "confirmed")
+    ).first() or 0
     
-    rsvp_count = len([r for r in registrations if r.status == "confirmed"])
-    declined_count = len([r for r in registrations if r.status == "declined"])
-    checked_in_count = len([r for r in registrations if r.checked_in])
+    declined_count = session.exec(
+        select(func.count(Registration.id))
+        .where(Registration.event_id == event.id)
+        .where(Registration.status == "declined")
+    ).first() or 0
+    
+    checked_in_count = session.exec(
+        select(func.count(Registration.id))
+        .where(Registration.event_id == event.id)
+        .where(Registration.checked_in == True)
+    ).first() or 0
+    
+    total_count = session.exec(
+        select(func.count(Registration.id))
+        .where(Registration.event_id == event.id)
+    ).first() or 0
     
     client_data = None
     if event.client_id:
@@ -1098,7 +1116,7 @@ def get_public_stats(slug: str, session: Session = Depends(get_session)):
         "rsvp": rsvp_count,
         "declined": declined_count,
         "checked_in": checked_in_count,
-        "total": len(registrations),
+        "total": total_count,
         "client": client_data
     }
 
@@ -1143,16 +1161,17 @@ def get_stats(
             "clients": clients_count
         }
         
-    registrations_count = len(session.exec(
-        select(Registration)
+    from sqlalchemy import func
+    registrations_count = session.exec(
+        select(func.count(Registration.id))
         .where(Registration.event_id.in_(event_ids))
         .where(Registration.status == "confirmed")
-    ).all())
-    checked_in_count = len(session.exec(
-        select(Registration)
+    ).first() or 0
+    checked_in_count = session.exec(
+        select(func.count(Registration.id))
         .where(Registration.event_id.in_(event_ids))
         .where(Registration.checked_in == True)
-    ).all())
+    ).first() or 0
     
     check_in_rate = 0
     if registrations_count > 0:
