@@ -231,7 +231,7 @@ export default function PublicRegistrationPage() {
         <div className="min-h-screen bg-black font-outfit">
           <div className="grid grid-cols-1 lg:grid-cols-2 min-h-screen">
             {/* Left Side: Info */}
-            <div className="bg-black p-12 lg:p-24 flex flex-col justify-between text-white relative overflow-hidden min-h-[50vh] lg:min-h-screen">
+            <div className="bg-black p-8 sm:p-12 lg:p-16 xl:p-24 flex flex-col justify-between text-white relative overflow-hidden min-h-[50vh] lg:min-h-screen">
               {event.banner_url ? (
                 <div className="absolute inset-0 z-0 overflow-hidden">
                   {event.banner_settings?.size === "contain" && (
@@ -256,9 +256,9 @@ export default function PublicRegistrationPage() {
               )}
               
               <div className="relative z-10 my-auto py-12 lg:py-24">
-                <h1 className="text-6xl lg:text-8xl font-black mb-10 leading-[0.9] tracking-tighter font-bricolage italic">{event.title}</h1>
-                <p className="text-xl text-zinc-300 mb-20 max-w-lg leading-relaxed font-medium">{event.description}</p>
-                <div className="space-y-10">
+                <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-black mb-6 lg:mb-10 leading-[0.9] tracking-tighter font-bricolage italic break-words">{event.title}</h1>
+                <p className="text-xl text-zinc-300 mb-10 lg:mb-20 max-w-lg leading-relaxed font-medium">{event.description}</p>
+                <div className="space-y-6 lg:space-y-10">
                   <div className="flex items-center gap-8 group">
                     <div className="bg-zinc-900 p-5 rounded-2xl border border-white/5 client-hover-border-accent transition-all">
                       <Calendar size={32} className="client-text-accent" />
