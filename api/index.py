@@ -469,6 +469,66 @@ def get_event_registrations(
         } for reg, att in registrations
     ]
 
+@app.get("/api/py/events/{event_id}/qrcodes/zip")
+def download_event_qrcodes_zip(
+    event_id: int,
+    session: Session = Depends(get_session),
+    current_user: Optional[User] = Depends(get_current_user_from_request)
+):
+    from fastapi.responses import StreamingResponse
+    import zipfile
+    from io import BytesIO
+    import qrcode
+    
+    event = session.get(Event, event_id)
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+    verify_event_access(current_user, event, session)
+    
+    registrations = session.exec(
+        select(Registration, Attendee)
+        .join(Attendee)
+        .where(Registration.event_id == event_id)
+        .where(Registration.status == "confirmed")
+    ).all()
+    
+    if not registrations:
+        raise HTTPException(status_code=400, detail="No confirmed registrants found for this event")
+        
+    zip_buffer = BytesIO()
+    
+    with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED, False) as zip_file:
+        for reg, att in registrations:
+            pin = reg.pin or str(reg.id)[:8]
+            
+            # Generate QR Code image
+            qr = qrcode.QRCode(version=1, box_size=10, border=4)
+            qr.add_data(pin)
+            qr.make(fit=True)
+            img = qr.make_image(fill_color="black", back_color="white")
+            
+            # Save QR to bytes
+            qr_bytes = BytesIO()
+            img.save(qr_bytes, format="PNG")
+            qr_bytes.seek(0)
+            
+            # Create file name
+            filename = f"{att.first_name.strip()}_{att.last_name.strip()}_{pin}.png"
+            # Sanitize filename (remove characters that are invalid in filenames)
+            filename = "".join(c for c in filename if c.isalnum() or c in (' ', '_', '-', '.')).strip()
+            filename = filename.replace(" ", "_")
+            
+            # Add to ZIP
+            zip_file.writestr(filename, qr_bytes.read())
+            
+    zip_buffer.seek(0)
+    
+    headers = {
+        "Content-Disposition": f"attachment; filename={event.slug}_qrcodes.zip",
+        "Access-Control-Expose-Headers": "Content-Disposition"
+    }
+    return StreamingResponse(zip_buffer, media_type="application/x-zip-compressed", headers=headers)
+
 def get_event_email_config(event, session: Session):
     client = session.get(Client, event.client_id) if event.client_id else None
     if client:

@@ -369,6 +369,8 @@ export default function EventDetailsPage() {
       "Email", 
       "Organization", 
       "Status", 
+      "Clearance PIN",
+      "QR Code Link",
       "Checked In (Any)", 
       ...(event?.duration_days && event.duration_days > 1
         ? ["Checked In Days", ...Array.from({ length: event.duration_days }, (_, i) => `Day ${i + 1} Check In`)]
@@ -400,12 +402,17 @@ export default function EventDetailsPage() {
           })
         : [];
 
+      const pinVal = reg.pin || reg.id.substring(0, 8);
+      const qrLinkVal = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${pinVal}`;
+
       const basicInfo = [
         escapeCSV(reg.attendee.first_name),
         escapeCSV(reg.attendee.last_name),
         escapeCSV(reg.attendee.email),
         escapeCSV(reg.attendee.company || ""),
         escapeCSV(reg.status),
+        escapeCSV(pinVal),
+        escapeCSV(qrLinkVal),
         escapeCSV(reg.checked_in ? "Yes" : "No"),
         ...(event?.duration_days && event.duration_days > 1
           ? [escapeCSV(checkedInDaysStr), ...dailyCheckIns]
@@ -600,6 +607,34 @@ export default function EventDetailsPage() {
                   >
                     <Download size={20} />
                     Export to Excel
+                  </button>
+                  <button
+                    onClick={async () => {
+                      try {
+                        const res = await fetch(`/api/py/events/${event.id}/qrcodes/zip`, {
+                          headers: { "x-user-email": session?.user?.email || "" }
+                        });
+                        if (!res.ok) {
+                          const errData = await res.json();
+                          throw new Error(errData.detail || "Failed to download ZIP");
+                        }
+                        const blob = await res.blob();
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement("a");
+                        a.href = url;
+                        a.download = `${event.slug}_qrcodes.zip`;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                      } catch (err: any) {
+                        alert(`Error: ${err.message}`);
+                      }
+                    }}
+                    disabled={registrations.length === 0}
+                    className="flex items-center justify-center gap-3 bg-[#eab308] hover:bg-[#ca8a04] disabled:bg-slate-200 text-[#0f172a] px-8 py-5 rounded-2xl font-black transition-all shadow-2xl shadow-yellow-500/10 uppercase tracking-widest text-xs"
+                  >
+                    <Download size={20} />
+                    Download QR Codes (ZIP)
                   </button>
                   <button
                     onClick={() => {
