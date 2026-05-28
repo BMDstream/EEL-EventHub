@@ -233,15 +233,22 @@ export default function PublicRegistrationPage() {
             {/* Left Side: Info */}
             <div className="bg-black p-12 lg:p-24 flex flex-col justify-between text-white relative overflow-hidden min-h-[50vh] lg:min-h-screen">
               {event.banner_url ? (
-                <div 
-                  className="absolute inset-0 z-0" 
-                  style={{ 
-                    backgroundImage: `url(${event.banner_url})`,
-                    backgroundSize: event.banner_settings?.size || "cover",
-                    backgroundPosition: event.banner_settings?.position || "center",
-                    backgroundRepeat: "no-repeat"
-                  }}
-                >
+                <div className="absolute inset-0 z-0 overflow-hidden">
+                  {event.banner_settings?.size === "contain" && (
+                    <div 
+                      className="absolute inset-0 scale-110 blur-2xl opacity-60 bg-cover bg-center" 
+                      style={{ backgroundImage: `url(${event.banner_url})` }}
+                    />
+                  )}
+                  <div 
+                    className="absolute inset-0" 
+                    style={{ 
+                      backgroundImage: `url(${event.banner_url})`,
+                      backgroundSize: event.banner_settings?.size || "cover",
+                      backgroundPosition: event.banner_settings?.position || "center",
+                      backgroundRepeat: "no-repeat"
+                    }}
+                  />
                   <div className="absolute inset-0 bg-black/40"></div>
                 </div>
               ) : (

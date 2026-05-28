@@ -320,22 +320,30 @@ export default function EditEventPage() {
                     }}
                     className="absolute inset-0 opacity-0 cursor-pointer z-10"
                   />
-                  <div className={`w-full h-24 rounded-2xl border-2 border-dashed ${formData.banner_url ? 'border-green-500/30 bg-green-50/50' : 'border-slate-200 bg-slate-50/50'} flex flex-col items-center justify-center transition-all overflow-hidden`}>
+                  <div className={`w-full h-24 rounded-2xl border-2 border-dashed ${formData.banner_url ? 'border-green-500/30 bg-green-50/50' : 'border-slate-200 bg-slate-50/50'} relative transition-all overflow-hidden`}>
                     {formData.banner_url ? (
-                      <img 
-                        src={formData.banner_url} 
-                        alt="Banner Preview" 
-                        className="w-full h-full" 
-                        style={{ 
-                          objectFit: (formData.banner_size === "100% 100%" ? "fill" : (formData.banner_size === "auto 100%" || formData.banner_size === "100% auto" ? "contain" : formData.banner_size)) as any, 
-                          objectPosition: formData.banner_position 
-                        }} 
-                      />
+                      <div className="absolute inset-0">
+                        {formData.banner_size === "contain" && (
+                          <div 
+                            className="absolute inset-0 scale-110 blur-md opacity-60 bg-cover bg-center"
+                            style={{ backgroundImage: `url(${formData.banner_url})` }}
+                          />
+                        )}
+                        <div 
+                          className="absolute inset-0"
+                          style={{
+                            backgroundImage: `url(${formData.banner_url})`,
+                            backgroundSize: formData.banner_size,
+                            backgroundPosition: formData.banner_position,
+                            backgroundRepeat: "no-repeat"
+                          }}
+                        />
+                      </div>
                     ) : (
-                      <>
+                      <div className="flex flex-col items-center justify-center h-full">
                         <p className="text-[10px] font-black text-slate-400 uppercase">Upload Banner Image</p>
                         <p className="text-[8px] text-slate-300 uppercase mt-1">Recommended: 1920x1080</p>
-                      </>
+                      </div>
                     )}
                   </div>
                 </div>
