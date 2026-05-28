@@ -7,6 +7,47 @@ import { ArrowLeft, Save, Loader2, Trash2, Building2, Lock } from "lucide-react"
 import { useSession } from "next-auth/react";
 import AdminLayout from "@/components/AdminLayout";
 
+const compressImage = (file: File, maxWidth: number, maxHeight: number, quality: number): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width = Math.round((width * maxHeight) / height);
+            height = maxHeight;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          resolve(event.target?.result as string);
+          return;
+        }
+        ctx.drawImage(img, 0, 0, width, height);
+        const dataUrl = canvas.toDataURL("image/jpeg", quality);
+        resolve(dataUrl);
+      };
+      img.onerror = (err) => reject(err);
+    };
+    reader.onerror = (err) => reject(err);
+  });
+};
+
 export default function EditEventPage() {
   const { id } = useParams();
   const router = useRouter();
@@ -16,6 +57,7 @@ export default function EditEventPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [clients, setClients] = useState<any[]>([]);
+  const [originalBanner, setOriginalBanner] = useState("");
   const [formData, setFormData] = useState({
     title: "",
     slug: "",
@@ -86,6 +128,7 @@ export default function EditEventPage() {
           banner_size: data.banner_settings?.size || "cover",
           banner_position: data.banner_settings?.position || "center",
         });
+        setOriginalBanner(data.banner_url || "");
         setLoading(false);
       })
       .catch((err) => {
@@ -99,25 +142,33 @@ export default function EditEventPage() {
     setSaving(true);
 
     try {
-      const { banner_size, banner_position, ...submitData } = formData;
+      const { banner_size, banner_position, banner_url, ...submitData } = formData;
+      
+      const payload: any = {
+        ...submitData,
+        client_id: formData.client_id ? parseInt(formData.client_id) : null,
+        start_date: formData.start_date,
+        allowed_domains: formData.allowed_domains
+          ? formData.allowed_domains.split(",").map(d => d.trim().toLowerCase()).filter(d => d)
+          : [],
+        banner_settings: {
+          size: formData.banner_size,
+          position: formData.banner_position,
+        }
+      };
+
+      // Only send banner_url if it has changed to avoid payload limit issues (413)
+      if (formData.banner_url !== originalBanner) {
+        payload.banner_url = formData.banner_url;
+      }
+
       const response = await fetch(`/api/py/events/${id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
           "x-user-email": session?.user?.email || "",
         },
-        body: JSON.stringify({
-          ...submitData,
-          client_id: formData.client_id ? parseInt(formData.client_id) : null,
-          start_date: formData.start_date,
-          allowed_domains: formData.allowed_domains
-            ? formData.allowed_domains.split(",").map(d => d.trim().toLowerCase()).filter(d => d)
-            : [],
-          banner_settings: {
-            size: formData.banner_size,
-            position: formData.banner_position,
-          }
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (response.ok) {
@@ -317,14 +368,20 @@ export default function EditEventPage() {
                   <input
                     type="file"
                     accept="image/*"
-                    onChange={(e) => {
+                    onChange={async (e) => {
                       const file = e.target.files?.[0];
                       if (file) {
-                        const reader = new FileReader();
-                        reader.onloadend = () => {
-                          setFormData(prev => ({ ...prev, banner_url: reader.result as string }));
-                        };
-                        reader.readAsDataURL(file);
+                        try {
+                          const compressed = await compressImage(file, 1600, 1600, 0.85);
+                          setFormData(prev => ({ ...prev, banner_url: compressed }));
+                        } catch (err) {
+                          console.error("Compression failed, using original", err);
+                          const reader = new FileReader();
+                          reader.onloadend = () => {
+                            setFormData(prev => ({ ...prev, banner_url: reader.result as string }));
+                          };
+                          reader.readAsDataURL(file);
+                        }
                       }
                     }}
                     className="absolute inset-0 opacity-0 cursor-pointer z-10"
