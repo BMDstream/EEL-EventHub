@@ -43,6 +43,10 @@ interface Event {
   custom_fields_schema?: FormField[];
   client?: Client;
   collect_company?: boolean;
+  banner_settings?: {
+    size?: string;
+    position?: string;
+  };
 }
 
 export default function PublicRegistrationPage() {
@@ -230,8 +234,13 @@ export default function PublicRegistrationPage() {
             <div className="bg-black p-12 lg:p-24 flex flex-col justify-between text-white relative overflow-hidden min-h-[50vh] lg:min-h-screen">
               {event.banner_url ? (
                 <div 
-                  className="absolute inset-0 z-0 bg-cover bg-center" 
-                  style={{ backgroundImage: `url(${event.banner_url})` }}
+                  className="absolute inset-0 z-0" 
+                  style={{ 
+                    backgroundImage: `url(${event.banner_url})`,
+                    backgroundSize: event.banner_settings?.size || "cover",
+                    backgroundPosition: event.banner_settings?.position || "center",
+                    backgroundRepeat: "no-repeat"
+                  }}
                 >
                   <div className="absolute inset-0 bg-black/40"></div>
                 </div>

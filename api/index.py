@@ -172,6 +172,12 @@ def on_startup():
             except Exception:
                 session.rollback()
 
+            try:
+                session.execute(text("ALTER TABLE \"event\" ADD COLUMN banner_settings JSON"))
+                session.commit()
+            except Exception:
+                session.rollback()
+
             # Create Client table if not exists
             try:
                 session.execute(text("""

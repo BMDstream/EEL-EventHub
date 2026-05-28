@@ -43,6 +43,7 @@ class Event(SQLModel, table=True):
     
     custom_fields_schema: Optional[List[Dict[str, Any]]] = Field(default=[], sa_column=Column(JSON))
     allowed_domains: Optional[List[str]] = Field(default=[], sa_column=Column(JSON))
+    banner_settings: Optional[Dict[str, Any]] = Field(default={"size": "cover", "position": "center"}, sa_column=Column(JSON))
     
     registrations: List["Registration"] = Relationship(
         back_populates="event", 

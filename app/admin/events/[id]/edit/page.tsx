@@ -29,6 +29,8 @@ export default function EditEventPage() {
     client_id: "",
     collect_company: true,
     allowed_domains: "",
+    banner_size: "cover",
+    banner_position: "center",
   });
 
   useEffect(() => {
@@ -81,6 +83,8 @@ export default function EditEventPage() {
           client_id: data.client_id ? data.client_id.toString() : "",
           collect_company: data.collect_company !== false,
           allowed_domains: data.allowed_domains ? data.allowed_domains.join(", ") : "",
+          banner_size: data.banner_settings?.size || "cover",
+          banner_position: data.banner_settings?.position || "center",
         });
         setLoading(false);
       })
@@ -107,7 +111,11 @@ export default function EditEventPage() {
           start_date: formData.start_date,
           allowed_domains: formData.allowed_domains
             ? formData.allowed_domains.split(",").map(d => d.trim().toLowerCase()).filter(d => d)
-            : []
+            : [],
+          banner_settings: {
+            size: formData.banner_size,
+            position: formData.banner_position,
+          }
         }),
       });
 
@@ -314,7 +322,15 @@ export default function EditEventPage() {
                   />
                   <div className={`w-full h-24 rounded-2xl border-2 border-dashed ${formData.banner_url ? 'border-green-500/30 bg-green-50/50' : 'border-slate-200 bg-slate-50/50'} flex flex-col items-center justify-center transition-all overflow-hidden`}>
                     {formData.banner_url ? (
-                      <img src={formData.banner_url} alt="Banner Preview" className="w-full h-full object-cover" />
+                      <img 
+                        src={formData.banner_url} 
+                        alt="Banner Preview" 
+                        className="w-full h-full" 
+                        style={{ 
+                          objectFit: formData.banner_size as any, 
+                          objectPosition: formData.banner_position 
+                        }} 
+                      />
                     ) : (
                       <>
                         <p className="text-[10px] font-black text-slate-400 uppercase">Upload Banner Image</p>
@@ -324,6 +340,41 @@ export default function EditEventPage() {
                   </div>
                 </div>
               </div>
+
+              {formData.banner_url && (
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Banner Display Settings</label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-1 block mb-1">Fit / Scale</label>
+                      <select
+                        name="banner_size"
+                        value={formData.banner_size}
+                        onChange={handleChange}
+                        className="w-full px-4 py-3 rounded-xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-xs text-slate-700 bg-slate-50/50 cursor-pointer"
+                      >
+                        <option value="cover">Cover (Fill Screen)</option>
+                        <option value="contain">Contain (Show Full Image)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-1 block mb-1">Focus / Position</label>
+                      <select
+                        name="banner_position"
+                        value={formData.banner_position}
+                        onChange={handleChange}
+                        className="w-full px-4 py-3 rounded-xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-xs text-slate-700 bg-slate-50/50 cursor-pointer"
+                      >
+                        <option value="center">Center</option>
+                        <option value="top">Top</option>
+                        <option value="bottom">Bottom</option>
+                        <option value="left">Left</option>
+                        <option value="right">Right</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="space-y-3">
