@@ -28,6 +28,7 @@ export default function EditEventPage() {
     banner_url: "",
     client_id: "",
     collect_company: true,
+    allowed_domains: "",
   });
 
   useEffect(() => {
@@ -79,6 +80,7 @@ export default function EditEventPage() {
           banner_url: data.banner_url || "",
           client_id: data.client_id ? data.client_id.toString() : "",
           collect_company: data.collect_company !== false,
+          allowed_domains: data.allowed_domains ? data.allowed_domains.join(", ") : "",
         });
         setLoading(false);
       })
@@ -103,6 +105,9 @@ export default function EditEventPage() {
           ...formData,
           client_id: formData.client_id ? parseInt(formData.client_id) : null,
           start_date: formData.start_date,
+          allowed_domains: formData.allowed_domains
+            ? formData.allowed_domains.split(",").map(d => d.trim().toLowerCase()).filter(d => d)
+            : []
         }),
       });
 
@@ -287,7 +292,7 @@ export default function EditEventPage() {
               </div>
 
               <div className="space-y-3">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center justify-between">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-between justify-between">
                   Background Banner
                   {formData.banner_url && <button onClick={() => setFormData({...formData, banner_url: ""})} className="text-red-500 hover:underline">Remove</button>}
                 </label>
@@ -319,6 +324,19 @@ export default function EditEventPage() {
                   </div>
                 </div>
               </div>
+            </div>
+
+            <div className="space-y-3">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Approved Email Domains (Optional - comma separated)</label>
+              <input
+                type="text"
+                name="allowed_domains"
+                value={formData.allowed_domains}
+                onChange={handleChange}
+                placeholder="e.g. bmdcomputing.com, companyname.co.za"
+                className="w-full px-5 py-4 rounded-2xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-slate-700 bg-slate-50/50"
+              />
+              <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest ml-1">Guests will only be permitted to register if their email ends in one of these domains.</p>
             </div>
 
             <div className="space-y-3">

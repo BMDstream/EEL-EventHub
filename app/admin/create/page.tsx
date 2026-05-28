@@ -38,6 +38,7 @@ export default function CreateEventPage() {
     duration_days: 1,
     client_id: "",
     collect_company: true,
+    allowed_domains: "",
   });
 
   useEffect(() => {
@@ -82,6 +83,9 @@ export default function CreateEventPage() {
           ...formData,
           client_id: formData.client_id ? parseInt(formData.client_id) : null,
           start_date: formData.start_date,
+          allowed_domains: formData.allowed_domains
+            ? formData.allowed_domains.split(",").map(d => d.trim().toLowerCase()).filter(d => d)
+            : []
         }),
       });
 
@@ -186,6 +190,19 @@ export default function CreateEventPage() {
                      </select>
                   </div>
                </div>
+
+              <div className="mt-10 space-y-3">
+                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Approved Email Domains (Optional - comma separated)</label>
+                 <input
+                   type="text"
+                   name="allowed_domains"
+                   value={formData.allowed_domains}
+                   onChange={handleChange}
+                   placeholder="e.g. bmdcomputing.com, companyname.co.za"
+                   className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a] transition-all"
+                 />
+                 <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest ml-1">Guests will only be permitted to register if their email ends in one of these domains.</p>
+              </div>
 
               <div className="mt-10 space-y-3">
                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Manifesto (Description)</label>

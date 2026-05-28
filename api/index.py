@@ -166,6 +166,12 @@ def on_startup():
             except Exception:
                 session.rollback()
 
+            try:
+                session.execute(text("ALTER TABLE \"event\" ADD COLUMN allowed_domains JSON"))
+                session.commit()
+            except Exception:
+                session.rollback()
+
             # Create Client table if not exists
             try:
                 session.execute(text("""
@@ -491,6 +497,20 @@ def register_attendee(
     # Standardize email: lowercase and strip whitespace
     raw_email = data.get("email", "")
     email = raw_email.strip().lower()
+    
+    # Domain restriction check
+    if event_id:
+        event = session.get(Event, event_id)
+        if event and event.allowed_domains:
+            email_parts = email.split("@")
+            if len(email_parts) > 1:
+                email_domain = email_parts[-1].strip().lower()
+                allowed = [d.strip().lower() for d in event.allowed_domains if d.strip()]
+                if allowed and email_domain not in allowed:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"This event is restricted. Please register using your corporate email address (e.g. ending in @{', @'.join(allowed)})."
+                    )
     
     first_name = data.get("first_name", "").strip()
     last_name = data.get("last_name", "").strip()
