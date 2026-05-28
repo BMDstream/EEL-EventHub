@@ -173,7 +173,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <div className={`flex items-center gap-3 mb-12 group relative ${isSidebarCollapsed ? "justify-center" : ""}`}>
             {/* Logo — clickable to upload only for admins */}
             {userRole === "admin" ? (
-              <label className={`cursor-pointer relative overflow-hidden w-10 h-10 rounded-2xl flex items-center justify-center transition-all hover:scale-110 shrink-0 ${
+              <label className={`cursor-pointer relative overflow-hidden ${isSidebarCollapsed ? "w-12 h-12" : "w-10 h-10"} rounded-2xl flex items-center justify-center transition-all hover:scale-110 shrink-0 ${
                 sidebarClientLogo 
                   ? "bg-transparent" 
                   : "bg-gradient-to-br from-yellow-400 to-amber-500 rotate-3 hover:rotate-6 shadow-lg shadow-yellow-500/20"
@@ -181,7 +181,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 {sidebarClientLogo ? (
                   <img src={sidebarClientLogo} alt="Logo" className="w-full h-full object-cover" />
                 ) : (
-                  <span className="text-black font-black text-xl font-bricolage italic">{sidebarInitial}</span>
+                  <span className={`text-black font-black ${isSidebarCollapsed ? "text-2xl" : "text-xl"} font-bricolage italic`}>{sidebarInitial}</span>
                 )}
                 <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
@@ -189,7 +189,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 </div>
               </label>
             ) : (
-              <div className={`relative overflow-hidden w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${
+              <div className={`relative overflow-hidden ${isSidebarCollapsed ? "w-12 h-12" : "w-10 h-10"} rounded-2xl flex items-center justify-center shrink-0 ${
                 sidebarClientLogo 
                   ? "bg-transparent" 
                   : "bg-gradient-to-br from-yellow-400 to-amber-500 rotate-3 shadow-lg shadow-yellow-500/20"
@@ -197,7 +197,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 {sidebarClientLogo ? (
                   <img src={sidebarClientLogo} alt="Logo" className="w-full h-full object-cover" />
                 ) : (
-                  <span className="text-black font-black text-xl font-bricolage italic">{sidebarInitial}</span>
+                  <span className={`text-black font-black ${isSidebarCollapsed ? "text-2xl" : "text-xl"} font-bricolage italic`}>{sidebarInitial}</span>
                 )}
               </div>
             )}
@@ -241,7 +241,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   } ${isSidebarCollapsed ? "justify-center px-0 w-12 h-12" : ""}`}
                   title={isSidebarCollapsed ? item.name : ""}
                 >
-                  <item.icon size={20} className={isActive ? "text-slate-950" : "text-slate-500 group-hover:text-white transition-colors duration-300"} />
+                  <item.icon size={isSidebarCollapsed ? 26 : 20} className={isActive ? "text-slate-950" : "text-slate-500 group-hover:text-white transition-colors duration-300"} />
                   {!isSidebarCollapsed && <span className="text-sm uppercase tracking-widest truncate">{item.name}</span>}
                 </Link>
               );
@@ -267,7 +267,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               className={`flex items-center gap-4 px-5 py-4 w-full rounded-2xl text-slate-400 hover:bg-red-500/10 hover:text-red-500 transition-all font-bold group ${isSidebarCollapsed ? "justify-center px-0 w-12 h-12" : ""}`}
               title={isSidebarCollapsed ? "Sign Out" : ""}
             >
-              <LogOut size={20} className="group-hover:translate-x-1 transition-transform shrink-0" />
+              <LogOut size={isSidebarCollapsed ? 26 : 20} className="group-hover:translate-x-1 transition-transform shrink-0" />
               {!isSidebarCollapsed && <span className="text-sm uppercase tracking-widest truncate">Sign Out</span>}
             </button>
           </div>
