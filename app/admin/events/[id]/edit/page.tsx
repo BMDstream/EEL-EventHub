@@ -327,7 +327,7 @@ export default function EditEventPage() {
                         alt="Banner Preview" 
                         className="w-full h-full" 
                         style={{ 
-                          objectFit: formData.banner_size as any, 
+                          objectFit: (formData.banner_size === "100% 100%" ? "fill" : (formData.banner_size === "auto 100%" || formData.banner_size === "100% auto" ? "contain" : formData.banner_size)) as any, 
                           objectPosition: formData.banner_position 
                         }} 
                       />
@@ -355,6 +355,9 @@ export default function EditEventPage() {
                       >
                         <option value="cover">Cover (Fill Screen)</option>
                         <option value="contain">Contain (Show Full Image)</option>
+                        <option value="100% 100%">Stretch to Fit</option>
+                        <option value="auto 100%">Fit Height (Top to Bottom)</option>
+                        <option value="100% auto">Fit Width</option>
                       </select>
                     </div>
                     <div>
