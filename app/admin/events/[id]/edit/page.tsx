@@ -99,6 +99,7 @@ export default function EditEventPage() {
     setSaving(true);
 
     try {
+      const { banner_size, banner_position, ...submitData } = formData;
       const response = await fetch(`/api/py/events/${id}`, {
         method: "PUT",
         headers: {
@@ -106,7 +107,7 @@ export default function EditEventPage() {
           "x-user-email": session?.user?.email || "",
         },
         body: JSON.stringify({
-          ...formData,
+          ...submitData,
           client_id: formData.client_id ? parseInt(formData.client_id) : null,
           start_date: formData.start_date,
           allowed_domains: formData.allowed_domains
@@ -122,8 +123,16 @@ export default function EditEventPage() {
       if (response.ok) {
         router.push(`/admin/events/${id}`);
       } else {
-        const error = await response.json();
-        alert(`Error: ${error.detail || "Failed to update event"}`);
+        let errorMessage = "Failed to update event";
+        try {
+          const error = await response.json();
+          errorMessage = error.detail || errorMessage;
+        } catch (jsonErr) {
+          try {
+            errorMessage = await response.text();
+          } catch (textErr) {}
+        }
+        alert(`Error: ${errorMessage}`);
       }
     } catch (err) {
       console.error("Failed to update event", err);
