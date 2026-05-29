@@ -89,6 +89,7 @@ export default function EventDetailsPage() {
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [parsedRegistrants, setParsedRegistrants] = useState<any[]>([]);
   const [importing, setImporting] = useState(false);
+  const [selectedMetric, setSelectedMetric] = useState<"date" | "venue" | "enrollment" | "declined" | "checked_in" | null>(null);
 
   const downloadRegistrantTemplate = () => {
     import("xlsx").then((XLSX) => {
@@ -534,7 +535,11 @@ export default function EventDetailsPage() {
                   </div>
                 )}
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-5 gap-y-8 gap-x-4 sm:gap-x-6">
-                  <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                  {/* Date Button */}
+                  <button 
+                    onClick={() => setSelectedMetric("date")}
+                    className="flex items-center gap-3 sm:gap-4 min-w-0 text-left hover:bg-slate-50/50 p-2 -m-2 rounded-2xl transition-all active:scale-[0.98] w-full"
+                  >
                     <div className="p-2.5 sm:p-3 bg-slate-50 text-[#0f172a] rounded-2xl shrink-0">
                       <Calendar size={20} className="sm:w-[22px] sm:h-[22px]" />
                     </div>
@@ -542,8 +547,13 @@ export default function EventDetailsPage() {
                       <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest whitespace-nowrap">Date</p>
                       <p className="font-bold text-[#0f172a] text-sm sm:text-base whitespace-nowrap">{new Date(event.start_date).toLocaleDateString(undefined, { dateStyle: 'medium' })}</p>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                  </button>
+
+                  {/* Venue Button */}
+                  <button 
+                    onClick={() => setSelectedMetric("venue")}
+                    className="flex items-center gap-3 sm:gap-4 min-w-0 text-left hover:bg-slate-50/50 p-2 -m-2 rounded-2xl transition-all active:scale-[0.98] w-full"
+                  >
                     <div className="p-2.5 sm:p-3 bg-slate-50 text-[#0f172a] rounded-2xl shrink-0">
                       <MapPin size={20} className="sm:w-[22px] sm:h-[22px]" />
                     </div>
@@ -554,8 +564,13 @@ export default function EventDetailsPage() {
                         <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest truncate" title={event.address}>{event.address}</p>
                       )}
                     </div>
-                  </div>
-                  <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                  </button>
+
+                  {/* Enrollment Button */}
+                  <button 
+                    onClick={() => setSelectedMetric("enrollment")}
+                    className="flex items-center gap-3 sm:gap-4 min-w-0 text-left hover:bg-slate-50/50 p-2 -m-2 rounded-2xl transition-all active:scale-[0.98] w-full"
+                  >
                     <div className="p-2.5 sm:p-3 bg-slate-50 text-[#0f172a] rounded-2xl shrink-0">
                       <Users size={20} className="sm:w-[22px] sm:h-[22px]" />
                     </div>
@@ -563,8 +578,13 @@ export default function EventDetailsPage() {
                       <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest whitespace-nowrap">Enrollment</p>
                       <p className="font-bold text-[#0f172a] text-sm sm:text-base whitespace-nowrap">{confirmedCount} / {event.capacity}</p>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                  </button>
+
+                  {/* Declined Button */}
+                  <button 
+                    onClick={() => setSelectedMetric("declined")}
+                    className="flex items-center gap-3 sm:gap-4 min-w-0 text-left hover:bg-slate-50/50 p-2 -m-2 rounded-2xl transition-all active:scale-[0.98] w-full"
+                  >
                     <div className="p-2.5 sm:p-3 bg-red-50 text-red-500 rounded-2xl shrink-0">
                       <UserX size={20} className="sm:w-[22px] sm:h-[22px]" />
                     </div>
@@ -572,8 +592,13 @@ export default function EventDetailsPage() {
                       <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest whitespace-nowrap">Declined</p>
                       <p className="font-bold text-red-500 text-sm sm:text-base whitespace-nowrap">{declinedCount}</p>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-3 sm:gap-4 min-w-0 col-span-2 sm:col-span-1 md:col-span-2 lg:col-span-1 xl:col-span-1 2xl:col-span-1">
+                  </button>
+
+                  {/* Checked In Button */}
+                  <button 
+                    onClick={() => setSelectedMetric("checked_in")}
+                    className="flex items-center gap-3 sm:gap-4 min-w-0 text-left hover:bg-slate-50/50 p-2 -m-2 rounded-2xl transition-all active:scale-[0.98] w-full col-span-2 sm:col-span-1 md:col-span-2 lg:col-span-1 xl:col-span-1 2xl:col-span-1"
+                  >
                     <div className="p-2.5 sm:p-3 bg-green-50 text-green-600 rounded-2xl shrink-0">
                       <CheckCircle2 size={20} className="sm:w-[22px] sm:h-[22px]" />
                     </div>
@@ -595,7 +620,7 @@ export default function EventDetailsPage() {
                         </div>
                       )}
                     </div>
-                  </div>
+                  </button>
                 </div>
               </div>
               {(userRole === "admin" || userRole === "manager") && (
@@ -1369,6 +1394,247 @@ export default function EventDetailsPage() {
                   {importing ? <Loader2 size={14} className="animate-spin" /> : null}
                   Confirm & Sync Attendees
                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Detail Modal for Logistics Stats */}
+        {selectedMetric && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div 
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity cursor-pointer" 
+              onClick={() => setSelectedMetric(null)}
+            />
+            
+            <div className="bg-white rounded-[2.5rem] shadow-2xl border border-slate-100 max-w-md w-full overflow-hidden relative z-10 transform scale-100 transition-all duration-300">
+              <button 
+                onClick={() => setSelectedMetric(null)}
+                className="absolute top-6 right-6 p-2 rounded-full hover:bg-slate-50 text-slate-400 hover:text-[#0f172a] transition-all"
+              >
+                <X size={18} />
+              </button>
+
+              <div className="p-10 font-outfit">
+                {selectedMetric === "date" && (
+                  <div>
+                    <div className="flex items-center gap-4 mb-8">
+                      <div className="p-4 bg-slate-50 text-[#0f172a] rounded-[1.5rem]">
+                        <Calendar size={32} />
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest block">Details</span>
+                        <h2 className="text-2xl font-black text-[#0f172a] tracking-tight italic font-bricolage leading-none">Event Schedule</h2>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-4">
+                      <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100">
+                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider block mb-1">Start Date & Time</span>
+                        <p className="font-bold text-[#0f172a] text-sm">
+                          {new Date(event.start_date).toLocaleString(undefined, { dateStyle: 'full', timeStyle: 'short' })}
+                        </p>
+                      </div>
+                      {event.duration_days && event.duration_days > 1 && (
+                        <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100">
+                          <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider block mb-1">End Date & Time (Estimated)</span>
+                          <p className="font-bold text-[#0f172a] text-sm">
+                            {(() => {
+                              const start = new Date(event.start_date);
+                              const end = new Date(start);
+                              end.setDate(start.getDate() + (event.duration_days - 1));
+                              return end.toLocaleString(undefined, { dateStyle: 'full', timeStyle: 'short' });
+                            })()}
+                          </p>
+                        </div>
+                      )}
+                      {event.duration_days && (
+                        <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100 flex justify-between items-center">
+                          <div>
+                            <span className="text-[9px] font-black text-slate-400 tracking-wider uppercase block">Duration</span>
+                            <p className="font-bold text-[#0f172a] text-sm">{event.duration_days} Day(s)</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {selectedMetric === "venue" && (
+                  <div>
+                    <div className="flex items-center gap-4 mb-8">
+                      <div className="p-4 bg-slate-50 text-[#0f172a] rounded-[1.5rem]">
+                        <MapPin size={32} />
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest block">Details</span>
+                        <h2 className="text-2xl font-black text-[#0f172a] tracking-tight italic font-bricolage leading-none">Venue Information</h2>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-4">
+                      <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100">
+                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider block mb-1">Location Name</span>
+                        <p className="font-bold text-[#0f172a] text-base leading-snug">{event.location}</p>
+                      </div>
+                      
+                      {event.address && (
+                        <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100">
+                          <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider block mb-1">Street Address</span>
+                          <p className="font-bold text-[#0f172a] text-sm leading-relaxed">{event.address}</p>
+                        </div>
+                      )}
+
+                      <div className="flex gap-3 mt-6">
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(`${event.location} ${event.address || ''}`);
+                            alert("Address copied to clipboard!");
+                          }}
+                          className="flex-1 py-3.5 bg-slate-50 border border-slate-100 text-slate-600 hover:text-[#0f172a] hover:bg-slate-100/50 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all"
+                        >
+                          Copy Address
+                        </button>
+                        <a
+                          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.location + ' ' + (event.address || ''))}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex-1 py-3.5 bg-[#0f172a] hover:bg-black text-white rounded-xl text-[10px] font-black uppercase tracking-wider text-center transition-all"
+                        >
+                          Open in Maps
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {selectedMetric === "enrollment" && (
+                  <div>
+                    <div className="flex items-center gap-4 mb-8">
+                      <div className="p-4 bg-slate-50 text-[#0f172a] rounded-[1.5rem]">
+                        <Users size={32} />
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest block">Details</span>
+                        <h2 className="text-2xl font-black text-[#0f172a] tracking-tight italic font-bricolage leading-none">Enrollment Status</h2>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-6">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100">
+                          <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider block mb-1">Confirmed</span>
+                          <p className="text-2xl font-black text-[#0f172a]">{confirmedCount}</p>
+                        </div>
+                        <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100">
+                          <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider block mb-1">Capacity</span>
+                          <p className="text-2xl font-black text-[#0f172a]">{event.capacity}</p>
+                        </div>
+                      </div>
+
+                      <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100">
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Fill Rate</span>
+                          <span className="text-xs font-bold text-[#0f172a]">
+                            {event.capacity > 0 ? Math.round((confirmedCount / event.capacity) * 100) : 0}%
+                          </span>
+                        </div>
+                        <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+                          <div 
+                            className="bg-yellow-400 h-full rounded-full transition-all duration-500" 
+                            style={{ width: `${event.capacity > 0 ? Math.min(100, Math.round((confirmedCount / event.capacity) * 100)) : 0}%` }}
+                          />
+                        </div>
+                        <span className="text-[9px] text-slate-400 font-bold block mt-3">
+                          {Math.max(0, event.capacity - confirmedCount)} spots remaining
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {selectedMetric === "declined" && (
+                  <div>
+                    <div className="flex items-center gap-4 mb-8">
+                      <div className="p-4 bg-red-50 text-red-500 rounded-[1.5rem]">
+                        <UserX size={32} />
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest block">Details</span>
+                        <h2 className="text-2xl font-black text-red-500 tracking-tight italic font-bricolage leading-none">Declined Invites</h2>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-4">
+                      <div className="bg-red-50/20 p-5 rounded-2xl border border-red-100 flex justify-between items-center">
+                        <div>
+                          <span className="text-[9px] font-black text-red-600/70 uppercase tracking-wider block mb-1">Declined Registrants</span>
+                          <p className="text-3xl font-black text-red-600">{declinedCount}</p>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100">
+                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider block mb-1">Impact Summary</span>
+                        <p className="text-xs font-bold text-[#0f172a] leading-relaxed mt-1">
+                          {declinedCount > 0 
+                            ? `${declinedCount} invitee(s) declined attendance. Their slots are released back to the general capacity pool.`
+                            : "Excellent! Currently, no invitees have declined attendance."
+                          }
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {selectedMetric === "checked_in" && (
+                  <div>
+                    <div className="flex items-center gap-4 mb-8">
+                      <div className="p-4 bg-green-50 text-green-600 rounded-[1.5rem]">
+                        <CheckCircle2 size={32} />
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest block">Details</span>
+                        <h2 className="text-2xl font-black text-green-600 tracking-tight italic font-bricolage leading-none">Check-in Status</h2>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-6">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100">
+                          <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider block mb-1">Checked In</span>
+                          <p className="text-2xl font-black text-green-600">{checkedInCount}</p>
+                        </div>
+                        <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100">
+                          <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider block mb-1">Attendance Rate</span>
+                          <p className="text-2xl font-black text-[#0f172a]">
+                            {confirmedCount > 0 ? Math.round((checkedInCount / confirmedCount) * 100) : 0}%
+                          </p>
+                        </div>
+                      </div>
+
+                      {event.duration_days && event.duration_days > 1 && (
+                        <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100">
+                          <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider block mb-3">Daily Attendance Breakdown</span>
+                          <div className="space-y-2">
+                            {Array.from({ length: event.duration_days }, (_, i) => i + 1).map(d => {
+                              const dailyCount = registrations.filter(r => r.checked_in_days?.includes(d)).length;
+                              const rate = confirmedCount > 0 ? Math.round((dailyCount / confirmedCount) * 100) : 0;
+                              return (
+                                <div key={d} className="flex justify-between items-center text-xs font-bold py-1 border-b border-slate-100 last:border-0">
+                                  <span className="text-[#0f172a]">Day {d}</span>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-slate-400">{rate}%</span>
+                                    <span className="text-green-600 bg-green-50 px-2 py-0.5 rounded-md font-mono">{dailyCount} check-ins</span>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
