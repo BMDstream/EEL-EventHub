@@ -494,9 +494,9 @@ export default function EventDetailsPage() {
         {/* Event Header Card */}
         <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden mb-8">
           <div className="p-10 lg:p-14">
-            <div className="flex flex-col md:flex-row justify-between items-start gap-12">
-              <div className="flex-1">
-                 <div className="flex items-center gap-3 mb-6">
+            <div className="flex flex-col md:flex-row justify-between items-start gap-12 min-w-0">
+              <div className="flex-1 min-w-0 w-full">
+                 <div className="flex flex-wrap items-center gap-3 mb-6">
                     {event.client?.logo_url && (
                       <div className="h-6 w-6 bg-slate-50 border border-slate-100 rounded-lg overflow-hidden flex items-center justify-center">
                         <img src={event.client.logo_url} alt={event.client.name} className="w-full h-full object-cover" />
@@ -507,11 +507,11 @@ export default function EventDetailsPage() {
                     </span>
                     <span className="text-[10px] font-mono text-slate-300">ID: {id}</span>
                  </div>
-                <h1 className={`text-3xl md:text-5xl font-black text-[#0f172a] tracking-tighter italic font-bricolage leading-none ${(userRole === "admin" || userRole === "manager") ? "mb-6" : "mb-10"}`}>{event.title}</h1>
+                <h1 className={`text-3xl sm:text-4xl md:text-5xl font-black text-[#0f172a] tracking-tighter italic font-bricolage leading-[1.1] ${(userRole === "admin" || userRole === "manager") ? "mb-6" : "mb-10"}`}>{event.title}</h1>
                 {(userRole === "admin" || userRole === "manager") && (
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mb-10 bg-slate-50 p-4 rounded-2xl border border-slate-100 group">
-                     <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest ml-1">Public Link:</p>
-                     <code className="text-xs font-bold text-[#0f172a] bg-white px-3 py-1 rounded-lg border border-slate-100 flex-1 truncate">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mb-10 bg-slate-50 p-4 rounded-2xl border border-slate-100 group min-w-0">
+                     <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest ml-1 shrink-0">Public Link:</p>
+                     <code className="text-xs font-bold text-[#0f172a] bg-white px-3 py-1 rounded-lg border border-slate-100 flex-1 min-w-0 truncate">
                        {typeof window !== 'undefined' ? `${window.location.origin}/register/${event.slug}` : `/register/${event.slug}`}
                      </code>
                      <button 
@@ -520,75 +520,75 @@ export default function EventDetailsPage() {
                          navigator.clipboard.writeText(url);
                          alert("Link copied!");
                        }}
-                       className="px-4 py-2 bg-[#0f172a] text-white text-[9px] font-black uppercase tracking-widest rounded-xl hover:bg-black transition-all"
+                       className="px-4 py-2 bg-[#0f172a] text-white text-[9px] font-black uppercase tracking-widest rounded-xl hover:bg-black transition-all shrink-0"
                      >
                        Copy Link
                      </button>
                      <a 
                        href={`/register/${event.slug}`} 
                        target="_blank" 
-                       className="p-2 text-slate-400 hover:text-[#0f172a] transition-all"
+                       className="p-2 text-slate-400 hover:text-[#0f172a] transition-all shrink-0"
                      >
                        <ArrowUpRight size={16} />
                      </a>
                   </div>
                 )}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 bg-slate-50 text-[#0f172a] rounded-2xl">
-                      <Calendar size={22} />
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-y-8 gap-x-4 sm:gap-x-6">
+                  <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                    <div className="p-2.5 sm:p-3 bg-slate-50 text-[#0f172a] rounded-2xl shrink-0">
+                      <Calendar size={20} className="sm:w-[22px] sm:h-[22px]" />
                     </div>
-                    <div>
-                      <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Date</p>
-                      <p className="font-bold text-[#0f172a]">{new Date(event.start_date).toLocaleDateString(undefined, { dateStyle: 'medium' })}</p>
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest truncate">Date</p>
+                      <p className="font-bold text-[#0f172a] text-sm sm:text-base truncate">{new Date(event.start_date).toLocaleDateString(undefined, { dateStyle: 'medium' })}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 bg-slate-50 text-[#0f172a] rounded-2xl">
-                      <MapPin size={22} />
+                  <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                    <div className="p-2.5 sm:p-3 bg-slate-50 text-[#0f172a] rounded-2xl shrink-0">
+                      <MapPin size={20} className="sm:w-[22px] sm:h-[22px]" />
                     </div>
-                    <div>
-                      <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Venue</p>
-                      <p className="font-bold text-[#0f172a] truncate max-w-[150px]" title={event.location}>{event.location}</p>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest truncate">Venue</p>
+                      <p className="font-bold text-[#0f172a] text-sm sm:text-base truncate" title={event.location}>{event.location}</p>
                       {event.address && (
-                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest truncate max-w-[150px]" title={event.address}>{event.address}</p>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest truncate" title={event.address}>{event.address}</p>
                       )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 bg-slate-50 text-[#0f172a] rounded-2xl">
-                      <Users size={22} />
+                  <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                    <div className="p-2.5 sm:p-3 bg-slate-50 text-[#0f172a] rounded-2xl shrink-0">
+                      <Users size={20} className="sm:w-[22px] sm:h-[22px]" />
                     </div>
-                    <div>
-                      <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Enrollment</p>
-                      <p className="font-bold text-[#0f172a]">{confirmedCount} / {event.capacity}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 bg-red-50 text-red-500 rounded-2xl">
-                      <UserX size={22} />
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Declined</p>
-                      <p className="font-bold text-red-500">{declinedCount}</p>
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest truncate">Enrollment</p>
+                      <p className="font-bold text-[#0f172a] text-sm sm:text-base truncate">{confirmedCount} / {event.capacity}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 bg-green-50 text-green-600 rounded-2xl">
-                      <CheckCircle2 size={22} />
+                  <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                    <div className="p-2.5 sm:p-3 bg-red-50 text-red-500 rounded-2xl shrink-0">
+                      <UserX size={20} className="sm:w-[22px] sm:h-[22px]" />
                     </div>
-                    <div>
-                      <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Checked In</p>
-                      <div className="flex items-baseline gap-2">
-                        <p className="font-bold text-green-600">{checkedInCount}</p>
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest truncate">Declined</p>
+                      <p className="font-bold text-red-500 text-sm sm:text-base truncate">{declinedCount}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 sm:gap-4 min-w-0 col-span-2 sm:col-span-1 md:col-span-2 lg:col-span-1 xl:col-span-1">
+                    <div className="p-2.5 sm:p-3 bg-green-50 text-green-600 rounded-2xl shrink-0">
+                      <CheckCircle2 size={20} className="sm:w-[22px] sm:h-[22px]" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest truncate">Checked In</p>
+                      <div className="flex items-baseline gap-1.5 flex-wrap min-w-0">
+                        <p className="font-bold text-green-600 text-sm sm:text-base truncate">{checkedInCount}</p>
                         {event.duration_days && event.duration_days > 1 && (
-                          <span className="text-[9px] text-slate-400 font-bold uppercase">(Unique Guests)</span>
+                          <span className="text-[9px] text-slate-400 font-bold uppercase truncate">(Unique)</span>
                         )}
                       </div>
                       {event.duration_days && event.duration_days > 1 && (
                         <div className="mt-1.5 flex flex-wrap gap-1">
                           {Array.from({ length: event.duration_days }, (_, i) => i + 1).map(d => (
-                            <span key={d} className="px-2 py-0.5 bg-green-50 text-green-700 text-[9px] font-bold rounded border border-green-200/50">
+                            <span key={d} className="px-1.5 py-0.5 bg-green-50 text-green-700 text-[8px] font-bold rounded border border-green-200/50 truncate shrink-0">
                               Day {d}: {registrations.filter(r => r.checked_in_days?.includes(d)).length}
                             </span>
                           ))}
