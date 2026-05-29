@@ -533,14 +533,14 @@ export default function EventDetailsPage() {
                      </a>
                   </div>
                 )}
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-y-8 gap-x-4 sm:gap-x-6">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-5 gap-y-8 gap-x-4 sm:gap-x-6">
                   <div className="flex items-center gap-3 sm:gap-4 min-w-0">
                     <div className="p-2.5 sm:p-3 bg-slate-50 text-[#0f172a] rounded-2xl shrink-0">
                       <Calendar size={20} className="sm:w-[22px] sm:h-[22px]" />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest truncate">Date</p>
-                      <p className="font-bold text-[#0f172a] text-sm sm:text-base truncate">{new Date(event.start_date).toLocaleDateString(undefined, { dateStyle: 'medium' })}</p>
+                      <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest whitespace-nowrap">Date</p>
+                      <p className="font-bold text-[#0f172a] text-sm sm:text-base whitespace-nowrap">{new Date(event.start_date).toLocaleDateString(undefined, { dateStyle: 'medium' })}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3 sm:gap-4 min-w-0">
@@ -548,7 +548,7 @@ export default function EventDetailsPage() {
                       <MapPin size={20} className="sm:w-[22px] sm:h-[22px]" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest truncate">Venue</p>
+                      <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest whitespace-nowrap">Venue</p>
                       <p className="font-bold text-[#0f172a] text-sm sm:text-base truncate" title={event.location}>{event.location}</p>
                       {event.address && (
                         <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest truncate" title={event.address}>{event.address}</p>
@@ -560,8 +560,8 @@ export default function EventDetailsPage() {
                       <Users size={20} className="sm:w-[22px] sm:h-[22px]" />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest truncate">Enrollment</p>
-                      <p className="font-bold text-[#0f172a] text-sm sm:text-base truncate">{confirmedCount} / {event.capacity}</p>
+                      <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest whitespace-nowrap">Enrollment</p>
+                      <p className="font-bold text-[#0f172a] text-sm sm:text-base whitespace-nowrap">{confirmedCount} / {event.capacity}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3 sm:gap-4 min-w-0">
@@ -569,26 +569,26 @@ export default function EventDetailsPage() {
                       <UserX size={20} className="sm:w-[22px] sm:h-[22px]" />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest truncate">Declined</p>
-                      <p className="font-bold text-red-500 text-sm sm:text-base truncate">{declinedCount}</p>
+                      <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest whitespace-nowrap">Declined</p>
+                      <p className="font-bold text-red-500 text-sm sm:text-base whitespace-nowrap">{declinedCount}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3 sm:gap-4 min-w-0 col-span-2 sm:col-span-1 md:col-span-2 lg:col-span-1 xl:col-span-1">
+                  <div className="flex items-center gap-3 sm:gap-4 min-w-0 col-span-2 sm:col-span-1 md:col-span-2 lg:col-span-1 xl:col-span-1 2xl:col-span-1">
                     <div className="p-2.5 sm:p-3 bg-green-50 text-green-600 rounded-2xl shrink-0">
                       <CheckCircle2 size={20} className="sm:w-[22px] sm:h-[22px]" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest truncate">Checked In</p>
+                      <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest whitespace-nowrap">Checked In</p>
                       <div className="flex items-baseline gap-1.5 flex-wrap min-w-0">
-                        <p className="font-bold text-green-600 text-sm sm:text-base truncate">{checkedInCount}</p>
+                        <p className="font-bold text-green-600 text-sm sm:text-base whitespace-nowrap">{checkedInCount}</p>
                         {event.duration_days && event.duration_days > 1 && (
-                          <span className="text-[9px] text-slate-400 font-bold uppercase truncate">(Unique)</span>
+                          <span className="text-[9px] text-slate-400 font-bold uppercase whitespace-nowrap">(Unique)</span>
                         )}
                       </div>
                       {event.duration_days && event.duration_days > 1 && (
                         <div className="mt-1.5 flex flex-wrap gap-1">
                           {Array.from({ length: event.duration_days }, (_, i) => i + 1).map(d => (
-                            <span key={d} className="px-1.5 py-0.5 bg-green-50 text-green-700 text-[8px] font-bold rounded border border-green-200/50 truncate shrink-0">
+                            <span key={d} className="px-1.5 py-0.5 bg-green-50 text-green-700 text-[8px] font-bold rounded border border-green-200/50 shrink-0">
                               Day {d}: {registrations.filter(r => r.checked_in_days?.includes(d)).length}
                             </span>
                           ))}
