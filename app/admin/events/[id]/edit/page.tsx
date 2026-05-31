@@ -472,6 +472,8 @@ export default function EditEventPage() {
                   <option value="neon_horizon">Neon Horizon (Synthwave & Neon Glow)</option>
                   <option value="forest_zen">Forest Zen (Deep Emerald & Sage Stacked)</option>
                   <option value="aurora_glow">Aurora Glow (Dynamic Gradient & Glassmorphism)</option>
+                  <option value="crimson_sunset">Crimson Sunset (Burgundy & Warm Coral)</option>
+                  <option value="cyberpunk_terminal">Cyberpunk Terminal (Matrix Green & Scanlines)</option>
                 </select>
               </div>
             </div>

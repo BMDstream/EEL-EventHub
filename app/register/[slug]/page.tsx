@@ -604,6 +604,116 @@ export default function PublicRegistrationPage() {
       centeredCard: "bg-white/5 border border-white/10 rounded-[2rem] p-8 sm:p-12 md:p-16 max-w-2xl w-full backdrop-blur-xl shadow-2xl shadow-emerald-500/5 text-white relative z-10 my-12",
       headerBlock: "",
       bodyBlock: "",
+    },
+    crimson_sunset: {
+      wrapper: "min-h-screen bg-[linear-gradient(to_bottom_right,_var(--tw-gradient-stops))] from-[#3a0d1e] via-[#6d1a36] to-[#b83b5e] text-white font-sans animate-in fade-in duration-500",
+      leftPanel: "",
+      leftOverlay: bannerUrl 
+        ? "absolute inset-0 z-0 overflow-hidden"
+        : "absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(240,138,93,0.15),transparent_60%)] pointer-events-none z-0",
+      leftBgImage: bannerUrl ? (
+        <div className="absolute inset-0 z-0 overflow-hidden">
+          {bannerSize === "contain" && (
+            <div 
+              className="absolute inset-0 scale-110 blur-2xl opacity-60 bg-cover bg-center" 
+              style={{ backgroundImage: `url(${bannerUrl})` }}
+            />
+          )}
+          <div 
+            className="absolute inset-0" 
+            style={{ 
+              backgroundImage: `url(${bannerUrl})`,
+              backgroundSize: bannerSize || "cover",
+              backgroundPosition: bannerPosition || "center",
+              backgroundRepeat: "no-repeat"
+            }}
+          />
+          <div className="absolute inset-0 bg-[#3a0d1e]/60"></div>
+        </div>
+      ) : null,
+      rightPanel: "",
+      title: "text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-rose-100 to-amber-300 leading-tight",
+      heading: "text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-amber-200 to-rose-200 mb-4 tracking-tight uppercase",
+      subHeading: "text-rose-200/50 text-sm font-medium leading-relaxed font-sans",
+      label: "text-[10px] font-bold uppercase tracking-[0.2em] text-rose-200/70 ml-1 block",
+      input: "w-full px-6 py-4 rounded-xl bg-black/25 border border-white/10 focus:border-[#f08a5d] focus:bg-black/35 outline-none transition-all font-medium text-white placeholder-slate-500 shadow-inner",
+      select: "w-full px-6 py-4 rounded-xl bg-black/25 border border-white/10 focus:border-[#f08a5d] focus:bg-black/35 outline-none transition-all font-medium text-white appearance-none cursor-pointer shadow-inner",
+      checkbox: "flex items-center gap-4 cursor-pointer group p-4 bg-black/25 rounded-xl border border-white/10 hover:border-[#f08a5d]/50 transition-all shadow-inner",
+      checkboxText: "text-xs font-medium text-rose-200/50 group-hover:text-white",
+      card: "bg-black/25 p-4 rounded-xl border border-white/10 backdrop-blur-sm",
+      badge: "inline-flex items-center gap-3 px-4 py-2 bg-[#f08a5d]/10 rounded-full border border-[#f08a5d]/20 backdrop-blur-md",
+      badgeText: "text-[9px] font-bold uppercase tracking-[0.2em] text-[#f08a5d]",
+      rsvpBorder: "py-5 border-y border-white/10 space-y-4",
+      divider: "border-t border-white/10",
+      btnSubmit: "w-full bg-[#f08a5d] hover:bg-[#f08a5d]/90 disabled:bg-zinc-800 text-black font-bold py-5 rounded-xl shadow-lg shadow-[#f08a5d]/10 transition-all flex items-center justify-center gap-4 uppercase tracking-[0.25em] text-xs font-black",
+      btnAttending: (active: boolean) => `px-6 py-4 rounded-xl font-bold transition-all border-2 ${active ? 'border-[#f08a5d] bg-[#f08a5d]/20 text-white shadow-inner' : 'border-white/10 bg-transparent text-rose-200/50 hover:border-white/20'}`,
+      btnNotAttending: (active: boolean) => `px-6 py-4 rounded-xl font-bold transition-all border-2 ${active ? 'border-red-500/80 bg-red-500/20 text-white' : 'border-white/10 bg-transparent text-rose-200/50 hover:border-white/20'}`,
+      loader: "animate-spin text-[#f08a5d]",
+      loadingBg: "min-h-screen flex items-center justify-center bg-[#3a0d1e]",
+      errorBg: "min-h-screen flex flex-col items-center justify-center bg-[#3a0d1e] p-6",
+      successBg: "min-h-screen flex items-center justify-center bg-[#3a0d1e] p-6",
+      successCard: "bg-black/35 border border-white/10 rounded-[2rem] p-12 max-w-xl w-full text-center relative overflow-hidden text-white backdrop-blur-xl",
+      successQR: "bg-black/25 border border-white/10 rounded-xl p-5 mb-6 shadow-sm",
+      textMain: "text-white",
+      textMuted: "text-rose-200/50",
+      centeredCard: "",
+      headerBlock: "bg-[#3a0d1e] text-white p-8 sm:p-12 md:p-16 border-b-4 border-[#6d1a36] relative overflow-hidden",
+      bodyBlock: "flex-1 py-16 px-6 max-w-xl mx-auto w-full",
+    },
+    cyberpunk_terminal: {
+      wrapper: "min-h-screen bg-black text-[#39ff14] font-mono animate-in fade-in duration-500",
+      leftPanel: "bg-black p-8 sm:p-12 lg:p-16 xl:p-24 flex flex-col justify-between text-[#39ff14] relative overflow-hidden min-h-[50vh] lg:min-screen border-r-2 border-[#39ff14]/30",
+      leftOverlay: bannerUrl 
+        ? "absolute inset-0 z-0 overflow-hidden"
+        : "absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[size:100%_4px,6px_100%] pointer-events-none z-0",
+      leftBgImage: bannerUrl ? (
+        <div className="absolute inset-0 z-0 overflow-hidden">
+          {bannerSize === "contain" && (
+            <div 
+              className="absolute inset-0 scale-110 blur-2xl opacity-60 bg-cover bg-center" 
+              style={{ backgroundImage: `url(${bannerUrl})` }}
+            />
+          )}
+          <div 
+            className="absolute inset-0" 
+            style={{ 
+              backgroundImage: `url(${bannerUrl})`,
+              backgroundSize: bannerSize || "cover",
+              backgroundPosition: bannerPosition || "center",
+              backgroundRepeat: "no-repeat"
+            }}
+          />
+          <div className="absolute inset-0 bg-black/80"></div>
+        </div>
+      ) : null,
+      rightPanel: "p-12 lg:p-24 flex flex-col justify-center bg-black relative border-l-2 border-[#39ff14]/20",
+      title: "text-3xl sm:text-4xl md:text-5xl font-black mb-6 leading-tight tracking-widest uppercase italic text-transparent bg-clip-text bg-gradient-to-r from-[#39ff14] via-[#20c20e] to-[#128a07] drop-shadow-[0_2px_10px_rgba(57,255,20,0.3)] relative z-10",
+      heading: "text-4xl font-black text-[#39ff14] mb-6 tracking-widest uppercase border-b-2 border-[#39ff14] pb-4",
+      subHeading: "text-[#39ff14]/60 text-xs font-medium leading-relaxed tracking-wider uppercase",
+      label: "text-[10px] font-black uppercase tracking-[0.25em] text-[#39ff14] ml-1 block",
+      input: "w-full px-6 py-5 rounded-none bg-black border-2 border-[#39ff14]/30 focus:border-[#39ff14] focus:shadow-[0_0_15px_rgba(57,255,20,0.25)] outline-none transition-all font-bold text-[#39ff14] placeholder-[#39ff14]/30",
+      select: "w-full px-6 py-5 rounded-none bg-black border-2 border-[#39ff14]/30 focus:border-[#39ff14] focus:shadow-[0_0_15px_rgba(57,255,20,0.25)] outline-none transition-all font-bold text-[#39ff14] appearance-none cursor-pointer",
+      checkbox: "flex items-center gap-4 cursor-pointer group p-5 bg-black rounded-none border-2 border-[#39ff14]/30 hover:border-[#39ff14] hover:shadow-[0_0_10px_rgba(57,255,20,0.15)] transition-all",
+      checkboxText: "text-xs font-bold text-[#39ff14]/80 group-hover:text-white",
+      card: "bg-black p-5 rounded-none border border-[#39ff14]/30 shadow-[0_0_15px_rgba(57,255,20,0.05)]",
+      badge: "inline-flex items-center gap-4 px-5 py-3 bg-black rounded-none border border-[#39ff14]/30",
+      badgeText: "text-[10px] font-black uppercase tracking-[0.3em] text-[#39ff14]",
+      rsvpBorder: "py-6 border-y border-[#39ff14]/20 space-y-4",
+      divider: "border-t border-[#39ff14]/20",
+      btnSubmit: "w-full bg-[#39ff14] hover:bg-black hover:text-[#39ff14] border-2 border-[#39ff14] disabled:bg-zinc-800 disabled:text-zinc-600 text-black font-black py-6 rounded-none shadow-[0_0_15px_rgba(57,255,20,0.2)] transition-all flex items-center justify-center gap-4 uppercase tracking-[0.3em] text-xs",
+      btnAttending: (active: boolean) => `px-6 py-4 rounded-none font-bold transition-all border-2 ${active ? 'border-[#39ff14] bg-[#39ff14]/10 text-[#39ff14] shadow-[0_0_10px_rgba(57,255,20,0.15)]' : 'border-[#39ff14]/20 bg-transparent text-[#39ff14]/40 hover:border-[#39ff14]/40'}`,
+      btnNotAttending: (active: boolean) => `px-6 py-4 rounded-none font-bold transition-all border-2 ${active ? 'border-red-500 bg-red-500/10 text-red-500 shadow-[0_0_10px_rgba(239,68,68,0.15)]' : 'border-[#39ff14]/20 bg-transparent text-[#39ff14]/40 hover:border-[#39ff14]/40'}`,
+      loader: "animate-spin text-[#39ff14]",
+      loadingBg: "min-h-screen flex items-center justify-center bg-black",
+      errorBg: "min-h-screen flex flex-col items-center justify-center bg-black p-6 border-2 border-[#39ff14]",
+      successBg: "min-h-screen flex items-center justify-center bg-black p-6",
+      successCard: "bg-black rounded-none border-2 border-[#39ff14] shadow-[0_0_30px_rgba(57,255,20,0.2)] p-16 max-w-xl w-full text-center relative overflow-hidden text-[#39ff14]",
+      successQR: "bg-black border border-[#39ff14]/30 rounded-none p-6 mb-8",
+      textMain: "text-[#39ff14]",
+      textMuted: "text-[#39ff14]/60",
+      centeredCard: "",
+      headerBlock: "",
+      bodyBlock: "",
     }
   };
 
@@ -617,7 +727,9 @@ export default function PublicRegistrationPage() {
     midnight_luxury: "centered",
     neon_horizon: "reversed",
     forest_zen: "stacked",
-    aurora_glow: "centered"
+    aurora_glow: "centered",
+    crimson_sunset: "stacked",
+    cyberpunk_terminal: "split"
   } as const;
 
   const layout = themeLayouts[theme as keyof typeof themeLayouts] || "split";
