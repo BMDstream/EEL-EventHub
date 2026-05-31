@@ -468,6 +468,10 @@ export default function EditEventPage() {
                   <option value="minimal_light">Minimal Light (Clean White & Slate)</option>
                   <option value="glassmorphism">Glassmorphism (Frosted Glass Overlay)</option>
                   <option value="brutalist_retro">Brutalist Retro (Bold Typography & Retro Tech)</option>
+                  <option value="midnight_luxury">Midnight Luxury (Deep Royal Blue & Gold)</option>
+                  <option value="neon_horizon">Neon Horizon (Synthwave & Neon Glow)</option>
+                  <option value="forest_zen">Forest Zen (Deep Emerald & Sage Stacked)</option>
+                  <option value="aurora_glow">Aurora Glow (Dynamic Gradient & Glassmorphism)</option>
                 </select>
               </div>
             </div>
