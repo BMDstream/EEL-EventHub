@@ -904,14 +904,11 @@ export default function PublicRegistrationPage() {
           )}
 
           {layout === "centered" && (
-            <div className="min-h-screen flex items-center justify-center p-4 sm:p-8 lg:p-12 relative z-10">
+            <div className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-8 lg:p-12 relative z-10">
               <div className={style.centeredCard}>
                 <div className="mb-8 border-b border-white/10 pb-8">
-                  <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-4 mb-6">
-                    <h1 className={style.title}>{event.title}</h1>
-                    {clientBadge}
-                  </div>
-                  <p className={`text-base mb-8 max-w-xl leading-relaxed ${style.textMuted}`}>{event.description}</p>
+                  <h1 className={style.title}>{event.title}</h1>
+                  <p className={`text-base mb-8 max-w-xl leading-relaxed mt-4 ${style.textMuted}`}>{event.description}</p>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="flex items-center gap-4">
@@ -932,6 +929,9 @@ export default function PublicRegistrationPage() {
                 </div>
                 {registrationForm}
               </div>
+              <div className="mt-8 mb-12 flex justify-center w-full">
+                {clientBadge}
+              </div>
             </div>
           )}
 
@@ -940,7 +940,6 @@ export default function PublicRegistrationPage() {
               <div className={style.headerBlock}>
                 <div className="max-w-5xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-8">
                   <div>
-                    {clientBadge}
                     <h1 className={style.title}>{event.title}</h1>
                     <p className={`text-base max-w-xl leading-relaxed mt-4 ${style.textMuted}`}>{event.description}</p>
                   </div>
@@ -965,6 +964,9 @@ export default function PublicRegistrationPage() {
               </div>
               <div className={style.bodyBlock}>
                 {registrationForm}
+                <div className="mt-12 mb-16 flex justify-center">
+                  {clientBadge}
+                </div>
               </div>
             </div>
           )}
