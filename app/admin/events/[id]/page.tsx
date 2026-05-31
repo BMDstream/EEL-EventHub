@@ -538,30 +538,30 @@ export default function EventDetailsPage() {
                   {/* Date Button */}
                   <button 
                     onClick={() => setSelectedMetric("date")}
-                    className="flex items-center gap-3 sm:gap-4 min-w-0 text-left bg-white border border-slate-100 p-4 rounded-[2rem] transition-all hover:bg-slate-50/50 hover:border-slate-200 hover:shadow-sm active:scale-[0.98] w-full shadow-xs"
+                    className="flex flex-col justify-between gap-4 min-w-0 text-left bg-white border border-slate-100 p-5 rounded-[2rem] transition-all hover:bg-slate-50/50 hover:border-slate-200 hover:shadow-sm active:scale-[0.98] w-full shadow-xs"
                   >
-                    <div className="p-2 sm:p-2.5 bg-slate-50 text-[#0f172a] rounded-xl shrink-0">
-                      <Calendar size={18} className="sm:w-[20px] sm:h-[20px]" />
+                    <div className="p-2.5 bg-slate-50 text-[#0f172a] rounded-2xl shrink-0 self-start">
+                      <Calendar size={20} className="sm:w-[22px] sm:h-[22px]" />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-[9px] font-black text-slate-400 dark:text-slate-300 uppercase tracking-wider whitespace-nowrap">Date</p>
-                      <p className="font-bold text-[#0f172a] text-xs sm:text-sm lg:text-base whitespace-nowrap">{new Date(event.start_date).toLocaleDateString(undefined, { dateStyle: 'medium' })}</p>
+                      <p className="text-[10px] font-black text-slate-400 dark:text-slate-300 uppercase tracking-wider whitespace-nowrap">Date</p>
+                      <p className="font-bold text-[#0f172a] text-sm sm:text-base whitespace-nowrap mt-1">{new Date(event.start_date).toLocaleDateString(undefined, { dateStyle: 'medium' })}</p>
                     </div>
                   </button>
 
                   {/* Venue Button */}
                   <button 
                     onClick={() => setSelectedMetric("venue")}
-                    className="flex items-center gap-3 sm:gap-4 min-w-0 text-left bg-white border border-slate-100 p-4 rounded-[2rem] transition-all hover:bg-slate-50/50 hover:border-slate-200 hover:shadow-sm active:scale-[0.98] w-full shadow-xs"
+                    className="flex flex-col justify-between gap-4 min-w-0 text-left bg-white border border-slate-100 p-5 rounded-[2rem] transition-all hover:bg-slate-50/50 hover:border-slate-200 hover:shadow-sm active:scale-[0.98] w-full shadow-xs"
                   >
-                    <div className="p-2 sm:p-2.5 bg-slate-50 text-[#0f172a] rounded-xl shrink-0">
-                      <MapPin size={18} className="sm:w-[20px] sm:h-[20px]" />
+                    <div className="p-2.5 bg-slate-50 text-[#0f172a] rounded-2xl shrink-0 self-start">
+                      <MapPin size={20} className="sm:w-[22px] sm:h-[22px]" />
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[9px] font-black text-slate-400 dark:text-slate-300 uppercase tracking-wider whitespace-nowrap">Venue</p>
-                      <p className="font-bold text-[#0f172a] text-xs sm:text-sm lg:text-base truncate" title={event.location}>{event.location}</p>
+                    <div className="min-w-0 w-full">
+                      <p className="text-[10px] font-black text-slate-400 dark:text-slate-300 uppercase tracking-wider whitespace-nowrap">Venue</p>
+                      <p className="font-bold text-[#0f172a] text-sm sm:text-base truncate mt-1" title={event.location}>{event.location}</p>
                       {event.address && (
-                        <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider truncate" title={event.address}>{event.address}</p>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider truncate mt-0.5" title={event.address}>{event.address}</p>
                       )}
                     </div>
                   </button>
@@ -569,43 +569,43 @@ export default function EventDetailsPage() {
                   {/* Enrollment Button */}
                   <button 
                     onClick={() => setSelectedMetric("enrollment")}
-                    className="flex items-center gap-3 sm:gap-4 min-w-0 text-left bg-white border border-slate-100 p-4 rounded-[2rem] transition-all hover:bg-slate-50/50 hover:border-slate-200 hover:shadow-sm active:scale-[0.98] w-full shadow-xs"
+                    className="flex flex-col justify-between gap-4 min-w-0 text-left bg-white border border-slate-100 p-5 rounded-[2rem] transition-all hover:bg-slate-50/50 hover:border-slate-200 hover:shadow-sm active:scale-[0.98] w-full shadow-xs"
                   >
-                    <div className="p-2 sm:p-2.5 bg-slate-50 text-[#0f172a] rounded-xl shrink-0">
-                      <Users size={18} className="sm:w-[20px] sm:h-[20px]" />
+                    <div className="p-2.5 bg-slate-50 text-[#0f172a] rounded-2xl shrink-0 self-start">
+                      <Users size={20} className="sm:w-[22px] sm:h-[22px]" />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-[9px] font-black text-slate-400 dark:text-slate-300 uppercase tracking-wider whitespace-nowrap">Enrollment</p>
-                      <p className="font-bold text-[#0f172a] text-xs sm:text-sm lg:text-base whitespace-nowrap">{confirmedCount} / {event.capacity}</p>
+                      <p className="text-[10px] font-black text-slate-400 dark:text-slate-300 uppercase tracking-wider whitespace-nowrap">Enrollment</p>
+                      <p className="font-bold text-[#0f172a] text-sm sm:text-base whitespace-nowrap mt-1">{confirmedCount} / {event.capacity}</p>
                     </div>
                   </button>
 
                   {/* Declined Button */}
                   <button 
                     onClick={() => setSelectedMetric("declined")}
-                    className="flex items-center gap-3 sm:gap-4 min-w-0 text-left bg-white border border-slate-100 p-4 rounded-[2rem] transition-all hover:bg-slate-50/50 hover:border-slate-200 hover:shadow-sm active:scale-[0.98] w-full shadow-xs"
+                    className="flex flex-col justify-between gap-4 min-w-0 text-left bg-white border border-slate-100 p-5 rounded-[2rem] transition-all hover:bg-slate-50/50 hover:border-slate-200 hover:shadow-sm active:scale-[0.98] w-full shadow-xs"
                   >
-                    <div className="p-2 sm:p-2.5 bg-red-50 text-red-500 rounded-xl shrink-0">
-                      <UserX size={18} className="sm:w-[20px] sm:h-[20px]" />
+                    <div className="p-2.5 bg-red-50 text-red-500 rounded-2xl shrink-0 self-start">
+                      <UserX size={20} className="sm:w-[22px] sm:h-[22px]" />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-[9px] font-black text-slate-400 dark:text-slate-300 uppercase tracking-wider whitespace-nowrap">Declined</p>
-                      <p className="font-bold text-red-500 text-xs sm:text-sm lg:text-base whitespace-nowrap">{declinedCount}</p>
+                      <p className="text-[10px] font-black text-slate-400 dark:text-slate-300 uppercase tracking-wider whitespace-nowrap">Declined</p>
+                      <p className="font-bold text-red-500 text-sm sm:text-base whitespace-nowrap mt-1">{declinedCount}</p>
                     </div>
                   </button>
 
                   {/* Checked In Button */}
                   <button 
                     onClick={() => setSelectedMetric("checked_in")}
-                    className="flex items-center gap-3 sm:gap-4 min-w-0 text-left bg-white border border-slate-100 p-4 rounded-[2rem] transition-all hover:bg-slate-50/50 hover:border-slate-200 hover:shadow-sm active:scale-[0.98] w-full col-span-2 sm:col-span-1 md:col-span-2 lg:col-span-1 xl:col-span-1 2xl:col-span-1 shadow-xs"
+                    className="flex flex-col justify-between gap-4 min-w-0 text-left bg-white border border-slate-100 p-5 rounded-[2rem] transition-all hover:bg-slate-50/50 hover:border-slate-200 hover:shadow-sm active:scale-[0.98] w-full col-span-2 sm:col-span-1 md:col-span-2 lg:col-span-1 xl:col-span-1 2xl:col-span-1 shadow-xs"
                   >
-                    <div className="p-2 sm:p-2.5 bg-green-50 text-green-600 rounded-xl shrink-0">
-                      <CheckCircle2 size={18} className="sm:w-[20px] sm:h-[20px]" />
+                    <div className="p-2.5 bg-green-50 text-green-600 rounded-2xl shrink-0 self-start">
+                      <CheckCircle2 size={20} className="sm:w-[22px] sm:h-[22px]" />
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[9px] font-black text-slate-400 dark:text-slate-300 uppercase tracking-wider whitespace-nowrap">Checked In</p>
-                      <div className="flex items-baseline gap-1.5 flex-wrap min-w-0">
-                        <p className="font-bold text-green-600 text-xs sm:text-sm lg:text-base whitespace-nowrap">{checkedInCount}</p>
+                    <div className="min-w-0 w-full">
+                      <p className="text-[10px] font-black text-slate-400 dark:text-slate-300 uppercase tracking-wider whitespace-nowrap">Checked In</p>
+                      <div className="flex items-baseline gap-1.5 flex-wrap min-w-0 mt-1">
+                        <p className="font-bold text-green-600 text-sm sm:text-base whitespace-nowrap">{checkedInCount}</p>
                         {event.duration_days && event.duration_days > 1 && (
                           <span className="text-[8px] text-slate-400 font-bold uppercase whitespace-nowrap">(Unique)</span>
                         )}
