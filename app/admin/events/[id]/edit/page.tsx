@@ -73,6 +73,7 @@ export default function EditEventPage() {
     allowed_domains: "",
     banner_size: "cover",
     banner_position: "center",
+    banner_theme: "cyber_dark",
   });
 
   useEffect(() => {
@@ -127,6 +128,7 @@ export default function EditEventPage() {
           allowed_domains: data.allowed_domains ? data.allowed_domains.join(", ") : "",
           banner_size: data.banner_settings?.size || "cover",
           banner_position: data.banner_settings?.position || "center",
+          banner_theme: data.banner_settings?.theme || "cyber_dark",
         });
         setOriginalBanner(data.banner_url || "");
         setLoading(false);
@@ -142,7 +144,7 @@ export default function EditEventPage() {
     setSaving(true);
 
     try {
-      const { banner_size, banner_position, banner_url, ...submitData } = formData;
+      const { banner_size, banner_position, banner_theme, banner_url, ...submitData } = formData;
       
       const payload: any = {
         ...submitData,
@@ -154,6 +156,7 @@ export default function EditEventPage() {
         banner_settings: {
           size: formData.banner_size,
           position: formData.banner_position,
+          theme: formData.banner_theme,
         }
       };
 
@@ -452,6 +455,21 @@ export default function EditEventPage() {
                   </div>
                 </div>
               )}
+
+              <div className="space-y-3">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Registration Form Design Style</label>
+                <select
+                  name="banner_theme"
+                  value={formData.banner_theme}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 rounded-xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-xs text-slate-700 bg-slate-50/50 cursor-pointer"
+                >
+                  <option value="cyber_dark">Cyber Dark (Premium Black & Gold)</option>
+                  <option value="minimal_light">Minimal Light (Clean White & Slate)</option>
+                  <option value="glassmorphism">Glassmorphism (Frosted Glass Overlay)</option>
+                  <option value="brutalist_retro">Brutalist Retro (Bold Typography & Retro Tech)</option>
+                </select>
+              </div>
             </div>
 
             <div className="space-y-3">
