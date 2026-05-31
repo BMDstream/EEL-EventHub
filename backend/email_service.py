@@ -5,6 +5,7 @@ import base64
 from io import BytesIO
 from typing import List, Dict, Any
 from dotenv import load_dotenv
+from urllib.parse import quote
 
 load_dotenv()
 
@@ -72,10 +73,15 @@ def send_confirmation_email(to_email: str, first_name: str, event_title: str, cl
 
         address_html = ""
         if event_details.get('address'):
+            query_str = f"{event_details.get('location', '')} {event_details.get('address', '')}".strip()
+            maps_url = f"https://www.google.com/maps/search/?api=1&query={quote(query_str)}"
             address_html = f"""
             <div style="margin-top: 20px;">
                 <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin: 0 0 4px 0;">Address</p>
-                <p style="font-size: 16px; font-weight: 700; color: #0f172a; margin: 0;">{event_details.get('address')}</p>
+                <p style="font-size: 16px; font-weight: 700; color: #0f172a; margin: 0 0 10px 0;">{event_details.get('address')}</p>
+                <a href="{maps_url}" target="_blank" style="display: inline-block; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.05em; color: #ffffff; background-color: {primary_color}; text-decoration: none; padding: 10px 20px; border-radius: 12px; margin-top: 4px;">
+                    🗺️ Open in Google Maps
+                </a>
             </div>
             """
 
