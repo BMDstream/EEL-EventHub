@@ -166,7 +166,7 @@ export default function PublicRegistrationPage() {
 
   const themeStyles = {
     cyber_dark: {
-      wrapper: "min-h-screen bg-black text-white animate-in fade-in duration-500",
+      wrapper: "min-h-screen bg-black text-white animate-in fade-in duration-500 relative",
       leftPanel: "bg-black p-8 sm:p-12 lg:p-16 xl:p-24 flex flex-col justify-between text-white relative overflow-hidden min-h-[50vh] lg:min-screen",
       leftOverlay: bannerUrl 
         ? "absolute inset-0 z-0 overflow-hidden"
@@ -191,7 +191,7 @@ export default function PublicRegistrationPage() {
           <div className="absolute inset-0 bg-black/40"></div>
         </div>
       ) : null,
-      rightPanel: "p-12 lg:p-24 flex flex-col justify-center bg-zinc-900/30 border-l border-white/5 relative",
+      rightPanel: "p-12 lg:p-24 flex flex-col justify-center bg-zinc-900/40 backdrop-blur-md border-l border-white/5 relative",
       title: "text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-black mb-6 lg:mb-10 leading-[0.9] tracking-tighter font-bricolage italic break-words text-white relative z-10",
       heading: "text-5xl font-black text-white mb-6 tracking-tight font-bricolage italic",
       subHeading: "text-zinc-500 text-lg font-medium leading-relaxed",
@@ -221,7 +221,7 @@ export default function PublicRegistrationPage() {
       bodyBlock: "",
     },
     minimal_light: {
-      wrapper: "min-h-screen bg-slate-50 text-slate-800 animate-in fade-in duration-500",
+      wrapper: "min-h-screen bg-slate-50 text-slate-800 animate-in fade-in duration-500 relative",
       leftPanel: "p-8 sm:p-12 lg:p-16 xl:p-24 flex flex-col justify-between text-slate-900 relative overflow-hidden min-h-[50vh] lg:min-screen border-r border-slate-200/60 bg-white",
       leftOverlay: bannerUrl 
         ? "absolute inset-0 z-0 overflow-hidden"
@@ -246,7 +246,7 @@ export default function PublicRegistrationPage() {
           <div className="absolute inset-0 bg-white/70 backdrop-blur-[1px]"></div>
         </div>
       ) : null,
-      rightPanel: "p-12 lg:p-24 flex flex-col justify-center bg-slate-50 relative",
+      rightPanel: "p-12 lg:p-24 flex flex-col justify-center bg-white/70 backdrop-blur-md border-l border-slate-200/40 relative",
       title: "text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-black mb-6 lg:mb-10 leading-[0.9] tracking-tighter font-bricolage italic break-words text-slate-900 relative z-10",
       heading: "text-5xl font-black text-slate-900 mb-6 tracking-tight font-bricolage italic",
       subHeading: "text-slate-500 text-lg font-medium leading-relaxed",
@@ -276,7 +276,7 @@ export default function PublicRegistrationPage() {
       bodyBlock: "",
     },
     glassmorphism: {
-      wrapper: "min-h-screen bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-slate-900 via-indigo-950 to-slate-950 text-white animate-in fade-in duration-500",
+      wrapper: "min-h-screen bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-slate-900 via-indigo-950 to-slate-950 text-white animate-in fade-in duration-500 relative",
       leftPanel: "p-8 sm:p-12 lg:p-16 xl:p-24 flex flex-col justify-between text-white relative overflow-hidden min-h-[50vh] lg:min-screen",
       leftOverlay: bannerUrl 
         ? "absolute inset-0 z-0 overflow-hidden"
@@ -331,7 +331,7 @@ export default function PublicRegistrationPage() {
       bodyBlock: "",
     },
     brutalist_retro: {
-      wrapper: "min-h-screen bg-[#f8f4eb] text-black font-mono animate-in fade-in duration-500",
+      wrapper: "min-h-screen bg-[#f8f4eb] text-black font-mono animate-in fade-in duration-500 relative",
       leftPanel: "p-8 sm:p-12 lg:p-16 xl:p-24 flex flex-col justify-between text-white relative overflow-hidden min-h-[50vh] lg:min-screen border-r-[8px] border-black bg-[#1e1e1e]",
       leftOverlay: bannerUrl 
         ? "absolute inset-0 z-0 overflow-hidden"
@@ -356,7 +356,7 @@ export default function PublicRegistrationPage() {
           <div className="absolute inset-0 bg-black/60"></div>
         </div>
       ) : null,
-      rightPanel: "p-12 lg:p-24 flex flex-col justify-center bg-[#fffbf0] relative border-l-[4px] border-black",
+      rightPanel: "p-12 lg:p-24 flex flex-col justify-center bg-[#fffbf0]/80 backdrop-blur-md relative border-l-[4px] border-black",
       title: "text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-black mb-6 lg:mb-10 leading-[0.9] tracking-tighter font-bricolage italic break-words text-[#facc15] uppercase relative z-10",
       heading: "text-5xl font-black text-black mb-6 tracking-tight font-bricolage italic uppercase border-b-4 border-black pb-4",
       subHeading: "text-black font-mono text-base font-bold",
@@ -466,7 +466,7 @@ export default function PublicRegistrationPage() {
           <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-[2px]"></div>
         </div>
       ) : null,
-      rightPanel: "p-12 lg:p-24 flex flex-col justify-center bg-[#070114] border-r border-[#00ffff]/10 relative",
+      rightPanel: "p-12 lg:p-24 flex flex-col justify-center bg-[#070114]/70 backdrop-blur-md border-r border-[#00ffff]/10 relative",
       title: "text-4xl sm:text-5xl md:text-6xl font-black mb-6 leading-[0.9] tracking-tighter uppercase italic text-transparent bg-clip-text bg-gradient-to-r from-[#ff007f] via-[#b900ff] to-[#00ffff] drop-shadow-[0_2px_10px_rgba(255,0,127,0.4)] relative z-10",
       heading: "text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#ff007f] to-[#00ffff] mb-6 tracking-tight uppercase italic",
       subHeading: "text-[#b900ff] text-base font-semibold tracking-wide uppercase",
@@ -496,7 +496,7 @@ export default function PublicRegistrationPage() {
       bodyBlock: "",
     },
     forest_zen: {
-      wrapper: "min-h-screen bg-[#fcfbf9] text-[#1c2e24] font-sans animate-in fade-in duration-500",
+      wrapper: "min-h-screen bg-[#fcfbf9] text-[#1c2e24] font-sans animate-in fade-in duration-500 relative",
       leftPanel: "",
       leftOverlay: bannerUrl 
         ? "absolute inset-0 z-0 overflow-hidden"
@@ -547,7 +547,7 @@ export default function PublicRegistrationPage() {
       textMain: "text-[#1c2e24]",
       textMuted: "text-[#5c7a67]",
       centeredCard: "",
-      headerBlock: "bg-[#1c2e24] text-[#fcfbf9] p-8 sm:p-12 md:p-16 border-b-4 border-[#2d4a39] relative overflow-hidden",
+      headerBlock: "bg-[#1c2e24]/85 backdrop-blur-md text-[#fcfbf9] p-8 sm:p-12 md:p-16 border-b-4 border-[#2d4a39] relative overflow-hidden",
       bodyBlock: "flex-1 py-16 px-6 max-w-xl mx-auto w-full",
     },
     aurora_glow: {
@@ -606,7 +606,7 @@ export default function PublicRegistrationPage() {
       bodyBlock: "",
     },
     crimson_sunset: {
-      wrapper: "min-h-screen bg-[linear-gradient(to_bottom_right,_var(--tw-gradient-stops))] from-[#3a0d1e] via-[#6d1a36] to-[#b83b5e] text-white font-sans animate-in fade-in duration-500",
+      wrapper: "min-h-screen bg-[linear-gradient(to_bottom_right,_var(--tw-gradient-stops))] from-[#3a0d1e] via-[#6d1a36] to-[#b83b5e] text-white font-sans animate-in fade-in duration-500 relative",
       leftPanel: "",
       leftOverlay: bannerUrl 
         ? "absolute inset-0 z-0 overflow-hidden"
@@ -657,11 +657,11 @@ export default function PublicRegistrationPage() {
       textMain: "text-white",
       textMuted: "text-rose-200/50",
       centeredCard: "",
-      headerBlock: "bg-[#3a0d1e] text-white p-8 sm:p-12 md:p-16 border-b-4 border-[#6d1a36] relative overflow-hidden",
+      headerBlock: "bg-[#3a0d1e]/85 backdrop-blur-md text-white p-8 sm:p-12 md:p-16 border-b-4 border-[#6d1a36] relative overflow-hidden",
       bodyBlock: "flex-1 py-16 px-6 max-w-xl mx-auto w-full",
     },
     cyberpunk_terminal: {
-      wrapper: "min-h-screen bg-black text-[#39ff14] font-mono animate-in fade-in duration-500",
+      wrapper: "min-h-screen bg-black text-[#39ff14] font-mono animate-in fade-in duration-500 relative",
       leftPanel: "bg-black p-8 sm:p-12 lg:p-16 xl:p-24 flex flex-col justify-between text-[#39ff14] relative overflow-hidden min-h-[50vh] lg:min-screen border-r-2 border-[#39ff14]/30",
       leftOverlay: bannerUrl 
         ? "absolute inset-0 z-0 overflow-hidden"
@@ -686,7 +686,7 @@ export default function PublicRegistrationPage() {
           <div className="absolute inset-0 bg-black/80"></div>
         </div>
       ) : null,
-      rightPanel: "p-12 lg:p-24 flex flex-col justify-center bg-black relative border-l-2 border-[#39ff14]/20",
+      rightPanel: "p-12 lg:p-24 flex flex-col justify-center bg-black/70 backdrop-blur-md relative border-l-2 border-[#39ff14]/20",
       title: "text-3xl sm:text-4xl md:text-5xl font-black mb-6 leading-tight tracking-widest uppercase italic text-transparent bg-clip-text bg-gradient-to-r from-[#39ff14] via-[#20c20e] to-[#128a07] drop-shadow-[0_2px_10px_rgba(57,255,20,0.3)] relative z-10",
       heading: "text-4xl font-black text-[#39ff14] mb-6 tracking-widest uppercase border-b-2 border-[#39ff14] pb-4",
       subHeading: "text-[#39ff14]/60 text-xs font-medium leading-relaxed tracking-wider uppercase",
