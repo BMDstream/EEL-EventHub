@@ -29,10 +29,10 @@ def generate_qr_base64(data: str):
     img.save(buffered, format="PNG")
     return base64.b64encode(buffered.getvalue()).decode()
 
-def send_confirmation_email(to_email: str, first_name: str, event_title: str, clearance_id: str, event_details: Dict[str, Any] = None, qr_code_url: str = None, config: Dict[str, Any] = None):
+def send_confirmation_email(to_email: str, first_name: str, event_title: str, clearance_id: str, event_details: Dict[str, Any] = None, qr_code_url: str = None, config: Dict[str, Any] = None, is_attending: bool = True):
     """Sends a registration confirmation email with an embedded QR code and event details."""
     if not resend.api_key or MOCK_EMAIL_SERVICE:
-        print(f"MOCK CONFIRMATION to {to_email}: Welcome to {event_title}! Your ID is {clearance_id}")
+        print(f"MOCK CONFIRMATION to {to_email} (attending={is_attending}): Welcome to {event_title}! Your ID is {clearance_id}")
         return {"id": "mock-confirmation-id"}
 
     if not config:
@@ -40,22 +40,36 @@ def send_confirmation_email(to_email: str, first_name: str, event_title: str, cl
             "primary_color": "#0f172a",
             "accent_color": "#94a3b8",
             "heading_text": "Access Granted.",
-            "body_text": "Your orchestration for **{event_title}** has been authorized. Below are your secure credentials for terminal verification.",
+            "body_text": "Your registration for **{event_title}** has been confirmed. Below are your secure credentials for terminal verification.",
             "footer_text": "Automated Event Management System\nSecurity Tier: Level 4 Authorized"
         }
 
-    qr_base64 = generate_qr_base64(clearance_id)
-    
-    # Process body text
-    body_html = config.get("body_text", "").replace("**{event_title}**", f"<strong>{event_title}</strong>").replace("{event_title}", event_title).replace("\n", "<br>")
-    footer_html = config.get("footer_text", "").replace("\n", "<br>")
+    # Process branding colors and headers
     primary_color = config.get("primary_color", "#0f172a")
     accent_color = config.get("accent_color", "#94a3b8")
-    heading_text = config.get("heading_text", "Access Granted.")
+    footer_html = config.get("footer_text", "").replace("\n", "<br>")
+    logo_url = config.get("logo_url")
 
-    # Format event details if provided
+    # Set badge, heading, and body texts depending on RSVP status
+    badge_text = "Official Dispatch" if is_attending else "Response Recorded"
+    
+    if is_attending:
+        heading_text = config.get("heading_text", "Access Granted.")
+        body_text_raw = config.get("body_text", "")
+        if not body_text_raw:
+            body_text_raw = "Your registration for **{event_title}** has been confirmed. Below are your secure credentials for terminal verification."
+    else:
+        heading_text = config.get("decline_heading_text", "Response Recorded.")
+        body_text_raw = config.get(
+            "decline_body_text", 
+            "We have recorded your response that you are unable to attend **{event_title}**. Thank you for letting us know, and we hope to connect with you at future events."
+        )
+
+    body_html = body_text_raw.replace("**{event_title}**", f"<strong>{event_title}</strong>").replace("{event_title}", event_title).replace("\n", "<br>")
+
+    # Format event details if provided (only if they are attending)
     details_html = ""
-    if event_details:
+    if event_details and is_attending:
         from datetime import datetime
         try:
             # Handle both string and datetime objects
@@ -107,16 +121,44 @@ def send_confirmation_email(to_email: str, first_name: str, event_title: str, cl
         </div>
         """
 
+
+
+    qr_block_html = ""
+    warning_block_html = ""
+    if is_attending:
+        qr_base64 = generate_qr_base64(clearance_id)
+        qr_block_html = f"""
+        <div style="background: #f8fafc; padding: 48px; border-radius: 32px; text-align: center; border: 1px solid #f1f5f9; margin-bottom: 40px; position: relative; overflow: hidden;">
+            <img src="data:image/png;base64,{qr_base64}" width="200" height="200" alt="Clearance QR Code" style="margin-bottom: 32px; border-radius: 20px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.15);" />
+            <p style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.3em; color: #64748b; margin-bottom: 16px;">Unique Clearance ID</p>
+            <div style="display: inline-block; background: #ffffff; padding: 16px 32px; border-radius: 20px; border: 2px solid {primary_color};">
+                <code style="font-size: 32px; font-weight: 900; color: {primary_color}; letter-spacing: 0.25em;">{clearance_id}</code>
+            </div>
+        </div>
+        """
+        warning_block_html = f"""
+        <div style="background: #fffbeb; padding: 28px; border-radius: 24px; border: 1px solid #fef3c7; margin-bottom: 48px; text-align: center;">
+            <p style="color: #b45309; font-size: 14px; font-weight: 700; margin: 0; line-height: 1.5; text-transform: uppercase; letter-spacing: 0.05em;">
+                Present this digital clearance at the registration desk.
+            </p>
+        </div>
+        """
+
+    # Format header details
+    heading_parts = heading_text.split('.')
+    heading_title = heading_parts[0]
+    heading_subtitle = heading_parts[1] if len(heading_parts) > 1 else ''
+
     html_content = f"""
     <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 40px auto; padding: 40px; border: 1px solid #f1f5f9; border-radius: 40px; background-color: #ffffff; color: {primary_color}; box-shadow: 0 20px 50px rgba(0,0,0,0.05);">
         <div style="text-align: center; margin-bottom: 48px;">
             <div style="display: inline-block; background: {primary_color}; padding: 12px 28px; border-radius: 16px;">
-                <span style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.4em; color: #ffffff;">Official Dispatch</span>
+                <span style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.4em; color: #ffffff;">{badge_text}</span>
             </div>
         </div>
 
         <h2 style="font-size: 38px; font-weight: 900; color: {primary_color}; margin-bottom: 28px; text-transform: uppercase; font-style: italic; letter-spacing: -0.04em; line-height: 1;">
-            {heading_text.split('.')[0]} <span style="color: {accent_color};">{heading_text.split('.')[1] if '.' in heading_text else ''}</span>
+            {heading_title} <span style="color: {accent_color};">{heading_subtitle}</span>
         </h2>
         
         <p style="font-size: 17px; line-height: 1.7; margin-bottom: 40px; color: #475569;">
@@ -126,20 +168,9 @@ def send_confirmation_email(to_email: str, first_name: str, event_title: str, cl
         
         {details_html}
 
-        <div style="background: #f8fafc; padding: 48px; border-radius: 32px; text-align: center; border: 1px solid #f1f5f9; margin-bottom: 40px; position: relative; overflow: hidden;">
-            <div style="position: absolute; top: -10px; right: -10px; font-size: 120px; font-weight: 900; color: #000; opacity: 0.02; font-style: italic;">BMD</div>
-            <img src="data:image/png;base64,{qr_base64}" width="200" height="200" alt="Clearance QR Code" style="margin-bottom: 32px; border-radius: 20px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.15);" />
-            <p style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.3em; color: #64748b; margin-bottom: 16px;">Unique Clearance ID</p>
-            <div style="display: inline-block; background: #ffffff; padding: 16px 32px; border-radius: 20px; border: 2px solid {primary_color};">
-                <code style="font-size: 32px; font-weight: 900; color: {primary_color}; letter-spacing: 0.25em;">{clearance_id}</code>
-            </div>
-        </div>
+        {qr_block_html}
 
-        <div style="background: #fffbeb; padding: 28px; border-radius: 24px; border: 1px solid #fef3c7; margin-bottom: 48px; text-align: center;">
-            <p style="color: #b45309; font-size: 14px; font-weight: 700; margin: 0; line-height: 1.5; text-transform: uppercase; letter-spacing: 0.05em;">
-                Present this digital clearance at the registration desk.
-            </p>
-        </div>
+        {warning_block_html}
         
         <hr style="border: 0; border-top: 1px solid #f1f5f9; margin-bottom: 40px;" />
         
@@ -160,11 +191,12 @@ def send_confirmation_email(to_email: str, first_name: str, event_title: str, cl
             sender_name = "BMD-EventHub"
             
         from_address = f"{sender_name} <events@eelogistics.co.za>"
+        subject = f"Access Granted: {event_title}" if is_attending else f"RSVP Confirmed: {event_title}"
         
         email_params = {
             "from": from_address,
             "to": to_email,
-            "subject": f"Access Granted: {event_title}",
+            "subject": subject,
             "html": html_content,
             "headers": {
                 "X-Entity-Ref-ID": clearance_id

@@ -99,7 +99,7 @@ export default function StaffAssignment({ eventId, clientId }: { eventId: string
           <h2 className="text-3xl font-black text-[#0f172a] font-bricolage italic uppercase tracking-tight">
             Staff <span className="text-slate-300">Assignment</span>
           </h2>
-          <p className="text-slate-500 font-medium">Assign specific staff members to orchestrate and scan this event.</p>
+          <p className="text-slate-500 font-medium">Assign specific staff members to manage and scan this event.</p>
         </div>
         <div>
           <button

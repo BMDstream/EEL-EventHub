@@ -21,7 +21,7 @@ class Client(SQLModel, table=True):
     primary_color: str = "#0f172a"
     accent_color: str = "#94a3b8"
     heading_text: str = "Access Granted."
-    body_text: str = "Your orchestration for **{event_title}** has been authorized. Below are your secure credentials for terminal verification."
+    body_text: str = "Your registration for **{event_title}** has been confirmed. Below are your secure credentials for terminal verification."
     footer_text: str = "Automated Event Management System\nSecurity Tier: Level 4 Authorized"
     created_at: datetime = Field(default_factory=datetime.utcnow)
     
@@ -78,10 +78,20 @@ class User(SQLModel, table=True):
     email: str = Field(unique=True, index=True)
     password: Optional[str] = None
     role: str = "staff" # admin, manager, staff
+    permissions: Optional[List[str]] = Field(default=[], sa_column=Column(JSON))
     is_active: bool = True
     created_at: datetime = Field(default_factory=datetime.utcnow)
     
     clients: List[Client] = Relationship(back_populates="users", link_model=UserClientLink)
+
+class WebhookSubscription(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    url: str = Field(index=True)
+    secret: str
+    event_types: List[str] = Field(default=[], sa_column=Column(JSON))
+    is_active: bool = Field(default=True)
+    client_id: Optional[int] = Field(default=None, foreign_key="client.id")
+    created_at: datetime = Field(default_factory=datetime.utcnow)
 
 class SystemSetting(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)

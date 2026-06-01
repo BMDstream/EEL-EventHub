@@ -11,7 +11,8 @@ import {
   Loader2, 
   CheckCircle2,
   AlertCircle,
-  Lock
+  Lock,
+  Upload
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useSession } from "next-auth/react";
@@ -24,8 +25,9 @@ export default function SettingsPage() {
     primary_color: "#0f172a",
     accent_color: "#94a3b8",
     heading_text: "Access Granted.",
-    body_text: "Your orchestration for **{event_title}** has been authorized. Below are your secure credentials for terminal verification.",
-    footer_text: "Automated Event Management System\nSecurity Tier: Level 4 Authorized"
+    body_text: "Your registration for **{event_title}** has been confirmed. Below are your secure credentials for terminal verification.",
+    footer_text: "Automated Event Management System\nSecurity Tier: Level 4 Authorized",
+    logo_url: ""
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -48,11 +50,18 @@ export default function SettingsPage() {
   useEffect(() => {
     async function fetchSettings() {
       try {
-        const res = await fetch("/api/py/settings/email_config");
+        const res = await fetch("/api/py/settings/email_config", {
+          headers: {
+            "x-user-email": session?.user?.email || ""
+          }
+        });
         if (res.ok) {
           const data = await res.json();
           if (data.value && Object.keys(data.value).length > 0) {
-            setConfig(data.value);
+            setConfig(prev => ({
+              ...prev,
+              ...data.value
+            }));
           }
         }
       } catch (err) {
@@ -61,8 +70,23 @@ export default function SettingsPage() {
         setLoading(false);
       }
     }
-    fetchSettings();
-  }, []);
+    if (session?.user?.email) {
+      fetchSettings();
+    } else if (session === null) {
+      setLoading(false);
+    }
+  }, [session]);
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setConfig(prev => ({ ...prev, logo_url: reader.result as string }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,7 +95,10 @@ export default function SettingsPage() {
     try {
       const res = await fetch("/api/py/settings/email_config", {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "x-user-email": session?.user?.email || ""
+        },
         body: JSON.stringify(config)
       });
       if (res.ok) {
@@ -165,7 +192,7 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              {/* Text Fields */}
+              {/* Text Fields & Logo */}
               <div className="space-y-6">
                 <div className="space-y-3">
                   <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-1 flex items-center gap-2">
@@ -179,6 +206,7 @@ export default function SettingsPage() {
                   />
                   <p className="text-[10px] text-slate-400 italic">Use a period (.) to separate the two colors (e.g. Access.Granted)</p>
                 </div>
+
               </div>
             </div>
 

@@ -160,7 +160,7 @@ export default function ClientViewPage() {
                 <span className="client-text-accent">INSIGHTS.</span>
               </h1>
               <p className="text-zinc-500 font-medium max-w-xl text-lg">
-                Real-time synchronization with the BMD orchestration engine. Providing transparency and operational data for your event.
+                Real-time synchronization with the BMD registration engine. Providing transparency and operational data for your event.
               </p>
             </motion.div>
 

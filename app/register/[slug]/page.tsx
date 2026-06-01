@@ -801,7 +801,7 @@ export default function PublicRegistrationPage() {
         </div>
 
         <div className="space-y-3">
-          <label className={style.label}>Intelligence / Email</label>
+          <label className={style.label}>Email</label>
           <input required type="email" name="email" value={formData.email} onChange={handleChange} placeholder="jane.doe@company.com" className={style.input} />
         </div>
 
@@ -828,7 +828,7 @@ export default function PublicRegistrationPage() {
               onClick={() => setIsAttending(false)}
               className={style.btnNotAttending(!isAttending)}
             >
-              Cannot attend
+              Unable to attend
             </button>
           </div>
         </div>
@@ -960,10 +960,10 @@ export default function PublicRegistrationPage() {
               {statusMessage || (isAttending ? "Access Granted." : "Response Recorded.")}
             </h1>
             <p className={`${style.textMuted} mb-12 font-medium leading-relaxed`}>
-              Your orchestration for <span className={`${style.textMain} font-bold`}>{event.title}</span> is confirmed. 
+              Your registration for <span className={`${style.textMain} font-bold`}>{event.title}</span> is {isAttending ? 'confirmed' : 'submitted'}. 
               {isAttending 
                 ? ` Verification has been dispatched to `
-                : ` We've noted that you cannot attend. Thank you for letting us know. `}
+                : ` We've noted that you are unable to attend. Thank you for letting us know. `}
               {isAttending && <span className={`${theme === "minimal_light" ? "client-text-primary" : "client-text-accent"} font-bold`}>{formData.email}</span>}
             </p>
             {isAttending && (

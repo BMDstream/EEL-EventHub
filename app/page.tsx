@@ -236,7 +236,7 @@ export default function LandingPage() {
             </h1>
             
             <p className="text-base text-zinc-400 max-w-md mb-12 font-medium leading-relaxed">
-              The next-generation logistics center for professional event orchestration. Precision manifest tracking, custom questionnaires, and seamless scanning operations.
+              The next-generation logistics center for professional event registration. Precision manifest tracking, custom questionnaires, and seamless scanning operations.
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4">

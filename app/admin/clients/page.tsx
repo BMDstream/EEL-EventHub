@@ -54,7 +54,7 @@ export default function ClientsPage() {
     primary_color: "#0f172a",
     accent_color: "#94a3b8",
     heading_text: "Access Granted.",
-    body_text: "Your orchestration for **{event_title}** has been authorized. Below are your secure credentials for terminal verification.",
+    body_text: "Your registration for **{event_title}** has been confirmed. Below are your secure credentials for terminal verification.",
     footer_text: "Automated Event Management System\nSecurity Tier: Level 4 Authorized"
   });
 
@@ -105,7 +105,7 @@ export default function ClientsPage() {
       primary_color: "#0f172a",
       accent_color: "#94a3b8",
       heading_text: "Access Granted.",
-      body_text: "Your orchestration for **{event_title}** has been authorized. Below are your secure credentials for terminal verification.",
+      body_text: "Your registration for **{event_title}** has been confirmed. Below are your secure credentials for terminal verification.",
       footer_text: "Automated Event Management System\nSecurity Tier: Level 4 Authorized"
     });
     setModalOpen(true);

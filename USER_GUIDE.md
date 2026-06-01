@@ -68,4 +68,4 @@ Visit the **Command Analytics** page to see your platform's overall performance.
 ---
 
 **BMD Computing**
-*Redefining Event Orchestration.*
+*Redefining Event Registration.*

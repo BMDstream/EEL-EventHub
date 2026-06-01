@@ -345,7 +345,7 @@ export default function UserManagementPage() {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
           <div>
             <h1 className="text-5xl font-black text-[#0f172a] tracking-tighter font-bricolage italic uppercase">TEAM <span className="text-slate-300">MANAGEMENT</span></h1>
-            <p className="text-slate-500 font-medium text-lg">Orchestrate permissions and access levels for Excellence Entertainment Logistics.</p>
+            <p className="text-slate-500 font-medium text-lg">Manage permissions and access levels for Excellence Entertainment Logistics.</p>
           </div>
           <div className="flex flex-wrap gap-4">
             <button 
