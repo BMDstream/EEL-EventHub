@@ -7,6 +7,24 @@ import { ArrowLeft, Save, Loader2, Trash2, Building2, Lock } from "lucide-react"
 import { useSession } from "next-auth/react";
 import AdminLayout from "@/components/AdminLayout";
 
+const THEME_DEFAULTS = {
+  cyber_dark: { primary: "#000000", accent: "#eab308" },
+  minimal_light: { primary: "#0f172a", accent: "#0284c7" },
+  glassmorphism: { primary: "#1e1b4b", accent: "#6366f1" },
+  brutalist_retro: { primary: "#000000", accent: "#facc15" },
+  midnight_luxury: { primary: "#0a1128", accent: "#d4af37" },
+  neon_horizon: { primary: "#000000", accent: "#ff007f" },
+  forest_zen: { primary: "#1c2e24", accent: "#2d4a39" },
+  aurora_glow: { primary: "#070b19", accent: "#14b8a6" },
+  crimson_sunset: { primary: "#3a0d1e", accent: "#f08a5d" },
+  cyberpunk_terminal: { primary: "#000000", accent: "#39ff14" },
+  corporate_mono: { primary: "#334155", accent: "#0f172a" },
+  nordic_alabaster: { primary: "#1c1917", accent: "#78716c" },
+  midnight_executive: { primary: "#0d0e12", accent: "#2563eb" },
+  champagne_lounge: { primary: "#4a3f35", accent: "#c5a059" },
+  logistics_glass: { primary: "#1e293b", accent: "#94a3b8" }
+};
+
 const compressImage = (file: File, maxWidth: number, maxHeight: number, quality: number): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -74,6 +92,8 @@ export default function EditEventPage() {
     banner_size: "cover",
     banner_position: "center",
     banner_theme: "cyber_dark",
+    banner_primary_color: "",
+    banner_accent_color: "",
     registration_active: true,
     registration_start: "",
     registration_end: "",
@@ -134,6 +154,8 @@ export default function EditEventPage() {
           banner_size: data.banner_settings?.size || "cover",
           banner_position: data.banner_settings?.position || "center",
           banner_theme: data.banner_settings?.theme || "cyber_dark",
+          banner_primary_color: data.banner_settings?.primary_color || "",
+          banner_accent_color: data.banner_settings?.accent_color || "",
           registration_active: data.registration_active !== false,
           registration_start: data.registration_start ? data.registration_start.slice(0, 16) : "",
           registration_end: data.registration_end ? data.registration_end.slice(0, 16) : "",
@@ -154,7 +176,7 @@ export default function EditEventPage() {
     setSaving(true);
 
     try {
-      const { banner_size, banner_position, banner_theme, banner_url, ...submitData } = formData;
+      const { banner_size, banner_position, banner_theme, banner_primary_color, banner_accent_color, banner_url, ...submitData } = formData;
       
       const payload: any = {
         ...submitData,
@@ -167,6 +189,8 @@ export default function EditEventPage() {
           size: formData.banner_size,
           position: formData.banner_position,
           theme: formData.banner_theme,
+          primary_color: formData.banner_primary_color || "",
+          accent_color: formData.banner_accent_color || "",
         },
         registration_start: formData.registration_start || null,
         registration_end: formData.registration_end || null,
@@ -233,10 +257,21 @@ export default function EditEventPage() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
     const checked = (e.target as HTMLInputElement).checked;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: type === "checkbox" ? checked : (name === "capacity" || name === "duration_days" ? parseInt(value) : value),
-    }));
+    
+    if (name === "banner_theme") {
+      const defaults = THEME_DEFAULTS[value as keyof typeof THEME_DEFAULTS];
+      setFormData((prev) => ({
+        ...prev,
+        banner_theme: value,
+        banner_primary_color: defaults?.primary || "",
+        banner_accent_color: defaults?.accent || "",
+      }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: type === "checkbox" ? checked : (name === "capacity" || name === "duration_days" ? parseInt(value) : value),
+      }));
+    }
   };
 
   if (loading) {
@@ -486,7 +521,56 @@ export default function EditEventPage() {
                   <option value="aurora_glow">Aurora Glow (Dynamic Gradient & Glassmorphism)</option>
                   <option value="crimson_sunset">Crimson Sunset (Burgundy & Warm Coral)</option>
                   <option value="cyberpunk_terminal">Cyberpunk Terminal (Matrix Green & Scanlines)</option>
+                  <option value="corporate_mono">Corporate Mono (Slate Grey & Pure Minimalist)</option>
+                  <option value="nordic_alabaster">Nordic Alabaster (Off-White & Editorial Serif)</option>
+                  <option value="midnight_executive">Midnight Executive (Deep Charcoal & Electric Blue)</option>
+                  <option value="champagne_lounge">Champagne Lounge (Warm Alabaster & Brushed Gold)</option>
+                  <option value="logistics_glass">Logistics Glass (Translucent Slate & Steel Borders)</option>
                 </select>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 block">Custom Primary Color Override</label>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="color"
+                      name="banner_primary_color"
+                      value={formData.banner_primary_color || "#000000"}
+                      onChange={handleChange}
+                      className="w-10 h-10 rounded-xl border border-slate-200 cursor-pointer p-0 bg-transparent shrink-0"
+                    />
+                    <input
+                      type="text"
+                      name="banner_primary_color"
+                      value={formData.banner_primary_color}
+                      onChange={handleChange}
+                      placeholder="e.g. #0f172a"
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-100 focus:border-[#1e293b] outline-none font-bold text-xs text-slate-700 bg-slate-50/50"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 block">Custom Accent Color Override</label>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="color"
+                      name="banner_accent_color"
+                      value={formData.banner_accent_color || "#000000"}
+                      onChange={handleChange}
+                      className="w-10 h-10 rounded-xl border border-slate-200 cursor-pointer p-0 bg-transparent shrink-0"
+                    />
+                    <input
+                      type="text"
+                      name="banner_accent_color"
+                      value={formData.banner_accent_color}
+                      onChange={handleChange}
+                      placeholder="e.g. #eab308"
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-100 focus:border-[#1e293b] outline-none font-bold text-xs text-slate-700 bg-slate-50/50"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
 

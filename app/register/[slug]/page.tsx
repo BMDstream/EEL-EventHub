@@ -5,6 +5,24 @@ import { useParams } from "next/navigation";
 import { Calendar, MapPin, CheckCircle2, Loader2, AlertCircle, ChevronDown } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 
+const THEME_DEFAULTS = {
+  cyber_dark: { primary: "#000000", accent: "#eab308" },
+  minimal_light: { primary: "#0f172a", accent: "#0284c7" },
+  glassmorphism: { primary: "#1e1b4b", accent: "#6366f1" },
+  brutalist_retro: { primary: "#000000", accent: "#facc15" },
+  midnight_luxury: { primary: "#0a1128", accent: "#d4af37" },
+  neon_horizon: { primary: "#000000", accent: "#ff007f" },
+  forest_zen: { primary: "#1c2e24", accent: "#2d4a39" },
+  aurora_glow: { primary: "#070b19", accent: "#14b8a6" },
+  crimson_sunset: { primary: "#3a0d1e", accent: "#f08a5d" },
+  cyberpunk_terminal: { primary: "#000000", accent: "#39ff14" },
+  corporate_mono: { primary: "#334155", accent: "#0f172a" },
+  nordic_alabaster: { primary: "#1c1917", accent: "#78716c" },
+  midnight_executive: { primary: "#0d0e12", accent: "#2563eb" },
+  champagne_lounge: { primary: "#4a3f35", accent: "#c5a059" },
+  logistics_glass: { primary: "#1e293b", accent: "#94a3b8" }
+};
+
 interface FormField {
   id: string;
   label: string;
@@ -35,7 +53,11 @@ function parseMarkdown(text: string, theme: string = "cyber_dark") {
   html = html.replace(/\*(.*?)\*/g, "<em>$1</em>");
   html = html.replace(/_(.*?)_/g, "<em>$1</em>");
 
-  const isDark = theme !== "minimal_light" && theme !== "brutalist_retro";
+  const isDark = theme !== "minimal_light" && 
+                 theme !== "brutalist_retro" && 
+                 theme !== "corporate_mono" && 
+                 theme !== "nordic_alabaster" && 
+                 theme !== "champagne_lounge";
   const numColorClass = isDark ? "client-text-accent text-amber-400 font-extrabold" : "client-text-primary text-slate-900 font-extrabold";
 
   // Split by line breaks to handle paragraphs/lists
@@ -94,6 +116,8 @@ interface Event {
     size?: string;
     position?: string;
     theme?: string;
+    primary_color?: string;
+    accent_color?: string;
   };
   registration_active?: boolean;
   registration_start?: string;
@@ -252,6 +276,16 @@ export default function PublicRegistrationPage() {
 
   const client = event?.client;
   const theme = event?.banner_settings?.theme || "cyber_dark";
+  const defaults = THEME_DEFAULTS[theme as keyof typeof THEME_DEFAULTS] || THEME_DEFAULTS.cyber_dark;
+
+  const eventPrimaryColor = event?.banner_settings?.primary_color || client?.primary_color || defaults.primary;
+  const eventAccentColor = event?.banner_settings?.accent_color || client?.accent_color || defaults.accent;
+
+  const isLightTheme = theme === "minimal_light" || 
+                       theme === "brutalist_retro" || 
+                       theme === "corporate_mono" || 
+                       theme === "nordic_alabaster" || 
+                       theme === "champagne_lounge";
 
   const bannerUrl = event?.banner_url;
   const bannerSize = event?.banner_settings?.size;
@@ -807,6 +841,281 @@ export default function PublicRegistrationPage() {
       centeredCard: "",
       headerBlock: "",
       bodyBlock: "",
+    },
+    corporate_mono: {
+      wrapper: "min-h-screen bg-slate-100 text-slate-900 font-sans animate-in fade-in duration-500 relative",
+      leftPanel: "bg-slate-900 text-white p-8 sm:p-12 lg:p-16 flex flex-col justify-between border-r border-slate-800 relative min-h-[50vh] lg:min-screen",
+      leftOverlay: bannerUrl 
+        ? "absolute inset-0 z-0 overflow-hidden"
+        : "absolute top-0 right-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,rgba(71,85,105,0.08),transparent_70%)]",
+      leftBgImage: bannerUrl ? (
+        <div className="absolute inset-0 z-0 overflow-hidden">
+          {bannerSize === "contain" && (
+            <div 
+              className="absolute inset-0 scale-110 blur-2xl opacity-60 bg-cover bg-center" 
+              style={{ backgroundImage: `url(${bannerUrl})` }}
+            />
+          )}
+          <div 
+            className="absolute inset-0" 
+            style={{ 
+              backgroundImage: `url(${bannerUrl})`,
+              backgroundSize: bannerSize || "cover",
+              backgroundPosition: bannerPosition || "center",
+              backgroundRepeat: "no-repeat"
+            }}
+          />
+          <div className="absolute inset-0 bg-slate-900/60"></div>
+        </div>
+      ) : null,
+      rightPanel: "p-12 lg:p-24 flex flex-col justify-center bg-white relative",
+      title: "text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tighter text-white mb-6 uppercase italic font-bricolage",
+      heading: "text-4xl font-extrabold text-slate-900 mb-6 tracking-tight italic font-bricolage",
+      subHeading: "text-slate-400 text-sm font-medium leading-relaxed uppercase tracking-wider",
+      label: "text-[10px] font-black uppercase tracking-[0.25em] text-slate-500 ml-1 block",
+      input: "w-full px-6 py-4 rounded-lg bg-slate-50 border border-slate-200 client-input-focus outline-none transition-all text-slate-900 font-bold placeholder-slate-300 shadow-sm",
+      select: "w-full px-6 py-4 rounded-lg bg-slate-50 border border-slate-200 client-input-focus outline-none transition-all font-bold text-slate-900 appearance-none cursor-pointer shadow-sm",
+      checkbox: "flex items-center gap-4 cursor-pointer group p-4 bg-slate-50 rounded-lg border border-slate-200 hover:border-slate-400 transition-all shadow-sm",
+      checkboxText: "text-xs font-bold text-slate-500 group-hover:text-slate-900",
+      card: "bg-slate-50 p-4 rounded-lg border border-slate-200 shadow-sm text-slate-800",
+      badge: "inline-flex items-center gap-3 px-4 py-2 bg-slate-100 rounded-full border border-slate-200 shadow-sm",
+      badgeText: "text-[9px] font-bold uppercase tracking-[0.2em] text-slate-500",
+      rsvpBorder: "py-5 border-y border-slate-200 space-y-4",
+      divider: "border-t border-slate-200",
+      btnSubmit: "w-full client-bg-primary hover:opacity-90 disabled:bg-slate-200 text-white font-bold py-5 rounded-lg transition-all uppercase tracking-widest text-xs",
+      btnAttending: (active: boolean) => `px-6 py-4 rounded-lg font-bold border transition-all ${active ? 'client-border-primary client-bg-primary text-white' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'}`,
+      btnNotAttending: (active: boolean) => `px-6 py-4 rounded-lg font-bold border transition-all ${active ? 'border-red-500 bg-red-500 text-white' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'}`,
+      loader: "animate-spin text-slate-900",
+      loadingBg: "min-h-screen flex items-center justify-center bg-slate-100",
+      errorBg: "min-h-screen flex flex-col items-center justify-center bg-slate-100 p-6",
+      successBg: "min-h-screen flex items-center justify-center bg-slate-100 p-6",
+      successCard: "bg-white rounded-3xl shadow-2xl p-12 max-w-xl w-full text-center border border-slate-200 relative overflow-hidden text-slate-900",
+      successQR: "bg-slate-50 border border-slate-200 rounded-xl p-5 mb-6 shadow-sm",
+      textMain: "text-slate-900",
+      textMuted: "text-slate-500",
+      centeredCard: "",
+      headerBlock: "",
+      bodyBlock: "",
+    },
+    nordic_alabaster: {
+      wrapper: "min-h-screen bg-[#faf9f6] text-slate-800 font-serif animate-in fade-in duration-500 relative",
+      leftPanel: "bg-[#f4f1ea] text-slate-900 p-8 sm:p-12 lg:p-16 flex flex-col justify-between border-r border-slate-200 relative min-h-[50vh] lg:min-screen",
+      leftOverlay: bannerUrl 
+        ? "absolute inset-0 z-0 overflow-hidden"
+        : "absolute top-0 right-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,rgba(140,130,115,0.05),transparent_70%)]",
+      leftBgImage: bannerUrl ? (
+        <div className="absolute inset-0 z-0 overflow-hidden">
+          {bannerSize === "contain" && (
+            <div 
+              className="absolute inset-0 scale-110 blur-2xl opacity-60 bg-cover bg-center" 
+              style={{ backgroundImage: `url(${bannerUrl})` }}
+            />
+          )}
+          <div 
+            className="absolute inset-0" 
+            style={{ 
+              backgroundImage: `url(${bannerUrl})`,
+              backgroundSize: bannerSize || "cover",
+              backgroundPosition: bannerPosition || "center",
+              backgroundRepeat: "no-repeat"
+            }}
+          />
+          <div className="absolute inset-0 bg-[#f4f1ea]/65 backdrop-blur-[1px]"></div>
+        </div>
+      ) : null,
+      rightPanel: "p-12 lg:p-24 flex flex-col justify-center bg-[#faf9f6] relative",
+      title: "text-4xl sm:text-5xl lg:text-6xl font-light font-serif tracking-tight text-slate-900 mb-6 italic break-words",
+      heading: "text-4xl font-light font-serif text-slate-900 mb-6 italic border-b border-slate-200 pb-4",
+      subHeading: "text-slate-500 text-sm font-medium leading-relaxed font-sans uppercase tracking-wider",
+      label: "text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 ml-1 block font-sans",
+      input: "w-full px-5 py-4 bg-transparent border-b-2 border-slate-300 client-input-focus outline-none transition-all text-slate-900 font-serif placeholder-slate-400 rounded-none",
+      select: "w-full px-5 py-4 bg-transparent border-b-2 border-slate-300 client-input-focus outline-none transition-all font-serif text-slate-900 appearance-none cursor-pointer rounded-none",
+      checkbox: "flex items-center gap-4 cursor-pointer group p-4 bg-[#f4f1ea] rounded-none border border-slate-200 hover:border-slate-400 transition-all",
+      checkboxText: "text-xs font-medium text-slate-500 group-hover:text-slate-900 font-sans",
+      card: "bg-[#f4f1ea] p-4 rounded-none border border-slate-200 text-slate-800 font-sans",
+      badge: "inline-flex items-center gap-3 px-4 py-2 bg-[#f4f1ea] rounded-none border border-slate-200",
+      badgeText: "text-[9px] font-bold uppercase tracking-[0.15em] text-slate-500 font-sans",
+      rsvpBorder: "py-5 border-y border-slate-200 space-y-4 font-sans",
+      divider: "border-t border-slate-200",
+      btnSubmit: "w-full client-bg-primary hover:opacity-90 disabled:bg-slate-200 text-white font-serif italic py-5 rounded-none transition-all tracking-wide text-sm",
+      btnAttending: (active: boolean) => `px-6 py-3 border-b-2 transition-all font-serif ${active ? 'client-border-primary text-slate-900 font-bold bg-[#f4f1ea]' : 'border-transparent text-slate-400 hover:text-slate-900'}`,
+      btnNotAttending: (active: boolean) => `px-6 py-3 border-b-2 transition-all font-serif ${active ? 'border-red-500 text-red-500 font-bold bg-[#f4f1ea]' : 'border-transparent text-slate-400 hover:text-slate-900'}`,
+      loader: "animate-spin text-slate-800",
+      loadingBg: "min-h-screen flex items-center justify-center bg-[#faf9f6]",
+      errorBg: "min-h-screen flex flex-col items-center justify-center bg-[#faf9f6] p-6",
+      successBg: "min-h-screen flex items-center justify-center bg-[#faf9f6] p-6",
+      successCard: "bg-[#faf9f6] border border-slate-200 rounded-none p-12 max-w-xl w-full text-center relative overflow-hidden text-slate-900",
+      successQR: "bg-[#f4f1ea] border border-slate-200 rounded-none p-5 mb-6",
+      textMain: "text-slate-900",
+      textMuted: "text-slate-500 font-sans",
+      centeredCard: "",
+      headerBlock: "",
+      bodyBlock: "",
+    },
+    midnight_executive: {
+      wrapper: "min-h-screen bg-[#0d0e12] text-zinc-100 font-sans animate-in fade-in duration-500 relative",
+      leftPanel: "bg-[#13151a] p-8 sm:p-12 lg:p-16 flex flex-col justify-between border-r border-zinc-800/50 relative min-h-[50vh] lg:min-screen",
+      leftOverlay: bannerUrl 
+        ? "absolute inset-0 z-0 overflow-hidden"
+        : "absolute inset-0 bg-[radial-gradient(circle_at_0%_0%,rgba(37,99,235,0.06),transparent_50%)] pointer-events-none z-0",
+      leftBgImage: bannerUrl ? (
+        <div className="absolute inset-0 z-0 overflow-hidden">
+          {bannerSize === "contain" && (
+            <div 
+              className="absolute inset-0 scale-110 blur-2xl opacity-60 bg-cover bg-center" 
+              style={{ backgroundImage: `url(${bannerUrl})` }}
+            />
+          )}
+          <div 
+            className="absolute inset-0" 
+            style={{ 
+              backgroundImage: `url(${bannerUrl})`,
+              backgroundSize: bannerSize || "cover",
+              backgroundPosition: bannerPosition || "center",
+              backgroundRepeat: "no-repeat"
+            }}
+          />
+          <div className="absolute inset-0 bg-[#13151a]/75 backdrop-blur-[1px]"></div>
+        </div>
+      ) : null,
+      rightPanel: "p-12 lg:p-24 flex flex-col justify-center bg-[#0d0e12]/80 backdrop-blur-md relative",
+      title: "text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight text-white mb-6 uppercase font-bricolage italic break-words",
+      heading: "text-4xl font-black text-white mb-6 tracking-tight font-bricolage italic uppercase",
+      subHeading: "text-zinc-500 text-sm font-medium leading-relaxed uppercase tracking-wider",
+      label: "text-[10px] font-black uppercase tracking-[0.25em] text-zinc-400 ml-1 block",
+      input: "w-full px-6 py-5 rounded-xl bg-[#16181f] border border-zinc-800 client-input-focus outline-none transition-all font-bold text-white placeholder-zinc-700",
+      select: "w-full px-6 py-5 rounded-xl bg-[#16181f] border border-zinc-800 client-input-focus outline-none transition-all font-bold text-white appearance-none cursor-pointer",
+      checkbox: "flex items-center gap-4 cursor-pointer group p-5 bg-[#16181f] rounded-xl border border-zinc-800 hover:border-zinc-700 transition-all",
+      checkboxText: "text-xs font-bold text-zinc-400 group-hover:text-white",
+      card: "bg-[#16181f] p-5 rounded-xl border border-zinc-800/80 text-zinc-300",
+      badge: "inline-flex items-center gap-4 px-5 py-3 bg-[#16181f] rounded-full border border-zinc-850",
+      badgeText: "text-[10px] font-black uppercase tracking-[0.3em] text-zinc-400",
+      rsvpBorder: "py-6 border-y border-zinc-850 space-y-4",
+      divider: "border-t border-zinc-850",
+      btnSubmit: "w-full client-bg-accent hover:opacity-90 disabled:bg-zinc-800 text-white font-bold py-5 rounded-xl transition-all shadow-lg client-shadow-accent uppercase tracking-widest text-xs",
+      btnAttending: (active: boolean) => `px-6 py-4 rounded-xl font-bold border-2 transition-all ${active ? 'client-border-accent client-bg-accent text-white shadow-inner' : 'border-zinc-800 bg-transparent text-zinc-500 hover:border-zinc-700'}`,
+      btnNotAttending: (active: boolean) => `px-6 py-4 rounded-xl font-bold border-2 transition-all ${active ? 'border-red-500 bg-red-500/10 text-red-500' : 'border-zinc-800 bg-transparent text-zinc-500 hover:border-zinc-700'}`,
+      loader: "animate-spin text-[#2563eb]",
+      loadingBg: "min-h-screen flex items-center justify-center bg-[#0d0e12]",
+      errorBg: "min-h-screen flex flex-col items-center justify-center bg-[#0d0e12] p-6",
+      successBg: "min-h-screen flex items-center justify-center bg-[#0d0e12] p-6",
+      successCard: "bg-[#13151a] border border-zinc-800/80 rounded-3xl p-12 max-w-xl w-full text-center relative overflow-hidden text-white backdrop-blur-md",
+      successQR: "bg-slate-950 border border-zinc-800 rounded-xl p-5 mb-6",
+      textMain: "text-white",
+      textMuted: "text-zinc-400",
+      centeredCard: "",
+      headerBlock: "",
+      bodyBlock: "",
+    },
+    champagne_lounge: {
+      wrapper: "min-h-screen bg-[#faf6f0] text-[#4a3f35] font-sans animate-in fade-in duration-500 relative flex items-center justify-center p-6",
+      leftPanel: "",
+      leftOverlay: bannerUrl 
+        ? "absolute inset-0 z-0 overflow-hidden"
+        : "absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(197,160,89,0.08),transparent_60%)] pointer-events-none z-0",
+      leftBgImage: bannerUrl ? (
+        <div className="absolute inset-0 z-0 overflow-hidden">
+          {bannerSize === "contain" && (
+            <div 
+              className="absolute inset-0 scale-110 blur-2xl opacity-60 bg-cover bg-center" 
+              style={{ backgroundImage: `url(${bannerUrl})` }}
+            />
+          )}
+          <div 
+            className="absolute inset-0" 
+            style={{ 
+              backgroundImage: `url(${bannerUrl})`,
+              backgroundSize: bannerSize || "cover",
+              backgroundPosition: bannerPosition || "center",
+              backgroundRepeat: "no-repeat"
+            }}
+          />
+          <div className="absolute inset-0 bg-[#faf6f0]/75"></div>
+        </div>
+      ) : null,
+      rightPanel: "",
+      title: "text-3xl sm:text-4xl font-light font-serif tracking-tight text-[#4a3f35] mb-6",
+      heading: "text-3xl font-light font-serif text-[#4a3f35] mb-4 tracking-tight border-b border-[#e3dac9] pb-4",
+      subHeading: "text-stone-400 text-xs font-semibold tracking-wide uppercase font-sans",
+      label: "text-[10px] font-bold uppercase tracking-[0.2em] text-[#4a3f35]/70 ml-1 block font-sans",
+      input: "w-full px-6 py-4 rounded-xl bg-white border border-[#e3dac9] client-input-focus outline-none transition-all font-medium text-[#4a3f35] placeholder-stone-300 shadow-inner",
+      select: "w-full px-6 py-4 rounded-xl bg-white border border-[#e3dac9] client-input-focus outline-none transition-all font-medium text-[#4a3f35] appearance-none cursor-pointer shadow-inner",
+      checkbox: "flex items-center gap-4 cursor-pointer group p-4 bg-white rounded-xl border border-[#e3dac9] hover:border-[#c5a059]/40 transition-all shadow-inner",
+      checkboxText: "text-xs font-bold text-stone-400 group-hover:text-[#4a3f35] font-sans",
+      card: "bg-white p-4 rounded-xl border border-[#e3dac9] shadow-sm text-[#4a3f35] font-sans",
+      badge: "inline-flex items-center gap-3 px-4 py-2 bg-[#c5a059]/10 rounded-full border border-[#c5a059]/20 backdrop-blur-md",
+      badgeText: "text-[9px] font-bold uppercase tracking-[0.25em] text-[#c5a059] font-sans",
+      rsvpBorder: "py-5 border-y border-[#e3dac9] space-y-4 font-sans",
+      divider: "border-t border-[#e3dac9]",
+      btnSubmit: "w-full client-bg-accent hover:opacity-90 disabled:bg-[#f2efe9] text-white font-bold py-5 rounded-full shadow-lg client-shadow-accent transition-all uppercase tracking-widest text-xs font-black font-sans",
+      btnAttending: (active: boolean) => `px-6 py-4 rounded-full font-bold transition-all border-2 ${active ? 'border-[#c5a059] bg-[#c5a059]/10 text-[#c5a059]' : 'border-[#e3dac9] bg-transparent text-stone-400 hover:border-[#c5a059]'}`,
+      btnNotAttending: (active: boolean) => `px-6 py-4 rounded-full font-bold transition-all border-2 ${active ? 'border-red-500 bg-red-500/10 text-red-500' : 'border-[#e3dac9] bg-transparent text-stone-400 hover:border-red-500'}`,
+      loader: "animate-spin text-[#c5a059]",
+      loadingBg: "min-h-screen flex items-center justify-center bg-[#faf6f0]",
+      errorBg: "min-h-screen flex flex-col items-center justify-center bg-[#faf6f0] p-6",
+      successBg: "min-h-screen flex items-center justify-center bg-[#faf6f0] p-6",
+      successCard: "bg-[#fdfbf7] border border-[#e3dac9] rounded-[2.5rem] p-12 max-w-xl w-full text-center relative overflow-hidden text-[#4a3f35] shadow-2xl",
+      successQR: "bg-white border border-[#e3dac9] rounded-xl p-5 mb-6 shadow-inner",
+      textMain: "text-[#4a3f35]",
+      textMuted: "text-stone-400 font-sans",
+      centeredCard: "bg-[#fdfbf7] border border-[#e3dac9] rounded-[2.5rem] p-8 sm:p-12 md:p-16 max-w-2xl w-full backdrop-blur-md shadow-2xl text-[#4a3f35] relative z-10 my-12",
+      headerBlock: "",
+      bodyBlock: "",
+    },
+    logistics_glass: {
+      wrapper: "min-h-screen bg-slate-950 text-slate-100 font-sans animate-in fade-in duration-500 relative",
+      leftPanel: "bg-slate-900/50 p-8 sm:p-12 lg:p-16 flex flex-col justify-between border-r border-slate-800/80 relative min-h-[50vh] lg:min-screen",
+      leftOverlay: bannerUrl 
+        ? "absolute inset-0 z-0 overflow-hidden"
+        : "absolute inset-0 bg-[radial-gradient(circle_at_100%_100%,rgba(148,163,184,0.05),transparent_60%)] pointer-events-none z-0",
+      leftBgImage: bannerUrl ? (
+        <div className="absolute inset-0 z-0 overflow-hidden">
+          {bannerSize === "contain" && (
+            <div 
+              className="absolute inset-0 scale-110 blur-2xl opacity-60 bg-cover bg-center" 
+              style={{ backgroundImage: `url(${bannerUrl})` }}
+            />
+          )}
+          <div 
+            className="absolute inset-0" 
+            style={{ 
+              backgroundImage: `url(${bannerUrl})`,
+              backgroundSize: bannerSize || "cover",
+              backgroundPosition: bannerPosition || "center",
+              backgroundRepeat: "no-repeat"
+            }}
+          />
+          <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-[2px]"></div>
+        </div>
+      ) : null,
+      rightPanel: "p-12 lg:p-24 flex flex-col justify-center bg-slate-900/30 backdrop-blur-md relative border-l border-slate-800/50",
+      title: "text-4xl sm:text-5xl lg:text-6xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-slate-100 via-slate-300 to-slate-500 mb-6 uppercase italic font-bricolage break-words",
+      heading: "text-4xl font-black text-white mb-6 tracking-tight font-bricolage italic uppercase border-b-2 border-slate-800 pb-4",
+      subHeading: "text-slate-400 text-xs font-semibold tracking-wider uppercase",
+      label: "text-[10px] font-black uppercase tracking-[0.25em] text-slate-400 ml-1 block",
+      input: "w-full px-6 py-5 rounded-xl bg-slate-950/40 backdrop-blur-sm border-2 border-slate-800 client-input-focus outline-none transition-all font-bold text-white placeholder-slate-700",
+      select: "w-full px-6 py-5 rounded-xl bg-slate-950/40 backdrop-blur-sm border-2 border-slate-800 client-input-focus outline-none transition-all font-bold text-white appearance-none cursor-pointer",
+      checkbox: "flex items-center gap-4 cursor-pointer group p-5 bg-slate-950/40 rounded-xl border-2 border-slate-800 hover:border-slate-600 transition-all",
+      checkboxText: "text-xs font-bold text-slate-400 group-hover:text-white",
+      card: "bg-slate-900/40 backdrop-blur-sm p-4 rounded-xl border-2 border-slate-800 text-slate-300",
+      badge: "inline-flex items-center gap-3 px-4 py-2 bg-slate-900/60 rounded-full border border-slate-800 backdrop-blur-md",
+      badgeText: "text-[9px] font-bold uppercase tracking-[0.2em] text-slate-400",
+      rsvpBorder: "py-5 border-y border-slate-800 space-y-4",
+      divider: "border-t border-slate-800",
+      btnSubmit: "w-full client-bg-primary hover:opacity-90 disabled:bg-zinc-800 text-white font-black py-6 rounded-xl transition-all shadow-xl uppercase tracking-widest text-xs",
+      btnAttending: (active: boolean) => `px-6 py-4 rounded-xl font-bold transition-all border-2 ${active ? 'client-border-primary client-bg-primary text-white' : 'border-slate-800 bg-transparent text-slate-500 hover:border-slate-750'}`,
+      btnNotAttending: (active: boolean) => `px-6 py-4 rounded-xl font-bold transition-all border-2 ${active ? 'border-red-500 bg-red-500/10 text-red-500' : 'border-slate-800 bg-transparent text-slate-500 hover:border-slate-750'}`,
+      loader: "animate-spin text-slate-400",
+      loadingBg: "min-h-screen flex items-center justify-center bg-slate-950",
+      errorBg: "min-h-screen flex flex-col items-center justify-center bg-slate-950 p-6",
+      successBg: "min-h-screen flex items-center justify-center bg-slate-950 p-6",
+      successCard: "bg-slate-900/40 border border-slate-800/80 rounded-3xl p-12 max-w-xl w-full text-center relative overflow-hidden text-white backdrop-blur-md",
+      successQR: "bg-slate-950 border border-slate-800 rounded-xl p-5 mb-6",
+      textMain: "text-white",
+      textMuted: "text-slate-400",
+      centeredCard: "",
+      headerBlock: "",
+      bodyBlock: "",
     }
   };
 
@@ -822,7 +1131,12 @@ export default function PublicRegistrationPage() {
     forest_zen: "stacked",
     aurora_glow: "centered",
     crimson_sunset: "stacked",
-    cyberpunk_terminal: "split"
+    cyberpunk_terminal: "split",
+    corporate_mono: "split",
+    nordic_alabaster: "split",
+    midnight_executive: "split",
+    champagne_lounge: "centered",
+    logistics_glass: "split"
   } as const;
 
   const layout = themeLayouts[theme as keyof typeof themeLayouts] || "split";
@@ -835,7 +1149,7 @@ export default function PublicRegistrationPage() {
       <div className="space-y-6 lg:space-y-10">
         <div className="flex items-center gap-8 group">
           <div className={style.card}>
-            <Calendar size={32} className={theme === "minimal_light" ? "client-text-primary" : "client-text-accent"} />
+            <Calendar size={32} className={isLightTheme ? "client-text-primary" : "client-text-accent"} />
           </div>
           <div>
             <p className={`${style.textMuted} text-[10px] font-black uppercase tracking-[0.3em] mb-2`}>Schedule</p>
@@ -844,7 +1158,7 @@ export default function PublicRegistrationPage() {
         </div>
         <div className="flex items-start gap-8 group">
           <div className={style.card}>
-            <MapPin size={32} className={theme === "minimal_light" ? "client-text-primary" : "client-text-accent"} />
+            <MapPin size={32} className={isLightTheme ? "client-text-primary" : "client-text-accent"} />
           </div>
           <div>
             <p className={`${style.textMuted} text-[10px] font-black uppercase tracking-[0.3em] mb-2`}>Venue</p>
@@ -874,139 +1188,172 @@ export default function PublicRegistrationPage() {
   );
 
   const registrationForm = event ? (
-    <div className="max-w-md w-full mx-auto relative z-10 py-12">
-      <div className="mb-16">
-        <h2 className={style.heading}>Register.</h2>
-        <p className={style.subHeading}>Secure your credentials for this exclusive engagement.</p>
-      </div>
-
+    <div className={style.bodyBlock || "w-full"}>
       <form onSubmit={handleSubmit} className="space-y-8">
-        {/* Default Fields */}
-        <div className="grid grid-cols-2 gap-6">
-          <div className="space-y-3">
-            <label className={style.label}>First Name</label>
-            <input required type="text" name="first_name" value={formData.first_name} onChange={handleChange} className={style.input} placeholder="Jane" />
+        <div className="space-y-6">
+          <div className="space-y-2">
+            <label className={style.label}>
+              First Name <span className={`${isLightTheme ? "client-text-primary" : "client-text-accent"} ml-0.5 font-bold`}>*</span>
+            </label>
+            <input
+              required
+              type="text"
+              name="first_name"
+              value={formData.first_name}
+              onChange={handleChange}
+              placeholder="e.g. Alan"
+              className={style.input}
+            />
           </div>
-          <div className="space-y-3">
-            <label className={style.label}>Last Name</label>
-            <input required type="text" name="last_name" value={formData.last_name} onChange={handleChange} className={style.input} placeholder="Doe" />
+
+          <div className="space-y-2">
+            <label className={style.label}>
+              Last Name <span className={`${isLightTheme ? "client-text-primary" : "client-text-accent"} ml-0.5 font-bold`}>*</span>
+            </label>
+            <input
+              required
+              type="text"
+              name="last_name"
+              value={formData.last_name}
+              onChange={handleChange}
+              placeholder="e.g. Turing"
+              className={style.input}
+            />
           </div>
-        </div>
 
-        <div className="space-y-3">
-          <label className={style.label}>Email</label>
-          <input required type="email" name="email" value={formData.email} onChange={handleChange} placeholder="jane.doe@company.com" className={style.input} />
-        </div>
-
-        {event.collect_company !== false && (
-          <div className="space-y-3">
-            <label className={style.label}>Organization</label>
-            <input type="text" name="company" value={formData.company} onChange={handleChange} placeholder="Global Enterprises Inc." className={style.input} />
+          <div className="space-y-2">
+            <label className={style.label}>
+              Secure Email Address <span className={`${isLightTheme ? "client-text-primary" : "client-text-accent"} ml-0.5 font-bold`}>*</span>
+            </label>
+            <input
+              required
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              placeholder="e.g. turing@bletchleypark.org.uk"
+              className={style.input}
+            />
           </div>
-        )}
 
-        {/* RSVP Question */}
-        <div className={style.rsvpBorder}>
-          <label className={style.label}>
-            Attendance Status <span className={`${theme === "minimal_light" ? "client-text-primary" : "client-text-accent"} ml-0.5 font-bold`}>*</span>
-          </label>
-          <div className="grid grid-cols-2 gap-4">
-            <button
-              type="button"
-              onClick={() => setIsAttending(true)}
-              className={style.btnAttending(isAttending === true)}
-            >
-              I am attending
-            </button>
-            <button
-              type="button"
-              onClick={() => setIsAttending(false)}
-              className={style.btnNotAttending(isAttending === false)}
-            >
-              Unable to attend
-            </button>
-          </div>
-        </div>
-
-        {/* Dynamic Custom Fields */}
-        {isAttending && event.custom_fields_schema && event.custom_fields_schema.length > 0 && (
-          <div className={`pt-4 pb-2 ${style.divider}`}>
-            <p className={`text-[10px] font-black uppercase tracking-[0.3em] ${theme === "minimal_light" ? "client-text-primary" : "client-text-accent"}`}>Additional Details</p>
-          </div>
-        )}
-        {isAttending && event.custom_fields_schema?.map((field) => {
-          if (field.dependsOn) {
-            const parentVal = customAnswers[field.dependsOn.fieldId];
-            const parentValStr = typeof parentVal === "boolean" ? String(parentVal) : parentVal;
-            if (parentValStr !== field.dependsOn.value) {
-              return null;
-            }
-          }
-
-          return (
-            <div key={field.id} className="space-y-3 animate-in fade-in slide-in-from-bottom-2">
-              <label className={style.label}>
-                {field.label} {field.required && <span className={`${theme === "minimal_light" ? "client-text-primary" : "client-text-accent"} ml-0.5 font-bold`}>*</span>}
-              </label>
-              
-              {field.description && (
-                <div className={`p-4 rounded-[1.2rem] flex items-start gap-3 text-xs leading-normal border ${
-                  theme === "minimal_light" || theme === "brutalist_retro"
-                    ? "bg-slate-100/80 border-slate-200 text-slate-600" 
-                    : "bg-black/30 border-white/5 text-zinc-400"
-                }`}>
-                  <span className="shrink-0 text-emerald-500">✅</span>
-                  <span className="italic font-medium">{field.description}</span>
-                </div>
-              )}
-              
-              {field.type === "text" && (
-                <input
-                  required={field.required}
-                  type="text"
-                  placeholder="Enter your answer"
-                  onChange={(e) => handleCustomChange(field.id, e.target.value)}
-                  className={style.input}
-                />
-              )}
-
-              {field.type === "select" && (
-                <div className="relative">
-                  <select
-                    required={field.required}
-                    onChange={(e) => handleCustomChange(field.id, e.target.value)}
-                    className={style.select}
-                  >
-                    <option value="" className={theme === "minimal_light" || theme === "brutalist_retro" ? "text-black" : "text-white"}>Select Option</option>
-                    {field.options?.map(opt => <option key={opt} value={opt} className={theme === "minimal_light" || theme === "brutalist_retro" ? "text-black" : "text-white"}>{opt}</option>)}
-                  </select>
-                  <ChevronDown className="absolute right-6 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" size={20} />
-                </div>
-              )}
-
-              {field.type === "checkbox" && (
-                <label className={style.checkbox}>
-                   <input 
-                     type="checkbox" 
-                     onChange={(e) => handleCustomChange(field.id, e.target.checked)}
-                     className="w-6 h-6 rounded-lg bg-zinc-900 border-white/10 client-checkbox transition-all" 
-                   />
-                   <span className={style.checkboxText}>Yes, I agree / confirm</span>
-                </label>
-              )}
+          {event.collect_company !== false && (
+            <div className="space-y-2">
+              <label className={style.label}>Organization / Company</label>
+              <input
+                type="text"
+                name="company"
+                value={formData.company}
+                onChange={handleChange}
+                placeholder="e.g. Government Code & Cypher School"
+                className={style.input}
+              />
             </div>
-          );
-        })}
+          )}
+
+          <div className={style.rsvpBorder}>
+            <label className={style.label}>
+              Attendance Status <span className={`${isLightTheme ? "client-text-primary" : "client-text-accent"} ml-0.5 font-bold`}>*</span>
+            </label>
+            <div className="grid grid-cols-2 gap-4">
+              <button
+                type="button"
+                onClick={() => setIsAttending(true)}
+                className={style.btnAttending(isAttending === true)}
+              >
+                I am attending
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsAttending(false)}
+                className={style.btnNotAttending(isAttending === false)}
+              >
+                Unable to attend
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {isAttending && event.custom_fields_schema && event.custom_fields_schema.length > 0 && (
+          <div className="space-y-8">
+            <div className="pt-6">
+              <p className={`text-[10px] font-black uppercase tracking-[0.3em] ${isLightTheme ? "client-text-primary" : "client-text-accent"}`}>Additional Details</p>
+            </div>
+            {event.custom_fields_schema.map((field) => {
+              // Evaluation of conditional rendering
+              if (field.dependsOn) {
+                const parentVal = customAnswers[field.dependsOn.fieldId];
+                const parentValStr = typeof parentVal === "boolean" ? String(parentVal) : parentVal;
+                if (parentValStr !== field.dependsOn.value) {
+                  return null;
+                }
+              }
+
+              return (
+                <div key={field.id} className="space-y-3">
+                  <label className={style.label}>
+                    {field.label} {field.required && <span className={`${isLightTheme ? "client-text-primary" : "client-text-accent"} ml-0.5 font-bold`}>*</span>}
+                  </label>
+                  
+                  {field.description && (
+                    <div className={`p-4 rounded-[1.2rem] flex items-start gap-3 text-xs leading-normal border ${
+                      isLightTheme
+                        ? "bg-slate-100/80 border-slate-200 text-slate-600" 
+                        : "bg-black/30 border-white/5 text-zinc-400"
+                    }`}>
+                      <span className="shrink-0 text-emerald-500">✅</span>
+                      <span className="italic font-medium">{field.description}</span>
+                    </div>
+                  )}
+                  
+                  {field.type === "text" && (
+                    <input
+                      required={field.required}
+                      type="text"
+                      placeholder="Enter your answer"
+                      onChange={(e) => handleCustomChange(field.id, e.target.value)}
+                      className={style.input}
+                    />
+                  )}
+
+                  {field.type === "select" && (
+                    <div className="relative">
+                      <select
+                        required={field.required}
+                        onChange={(e) => handleCustomChange(field.id, e.target.value)}
+                        className={style.select}
+                      >
+                        <option value="" className={isLightTheme ? "text-black" : "text-white"}>Select Option</option>
+                        {field.options?.map(opt => <option key={opt} value={opt} className={isLightTheme ? "text-black" : "text-white"}>{opt}</option>)}
+                      </select>
+                      <ChevronDown className="absolute right-6 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" size={20} />
+                    </div>
+                  )}
+
+                  {field.type === "checkbox" && (
+                    <label className={style.checkbox}>
+                       <input 
+                         type="checkbox" 
+                         onChange={(e) => handleCustomChange(field.id, e.target.checked)}
+                         className="w-6 h-6 rounded-lg bg-zinc-900 border-white/10 client-checkbox transition-all" 
+                       />
+                       <span className={style.checkboxText}>Yes, I agree / confirm</span>
+                    </label>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         {/* Disclaimer & Indemnity */}
         {isAttending && event.disclaimer_enabled && event.disclaimer_text && (
-          <div className={`space-y-4 p-6 rounded-[1.5rem] border ${theme === 'minimal_light' || theme === 'brutalist_retro' ? 'bg-slate-100 border-slate-200 text-slate-900' : 'bg-black/30 border-white/10 text-white'} mt-6`}>
-            <p className={`text-[10px] font-black uppercase tracking-[0.3em] ${theme === "minimal_light" ? "client-text-primary" : "client-text-accent"}`}>Disclaimer & Indemnity</p>
+          <div className={`space-y-4 p-6 rounded-[1.5rem] border ${isLightTheme ? 'bg-slate-100 border-slate-200 text-slate-900' : 'bg-black/30 border-white/10 text-white'} mt-6`}>
+            <p className={`text-[10px] font-black uppercase tracking-[0.3em] ${isLightTheme ? "client-text-primary" : "client-text-accent"}`}>Disclaimer & Indemnity</p>
             <div 
               className="text-xs leading-relaxed opacity-85 max-h-40 overflow-y-auto pr-2 border-b border-white/5 pb-4 space-y-1.5"
               dangerouslySetInnerHTML={{ __html: parseMarkdown(event.disclaimer_text || "", theme) }}
             />
-            <label className={`flex items-center gap-4 cursor-pointer group p-4 rounded-xl border border-white/5 hover:border-white/10 transition-all ${theme === 'minimal_light' || theme === 'brutalist_retro' ? 'bg-white border-slate-200 text-slate-800' : 'bg-black/20 text-white'}`}>
+            <label className={`flex items-center gap-4 cursor-pointer group p-4 rounded-xl border border-white/5 hover:border-white/10 transition-all ${isLightTheme ? 'bg-white border-slate-200 text-slate-800' : 'bg-black/20 text-white'}`}>
               <input
                 required
                 type="checkbox"
@@ -1049,25 +1396,23 @@ export default function PublicRegistrationPage() {
           background-size: 200% 200%;
           animation: aurora 15s ease infinite;
         }
-        ${client ? `
-          .client-text-accent { color: ${client.accent_color || '#eab308'} !important; }
-          .client-bg-accent { background-color: ${client.accent_color || '#eab308'} !important; }
-          .client-border-accent { border-color: ${client.accent_color || '#eab308'} !important; }
-          .client-hover-border-accent:hover { border-color: ${client.accent_color || '#eab308'} !important; }
-          .client-hover-bg-accent:hover { background-color: ${client.accent_color || '#eab308'} !important; }
-          .client-shadow-accent { box-shadow: 0 25px 50px -12px ${(client.accent_color || '#eab308')}30 !important; }
-          .client-text-primary { color: ${client.primary_color || '#0f172a'} !important; }
-          .client-bg-primary { background-color: ${client.primary_color || '#0f172a'} !important; }
-          .client-border-primary { border-color: ${client.primary_color || '#0f172a'} !important; }
-          .client-input-focus:focus {
-            border-color: ${client.accent_color || '#eab308'} !important;
-            box-shadow: 0 0 0 4px ${client.accent_color}1a !important;
-          }
-          .client-checkbox:checked {
-            background-color: ${client.accent_color || '#eab308'} !important;
-            border-color: ${client.accent_color || '#eab308'} !important;
-          }
-        ` : ''}
+        .client-text-accent { color: ${eventAccentColor} !important; }
+        .client-bg-accent { background-color: ${eventAccentColor} !important; }
+        .client-border-accent { border-color: ${eventAccentColor} !important; }
+        .client-hover-border-accent:hover { border-color: ${eventAccentColor} !important; }
+        .client-hover-bg-accent:hover { background-color: ${eventAccentColor} !important; }
+        .client-shadow-accent { box-shadow: 0 25px 50px -12px ${eventAccentColor}30 !important; }
+        .client-text-primary { color: ${eventPrimaryColor} !important; }
+        .client-bg-primary { background-color: ${eventPrimaryColor} !important; }
+        .client-border-primary { border-color: ${eventPrimaryColor} !important; }
+        .client-input-focus:focus {
+          border-color: ${eventAccentColor} !important;
+          box-shadow: 0 0 0 4px ${eventAccentColor}1a !important;
+        }
+        .client-checkbox:checked {
+          background-color: ${eventAccentColor} !important;
+          border-color: ${eventAccentColor} !important;
+        }
       `}} />
       {loading ? (
         <div className={style.loadingBg}>
@@ -1088,9 +1433,17 @@ export default function PublicRegistrationPage() {
       ) : registeredId ? (
         <div className={style.successBg}>
           <div className={style.successCard}>
-            {theme === "cyber_dark" && <div className="absolute top-0 left-0 w-full h-1 client-bg-accent"></div>}
-            <div className={`${theme === "cyber_dark" ? "client-bg-accent animate-bounce" : theme === "minimal_light" ? "client-bg-primary animate-pulse" : theme === "brutalist_retro" ? "bg-[#facc15] border-[3px] border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]" : "bg-gradient-to-r from-yellow-500 to-indigo-500"} w-24 h-24 rounded-[2rem] flex items-center justify-center mx-auto mb-10 shadow-2xl`}>
-              <CheckCircle2 className={theme === "minimal_light" ? "text-white" : "text-black"} size={56} />
+            {(theme === "cyber_dark" || theme === "midnight_executive" || theme === "logistics_glass") && <div className="absolute top-0 left-0 w-full h-1 client-bg-accent"></div>}
+            <div className={`${
+              theme === "cyber_dark" || theme === "midnight_executive" || theme === "logistics_glass"
+                ? "client-bg-accent animate-bounce" 
+                : theme === "minimal_light" || theme === "corporate_mono" || theme === "nordic_alabaster" || theme === "champagne_lounge"
+                  ? "client-bg-primary animate-pulse" 
+                  : theme === "brutalist_retro" 
+                    ? "bg-[#facc15] border-[3px] border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]" 
+                    : "bg-gradient-to-r from-yellow-500 to-indigo-500"
+            } w-24 h-24 rounded-[2rem] flex items-center justify-center mx-auto mb-10 shadow-2xl`}>
+              <CheckCircle2 className={isLightTheme && theme !== "brutalist_retro" ? "text-white" : "text-black"} size={56} />
             </div>
             <h1 className={`text-4xl font-black mb-6 font-bricolage italic uppercase tracking-tight ${style.textMain}`}>
               {statusMessage || (isAttending ? "Access Granted." : "Response Recorded.")}
@@ -1100,7 +1453,7 @@ export default function PublicRegistrationPage() {
               {isAttending 
                 ? ` Verification has been dispatched to `
                 : ` We've noted that you are unable to attend. Thank you for letting us know. `}
-              {isAttending && <span className={`${theme === "minimal_light" ? "client-text-primary" : "client-text-accent"} font-bold`}>{formData.email}</span>}
+              {isAttending && <span className={`${isLightTheme ? "client-text-primary" : "client-text-accent"} font-bold`}>{formData.email}</span>}
             </p>
             {isAttending && (
               <div className={style.successQR}>
@@ -1114,7 +1467,7 @@ export default function PublicRegistrationPage() {
                   </div>
                 </div>
                 <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 mb-1">Unique Clearance ID</p>
-                <p className={`text-3xl font-black ${theme === "minimal_light" ? "client-text-primary" : "client-text-accent"} tracking-tighter italic font-bricolage`}>
+                <p className={`text-3xl font-black ${isLightTheme ? "client-text-primary" : "client-text-accent"} tracking-tighter italic font-bricolage`}>
                   {registeredPin || (registeredId ? registeredId.substring(0, 8) : "")}
                 </p>
               </div>
@@ -1160,14 +1513,16 @@ export default function PublicRegistrationPage() {
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="flex items-center gap-4">
-                      <Calendar size={24} className={theme === "minimal_light" ? "client-text-primary" : "client-text-accent"} />
+                      <Calendar size={24} className={isLightTheme ? "client-text-primary" : "client-text-accent"} />
                       <div>
-                        <p className={`${style.textMuted} text-[8px] font-black uppercase tracking-[0.3em]`}>Schedule</p>
-                        <p className={`text-sm font-bold ${style.textMain}`}>{new Date(event.start_date).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}</p>
+                        <p className={`${style.textMuted} text-[9px] font-black uppercase tracking-[0.25em] mb-1`}>Time Frame</p>
+                        <p className={`text-sm font-bold tracking-tight ${style.textMain}`}>{new Date(event.start_date).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-4">
-                      <MapPin size={24} className={theme === "minimal_light" ? "client-text-primary" : "client-text-accent"} />
+                    <div className="flex items-center gap-5">
+                      <div className={style.card}>
+                        <MapPin size={24} className={isLightTheme ? "client-text-primary" : "client-text-accent"} />
+                      </div>
                       <div>
                         <p className={`${style.textMuted} text-[8px] font-black uppercase tracking-[0.3em]`}>Venue</p>
                         <p className={`text-sm font-bold ${style.textMain}`}>{event.location}</p>
