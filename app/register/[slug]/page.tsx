@@ -18,6 +18,49 @@ interface FormField {
   description?: string;
 }
 
+function parseMarkdown(text: string) {
+  if (!text) return "";
+  
+  // Escape HTML to prevent XSS
+  let html = text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+
+  // Bold (**text** or __text__)
+  html = html.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+  html = html.replace(/__(.*?)__/g, "<strong>$1</strong>");
+
+  // Italic (*text* or _text_)
+  html = html.replace(/\*(.*?)\*/g, "<em>$1</em>");
+  html = html.replace(/_(.*?)_/g, "<em>$1</em>");
+
+  // Split by line breaks to handle paragraphs/lists
+  const lines = html.split("\n");
+  const processedLines = lines.map((line) => {
+    // Check if it's a numbered list item (e.g. "1. Item")
+    const numListMatch = line.match(/^(\s*\d+\.\s+)(.*)/);
+    if (numListMatch) {
+      return `<div class="pl-4 py-1 flex items-start gap-1"><span class="font-bold text-slate-800 dark:text-white shrink-0">${numListMatch[1]}</span><span>${numListMatch[2]}</span></div>`;
+    }
+    
+    // Check if it's a bullet list item (e.g. "- Item" or "* Item")
+    const bulletListMatch = line.match(/^(\s*[-*]\s+)(.*)/);
+    if (bulletListMatch) {
+      return `<div class="pl-6 py-1 flex items-start gap-1 list-disc list-inside"><span>•</span><span>${bulletListMatch[2]}</span></div>`;
+    }
+
+    // Check if the line starts with spaces (indentation)
+    if (line.startsWith("   ") || line.startsWith("  ") || line.startsWith("\t")) {
+      return `<p class="pl-8 min-h-[1em]">${line.trim()}</p>`;
+    }
+
+    return `<p class="min-h-[1em]">${line}</p>`;
+  });
+
+  return processedLines.join("");
+}
+
 interface Client {
   id: number;
   name: string;
@@ -956,9 +999,10 @@ export default function PublicRegistrationPage() {
         {isAttending && event.disclaimer_enabled && event.disclaimer_text && (
           <div className={`space-y-4 p-6 rounded-[1.5rem] border ${theme === 'minimal_light' || theme === 'brutalist_retro' ? 'bg-slate-100 border-slate-200 text-slate-900' : 'bg-black/30 border-white/10 text-white'} mt-6`}>
             <p className={`text-[10px] font-black uppercase tracking-[0.3em] ${theme === "minimal_light" ? "client-text-primary" : "client-text-accent"}`}>Disclaimer & Indemnity</p>
-            <div className="text-xs leading-relaxed opacity-85 whitespace-pre-wrap max-h-40 overflow-y-auto pr-2 border-b border-white/5 pb-4">
-              {event.disclaimer_text}
-            </div>
+            <div 
+              className="text-xs leading-relaxed opacity-85 max-h-40 overflow-y-auto pr-2 border-b border-white/5 pb-4 space-y-1.5"
+              dangerouslySetInnerHTML={{ __html: parseMarkdown(event.disclaimer_text || "") }}
+            />
             <label className={`flex items-center gap-4 cursor-pointer group p-4 rounded-xl border border-white/5 hover:border-white/10 transition-all ${theme === 'minimal_light' || theme === 'brutalist_retro' ? 'bg-white border-slate-200 text-slate-800' : 'bg-black/20 text-white'}`}>
               <input
                 required
