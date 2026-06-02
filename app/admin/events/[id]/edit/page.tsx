@@ -94,6 +94,7 @@ export default function EditEventPage() {
     banner_theme: "cyber_dark",
     banner_primary_color: "",
     banner_accent_color: "",
+    banner_layout: "",
     registration_active: true,
     registration_start: "",
     registration_end: "",
@@ -156,6 +157,7 @@ export default function EditEventPage() {
           banner_theme: data.banner_settings?.theme || "cyber_dark",
           banner_primary_color: data.banner_settings?.primary_color || "",
           banner_accent_color: data.banner_settings?.accent_color || "",
+          banner_layout: data.banner_settings?.layout || "",
           registration_active: data.registration_active !== false,
           registration_start: data.registration_start ? data.registration_start.slice(0, 16) : "",
           registration_end: data.registration_end ? data.registration_end.slice(0, 16) : "",
@@ -176,7 +178,7 @@ export default function EditEventPage() {
     setSaving(true);
 
     try {
-      const { banner_size, banner_position, banner_theme, banner_primary_color, banner_accent_color, banner_url, ...submitData } = formData;
+      const { banner_size, banner_position, banner_theme, banner_primary_color, banner_accent_color, banner_layout, banner_url, ...submitData } = formData;
       
       const payload: any = {
         ...submitData,
@@ -191,6 +193,7 @@ export default function EditEventPage() {
           theme: formData.banner_theme,
           primary_color: formData.banner_primary_color || "",
           accent_color: formData.banner_accent_color || "",
+          layout: formData.banner_layout || "",
         },
         registration_start: formData.registration_start || null,
         registration_end: formData.registration_end || null,
@@ -527,6 +530,72 @@ export default function EditEventPage() {
                   <option value="champagne_lounge">Champagne Lounge (Warm Alabaster & Brushed Gold)</option>
                   <option value="logistics_glass">Logistics Glass (Translucent Slate & Steel Borders)</option>
                 </select>
+              </div>
+
+              <div className="space-y-3">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Registration Form Layout</label>
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                  {[
+                    { id: "", label: "Default", desc: "Theme default" },
+                    { id: "stacked", label: "Stacked", desc: "Top Banner" },
+                    { id: "split", label: "Split Right", desc: "Form on Right" },
+                    { id: "reversed", label: "Split Left", desc: "Form on Left" },
+                    { id: "centered", label: "Centered", desc: "Centered Card" }
+                  ].map((lay) => {
+                    const active = formData.banner_layout === lay.id;
+                    return (
+                      <button
+                        key={lay.id}
+                        type="button"
+                        onClick={() => setFormData(prev => ({ ...prev, banner_layout: lay.id }))}
+                        className={`flex flex-col items-center justify-between p-2.5 rounded-xl border text-center transition-all bg-white hover:border-slate-350 ${
+                          active 
+                            ? "border-slate-800 ring-2 ring-slate-800/10 shadow-sm" 
+                            : "border-slate-100 shadow-sm opacity-80 hover:opacity-100"
+                        }`}
+                      >
+                        {lay.id === "" && (
+                          <div className="relative w-full h-10 bg-slate-100 rounded flex items-center justify-center border border-slate-200/60 mb-2 overflow-hidden">
+                            <div className="text-[9px] font-black tracking-tighter text-slate-400 uppercase">Default</div>
+                          </div>
+                        )}
+                        {lay.id === "stacked" && (
+                          <div className="flex flex-col gap-0.5 w-full h-10 bg-slate-150 rounded p-1 border border-slate-200/60 mb-2">
+                            <div className="bg-slate-350 h-2 w-full rounded-sm"></div>
+                            <div className="bg-white h-5 w-4/5 mx-auto rounded-sm border border-slate-200 flex items-center justify-center">
+                              <span className="w-1.5 h-1.5 bg-slate-300 rounded-full"></span>
+                            </div>
+                          </div>
+                        )}
+                        {lay.id === "split" && (
+                          <div className="flex gap-0.5 w-full h-10 bg-slate-150 rounded p-1 border border-slate-200/60 mb-2">
+                            <div className="bg-slate-350 w-2/5 h-full rounded-sm"></div>
+                            <div className="bg-white w-3/5 h-full rounded-sm border border-slate-200 flex items-center justify-center">
+                              <span className="w-1.5 h-1.5 bg-slate-300 rounded-full"></span>
+                            </div>
+                          </div>
+                        )}
+                        {lay.id === "reversed" && (
+                          <div className="flex gap-0.5 w-full h-10 bg-slate-150 rounded p-1 border border-slate-200/60 mb-2">
+                            <div className="bg-white w-3/5 h-full rounded-sm border border-slate-200 flex items-center justify-center">
+                              <span className="w-1.5 h-1.5 bg-slate-300 rounded-full"></span>
+                            </div>
+                            <div className="bg-slate-350 w-2/5 h-full rounded-sm"></div>
+                          </div>
+                        )}
+                        {lay.id === "centered" && (
+                          <div className="relative w-full h-10 bg-slate-200 rounded p-1 border border-slate-250 mb-2 flex items-center justify-center">
+                            <div className="bg-white w-3/4 h-6 rounded-sm border border-slate-300 shadow-sm flex items-center justify-center">
+                              <span className="w-1.5 h-1.5 bg-slate-300 rounded-full"></span>
+                            </div>
+                          </div>
+                        )}
+                        <span className="text-[10px] font-black tracking-tight text-slate-800 block leading-tight">{lay.label}</span>
+                        <span className="text-[8px] text-slate-400 font-bold block">{lay.desc}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

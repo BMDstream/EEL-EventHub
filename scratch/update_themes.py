@@ -1,42 +1,13 @@
-"use client";
+import os
+import re
 
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
-import { Calendar, MapPin, CheckCircle2, Loader2, AlertCircle, ChevronDown } from "lucide-react";
-import { QRCodeSVG } from "qrcode.react";
+file_path = "app/register/[slug]/page.tsx"
 
-const THEME_DEFAULTS = {
-  cyber_dark: { primary: "#000000", accent: "#eab308" },
-  minimal_light: { primary: "#0f172a", accent: "#0284c7" },
-  glassmorphism: { primary: "#1e1b4b", accent: "#6366f1" },
-  brutalist_retro: { primary: "#000000", accent: "#facc15" },
-  midnight_luxury: { primary: "#0a1128", accent: "#d4af37" },
-  neon_horizon: { primary: "#000000", accent: "#ff007f" },
-  forest_zen: { primary: "#1c2e24", accent: "#2d4a39" },
-  aurora_glow: { primary: "#070b19", accent: "#14b8a6" },
-  crimson_sunset: { primary: "#3a0d1e", accent: "#f08a5d" },
-  cyberpunk_terminal: { primary: "#000000", accent: "#39ff14" },
-  corporate_mono: { primary: "#334155", accent: "#0f172a" },
-  nordic_alabaster: { primary: "#1c1917", accent: "#78716c" },
-  midnight_executive: { primary: "#0d0e12", accent: "#2563eb" },
-  champagne_lounge: { primary: "#4a3f35", accent: "#c5a059" },
-  logistics_glass: { primary: "#1e293b", accent: "#94a3b8" }
-};
+with open(file_path, "r", encoding="utf-8") as f:
+    content = f.read()
 
-interface FormField {
-  id: string;
-  label: string;
-  type: "text" | "select" | "checkbox";
-  required: boolean;
-  options?: string[];
-  dependsOn?: {
-    fieldId: string;
-    value: string;
-  };
-  description?: string;
-}
-
-function parseMarkdown(text: string, theme: string = "cyber_dark") {
+# 1. Replace parseMarkdown function
+old_markdown_parser = """function parseMarkdown(text: string, theme: string = "cyber_dark") {
   if (!text) return "";
   
   // Escape HTML to prevent XSS
@@ -46,11 +17,61 @@ function parseMarkdown(text: string, theme: string = "cyber_dark") {
     .replace(/>/g, "&gt;");
 
   // Bold (**text** or __text__)
-  html = html.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+  html = html.replace(/\\*\\*(.*?)\\*\\*/g, "<strong>$1</strong>");
   html = html.replace(/__(.*?)__/g, "<strong>$1</strong>");
 
   // Italic (*text* or _text_)
-  html = html.replace(/\*(.*?)\*/g, "<em>$1</em>");
+  html = html.replace(/\\*(.*?)\\*/g, "<em>$1</em>");
+  html = html.replace(/_(.*?)_/g, "<em>$1</em>");
+
+  const isDark = theme !== "minimal_light" && 
+                 theme !== "brutalist_retro" && 
+                 theme !== "corporate_mono" && 
+                 theme !== "nordic_alabaster" && 
+                 theme !== "champagne_lounge";
+  const numColorClass = isDark ? "client-text-accent text-amber-400 font-extrabold" : "client-text-primary text-slate-900 font-extrabold";
+
+  // Split by line breaks to handle paragraphs/lists
+  const lines = html.split("\\n");
+  const processedLines = lines.map((line) => {
+    // Check if it's a numbered list item (e.g. "1. Item")
+    const numListMatch = line.match(/^(\\s*\\d+\\.\\s+)(.*)/);
+    if (numListMatch) {
+      return `<div class="pl-4 py-1 flex items-start gap-1"><span class="${numColorClass} shrink-0">${numListMatch[1]}</span><span>${numListMatch[2]}</span></div>`;
+    }
+    
+    // Check if it's a bullet list item (e.g. "- Item" or "* Item")
+    const bulletListMatch = line.match(/^(\\s*[-*]\\s+)(.*)/);
+    if (bulletListMatch) {
+      return `<div class="pl-6 py-1 flex items-start gap-1 list-disc list-inside"><span>•</span><span>${bulletListMatch[2]}</span></div>`;
+    }
+
+    // Check if the line starts with spaces (indentation)
+    if (line.startsWith("   ") || line.startsWith("  ") || line.startsWith("\\t")) {
+      return `<p class="pl-8 min-h-[1em]">${line.trim()}</p>`;
+    }
+
+    return `<p class="min-h-[1em]">${line}</p>`;
+  });
+
+  return processedLines.join("");
+}"""
+
+new_markdown_parser = """function parseMarkdown(text: string, theme: string = "cyber_dark") {
+  if (!text) return "";
+  
+  // Escape HTML to prevent XSS
+  let html = text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+
+  // Bold (**text** or __text__)
+  html = html.replace(/\\*\\*(.*?)\\*\\*/g, "<strong>$1</strong>");
+  html = html.replace(/__(.*?)__/g, "<strong>$1</strong>");
+
+  // Italic (*text* or _text_)
+  html = html.replace(/\\*(.*?)\\*/g, "<em>$1</em>");
   html = html.replace(/_(.*?)_/g, "<em>$1</em>");
 
   const isDark = theme !== "minimal_light" && 
@@ -111,22 +132,22 @@ function parseMarkdown(text: string, theme: string = "cyber_dark") {
   }
 
   // Split by line breaks to handle paragraphs/lists
-  const lines = html.split("\n");
+  const lines = html.split("\\n");
   const processedLines = lines.map((line) => {
     // Check if it's a numbered list item (e.g. "1. Item")
-    const numListMatch = line.match(/^(\s*\d+\.\s+)(.*)/);
+    const numListMatch = line.match(/^(\\s*\\d+\\.\\s+)(.*)/);
     if (numListMatch) {
       return `<div class="pl-4 py-1 flex items-start gap-1"><span class="${numStyleClass} shrink-0">${numListMatch[1]}</span><span>${numListMatch[2]}</span></div>`;
     }
     
     // Check if it's a bullet list item (e.g. "- Item" or "* Item")
-    const bulletListMatch = line.match(/^(\s*[-*]\s+)(.*)/);
+    const bulletListMatch = line.match(/^(\\s*[-*]\\s+)(.*)/);
     if (bulletListMatch) {
       return `<div class="pl-6 py-1 flex items-start gap-1 list-disc list-inside"><span>•</span><span>${bulletListMatch[2]}</span></div>`;
     }
 
     // Check if the line starts with spaces (indentation)
-    if (line.startsWith("   ") || line.startsWith("  ") || line.startsWith("\t")) {
+    if (line.startsWith("   ") || line.startsWith("  ") || line.startsWith("\\t")) {
       return `<p class="pl-8 min-h-[1em]">${line.trim()}</p>`;
     }
 
@@ -134,215 +155,10 @@ function parseMarkdown(text: string, theme: string = "cyber_dark") {
   });
 
   return processedLines.join("");
-}
+}"""
 
-interface Client {
-  id: number;
-  name: string;
-  slug: string;
-  logo_url?: string;
-  sender_name?: string;
-  reply_to?: string;
-  primary_color: string;
-  accent_color: string;
-  heading_text: string;
-  body_text: string;
-  footer_text: string;
-}
-
-interface Event {
-  id: number;
-  title: string;
-  description: string;
-  start_date: string;
-  location: string;
-  address?: string;
-  capacity: number;
-  banner_url?: string;
-  custom_fields_schema?: FormField[];
-  client?: Client;
-  collect_company?: boolean;
-  banner_settings?: {
-    size?: string;
-    position?: string;
-    theme?: string;
-    primary_color?: string;
-    accent_color?: string;
-    layout?: string;
-  };
-  registration_active?: boolean;
-  registration_start?: string;
-  registration_end?: string;
-  disclaimer_enabled?: boolean;
-  disclaimer_text?: string;
-}
-
-export default function PublicRegistrationPage() {
-  const { slug } = useParams();
-  const [event, setEvent] = useState<Event | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [registering, setRegistering] = useState(false);
-  const [registeredId, setRegisteredId] = useState<string | null>(null);
-  const [registeredPin, setRegisteredPin] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [submitError, setSubmitError] = useState<string | null>(null);
-
-  const [statusMessage, setStatusMessage] = useState<string | null>(null);
-
-  const [formData, setFormData] = useState({
-    first_name: "",
-    last_name: "",
-    email: "",
-    company: "",
-  });
-
-  const [customAnswers, setCustomAnswers] = useState<Record<string, any>>({});
-  const [disclaimerAccepted, setDisclaimerAccepted] = useState(false);
-
-  // Prune any custom answers for fields that are hidden because of conditional branching
-  useEffect(() => {
-    if (!event?.custom_fields_schema) return;
-    
-    let changed = false;
-    const newAnswers = { ...customAnswers };
-    
-    for (const field of event.custom_fields_schema) {
-      if (field.dependsOn) {
-        const parentVal = newAnswers[field.dependsOn.fieldId];
-        const parentValStr = typeof parentVal === "boolean" ? String(parentVal) : parentVal;
-        
-        if (parentValStr !== field.dependsOn.value) {
-          if (newAnswers[field.id] !== undefined) {
-            delete newAnswers[field.id];
-            changed = true;
-          }
-        }
-      }
-    }
-    
-    if (changed) {
-      setCustomAnswers(newAnswers);
-    }
-  }, [customAnswers, event?.custom_fields_schema]);
-  const [isAttending, setIsAttending] = useState<boolean | null>(null);
-
-  // Check if registration is active or scheduled
-  let registrationClosed = false;
-  let closureReason = "";
-  
-  if (event) {
-    const now = new Date();
-    if (event.registration_active === false) {
-      registrationClosed = true;
-      closureReason = "Registration is currently closed for this event.";
-    } else {
-      if (event.registration_start) {
-        const startDate = new Date(event.registration_start);
-        if (now < startDate) {
-          registrationClosed = true;
-          closureReason = `Registration has not opened yet. It is scheduled to open on ${startDate.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}.`;
-        }
-      }
-      if (event.registration_end) {
-        const endDate = new Date(event.registration_end);
-        if (now > endDate) {
-          registrationClosed = true;
-          closureReason = "Registration for this event has closed.";
-        }
-      }
-    }
-  }
-
-  useEffect(() => {
-    fetch(`/api/py/events/${slug}`)
-      .then((res) => {
-        if (!res.ok) throw new Error("Event not found");
-        return res.json();
-      })
-      .then((data) => {
-        setEvent(data);
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error(err);
-        setError("Event not found or has expired.");
-        setLoading(false);
-      });
-  }, [slug]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!event) return;
-    
-    if (isAttending === null) {
-      setSubmitError("Please select your attendance status.");
-      return;
-    }
-    
-    // Enforce disclaimer acceptance
-    if (isAttending && event.disclaimer_enabled && event.disclaimer_text && !disclaimerAccepted) {
-      setSubmitError("You must read and accept the Disclaimer and Indemnity to register.");
-      return;
-    }
-    
-    setRegistering(true);
-    setSubmitError(null);
-
-    try {
-      const response = await fetch(`/api/py/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          event_id: event.id,
-          ...formData,
-          custom_answers: customAnswers,
-          is_attending: isAttending
-        })
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setRegisteredId(data.id);
-        setRegisteredPin(data.pin);
-        setStatusMessage(data.message);
-      } else {
-        const errData = await response.json().catch(() => ({}));
-        setSubmitError(errData.detail || "Registration failed. Please check your details and try again.");
-      }
-    } catch (err) {
-      console.error(err);
-      setSubmitError("An unexpected error occurred. Please try again.");
-    } finally {
-      setRegistering(false);
-    }
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-  };
-
-  const handleCustomChange = (id: string, value: any) => {
-    setCustomAnswers(prev => ({ ...prev, [id]: value }));
-  };
-
-  const client = event?.client;
-  const theme = event?.banner_settings?.theme || "cyber_dark";
-  const defaults = THEME_DEFAULTS[theme as keyof typeof THEME_DEFAULTS] || THEME_DEFAULTS.cyber_dark;
-
-  const eventPrimaryColor = event?.banner_settings?.primary_color || client?.primary_color || defaults.primary;
-  const eventAccentColor = event?.banner_settings?.accent_color || client?.accent_color || defaults.accent;
-
-  const isLightTheme = theme === "minimal_light" || 
-                       theme === "brutalist_retro" || 
-                       theme === "corporate_mono" || 
-                       theme === "nordic_alabaster" || 
-                       theme === "champagne_lounge";
-
-  const bannerUrl = event?.banner_url;
-  const bannerSize = event?.banner_settings?.size;
-  const bannerPosition = event?.banner_settings?.position;
-
-  const themeStyles = {
+# 2. Replace themeStyles dictionary
+new_theme_styles = """  const themeStyles = {
     cyber_dark: {
       wrapper: "min-h-screen bg-black text-white animate-in fade-in duration-500 relative",
       leftPanel: "bg-black p-8 sm:p-12 lg:p-16 xl:p-24 flex flex-col justify-between text-white relative overflow-hidden min-h-[50vh] lg:min-screen",
@@ -1213,469 +1029,56 @@ export default function PublicRegistrationPage() {
       disclaimerContainer: "space-y-4 p-6 rounded-none border border-slate-800 bg-slate-950/40 text-slate-350 mt-6 font-mono",
       disclaimerAcceptLabel: "flex items-center gap-4 cursor-pointer group p-4 rounded-none border border-slate-800 bg-slate-950/20 text-slate-300 hover:border-slate-600 font-mono"
     }
-  };
+  };"""
 
-  const style = themeStyles[theme as keyof typeof themeStyles] || themeStyles.cyber_dark;
+# 3. Dynamic layout loading with fallback and layout bindings
+split_content = content.split("  const themeStyles = {")
+if len(split_content) < 2:
+    print("Could not find themeStyles block!")
+    exit(1)
 
-  const themeLayouts = {
-    cyber_dark: "split",
-    minimal_light: "split",
-    glassmorphism: "split",
-    brutalist_retro: "reversed",
-    midnight_luxury: "centered",
-    neon_horizon: "reversed",
-    forest_zen: "stacked",
-    aurora_glow: "centered",
-    crimson_sunset: "stacked",
-    cyberpunk_terminal: "split",
-    corporate_mono: "split",
-    nordic_alabaster: "split",
-    midnight_executive: "split",
-    champagne_lounge: "centered",
-    logistics_glass: "split"
-  } as const;
+pre_themeStyles = split_content[0]
+post_themeStyles_full = split_content[1]
 
-  const layout = event?.banner_settings?.layout || themeLayouts[theme as keyof typeof themeLayouts] || "split";
+# Find post themeStyles boundary
+style_decl_index = post_themeStyles_full.find("  const style = themeStyles[theme as keyof typeof themeStyles] || themeStyles.cyber_dark;")
+if style_decl_index == -1:
+    print("Could not find style declaration block boundary!")
+    exit(1)
 
-  // Sub-render blocks for dynamic layouts
-  const eventInfo = event ? (
-    <div className="relative z-10 my-auto py-12 lg:py-24">
-      <h1 className={style.title}>{event.title}</h1>
-      <p className={`text-xl mb-10 lg:mb-20 max-w-lg leading-relaxed font-medium ${style.textMuted}`}>{event.description}</p>
-      <div className="space-y-6 lg:space-y-10">
-        <div className="flex items-center gap-8 group">
-          <div className={style.card}>
-            <Calendar size={32} className={isLightTheme ? "client-text-primary" : "client-text-accent"} />
-          </div>
-          <div>
-            <p className={`${style.textMuted} text-[10px] font-black uppercase tracking-[0.3em] mb-2`}>Schedule</p>
-            <p className={`text-2xl font-black font-bricolage italic tracking-tight ${style.textMain}`}>{new Date(event.start_date).toLocaleString(undefined, { dateStyle: 'full', timeStyle: 'short' })}</p>
-          </div>
-        </div>
-        <div className="flex items-start gap-8 group">
-          <div className={style.card}>
-            <MapPin size={32} className={isLightTheme ? "client-text-primary" : "client-text-accent"} />
-          </div>
-          <div>
-            <p className={`${style.textMuted} text-[10px] font-black uppercase tracking-[0.3em] mb-2`}>Venue</p>
-            <p className={`text-2xl font-black font-bricolage italic tracking-tight ${style.textMain}`}>{event.location}</p>
-            {event.address && (
-              <p className={`${style.textMuted} text-sm font-medium leading-relaxed max-w-sm mt-1`}>{event.address}</p>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  ) : null;
+post_themeStyles = post_themeStyles_full[style_decl_index:]
 
-  const clientBadge = (
-    <div className="relative z-10 mt-12 lg:mt-0">
-      <div className={style.badge}>
-        {client?.logo_url ? (
-          <img src={client.logo_url} alt={client.name} className="h-6 object-contain animate-in zoom-in duration-300" />
-        ) : (
-          <span className={`w-2 h-2 rounded-full animate-pulse ${theme === "minimal_light" ? "client-bg-primary" : "client-bg-accent"}`}></span>
-        )}
-        <span className={style.badgeText}>
-          {client?.name || "Excellence Entertainment Logistics"}
-        </span>
-      </div>
-    </div>
-  );
+# Assemble new content with updated themeStyles
+assembled = pre_themeStyles + new_theme_styles + "\n\n" + post_themeStyles
 
-  const registrationForm = event ? (
-    <div className={style.bodyBlock || "max-w-md w-full mx-auto relative z-10 py-12"}>
-      <div className="mb-12">
-        <h2 className={style.heading}>Register.</h2>
-        <p className={style.subHeading}>Secure your credentials for this exclusive engagement.</p>
-      </div>
+# Apply parseMarkdown replacement
+assembled = assembled.replace(old_markdown_parser, new_markdown_parser)
 
-      <form onSubmit={handleSubmit} className="space-y-8">
-        <div className="space-y-6">
-          <div className="space-y-2">
-            <label className={style.label}>
-              First Name <span className={`${isLightTheme ? "client-text-primary" : "client-text-accent"} ml-0.5 font-bold`}>*</span>
-            </label>
-            <input
-              required
-              type="text"
-              name="first_name"
-              value={formData.first_name}
-              onChange={handleChange}
-              placeholder="e.g. Alan"
-              className={style.input}
-            />
-          </div>
+# Apply dynamic layout variable override:
+# Target: const layout = themeLayouts[theme as keyof typeof themeLayouts] || "split";
+assembled = assembled.replace(
+    'const layout = themeLayouts[theme as keyof typeof themeLayouts] || "split";',
+    'const layout = event?.banner_settings?.layout || themeLayouts[theme as keyof typeof themeLayouts] || "split";'
+)
 
-          <div className="space-y-2">
-            <label className={style.label}>
-              Last Name <span className={`${isLightTheme ? "client-text-primary" : "client-text-accent"} ml-0.5 font-bold`}>*</span>
-            </label>
-            <input
-              required
-              type="text"
-              name="last_name"
-              value={formData.last_name}
-              onChange={handleChange}
-              placeholder="e.g. Turing"
-              className={style.input}
-            />
-          </div>
+# Replace the hardcoded checkboxes class to style.checkboxInput
+assembled = assembled.replace(
+    'className="w-6 h-6 rounded-lg bg-zinc-900 border-white/10 client-checkbox transition-all"',
+    'className={style.checkboxInput || "w-6 h-6 rounded-lg bg-zinc-900 border-white/10 client-checkbox transition-all"}'
+)
 
-          <div className="space-y-2">
-            <label className={style.label}>
-              Secure Email Address <span className={`${isLightTheme ? "client-text-primary" : "client-text-accent"} ml-0.5 font-bold`}>*</span>
-            </label>
-            <input
-              required
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              placeholder="e.g. turing@bletchleypark.org.uk"
-              className={style.input}
-            />
-          </div>
+# Replace disclaimer wrapper and labels
+assembled = assembled.replace(
+    'className={`space-y-4 p-6 rounded-[1.5rem] border ${isLightTheme ? \'bg-slate-100 border-slate-200 text-slate-900\' : \'bg-black/30 border-white/10 text-white\'} mt-6`}',
+    'className={style.disclaimerContainer || `space-y-4 p-6 rounded-[1.5rem] border ${isLightTheme ? \'bg-slate-100 border-slate-200 text-slate-900\' : \'bg-black/30 border-white/10 text-white\'} mt-6`}'
+)
 
-          {event.collect_company !== false && (
-            <div className="space-y-2">
-              <label className={style.label}>Organization / Company</label>
-              <input
-                type="text"
-                name="company"
-                value={formData.company}
-                onChange={handleChange}
-                placeholder="e.g. Government Code & Cypher School"
-                className={style.input}
-              />
-            </div>
-          )}
+assembled = assembled.replace(
+    'className={`flex items-center gap-4 cursor-pointer group p-4 rounded-xl border border-white/5 hover:border-white/10 transition-all ${isLightTheme ? \'bg-white border-slate-200 text-slate-800\' : \'bg-black/20 text-white\'}`}',
+    'className={style.disclaimerAcceptLabel || `flex items-center gap-4 cursor-pointer group p-4 rounded-xl border border-white/5 hover:border-white/10 transition-all ${isLightTheme ? \'bg-white border-slate-200 text-slate-800\' : \'bg-black/20 text-white\'}`}'
+)
 
-          <div className={style.rsvpBorder}>
-            <label className={style.label}>
-              Attendance Status <span className={`${isLightTheme ? "client-text-primary" : "client-text-accent"} ml-0.5 font-bold`}>*</span>
-            </label>
-            <div className="grid grid-cols-2 gap-4">
-              <button
-                type="button"
-                onClick={() => setIsAttending(true)}
-                className={style.btnAttending(isAttending === true)}
-              >
-                I am attending
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsAttending(false)}
-                className={style.btnNotAttending(isAttending === false)}
-              >
-                Unable to attend
-              </button>
-            </div>
-          </div>
-        </div>
+with open(file_path, "w", encoding="utf-8") as f:
+    f.write(assembled)
 
-        {isAttending && event.custom_fields_schema && event.custom_fields_schema.length > 0 && (
-          <div className="space-y-8">
-            <div className="pt-6">
-              <p className={`text-[10px] font-black uppercase tracking-[0.3em] ${isLightTheme ? "client-text-primary" : "client-text-accent"}`}>Additional Details</p>
-            </div>
-            {event.custom_fields_schema.map((field) => {
-              // Evaluation of conditional rendering
-              if (field.dependsOn) {
-                const parentVal = customAnswers[field.dependsOn.fieldId];
-                const parentValStr = typeof parentVal === "boolean" ? String(parentVal) : parentVal;
-                if (parentValStr !== field.dependsOn.value) {
-                  return null;
-                }
-              }
-
-              return (
-                <div key={field.id} className="space-y-3">
-                  <label className={style.label}>
-                    {field.label} {field.required && <span className={`${isLightTheme ? "client-text-primary" : "client-text-accent"} ml-0.5 font-bold`}>*</span>}
-                  </label>
-                  
-                  {field.description && (
-                    <div className={`p-4 rounded-[1.2rem] flex items-start gap-3 text-xs leading-normal border ${
-                      isLightTheme
-                        ? "bg-slate-100/80 border-slate-200 text-slate-600" 
-                        : "bg-black/30 border-white/5 text-zinc-400"
-                    }`}>
-                      <span className="shrink-0 text-emerald-500">✅</span>
-                      <span className="italic font-medium">{field.description}</span>
-                    </div>
-                  )}
-                  
-                  {field.type === "text" && (
-                    <input
-                      required={field.required}
-                      type="text"
-                      placeholder="Enter your answer"
-                      onChange={(e) => handleCustomChange(field.id, e.target.value)}
-                      className={style.input}
-                    />
-                  )}
-
-                  {field.type === "select" && (
-                    <div className="relative">
-                      <select
-                        required={field.required}
-                        onChange={(e) => handleCustomChange(field.id, e.target.value)}
-                        className={style.select}
-                      >
-                        <option value="" className={isLightTheme ? "text-black" : "text-white"}>Select Option</option>
-                        {field.options?.map(opt => <option key={opt} value={opt} className={isLightTheme ? "text-black" : "text-white"}>{opt}</option>)}
-                      </select>
-                      <ChevronDown className="absolute right-6 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" size={20} />
-                    </div>
-                  )}
-
-                  {field.type === "checkbox" && (
-                    <label className={style.checkbox}>
-                       <input 
-                         type="checkbox" 
-                         onChange={(e) => handleCustomChange(field.id, e.target.checked)}
-                         className={style.checkboxInput || "w-6 h-6 rounded-lg bg-zinc-900 border-white/10 client-checkbox transition-all"} 
-                       />
-                       <span className={style.checkboxText}>Yes, I agree / confirm</span>
-                    </label>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Disclaimer & Indemnity */}
-        {isAttending && event.disclaimer_enabled && event.disclaimer_text && (
-          <div className={style.disclaimerContainer || `space-y-4 p-6 rounded-[1.5rem] border ${isLightTheme ? 'bg-slate-100 border-slate-200 text-slate-900' : 'bg-black/30 border-white/10 text-white'} mt-6`}>
-            <p className={`text-[10px] font-black uppercase tracking-[0.3em] ${isLightTheme ? "client-text-primary" : "client-text-accent"}`}>Disclaimer & Indemnity</p>
-            <div 
-              className="text-xs leading-relaxed opacity-85 max-h-40 overflow-y-auto pr-2 border-b border-white/5 pb-4 space-y-1.5"
-              dangerouslySetInnerHTML={{ __html: parseMarkdown(event.disclaimer_text || "", theme) }}
-            />
-            <label className={style.disclaimerAcceptLabel || `flex items-center gap-4 cursor-pointer group p-4 rounded-xl border border-white/5 hover:border-white/10 transition-all ${isLightTheme ? 'bg-white border-slate-200 text-slate-800' : 'bg-black/20 text-white'}`}>
-              <input
-                required
-                type="checkbox"
-                checked={disclaimerAccepted}
-                onChange={(e) => setDisclaimerAccepted(e.target.checked)}
-                className={style.checkboxInput || "w-6 h-6 rounded-lg bg-zinc-900 border-white/10 client-checkbox transition-all"}
-              />
-              <span className="text-xs font-bold opacity-80 group-hover:opacity-100 transition-opacity">
-                I read and accept the Disclaimer and Indemnity <span className="text-red-500 font-bold">*</span>
-              </span>
-            </label>
-          </div>
-        )}
-
-        <div className="pt-8">
-          {submitError && (
-            <div className="mb-4 px-5 py-4 rounded-2xl bg-red-950/60 border border-red-500/40 flex items-start gap-3">
-              <span className="text-red-400 mt-0.5 shrink-0">✕</span>
-              <p className="text-red-300 text-sm font-medium leading-snug">{submitError}</p>
-            </div>
-          )}
-          <button type="submit" disabled={registering} className={style.btnSubmit}>
-            {registering ? <Loader2 className="animate-spin" size={20} /> : null}
-            {registering ? "Dispatching..." : "Submit Registration"}
-          </button>
-        </div>
-      </form>
-    </div>
-  ) : null;
-
-  return (
-    <>
-      <style dangerouslySetInnerHTML={{ __html: `
-        @keyframes aurora {
-          0% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
-          100% { background-position: 0% 50%; }
-        }
-        .animate-aurora {
-          background-size: 200% 200%;
-          animation: aurora 15s ease infinite;
-        }
-        .client-text-accent { color: ${eventAccentColor} !important; }
-        .client-bg-accent { background-color: ${eventAccentColor} !important; }
-        .client-border-accent { border-color: ${eventAccentColor} !important; }
-        .client-hover-border-accent:hover { border-color: ${eventAccentColor} !important; }
-        .client-hover-bg-accent:hover { background-color: ${eventAccentColor} !important; }
-        .client-shadow-accent { box-shadow: 0 25px 50px -12px ${eventAccentColor}30 !important; }
-        .client-text-primary { color: ${eventPrimaryColor} !important; }
-        .client-bg-primary { background-color: ${eventPrimaryColor} !important; }
-        .client-border-primary { border-color: ${eventPrimaryColor} !important; }
-        .client-input-focus:focus {
-          border-color: ${eventAccentColor} !important;
-          box-shadow: 0 0 0 4px ${eventAccentColor}1a !important;
-        }
-        .client-checkbox:checked {
-          background-color: ${eventAccentColor} !important;
-          border-color: ${eventAccentColor} !important;
-        }
-      `}} />
-      {loading ? (
-        <div className={style.loadingBg}>
-          <Loader2 className={style.loader} size={48} />
-        </div>
-      ) : error || !event ? (
-        <div className={style.errorBg}>
-          <AlertCircle className="text-red-500 mb-6" size={64} />
-          <h1 className={`text-3xl font-black mb-4 font-bricolage italic uppercase tracking-tight ${style.textMain}`}>Access Denied</h1>
-          <p className={`${style.textMuted} text-center max-w-md font-medium`}>{error}</p>
-        </div>
-      ) : registrationClosed ? (
-        <div className={style.errorBg}>
-          <AlertCircle className="text-yellow-500 mb-6 animate-pulse" size={64} />
-          <h1 className={`text-3xl font-black mb-4 font-bricolage italic uppercase tracking-tight ${style.textMain}`}>Registration Closed</h1>
-          <p className={`${style.textMuted} text-center max-w-md font-medium`}>{closureReason}</p>
-        </div>
-      ) : registeredId ? (
-        <div className={style.successBg}>
-          <div className={style.successCard}>
-            {(theme === "cyber_dark" || theme === "midnight_executive" || theme === "logistics_glass") && <div className="absolute top-0 left-0 w-full h-1 client-bg-accent"></div>}
-            <div className={`${
-              theme === "cyber_dark" || theme === "midnight_executive" || theme === "logistics_glass"
-                ? "client-bg-accent animate-bounce" 
-                : theme === "minimal_light" || theme === "corporate_mono" || theme === "nordic_alabaster" || theme === "champagne_lounge"
-                  ? "client-bg-primary animate-pulse" 
-                  : theme === "brutalist_retro" 
-                    ? "bg-[#facc15] border-[3px] border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]" 
-                    : "bg-gradient-to-r from-yellow-500 to-indigo-500"
-            } w-24 h-24 rounded-[2rem] flex items-center justify-center mx-auto mb-10 shadow-2xl`}>
-              <CheckCircle2 className={isLightTheme && theme !== "brutalist_retro" ? "text-white" : "text-black"} size={56} />
-            </div>
-            <h1 className={`text-4xl font-black mb-6 font-bricolage italic uppercase tracking-tight ${style.textMain}`}>
-              {statusMessage || (isAttending ? "Access Granted." : "Response Recorded.")}
-            </h1>
-            <p className={`${style.textMuted} mb-12 font-medium leading-relaxed`}>
-              Your registration for <span className={`${style.textMain} font-bold`}>{event.title}</span> is {isAttending ? 'confirmed' : 'submitted'}. 
-              {isAttending 
-                ? ` Verification has been dispatched to `
-                : ` We've noted that you are unable to attend. Thank you for letting us know. `}
-              {isAttending && <span className={`${isLightTheme ? "client-text-primary" : "client-text-accent"} font-bold`}>{formData.email}</span>}
-            </p>
-            {isAttending && (
-              <div className={style.successQR}>
-                <div className="flex justify-center mb-4">
-                  <div className="bg-white p-2 rounded-xl">
-                    <QRCodeSVG 
-                      value={registeredPin || registeredId || ""} 
-                      size={160}
-                      level="M"
-                    />
-                  </div>
-                </div>
-                <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 mb-1">Unique Clearance ID</p>
-                <p className={`text-3xl font-black ${isLightTheme ? "client-text-primary" : "client-text-accent"} tracking-tighter italic font-bricolage`}>
-                  {registeredPin || (registeredId ? registeredId.substring(0, 8) : "")}
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-      ) : (
-        <div className={style.wrapper}>
-          {/* Background Images / Overlay rendering */}
-          {style.leftBgImage}
-          <div className={style.leftOverlay}></div>
-
-          {layout === "split" && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 min-h-screen relative z-10">
-              <div className={style.leftPanel}>
-                {eventInfo}
-                {clientBadge}
-              </div>
-              <div className={style.rightPanel}>
-                {registrationForm}
-              </div>
-            </div>
-          )}
-
-          {layout === "reversed" && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 min-h-screen relative z-10">
-              <div className={`${style.leftPanel} lg:order-last`}>
-                {eventInfo}
-                {clientBadge}
-              </div>
-              <div className={style.rightPanel}>
-                {registrationForm}
-              </div>
-            </div>
-          )}
-
-          {layout === "centered" && (
-            <div className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-8 lg:p-12 relative z-10">
-              <div className={style.centeredCard}>
-                <div className="mb-8 border-b border-white/10 pb-8">
-                  <h1 className={style.title}>{event.title}</h1>
-                  <p className={`text-base mb-8 max-w-xl leading-relaxed mt-4 ${style.textMuted}`}>{event.description}</p>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="flex items-center gap-4">
-                      <Calendar size={24} className={isLightTheme ? "client-text-primary" : "client-text-accent"} />
-                      <div>
-                        <p className={`${style.textMuted} text-[9px] font-black uppercase tracking-[0.25em] mb-1`}>Time Frame</p>
-                        <p className={`text-sm font-bold tracking-tight ${style.textMain}`}>{new Date(event.start_date).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-5">
-                      <div className={style.card}>
-                        <MapPin size={24} className={isLightTheme ? "client-text-primary" : "client-text-accent"} />
-                      </div>
-                      <div>
-                        <p className={`${style.textMuted} text-[8px] font-black uppercase tracking-[0.3em]`}>Venue</p>
-                        <p className={`text-sm font-bold ${style.textMain}`}>{event.location}</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                {registrationForm}
-              </div>
-              <div className="mt-8 mb-12 flex justify-center w-full">
-                {clientBadge}
-              </div>
-            </div>
-          )}
-
-          {layout === "stacked" && (
-            <div className="min-h-screen flex flex-col relative z-10">
-              <div className={style.headerBlock}>
-                <div className="max-w-5xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-8">
-                  <div>
-                    <h1 className={style.title}>{event.title}</h1>
-                    <p className={`text-base max-w-xl leading-relaxed mt-4 ${style.textMuted}`}>{event.description}</p>
-                  </div>
-                  
-                  <div className="flex flex-col sm:flex-row gap-8 shrink-0">
-                    <div className="flex items-center gap-4">
-                      <Calendar size={24} className="client-text-accent" />
-                      <div>
-                        <p className={`${style.textMuted} text-[9px] font-black uppercase tracking-[0.3em]`}>Schedule</p>
-                        <p className={`text-lg font-bold ${style.textMain}`}>{new Date(event.start_date).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <MapPin size={24} className="client-text-accent" />
-                      <div>
-                        <p className={`${style.textMuted} text-[9px] font-black uppercase tracking-[0.3em]`}>Venue</p>
-                        <p className={`text-lg font-bold ${style.textMain}`}>{event.location}</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className={style.bodyBlock}>
-                {registrationForm}
-                <div className="mt-12 mb-16 flex justify-center">
-                  {clientBadge}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-    </>
-  );
-}
+print("Form update script completed successfully.")
