@@ -18,7 +18,7 @@ interface FormField {
   description?: string;
 }
 
-function parseMarkdown(text: string) {
+function parseMarkdown(text: string, theme: string = "cyber_dark") {
   if (!text) return "";
   
   // Escape HTML to prevent XSS
@@ -35,13 +35,16 @@ function parseMarkdown(text: string) {
   html = html.replace(/\*(.*?)\*/g, "<em>$1</em>");
   html = html.replace(/_(.*?)_/g, "<em>$1</em>");
 
+  const isDark = theme !== "minimal_light" && theme !== "brutalist_retro";
+  const numColorClass = isDark ? "client-text-accent text-amber-400 font-extrabold" : "client-text-primary text-slate-900 font-extrabold";
+
   // Split by line breaks to handle paragraphs/lists
   const lines = html.split("\n");
   const processedLines = lines.map((line) => {
     // Check if it's a numbered list item (e.g. "1. Item")
     const numListMatch = line.match(/^(\s*\d+\.\s+)(.*)/);
     if (numListMatch) {
-      return `<div class="pl-4 py-1 flex items-start gap-1"><span class="font-bold text-slate-800 dark:text-white shrink-0">${numListMatch[1]}</span><span>${numListMatch[2]}</span></div>`;
+      return `<div class="pl-4 py-1 flex items-start gap-1"><span class="${numColorClass} shrink-0">${numListMatch[1]}</span><span>${numListMatch[2]}</span></div>`;
     }
     
     // Check if it's a bullet list item (e.g. "- Item" or "* Item")
@@ -1001,7 +1004,7 @@ export default function PublicRegistrationPage() {
             <p className={`text-[10px] font-black uppercase tracking-[0.3em] ${theme === "minimal_light" ? "client-text-primary" : "client-text-accent"}`}>Disclaimer & Indemnity</p>
             <div 
               className="text-xs leading-relaxed opacity-85 max-h-40 overflow-y-auto pr-2 border-b border-white/5 pb-4 space-y-1.5"
-              dangerouslySetInnerHTML={{ __html: parseMarkdown(event.disclaimer_text || "") }}
+              dangerouslySetInnerHTML={{ __html: parseMarkdown(event.disclaimer_text || "", theme) }}
             />
             <label className={`flex items-center gap-4 cursor-pointer group p-4 rounded-xl border border-white/5 hover:border-white/10 transition-all ${theme === 'minimal_light' || theme === 'brutalist_retro' ? 'bg-white border-slate-200 text-slate-800' : 'bg-black/20 text-white'}`}>
               <input
