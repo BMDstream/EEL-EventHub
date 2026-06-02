@@ -74,6 +74,11 @@ export default function EditEventPage() {
     banner_size: "cover",
     banner_position: "center",
     banner_theme: "cyber_dark",
+    registration_active: true,
+    registration_start: "",
+    registration_end: "",
+    disclaimer_enabled: false,
+    disclaimer_text: "",
   });
 
   useEffect(() => {
@@ -129,6 +134,11 @@ export default function EditEventPage() {
           banner_size: data.banner_settings?.size || "cover",
           banner_position: data.banner_settings?.position || "center",
           banner_theme: data.banner_settings?.theme || "cyber_dark",
+          registration_active: data.registration_active !== false,
+          registration_start: data.registration_start ? data.registration_start.slice(0, 16) : "",
+          registration_end: data.registration_end ? data.registration_end.slice(0, 16) : "",
+          disclaimer_enabled: !!data.disclaimer_enabled,
+          disclaimer_text: data.disclaimer_text || "",
         });
         setOriginalBanner(data.banner_url || "");
         setLoading(false);
@@ -157,7 +167,9 @@ export default function EditEventPage() {
           size: formData.banner_size,
           position: formData.banner_position,
           theme: formData.banner_theme,
-        }
+        },
+        registration_start: formData.registration_start || null,
+        registration_end: formData.registration_end || null,
       };
 
       // Only send banner_url if it has changed to avoid payload limit issues (413)
@@ -517,6 +529,92 @@ export default function EditEventPage() {
               </label>
             </div>
 
+            {/* Registration Active & Disclaimer Section */}
+            <div className="border-t border-slate-100 pt-8 mt-6 space-y-6">
+              <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-3">
+                 <Lock size={16} /> Registration Access & Disclaimer
+              </h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                 {/* Registration Active Toggle */}
+                 <div className="space-y-3 md:col-span-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Registration Availability</label>
+                    <label className="flex items-center gap-4 p-5 bg-slate-50/50 rounded-2xl border border-slate-100 cursor-pointer hover:bg-slate-50 transition-colors">
+                       <input 
+                         type="checkbox" 
+                         name="registration_active" 
+                         checked={formData.registration_active} 
+                         onChange={handleChange}
+                         className="w-5 h-5 rounded border-slate-300 text-[#1e293b] focus:ring-[#1e293b]/5" 
+                       />
+                       <div>
+                          <p className="text-xs font-bold text-[#1e293b]">Registration Form Active</p>
+                          <p className="text-[10px] text-slate-400 mt-0.5">Toggle this off to immediately suspend all public registrations.</p>
+                       </div>
+                    </label>
+                 </div>
+
+                 {/* Scheduling Dates */}
+                 <div className="space-y-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Schedule Open Date & Time (Optional)</label>
+                    <input
+                      type="datetime-local"
+                      name="registration_start"
+                      value={formData.registration_start}
+                      onChange={handleChange}
+                      className="w-full px-5 py-4 rounded-2xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-slate-700 bg-slate-50/50"
+                    />
+                    <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest ml-1">Leave empty to open immediately</p>
+                 </div>
+
+                 <div className="space-y-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Schedule Close Date & Time (Optional)</label>
+                    <input
+                      type="datetime-local"
+                      name="registration_end"
+                      value={formData.registration_end}
+                      onChange={handleChange}
+                      className="w-full px-5 py-4 rounded-2xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-slate-700 bg-slate-50/50"
+                    />
+                    <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest ml-1">Leave empty to keep open indefinitely</p>
+                 </div>
+
+                 {/* Disclaimer Toggle */}
+                 <div className="space-y-3 md:col-span-2 border-t border-slate-100 pt-6 mt-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Disclaimer & Indemnity</label>
+                    <label className="flex items-center gap-4 p-5 bg-slate-50/50 rounded-2xl border border-slate-100 cursor-pointer hover:bg-slate-50 transition-colors">
+                       <input 
+                         type="checkbox" 
+                         name="disclaimer_enabled" 
+                         checked={formData.disclaimer_enabled} 
+                         onChange={handleChange}
+                         className="w-5 h-5 rounded border-slate-300 text-[#1e293b] focus:ring-[#1e293b]/5" 
+                       />
+                       <div>
+                          <p className="text-xs font-bold text-[#1e293b]">Enable Disclaimer & Indemnity</p>
+                          <p className="text-[10px] text-slate-400 mt-0.5">Show a custom terms/indemnity agreement that guests must accept to register.</p>
+                       </div>
+                    </label>
+                 </div>
+
+                 {/* Disclaimer Text Area (Conditional) */}
+                 {formData.disclaimer_enabled && (
+                    <div className="space-y-3 md:col-span-2 animate-in fade-in slide-in-from-top-2">
+                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Disclaimer Content</label>
+                       <textarea
+                         required={formData.disclaimer_enabled}
+                         name="disclaimer_text"
+                         value={formData.disclaimer_text}
+                         onChange={handleChange}
+                         rows={4}
+                         placeholder="Enter the disclaimer and indemnity statement that guests must read and accept..."
+                         className="w-full px-5 py-4 rounded-2xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-slate-700 bg-slate-50/50 resize-none"
+                       />
+                    </div>
+                 )}
+              </div>
+            </div>
+ 
             <div className="pt-6">
               <button
                 type="submit"

@@ -41,6 +41,12 @@ class Event(SQLModel, table=True):
     collect_company: bool = Field(default=True)
     duration_days: int = Field(default=1)
     
+    registration_active: bool = Field(default=True)
+    registration_start: Optional[datetime] = Field(default=None)
+    registration_end: Optional[datetime] = Field(default=None)
+    disclaimer_enabled: bool = Field(default=False)
+    disclaimer_text: Optional[str] = Field(default=None)
+    
     custom_fields_schema: Optional[List[Dict[str, Any]]] = Field(default=[], sa_column=Column(JSON))
     allowed_domains: Optional[List[str]] = Field(default=[], sa_column=Column(JSON))
     banner_settings: Optional[Dict[str, Any]] = Field(default={"size": "cover", "position": "center"}, sa_column=Column(JSON))

@@ -46,6 +46,28 @@ def on_startup():
             except Exception:
                 session.rollback()
 
+            # Safely ensure registration and disclaimer columns are added to event table (fallback migration)
+            dialect_name = session.bind.dialect.name
+            is_sqlite = dialect_name == "sqlite"
+            
+            bool_true = "1" if is_sqlite else "TRUE"
+            bool_false = "0" if is_sqlite else "FALSE"
+            datetime_type = "DATETIME" if is_sqlite else "TIMESTAMP"
+            
+            for col_name, col_type in [
+                ("registration_active", f"BOOLEAN DEFAULT {bool_true}"),
+                ("registration_start", datetime_type),
+                ("registration_end", datetime_type),
+                ("disclaimer_enabled", f"BOOLEAN DEFAULT {bool_false}"),
+                ("disclaimer_text", "TEXT")
+            ]:
+                try:
+                    session.execute(text(f'ALTER TABLE "event" ADD COLUMN {col_name} {col_type}'))
+                    session.commit()
+                    print(f"Column '{col_name}' added to event table.")
+                except Exception:
+                    session.rollback()
+
             # 1. Initialize default email settings if not present
             default_email = session.exec(select(SystemSetting).where(SystemSetting.key == "email_config")).first()
             if not default_email:

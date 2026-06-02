@@ -15,6 +15,7 @@ interface FormField {
     fieldId: string;
     value: string;
   };
+  description?: string;
 }
 
 export default function FormBuilder({ eventId, initialSchema, onSave }: { eventId: string, initialSchema: FormField[], onSave: (schema: FormField[]) => void }) {
@@ -246,7 +247,7 @@ export default function FormBuilder({ eventId, initialSchema, onSave }: { eventI
                           <div className="flex-1 space-y-6">
                              <div className="flex flex-col md:flex-row gap-6">
                                 <div className="flex-1 space-y-2">
-                                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Field Label</label>
+                                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Field Label / Question</label>
                                    <input 
                                      type="text" 
                                      value={field.label}
@@ -263,6 +264,17 @@ export default function FormBuilder({ eventId, initialSchema, onSave }: { eventI
                                       {field.type}
                                    </div>
                                 </div>
+                             </div>
+
+                             <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Field Description / Help Text (Optional)</label>
+                                <input 
+                                  type="text" 
+                                  value={field.description || ""}
+                                  onChange={(e) => updateField(field.id, { description: e.target.value })}
+                                  placeholder="e.g. Only include requirements based on medical, religious, or ethical needs."
+                                  className="w-full px-6 py-4 bg-slate-50 rounded-xl border-none outline-none font-bold text-[#0f172a] focus:ring-2 focus:ring-yellow-400"
+                                />
                              </div>
 
                              {field.type === "select" && (

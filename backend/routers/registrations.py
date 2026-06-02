@@ -46,19 +46,45 @@ def register_attendee(
     raw_email = data.get("email", "")
     email = raw_email.strip().lower()
     
-    # Domain restriction check
+    # Domain restriction and status check
     if event_id:
         event = session.get(Event, event_id)
-        if event and event.allowed_domains:
-            email_parts = email.split("@")
-            if len(email_parts) > 1:
-                email_domain = email_parts[-1].strip().lower()
-                allowed = [d.strip().lower() for d in event.allowed_domains if d.strip()]
-                if allowed and email_domain not in allowed:
-                    raise HTTPException(
-                        status_code=400,
-                        detail=f"This event is restricted. Please register using your corporate email address (e.g. ending in @{', @'.join(allowed)})."
-                    )
+        if event:
+            # Check manual active flag (defaults to True)
+            if not getattr(event, "registration_active", True):
+                raise HTTPException(
+                    status_code=400,
+                    detail="Registration is currently closed for this event."
+                )
+
+            # Check scheduling start/end times
+            from datetime import datetime
+            now = datetime.utcnow()
+
+            reg_start = getattr(event, "registration_start", None)
+            if reg_start and now < reg_start:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Registration has not opened yet. It is scheduled to open on {reg_start.strftime('%Y-%m-%d %H:%M UTC')}."
+                )
+
+            reg_end = getattr(event, "registration_end", None)
+            if reg_end and now > reg_end:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Registration for this event has closed."
+                )
+
+            if event.allowed_domains:
+                email_parts = email.split("@")
+                if len(email_parts) > 1:
+                    email_domain = email_parts[-1].strip().lower()
+                    allowed = [d.strip().lower() for d in event.allowed_domains if d.strip()]
+                    if allowed and email_domain not in allowed:
+                        raise HTTPException(
+                            status_code=400,
+                            detail=f"This event is restricted. Please register using your corporate email address (e.g. ending in @{', @'.join(allowed)})."
+                        )
     else:
         raise HTTPException(status_code=400, detail="Event ID is required")
         

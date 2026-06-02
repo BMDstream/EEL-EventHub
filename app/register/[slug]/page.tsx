@@ -15,6 +15,7 @@ interface FormField {
     fieldId: string;
     value: string;
   };
+  description?: string;
 }
 
 interface Client {
@@ -48,6 +49,11 @@ interface Event {
     position?: string;
     theme?: string;
   };
+  registration_active?: boolean;
+  registration_start?: string;
+  registration_end?: string;
+  disclaimer_enabled?: boolean;
+  disclaimer_text?: string;
 }
 
 export default function PublicRegistrationPage() {
@@ -70,6 +76,7 @@ export default function PublicRegistrationPage() {
   });
 
   const [customAnswers, setCustomAnswers] = useState<Record<string, any>>({});
+  const [disclaimerAccepted, setDisclaimerAccepted] = useState(false);
 
   // Prune any custom answers for fields that are hidden because of conditional branching
   useEffect(() => {
@@ -96,7 +103,34 @@ export default function PublicRegistrationPage() {
       setCustomAnswers(newAnswers);
     }
   }, [customAnswers, event?.custom_fields_schema]);
-  const [isAttending, setIsAttending] = useState<boolean>(true);
+  const [isAttending, setIsAttending] = useState<boolean | null>(null);
+
+  // Check if registration is active or scheduled
+  let registrationClosed = false;
+  let closureReason = "";
+  
+  if (event) {
+    const now = new Date();
+    if (event.registration_active === false) {
+      registrationClosed = true;
+      closureReason = "Registration is currently closed for this event.";
+    } else {
+      if (event.registration_start) {
+        const startDate = new Date(event.registration_start);
+        if (now < startDate) {
+          registrationClosed = true;
+          closureReason = `Registration has not opened yet. It is scheduled to open on ${startDate.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}.`;
+        }
+      }
+      if (event.registration_end) {
+        const endDate = new Date(event.registration_end);
+        if (now > endDate) {
+          registrationClosed = true;
+          closureReason = "Registration for this event has closed.";
+        }
+      }
+    }
+  }
 
   useEffect(() => {
     fetch(`/api/py/events/${slug}`)
@@ -118,7 +152,20 @@ export default function PublicRegistrationPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!event) return;
+    
+    if (isAttending === null) {
+      setSubmitError("Please select your attendance status.");
+      return;
+    }
+    
+    // Enforce disclaimer acceptance
+    if (isAttending && event.disclaimer_enabled && event.disclaimer_text && !disclaimerAccepted) {
+      setSubmitError("You must read and accept the Disclaimer and Indemnity to register.");
+      return;
+    }
+    
     setRegistering(true);
+    setSubmitError(null);
 
     try {
       const response = await fetch(`/api/py/register`, {
@@ -814,19 +861,21 @@ export default function PublicRegistrationPage() {
 
         {/* RSVP Question */}
         <div className={style.rsvpBorder}>
-          <label className={style.label}>Attendance Status</label>
+          <label className={style.label}>
+            Attendance Status <span className={`${theme === "minimal_light" ? "client-text-primary" : "client-text-accent"} ml-0.5 font-bold`}>*</span>
+          </label>
           <div className="grid grid-cols-2 gap-4">
             <button
               type="button"
               onClick={() => setIsAttending(true)}
-              className={style.btnAttending(isAttending)}
+              className={style.btnAttending(isAttending === true)}
             >
               I am attending
             </button>
             <button
               type="button"
               onClick={() => setIsAttending(false)}
-              className={style.btnNotAttending(!isAttending)}
+              className={style.btnNotAttending(isAttending === false)}
             >
               Unable to attend
             </button>
@@ -854,10 +903,22 @@ export default function PublicRegistrationPage() {
                 {field.label} {field.required && <span className={`${theme === "minimal_light" ? "client-text-primary" : "client-text-accent"} ml-0.5 font-bold`}>*</span>}
               </label>
               
+              {field.description && (
+                <div className={`p-4 rounded-[1.2rem] flex items-start gap-3 text-xs leading-normal border ${
+                  theme === "minimal_light" || theme === "brutalist_retro"
+                    ? "bg-slate-100/80 border-slate-200 text-slate-600" 
+                    : "bg-black/30 border-white/5 text-zinc-400"
+                }`}>
+                  <span className="shrink-0 text-emerald-500">✅</span>
+                  <span className="italic font-medium">{field.description}</span>
+                </div>
+              )}
+              
               {field.type === "text" && (
                 <input
                   required={field.required}
                   type="text"
+                  placeholder="Enter your answer"
                   onChange={(e) => handleCustomChange(field.id, e.target.value)}
                   className={style.input}
                 />
@@ -890,6 +951,28 @@ export default function PublicRegistrationPage() {
             </div>
           );
         })}
+
+        {/* Disclaimer & Indemnity */}
+        {isAttending && event.disclaimer_enabled && event.disclaimer_text && (
+          <div className={`space-y-4 p-6 rounded-[1.5rem] border ${theme === 'minimal_light' || theme === 'brutalist_retro' ? 'bg-slate-100 border-slate-200 text-slate-900' : 'bg-black/30 border-white/10 text-white'} mt-6`}>
+            <p className={`text-[10px] font-black uppercase tracking-[0.3em] ${theme === "minimal_light" ? "client-text-primary" : "client-text-accent"}`}>Disclaimer & Indemnity</p>
+            <div className="text-xs leading-relaxed opacity-85 whitespace-pre-wrap max-h-40 overflow-y-auto pr-2 border-b border-white/5 pb-4">
+              {event.disclaimer_text}
+            </div>
+            <label className={`flex items-center gap-4 cursor-pointer group p-4 rounded-xl border border-white/5 hover:border-white/10 transition-all ${theme === 'minimal_light' || theme === 'brutalist_retro' ? 'bg-white border-slate-200 text-slate-800' : 'bg-black/20 text-white'}`}>
+              <input
+                required
+                type="checkbox"
+                checked={disclaimerAccepted}
+                onChange={(e) => setDisclaimerAccepted(e.target.checked)}
+                className="w-6 h-6 rounded-lg bg-zinc-900 border-white/10 client-checkbox transition-all"
+              />
+              <span className="text-xs font-bold opacity-80 group-hover:opacity-100 transition-opacity">
+                I read and accept the Disclaimer and Indemnity <span className="text-red-500 font-bold">*</span>
+              </span>
+            </label>
+          </div>
+        )}
 
         <div className="pt-8">
           {submitError && (
@@ -948,6 +1031,12 @@ export default function PublicRegistrationPage() {
           <AlertCircle className="text-red-500 mb-6" size={64} />
           <h1 className={`text-3xl font-black mb-4 font-bricolage italic uppercase tracking-tight ${style.textMain}`}>Access Denied</h1>
           <p className={`${style.textMuted} text-center max-w-md font-medium`}>{error}</p>
+        </div>
+      ) : registrationClosed ? (
+        <div className={style.errorBg}>
+          <AlertCircle className="text-yellow-500 mb-6 animate-pulse" size={64} />
+          <h1 className={`text-3xl font-black mb-4 font-bricolage italic uppercase tracking-tight ${style.textMain}`}>Registration Closed</h1>
+          <p className={`${style.textMuted} text-center max-w-md font-medium`}>{closureReason}</p>
         </div>
       ) : registeredId ? (
         <div className={style.successBg}>

@@ -62,6 +62,11 @@ interface Event {
   custom_fields_schema: any[];
   client?: any;
   duration_days?: number;
+  registration_active?: boolean;
+  registration_start?: string;
+  registration_end?: string;
+  disclaimer_enabled?: boolean;
+  disclaimer_text?: string;
 }
 
 export default function EventDetailsPage() {
@@ -507,6 +512,37 @@ export default function EventDetailsPage() {
                       {event.client?.name || "Command Panel"}
                     </span>
                     <span className="text-[10px] font-mono text-slate-300">ID: {id}</span>
+                    {(() => {
+                      const now = new Date();
+                      let statusText = "Active";
+                      let badgeClass = "bg-green-50 text-green-600 border-green-200/50";
+                      
+                      if (event.registration_active === false) {
+                        statusText = "Closed / Paused";
+                        badgeClass = "bg-red-50 text-red-600 border-red-200/50";
+                      } else {
+                        if (event.registration_start) {
+                          const startDate = new Date(event.registration_start);
+                          if (now < startDate) {
+                            statusText = `Scheduled (Opens ${startDate.toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })})`;
+                            badgeClass = "bg-blue-50 text-blue-600 border-blue-200/50";
+                          }
+                        }
+                        if (event.registration_end) {
+                          const endDate = new Date(event.registration_end);
+                          if (now > endDate) {
+                            statusText = "Closed (Expired)";
+                            badgeClass = "bg-red-50 text-red-600 border-red-200/50";
+                          }
+                        }
+                      }
+                      
+                      return (
+                        <span className={`px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] rounded-lg border ${badgeClass}`}>
+                          Registration: {statusText}
+                        </span>
+                      );
+                    })()}
                  </div>
                 <h1 className={`text-3xl sm:text-4xl md:text-5xl font-black text-[#0f172a] tracking-tighter italic font-bricolage leading-[1.1] ${(userRole === "admin" || userRole === "manager") ? "mb-6" : "mb-10"}`}>{event.title}</h1>
                 {(userRole === "admin" || userRole === "manager") && (
