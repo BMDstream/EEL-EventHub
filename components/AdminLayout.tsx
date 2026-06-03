@@ -126,14 +126,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { name: "Settings", href: "/admin/settings", icon: Settings },
   ];
 
+  const clientRoles: string[] = (session?.user as any)?.client_roles || [];
+  const isClientManager = clientRoles.includes("manager");
+  const isManagerLike = userRole === "manager" || isClientManager;
+
   const navItems = allNavItems.filter(item => {
-    if (userRole === "staff") {
-      return item.name === "Dashboard" || item.name === "Events";
+    if (userRole === "admin") {
+      return true;
     }
-    if (userRole === "manager") {
+    if (isManagerLike) {
       return item.name !== "Team" && item.name !== "Security" && item.name !== "Clients";
     }
-    return true; // admin
+    return item.name === "Dashboard" || item.name === "Events";
   });
 
   // Determine sidebar branding: use assigned client branding for non-admins

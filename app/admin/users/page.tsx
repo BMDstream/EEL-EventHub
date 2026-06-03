@@ -30,6 +30,7 @@ export default function UserManagementPage() {
   const [allClients, setAllClients] = useState<any[]>([]);
   const [selectedUserForClientModal, setSelectedUserForClientModal] = useState<User | null>(null);
   const [modalClientIds, setModalClientIds] = useState<number[]>([]);
+  const [modalClientRoles, setModalClientRoles] = useState<Record<number, string>>({});
   const [syncingClients, setSyncingClients] = useState(false);
 
   // Bulk Upload States
@@ -266,28 +267,57 @@ export default function UserManagementPage() {
 
   const handleOpenClientModal = (user: User) => {
     setSelectedUserForClientModal(user);
-    setModalClientIds(user.clients?.map(c => c.id) || []);
+    const initialRoles: Record<number, string> = {};
+    const initialClientIds: number[] = [];
+    user.clients?.forEach(c => {
+      initialClientIds.push(c.id);
+      initialRoles[c.id] = (c as any).role || "staff";
+    });
+    setModalClientIds(initialClientIds);
+    setModalClientRoles(initialRoles);
   };
 
   const handleToggleClientCheckbox = (clientId: number) => {
-    setModalClientIds(prev => 
-      prev.includes(clientId) 
-        ? prev.filter(id => id !== clientId)
-        : [...prev, clientId]
-    );
+    setModalClientIds(prev => {
+      const isChecked = prev.includes(clientId);
+      if (isChecked) {
+        const nextRoles = { ...modalClientRoles };
+        delete nextRoles[clientId];
+        setModalClientRoles(nextRoles);
+        return prev.filter(id => id !== clientId);
+      } else {
+        setModalClientRoles(prevRoles => ({ ...prevRoles, [clientId]: "staff" }));
+        return [...prev, clientId];
+      }
+    });
+  };
+
+  const handleRoleChange = (clientId: number, role: string) => {
+    setModalClientRoles(prev => ({
+      ...prev,
+      [clientId]: role
+    }));
   };
 
   const handleSaveUserClients = async () => {
     if (!selectedUserForClientModal) return;
     setSyncingClients(true);
     try {
+      const clientRolesPayload = modalClientIds.map(id => ({
+        client_id: id,
+        role: modalClientRoles[id] || "staff"
+      }));
+
       const res = await fetch(`/api/py/users/${selectedUserForClientModal.id}/clients`, {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
           "x-user-email": session?.user?.email || ""
         },
-        body: JSON.stringify({ client_ids: modalClientIds })
+        body: JSON.stringify({ 
+          client_ids: modalClientIds,
+          client_roles: clientRolesPayload
+        })
       });
       if (res.ok) {
         setSelectedUserForClientModal(null);
@@ -428,8 +458,11 @@ export default function UserManagementPage() {
                       ) : user.clients && user.clients.length > 0 ? (
                         <div className="flex flex-wrap gap-1.5 max-w-[200px]">
                           {user.clients.map(c => (
-                            <span key={c.id} className="inline-block px-2.5 py-1 bg-slate-50 text-slate-500 rounded-md text-[9px] font-bold border border-slate-100 uppercase tracking-wide">
+                            <span key={c.id} className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 text-slate-500 rounded-md text-[9px] font-bold border border-slate-100 uppercase tracking-wide dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700">
                               {c.name}
+                              <span className={`text-[7px] px-1 rounded-sm uppercase tracking-tighter ${c.role === 'manager' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' : 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-400'}`}>
+                                {c.role === 'manager' ? 'Mgr' : 'Staff'}
+                              </span>
                             </span>
                           ))}
                         </div>
@@ -672,31 +705,51 @@ export default function UserManagementPage() {
               <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2 mb-8">
                 {allClients.map((client) => {
                   const isChecked = modalClientIds.includes(client.id);
+                  const currentRole = modalClientRoles[client.id] || "staff";
                   return (
                     <div 
                       key={client.id}
                       onClick={() => handleToggleClientCheckbox(client.id)}
-                      className={`flex items-center justify-between p-5 rounded-2xl border-2 transition-all cursor-pointer ${isChecked ? 'border-yellow-400 bg-yellow-500/5' : 'border-slate-100 hover:border-slate-200 dark:border-slate-800 dark:hover:border-slate-700 bg-transparent'}`}
+                      className={`flex flex-col gap-3 p-5 rounded-2xl border-2 transition-all cursor-pointer ${isChecked ? 'border-yellow-400 bg-yellow-500/5' : 'border-slate-100 hover:border-slate-200 dark:border-slate-800 dark:hover:border-slate-700 bg-transparent'}`}
                     >
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center border border-slate-100 overflow-hidden dark:bg-slate-800 dark:border-slate-700">
-                          {client.logo_url ? (
-                            <img src={client.logo_url} alt={client.name} className="w-full h-full object-cover" />
-                          ) : (
-                            <Building2 size={18} className="text-slate-300 dark:text-slate-600" />
-                          )}
+                      <div className="flex items-center justify-between w-full">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center border border-slate-100 overflow-hidden dark:bg-slate-800 dark:border-slate-700">
+                            {client.logo_url ? (
+                              <img src={client.logo_url} alt={client.name} className="w-full h-full object-cover" />
+                            ) : (
+                              <Building2 size={18} className="text-slate-300 dark:text-slate-600" />
+                            )}
+                          </div>
+                          <div>
+                            <p className="font-bold text-[#0f172a] text-sm dark:text-white">{client.name}</p>
+                            <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">slug: {client.slug}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-bold text-[#0f172a] text-sm dark:text-white">{client.name}</p>
-                          <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">slug: {client.slug}</p>
-                        </div>
+                        <input 
+                          type="checkbox"
+                          checked={isChecked}
+                          readOnly
+                          className="w-5 h-5 rounded-lg border-slate-300 text-yellow-400 focus:ring-yellow-400"
+                        />
                       </div>
-                      <input 
-                        type="checkbox"
-                        checked={isChecked}
-                        readOnly
-                        className="w-5 h-5 rounded-lg border-slate-300 text-yellow-400 focus:ring-yellow-400"
-                      />
+                      
+                      {isChecked && (
+                        <div 
+                          className="flex items-center justify-between pl-14 pr-2 py-2 mt-1 border-t border-dashed border-slate-200 dark:border-slate-800" 
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Assigned Role:</span>
+                          <select
+                            value={currentRole}
+                            onChange={(e) => handleRoleChange(client.id, e.target.value)}
+                            className="bg-white border border-slate-200 dark:bg-slate-800 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-white rounded-lg px-2 py-1.5 focus:outline-none cursor-pointer"
+                          >
+                            <option value="staff">Staff (Scanner)</option>
+                            <option value="manager">Manager (Tenant Admin)</option>
+                          </select>
+                        </div>
+                      )}
                     </div>
                   );
                 })}

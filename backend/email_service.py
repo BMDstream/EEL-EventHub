@@ -231,7 +231,11 @@ def send_confirmation_email(to_email: str, first_name: str, event_title: str, cl
         if not sender_name:
             sender_name = "BMD-EventHub"
             
-        from_address = f"{sender_name} <events@eelogistics.co.za>"
+        sender_email = config.get("sender_email") if config else None
+        if not sender_email:
+            sender_email = "events@eelogistics.co.za"
+            
+        from_address = f"{sender_name} <{sender_email}>"
         subject = f"Access Granted: {event_title}" if is_attending else f"RSVP Confirmed: {event_title}"
         
         email_params = {
@@ -294,7 +298,11 @@ def send_broadcast_email(
     if not sender_name:
         sender_name = "BMD-EventHub"
         
-    from_address = f"{sender_name} <events@eelogistics.co.za>"
+    sender_email = config.get("sender_email") if config else None
+    if not sender_email:
+        sender_email = "events@eelogistics.co.za"
+        
+    from_address = f"{sender_name} <{sender_email}>"
     reply_to = config.get("reply_to") if config else None
 
     # Handle event details formatting

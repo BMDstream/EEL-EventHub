@@ -24,18 +24,28 @@ def read_events(
         
     if current_user.role == "admin":
         events = session.exec(select(Event)).all()
-    elif current_user.role == "manager":
-        stmt = text('SELECT client_id FROM "userclientlink" WHERE user_id = :user_id')
-        rows = session.execute(stmt, {"user_id": current_user.id}).all()
-        allowed_client_ids = [row[0] for row in rows]
-        events = session.exec(select(Event).where(Event.client_id.in_(allowed_client_ids))).all()
-    elif current_user.role == "staff":
-        stmt = text('SELECT event_id FROM "usereventlink" WHERE user_id = :user_id')
-        rows = session.execute(stmt, {"user_id": current_user.id}).all()
-        allowed_event_ids = [row[0] for row in rows]
-        events = session.exec(select(Event).where(Event.id.in_(allowed_event_ids))).all()
     else:
+        # Get all client links with roles
+        stmt = text('SELECT client_id, role FROM "userclientlink" WHERE user_id = :user_id')
+        rows = session.execute(stmt, {"user_id": current_user.id}).all()
+        
+        manager_client_ids = [row[0] for row in rows if row[1] == "manager"]
+        
+        # Get explicitly assigned events via usereventlink
+        event_stmt = text('SELECT event_id FROM "usereventlink" WHERE user_id = :user_id')
+        event_rows = session.execute(event_stmt, {"user_id": current_user.id}).all()
+        assigned_event_ids = [r[0] for r in event_rows]
+        
         events = []
+        if manager_client_ids:
+            mgr_events = session.exec(select(Event).where(Event.client_id.in_(manager_client_ids))).all()
+            events.extend(mgr_events)
+            
+        if assigned_event_ids:
+            ass_events = session.exec(select(Event).where(Event.id.in_(assigned_event_ids))).all()
+            for ae in ass_events:
+                if ae not in events:
+                    events.append(ae)
         
     result = []
     for event in events:
@@ -82,8 +92,21 @@ def read_event_by_id(
     verify_event_access(current_user, event, session)
     
     client = session.get(Client, event.client_id) if event.client_id else None
+    
+    user_role = "staff"
+    if current_user.role == "admin":
+        user_role = "admin"
+    elif event.client_id:
+        link = session.execute(
+            text('SELECT role FROM "userclientlink" WHERE user_id = :user_id AND client_id = :client_id'),
+            {"user_id": current_user.id, "client_id": event.client_id}
+        ).first()
+        if link:
+            user_role = link[0]
+            
     event_dict = event.dict()
     event_dict["client"] = client.dict() if client else None
+    event_dict["user_role_for_client"] = user_role
     return event_dict
 
 @router.put("/{event_id}", response_model=Event)
@@ -210,23 +233,34 @@ def get_stats(
     if current_user.role == "admin":
         events = session.exec(select(Event)).all()
         clients_count = len(session.exec(select(Client)).all())
-    elif current_user.role == "manager":
-        stmt = text('SELECT client_id FROM "userclientlink" WHERE user_id = :user_id')
-        rows = session.execute(stmt, {"user_id": current_user.id}).all()
-        allowed_client_ids = [row[0] for row in rows]
-        events = session.exec(select(Event).where(Event.client_id.in_(allowed_client_ids))).all()
-        clients_count = len(allowed_client_ids)
-    elif current_user.role == "staff":
-        stmt = text('SELECT event_id FROM "usereventlink" WHERE user_id = :user_id')
-        rows = session.execute(stmt, {"user_id": current_user.id}).all()
-        allowed_event_ids = [row[0] for row in rows]
-        events = session.exec(select(Event).where(Event.id.in_(allowed_event_ids))).all()
-        
-        allowed_client_ids = list(set([e.client_id for e in events if e.client_id]))
-        clients_count = len(allowed_client_ids)
     else:
+        # Get all client links with roles
+        stmt = text('SELECT client_id, role FROM "userclientlink" WHERE user_id = :user_id')
+        rows = session.execute(stmt, {"user_id": current_user.id}).all()
+        
+        manager_client_ids = [row[0] for row in rows if row[1] == "manager"]
+        
+        # Get explicitly assigned events via usereventlink
+        event_stmt = text('SELECT event_id FROM "usereventlink" WHERE user_id = :user_id')
+        event_rows = session.execute(event_stmt, {"user_id": current_user.id}).all()
+        assigned_event_ids = [r[0] for r in event_rows]
+        
         events = []
-        clients_count = 0
+        if manager_client_ids:
+            mgr_events = session.exec(select(Event).where(Event.client_id.in_(manager_client_ids))).all()
+            events.extend(mgr_events)
+            
+        if assigned_event_ids:
+            ass_events = session.exec(select(Event).where(Event.id.in_(assigned_event_ids))).all()
+            for ae in ass_events:
+                if ae not in events:
+                    events.append(ae)
+                    
+        accessible_client_ids = set(manager_client_ids)
+        for e in events:
+            if e.client_id:
+                accessible_client_ids.add(e.client_id)
+        clients_count = len(accessible_client_ids)
         
     event_ids = [e.id for e in events]
     if not event_ids:

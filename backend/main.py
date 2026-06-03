@@ -46,7 +46,28 @@ def on_startup():
             except Exception:
                 session.rollback()
 
-            # Safely ensure registration and disclaimer columns are added to event table (fallback migration)
+            # Safely ensure role column is added to userclientlink table (fallback migration)
+            try:
+                session.execute(text('ALTER TABLE "userclientlink" ADD COLUMN role TEXT DEFAULT \'staff\''))
+                session.commit()
+                print("Role column added to userclientlink table.")
+            except Exception:
+                session.rollback()
+
+            # One-time data migration for existing user client roles
+            try:
+                session.execute(text('''
+                    UPDATE "userclientlink"
+                    SET role = 'manager'
+                    WHERE user_id IN (SELECT id FROM "user" WHERE role = 'manager')
+                '''))
+                session.commit()
+                print("Migrated existing user roles to userclientlink links.")
+            except Exception as e:
+                session.rollback()
+                print(f"Role migration warning: {e}")
+
+            # Safely ensure registration, disclaimer, and sender_email columns are added to event table (fallback migration)
             dialect_name = session.bind.dialect.name
             is_sqlite = dialect_name == "sqlite"
             
@@ -60,7 +81,8 @@ def on_startup():
                 ("registration_end", datetime_type),
                 ("disclaimer_enabled", f"BOOLEAN DEFAULT {bool_false}"),
                 ("disclaimer_text", "TEXT"),
-                ("logo_url", "TEXT")
+                ("logo_url", "TEXT"),
+                ("sender_email", "TEXT")
             ]:
                 try:
                     session.execute(text(f'ALTER TABLE "event" ADD COLUMN {col_name} {col_type}'))

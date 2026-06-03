@@ -44,13 +44,16 @@ def verify_client_access(user: Optional[User], client_id: Optional[int], session
     if not client_id:
         raise HTTPException(status_code=403, detail="Forbidden: Resource has no associated client")
         
-    link_exists = session.execute(
-        text('SELECT 1 FROM "userclientlink" WHERE user_id = :user_id AND client_id = :client_id'),
+    link = session.execute(
+        text('SELECT role FROM "userclientlink" WHERE user_id = :user_id AND client_id = :client_id'),
         {"user_id": user.id, "client_id": client_id}
     ).first()
     
-    if not link_exists:
+    if not link:
         raise HTTPException(status_code=403, detail="Forbidden: Access to this client's resources is denied")
+        
+    if link[0] != "manager":
+        raise HTTPException(status_code=403, detail="Forbidden: Manager permissions required for this client")
     return True
 
 def verify_event_access(user: Optional[User], event: Event, session: Session):
@@ -58,8 +61,15 @@ def verify_event_access(user: Optional[User], event: Event, session: Session):
         raise HTTPException(status_code=401, detail="Authentication required")
     if user.role == "admin":
         return True
-    if user.role == "manager":
-        return verify_client_access(user, event.client_id, session)
+        
+    # Check if user is a manager for this client context
+    if event.client_id:
+        link = session.execute(
+            text('SELECT role FROM "userclientlink" WHERE user_id = :user_id AND client_id = :client_id'),
+            {"user_id": user.id, "client_id": event.client_id}
+        ).first()
+        if link and link[0] == "manager":
+            return True
         
     # staff role check event assignment
     link_exists = session.execute(
@@ -89,6 +99,13 @@ def get_event_email_config(event: Event, session: Session):
         config = email_setting.value if email_setting else {}
         if not config.get("sender_name"):
             config["sender_name"] = "BMD-EventHub"
+            
+    # Set default sender_email
+    config["sender_email"] = "events@eelogistics.co.za"
+
+    # Override with event-specific sender_email if provided
+    if getattr(event, "sender_email", None):
+        config["sender_email"] = event.sender_email
             
     # Override with event-specific logo if provided
     if getattr(event, "logo_url", None):

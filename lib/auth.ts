@@ -26,7 +26,8 @@ export const authOptions: NextAuthOptions = {
                 id: user.sub, 
                 email: user.email, 
                 role: user.role,
-                allowed_clients: user.allowed_clients || []
+                allowed_clients: user.allowed_clients || [],
+                client_roles: user.client_roles || []
               };
             }
           } catch (err) {
@@ -46,7 +47,9 @@ export const authOptions: NextAuthOptions = {
           const { default: sql } = await import("@/lib/db");
           
           const results = await sql`
-            SELECT u.id, u.email, u.password, u.role, ARRAY_AGG(c.slug) FILTER (WHERE c.slug IS NOT NULL) as allowed_clients
+            SELECT u.id, u.email, u.password, u.role, 
+                   ARRAY_AGG(c.slug) FILTER (WHERE c.slug IS NOT NULL) as allowed_clients,
+                   ARRAY_AGG(l.role) FILTER (WHERE l.role IS NOT NULL) as client_roles
             FROM "user" u
             LEFT JOIN userclientlink l ON l.user_id = u.id
             LEFT JOIN client c ON c.id = l.client_id
@@ -94,7 +97,8 @@ export const authOptions: NextAuthOptions = {
                 id: user.id.toString(), 
                 email: user.email, 
                 role: user.role,
-                allowed_clients: user.allowed_clients || []
+                allowed_clients: user.allowed_clients || [],
+                client_roles: user.client_roles || []
               };
             }
           }
@@ -115,23 +119,27 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.role = (user as any).role;
         token.allowed_clients = (user as any).allowed_clients || [];
+        token.client_roles = (user as any).client_roles || [];
 
         // Refresh from DB on first sign-in to get the latest role/clients
         if (token.email) {
           try {
             const { default: sql } = await import("@/lib/db");
             const results = await sql`
-              SELECT u.role, ARRAY_AGG(c.slug) FILTER (WHERE c.slug IS NOT NULL) as allowed_clients
+              SELECT u.role, 
+                     ARRAY_AGG(c.slug) FILTER (WHERE c.slug IS NOT NULL) as allowed_clients,
+                     ARRAY_AGG(l.role) FILTER (WHERE l.role IS NOT NULL) as client_roles
               FROM "user" u
               LEFT JOIN userclientlink l ON l.user_id = u.id
               LEFT JOIN client c ON c.id = l.client_id
-              WHERE LOWER(u.email) = ${token.email.toLowerCase()}
+              WHERE LOWER(token.email.toLowerCase()) = LOWER(u.email)
               GROUP BY u.id
               LIMIT 1
             `;
             if (results && results.length > 0) {
               token.role = results[0].role;
               token.allowed_clients = results[0].allowed_clients || [];
+              token.client_roles = results[0].client_roles || [];
             }
           } catch (err) {
             console.error("Failed to fetch user role from DB in JWT callback", err);
@@ -146,6 +154,7 @@ export const authOptions: NextAuthOptions = {
         (session.user as any).id = token.sub;
         (session.user as any).role = token.role || "staff";
         (session.user as any).allowed_clients = token.allowed_clients || [];
+        (session.user as any).client_roles = (token as any).client_roles || [];
       }
       return session;
     },

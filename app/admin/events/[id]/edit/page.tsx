@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Save, Loader2, Trash2, Building2, Lock } from "lucide-react";
+import { ArrowLeft, Save, Loader2, Trash2, Building2, Lock, Mail } from "lucide-react";
 import { useSession } from "next-auth/react";
 import AdminLayout from "@/components/AdminLayout";
 
@@ -25,7 +25,7 @@ const THEME_DEFAULTS = {
   logistics_glass: { primary: "#1e293b", accent: "#94a3b8" }
 };
 
-const compressImage = (file: File, maxWidth: number, maxHeight: number, quality: number): Promise<string> => {
+const compressImage = (file: File, maxWidth = 1200, maxHeight = 630, quality = 0.8): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
@@ -77,6 +77,7 @@ export default function EditEventPage() {
   const [clients, setClients] = useState<any[]>([]);
   const [originalBanner, setOriginalBanner] = useState("");
   const [originalLogo, setOriginalLogo] = useState("");
+  const [eventUserRole, setEventUserRole] = useState<string>("staff");
   const [formData, setFormData] = useState({
     title: "",
     slug: "",
@@ -88,6 +89,7 @@ export default function EditEventPage() {
     duration_days: 1,
     banner_url: "",
     logo_url: "",
+    sender_email: "",
     client_id: "",
     collect_company: true,
     allowed_domains: "",
@@ -114,7 +116,9 @@ export default function EditEventPage() {
       .catch((err) => console.error("Failed to fetch clients", err));
   }, [session]);
 
-  if (userRole === "staff") {
+  const effectiveRole = userRole === "admin" ? "admin" : eventUserRole;
+
+  if (!loading && effectiveRole === "staff") {
     return (
       <AdminLayout>
         <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-6">
@@ -152,6 +156,7 @@ export default function EditEventPage() {
           duration_days: data.duration_days || 1,
           banner_url: data.banner_url || "",
           logo_url: data.logo_url || "",
+          sender_email: data.sender_email || "",
           client_id: data.client_id ? data.client_id.toString() : "",
           collect_company: data.collect_company !== false,
           allowed_domains: data.allowed_domains ? data.allowed_domains.join(", ") : "",
@@ -169,6 +174,7 @@ export default function EditEventPage() {
         });
         setOriginalBanner(data.banner_url || "");
         setOriginalLogo(data.logo_url || "");
+        setEventUserRole(data.user_role_for_client || "staff");
         setLoading(false);
       })
       .catch((err) => {
@@ -187,6 +193,7 @@ export default function EditEventPage() {
       const payload: any = {
         ...submitData,
         client_id: formData.client_id ? parseInt(formData.client_id) : null,
+        sender_email: formData.sender_email || null,
         start_date: formData.start_date,
         allowed_domains: formData.allowed_domains
           ? formData.allowed_domains.split(",").map(d => d.trim().toLowerCase()).filter(d => d)
@@ -360,6 +367,23 @@ export default function EditEventPage() {
                   ))}
                 </select>
               </div>
+              {userRole === "admin" && (
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                    <Mail size={14} /> Email Sender Domain
+                  </label>
+                  <select
+                    name="sender_email"
+                    value={formData.sender_email}
+                    onChange={handleChange}
+                    className="w-full px-5 py-4 rounded-2xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-slate-700 bg-slate-50/50 appearance-none cursor-pointer dark:bg-slate-800 dark:text-white dark:border-slate-700"
+                  >
+                    <option value="">Default (events@eelogistics.co.za)</option>
+                    <option value="events@eelogistics.co.za">events@eelogistics.co.za</option>
+                    <option value="events@bmdcomputing.com">events@bmdcomputing.com</option>
+                  </select>
+                </div>
+              )}
               <div className="space-y-3">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Date & Time</label>
                 <input

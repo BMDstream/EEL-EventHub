@@ -82,7 +82,9 @@ export default function EventDetailsPage() {
   const [selectedReg, setSelectedReg] = useState<Registration | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const { data: session } = useSession();
-  const userRole = (session?.user as any)?.role || "staff";
+  const sessionRole = (session?.user as any)?.role || "staff";
+  const [eventUserRole, setEventUserRole] = useState<string>("staff");
+  const userRole = sessionRole === "admin" ? "admin" : eventUserRole;
   const [activeTab, setActiveTab] = useState<"registrants" | "form" | "scanner" | "communications" | "staff">(initialTab as any || "registrants");
   const [pin, setPin] = useState("");
   const [pinLoading, setPinLoading] = useState(false);
@@ -329,6 +331,7 @@ export default function EventDetailsPage() {
         if (!eventRes.ok) throw new Error("Event not found");
         const eventData = await eventRes.json();
         setEvent(eventData);
+        setEventUserRole(eventData.user_role_for_client || "staff");
 
         const regRes = await fetch(`/api/py/events/${id}/registrations`, {
           headers: { "x-user-email": session.user.email || "" }

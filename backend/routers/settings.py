@@ -144,19 +144,29 @@ def sync_user_clients(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    client_ids = payload.get("client_ids", [])
-    if not isinstance(client_ids, list):
-        raise HTTPException(status_code=422, detail="client_ids must be a list")
+    client_ids = payload.get("client_ids")
+    client_roles = payload.get("client_roles")
     
     session.execute(text('DELETE FROM "userclientlink" WHERE user_id = :user_id'), {"user_id": user_id})
     session.commit()
     
-    for c_id in client_ids:
-        client = session.get(Client, c_id)
-        if client:
-            session.execute(
-                text('INSERT INTO "userclientlink" (user_id, client_id) VALUES (:user_id, :client_id)'),
-                {"user_id": user_id, "client_id": c_id}
-            )
+    if client_roles is not None:
+        for cr in client_roles:
+            c_id = cr.get("client_id")
+            role = cr.get("role", "staff")
+            client = session.get(Client, c_id)
+            if client:
+                session.execute(
+                    text('INSERT INTO "userclientlink" (user_id, client_id, role) VALUES (:user_id, :client_id, :role)'),
+                    {"user_id": user_id, "client_id": c_id, "role": role}
+                )
+    elif client_ids is not None:
+        for c_id in client_ids:
+            client = session.get(Client, c_id)
+            if client:
+                session.execute(
+                    text('INSERT INTO "userclientlink" (user_id, client_id, role) VALUES (:user_id, :client_id, :role)'),
+                    {"user_id": user_id, "client_id": c_id, "role": "staff"}
+                )
     session.commit()
     return {"ok": True}

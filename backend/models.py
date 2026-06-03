@@ -6,6 +6,7 @@ from datetime import datetime
 class UserClientLink(SQLModel, table=True):
     user_id: int = Field(foreign_key="user.id", primary_key=True)
     client_id: int = Field(foreign_key="client.id", primary_key=True)
+    role: str = Field(default="staff")
 
 class UserEventLink(SQLModel, table=True):
     user_id: int = Field(foreign_key="user.id", primary_key=True)
@@ -38,6 +39,7 @@ class Event(SQLModel, table=True):
     capacity: int
     banner_url: Optional[str] = None
     logo_url: Optional[str] = Field(default=None)
+    sender_email: Optional[str] = Field(default=None)
     client_id: Optional[int] = Field(default=None, foreign_key="client.id")
     collect_company: bool = Field(default=True)
     duration_days: int = Field(default=1)

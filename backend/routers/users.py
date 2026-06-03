@@ -21,10 +21,22 @@ def read_users(
         raise HTTPException(status_code=403, detail="Only admins can view users")
     users = session.exec(select(User)).all()
     result = []
+    from sqlalchemy import text
     for user in users:
         u_dict = user.dict()
         u_dict["password"] = None  # Security check: redact passwords
-        u_dict["clients"] = [c.dict() for c in user.clients]
+        
+        clients_enriched = []
+        for client in user.clients:
+            c_dict = client.dict()
+            link = session.execute(
+                text('SELECT role FROM "userclientlink" WHERE user_id = :user_id AND client_id = :client_id'),
+                {"user_id": user.id, "client_id": client.id}
+            ).first()
+            c_dict["role"] = link[0] if link else "staff"
+            clients_enriched.append(c_dict)
+            
+        u_dict["clients"] = clients_enriched
         result.append(u_dict)
     return result
 
