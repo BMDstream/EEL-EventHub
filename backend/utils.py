@@ -14,6 +14,9 @@ from backend.models import User, Event, Client, Registration
 # Share a single limiter instance across all routers
 limiter = Limiter(key_func=get_remote_address)
 
+if os.getenv("MOCK_EMAIL_SERVICE") == "true":
+    limiter.enabled = False
+
 def get_current_user_from_request(
     x_user_email: Optional[str] = Header(None),
     email: Optional[str] = None,

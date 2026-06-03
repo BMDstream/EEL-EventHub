@@ -6,7 +6,7 @@ import string
 import sys
 
 # Configuration
-BASE_URL = "http://localhost:3000/api/py"
+BASE_URL = "http://127.0.0.1:8000/api/py"
 NUM_REQUESTS = 3000
 CONCURRENCY = 50
 
@@ -15,13 +15,13 @@ def random_string(length=8):
 
 def get_event_id():
     try:
-        r = requests.get(f"{BASE_URL}/events", timeout=5)
-        events = r.json()
-        if events:
-            return events[0]['id']
+        r = requests.get(f"{BASE_URL}/events/stress-test-final", timeout=5)
+        event = r.json()
+        if isinstance(event, dict) and 'id' in event:
+            return event['id']
         return None
     except Exception as e:
-        print(f"Error fetching events: {e}")
+        print(f"Error fetching event: {e}")
         return None
 
 def send_registration(i, event_id):

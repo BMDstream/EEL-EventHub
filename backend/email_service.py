@@ -149,40 +149,81 @@ def send_confirmation_email(to_email: str, first_name: str, event_title: str, cl
     heading_title = heading_parts[0]
     heading_subtitle = heading_parts[1] if len(heading_parts) > 1 else ''
 
+    logo_td_html = ""
+    if logo_url:
+        logo_td_html = f"""
+        <td align="right" valign="middle" style="padding-bottom: 0px;">
+            <img src="{logo_url}" style="max-height: 48px; max-width: 140px; object-fit: contain; display: block;" alt="Client Logo" />
+        </td>
+        """
+
     html_content = f"""
-    <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 40px auto; padding: 40px; border: 1px solid #f1f5f9; border-radius: 40px; background-color: #ffffff; color: {primary_color}; box-shadow: 0 20px 50px rgba(0,0,0,0.05);">
-        <div style="text-align: center; margin-bottom: 48px;">
-            <div style="display: inline-block; background: {primary_color}; padding: 12px 28px; border-radius: 16px;">
-                <span style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.4em; color: #ffffff;">{badge_text}</span>
-            </div>
-        </div>
+    <table width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; table-layout: fixed; margin: 0; padding: 0;">
+      <tr>
+        <td align="center" style="padding: 40px 0;">
+          <!--[if mso]>
+          <table width="600" border="0" cellspacing="0" cellpadding="0">
+            <tr>
+              <td>
+          <![endif]-->
+          <table width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; max-width: 600px; border: 1px solid #f1f5f9; border-radius: 40px; background-color: #ffffff; color: {primary_color}; box-shadow: 0 20px 50px rgba(0,0,0,0.05); overflow: hidden; border-collapse: separate;">
+            <tr>
+              <td style="padding: 40px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
+                <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 48px;">
+                  <tr>
+                    <td align="left" valign="middle">
+                      <table border="0" cellspacing="0" cellpadding="0" style="display: inline-block;">
+                        <tr>
+                          <td align="center" style="background: {primary_color}; padding: 12px 28px; border-radius: 16px;">
+                            <span style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.4em; color: #ffffff;">{badge_text}</span>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                    {logo_td_html}
+                  </tr>
+                </table>
 
-        <h2 style="font-size: 38px; font-weight: 900; color: {primary_color}; margin-bottom: 28px; text-transform: uppercase; font-style: italic; letter-spacing: -0.04em; line-height: 1;">
-            {heading_title} <span style="color: {accent_color};">{heading_subtitle}</span>
-        </h2>
-        
-        <p style="font-size: 17px; line-height: 1.7; margin-bottom: 40px; color: #475569;">
-            Hello <strong>{first_name}</strong>,<br><br>
-            {body_html}
-        </p>
-        
-        {details_html}
+                <h2 style="font-size: 38px; font-weight: 900; color: {primary_color}; margin-bottom: 28px; text-transform: uppercase; font-style: italic; letter-spacing: -0.04em; line-height: 1; margin-top: 0;">
+                    {heading_title} <span style="color: {accent_color};">{heading_subtitle}</span>
+                </h2>
+                
+                <p style="font-size: 17px; line-height: 1.7; margin-bottom: 40px; color: #475569;">
+                    Hello <strong>{first_name}</strong>,<br><br>
+                    {body_html}
+                </p>
+                
+                {details_html}
 
-        {qr_block_html}
+                {qr_block_html}
 
-        {warning_block_html}
-        
-        <hr style="border: 0; border-top: 1px solid #f1f5f9; margin-bottom: 40px;" />
-        
-        <div style="text-align: center;">
-            <p style="font-size: 11px; color: #94a3b8; margin-bottom: 32px; line-height: 1.6;">
-                {footer_html}
-            </p>
-            <p style="font-size: 9px; color: #cbd5e1; text-transform: uppercase; letter-spacing: 0.1em;">
-                Confidentiality Notice: This dispatch is intended solely for {to_email}.
-            </p>
-        </div>
-    </div>
+                {warning_block_html}
+                
+                <hr style="border: 0; border-top: 1px solid #f1f5f9; margin-bottom: 40px; margin-top: 40px;" />
+                
+                <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                  <tr>
+                    <td align="center">
+                      <p style="font-size: 11px; color: #94a3b8; margin-bottom: 32px; line-height: 1.6; margin-top: 0;">
+                          {footer_html}
+                      </p>
+                      <p style="font-size: 9px; color: #cbd5e1; text-transform: uppercase; letter-spacing: 0.1em; margin: 0;">
+                          Confidentiality Notice: This dispatch is intended solely for {to_email}.
+                      </p>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+          <!--[if mso]>
+              </td>
+            </tr>
+          </table>
+          <![endif]-->
+        </td>
+      </tr>
+    </table>
     """
 
     try:
@@ -239,6 +280,15 @@ def send_broadcast_email(
 
     primary_color = config.get("primary_color", "#0f172a")
     accent_color = config.get("accent_color", "#94a3b8")
+    logo_url = config.get("logo_url")
+
+    logo_td_html = ""
+    if logo_url:
+        logo_td_html = f"""
+        <td align="right" valign="middle" style="padding-bottom: 0px;">
+            <img src="{logo_url}" style="max-height: 48px; max-width: 140px; object-fit: contain; display: block;" alt="Client Logo" />
+        </td>
+        """
 
     sender_name = config.get("sender_name") if config else None
     if not sender_name:
@@ -307,31 +357,64 @@ def send_broadcast_email(
         signature_html = f'<div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #f1f5f9; font-style: italic; color: #64748b; font-size: 14px;">{signature.replace("\r\n", "<br>").replace("\n", "<br>")}</div>' if signature else ""
 
         html_content = f"""
-        <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 40px auto; padding: 40px; border: 1px solid #f1f5f9; border-radius: 40px; background-color: #ffffff; color: {primary_color}; box-shadow: 0 20px 50px rgba(0,0,0,0.05);">
-            <div style="text-align: center; margin-bottom: 48px;">
-                <div style="display: inline-block; background: {primary_color}; padding: 12px 28px; border-radius: 16px;">
-                    <span style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.4em; color: #ffffff;">Broadcast Dispatch</span>
-                </div>
-            </div>
+        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; table-layout: fixed; margin: 0; padding: 0;">
+          <tr>
+            <td align="center" style="padding: 40px 0;">
+              <!--[if mso]>
+              <table width="600" border="0" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td>
+              <![endif]-->
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; max-width: 600px; border: 1px solid #f1f5f9; border-radius: 40px; background-color: #ffffff; color: {primary_color}; box-shadow: 0 20px 50px rgba(0,0,0,0.05); overflow: hidden; border-collapse: separate;">
+                <tr>
+                  <td style="padding: 40px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
+                    <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 48px;">
+                      <tr>
+                        <td align="left" valign="middle">
+                          <table border="0" cellspacing="0" cellpadding="0" style="display: inline-block;">
+                            <tr>
+                              <td align="center" style="background: {primary_color}; padding: 12px 28px; border-radius: 16px;">
+                                <span style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.4em; color: #ffffff;">Broadcast Dispatch</span>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                        {logo_td_html}
+                      </tr>
+                    </table>
 
-            <h2 style="font-size: 32px; font-weight: 900; color: {primary_color}; margin-bottom: 28px; text-transform: uppercase; font-style: italic; letter-spacing: -0.04em; line-height: 1.1;">
-                Update: <span style="color: {accent_color};">{event_title}</span>
-            </h2>
-            
-            <div style="font-size: 16px; line-height: 1.8; color: #334155; margin-bottom: 40px;">
-                {p_body.replace("\r\n", "<br>").replace("\n", "<br>")}
-            </div>
+                    <h2 style="font-size: 32px; font-weight: 900; color: {primary_color}; margin-bottom: 28px; text-transform: uppercase; font-style: italic; letter-spacing: -0.04em; line-height: 1.1; margin-top: 0;">
+                        Update: <span style="color: {accent_color};">{event_title}</span>
+                    </h2>
+                    
+                    <div style="font-size: 16px; line-height: 1.8; color: #334155; margin-bottom: 40px;">
+                        {p_body.replace("\r\n", "<br>").replace("\n", "<br>")}
+                    </div>
 
-            {signature_html}
-            
-            <hr style="border: 0; border-top: 1px solid #f1f5f9; margin: 40px 0;" />
-            
-            <div style="text-align: center;">
-                <p style="font-size: 10px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.2em;">
-                    Automated Event Management System • Security Tier 4
-                </p>
-            </div>
-        </div>
+                    {signature_html}
+                    
+                    <hr style="border: 0; border-top: 1px solid #f1f5f9; margin-bottom: 40px; margin-top: 40px;" />
+                    
+                    <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                      <tr>
+                        <td align="center">
+                          <p style="font-size: 10px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.2em; margin: 0;">
+                              Automated Event Management System • Security Tier 4
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+              <!--[if mso]>
+                  </td>
+                </tr>
+              </table>
+              <![endif]-->
+            </td>
+          </tr>
+        </table>
         """
 
         email_params = {
