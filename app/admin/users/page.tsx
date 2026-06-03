@@ -292,7 +292,7 @@ export default function UserManagementPage() {
     });
   };
 
-  const handleRoleChange = (clientId: number, role: string) => {
+  const handleClientRoleChange = (clientId: number, role: string) => {
     setModalClientRoles(prev => ({
       ...prev,
       [clientId]: role
@@ -742,7 +742,7 @@ export default function UserManagementPage() {
                           <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Assigned Role:</span>
                           <select
                             value={currentRole}
-                            onChange={(e) => handleRoleChange(client.id, e.target.value)}
+                            onChange={(e) => handleClientRoleChange(client.id, e.target.value)}
                             className="bg-white border border-slate-200 dark:bg-slate-800 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-white rounded-lg px-2 py-1.5 focus:outline-none cursor-pointer"
                           >
                             <option value="staff">Staff (Scanner)</option>
