@@ -9,6 +9,45 @@ from backend.utils import get_current_user_from_request
 
 router = APIRouter()
 
+@router.get("/settings/sender-domains", response_model=List[str])
+def get_sender_domains(
+    session: Session = Depends(get_session),
+    current_user: Optional[User] = Depends(get_current_user_from_request)
+):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only admins can list sender domains")
+    
+    import os
+    import resend
+    
+    resend.api_key = os.getenv("RESEND_API_KEY")
+    mock_email = os.getenv("MOCK_EMAIL_SERVICE", "false").lower() == "true"
+    
+    domains_list = []
+    if resend.api_key and not mock_email:
+        try:
+            res = resend.Domains.list()
+            if hasattr(res, "data") and res.data:
+                for item in res.data:
+                    if hasattr(item, "name"):
+                        domains_list.append(item.name)
+                    elif isinstance(item, dict) and "name" in item:
+                        domains_list.append(item["name"])
+            elif isinstance(res, dict) and "data" in res:
+                for item in res["data"]:
+                    if isinstance(item, dict) and "name" in item:
+                        domains_list.append(item["name"])
+        except Exception as e:
+            print(f"Error fetching domains from Resend: {e}")
+            
+    if not domains_list:
+        domains_list = ["eelogistics.co.za", "bmdcomputing.com"]
+        
+    sender_emails = [f"events@{domain}" for domain in domains_list]
+    return sender_emails
+
 @router.get("/settings/{key}")
 def get_setting(
     key: str,

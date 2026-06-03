@@ -75,6 +75,7 @@ export default function EditEventPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [clients, setClients] = useState<any[]>([]);
+  const [senderEmails, setSenderEmails] = useState<string[]>([]);
   const [originalBanner, setOriginalBanner] = useState("");
   const [originalLogo, setOriginalLogo] = useState("");
   const [eventUserRole, setEventUserRole] = useState<string>("staff");
@@ -115,6 +116,20 @@ export default function EditEventPage() {
       .then((data) => setClients(data))
       .catch((err) => console.error("Failed to fetch clients", err));
   }, [session]);
+
+  useEffect(() => {
+    if (userRole !== "admin" || !session?.user?.email) return;
+    fetch("/api/py/settings/sender-domains", {
+      headers: { "x-user-email": session.user.email }
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setSenderEmails(data);
+        }
+      })
+      .catch((err) => console.error("Failed to fetch sender domains", err));
+  }, [userRole, session]);
 
   const effectiveRole = userRole === "admin" ? "admin" : eventUserRole;
 
@@ -379,8 +394,9 @@ export default function EditEventPage() {
                     className="w-full px-5 py-4 rounded-2xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-slate-700 bg-slate-50/50 appearance-none cursor-pointer dark:bg-slate-800 dark:text-white dark:border-slate-700"
                   >
                     <option value="">Default (events@eelogistics.co.za)</option>
-                    <option value="events@eelogistics.co.za">events@eelogistics.co.za</option>
-                    <option value="events@bmdcomputing.com">events@bmdcomputing.com</option>
+                    {(senderEmails.length > 0 ? senderEmails : ["events@eelogistics.co.za", "events@bmdcomputing.com"]).map((email) => (
+                      <option key={email} value={email}>{email}</option>
+                    ))}
                   </select>
                 </div>
               )}
