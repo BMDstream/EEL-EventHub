@@ -73,7 +73,7 @@ def verify_event_access(user: Optional[User], event: Event, session: Session):
 def get_event_email_config(event: Event, session: Session):
     client = session.get(Client, event.client_id) if event.client_id else None
     if client:
-        return {
+        config = {
             "primary_color": client.primary_color,
             "accent_color": client.accent_color,
             "heading_text": client.heading_text,
@@ -83,12 +83,17 @@ def get_event_email_config(event: Event, session: Session):
             "reply_to": client.reply_to,
             "logo_url": client.logo_url
         }
-    
-    from backend.models import SystemSetting
-    email_setting = session.exec(select(SystemSetting).where(SystemSetting.key == "email_config")).first()
-    config = email_setting.value if email_setting else {}
-    if not config.get("sender_name"):
-        config["sender_name"] = "BMD-EventHub"
+    else:
+        from backend.models import SystemSetting
+        email_setting = session.exec(select(SystemSetting).where(SystemSetting.key == "email_config")).first()
+        config = email_setting.value if email_setting else {}
+        if not config.get("sender_name"):
+            config["sender_name"] = "BMD-EventHub"
+            
+    # Override with event-specific logo if provided
+    if getattr(event, "logo_url", None):
+        config["logo_url"] = event.logo_url
+        
     return config
 
 def perform_checkin_logic(registration: Registration, day: Optional[int], mode: str, session: Session):

@@ -59,7 +59,8 @@ def on_startup():
                 ("registration_start", datetime_type),
                 ("registration_end", datetime_type),
                 ("disclaimer_enabled", f"BOOLEAN DEFAULT {bool_false}"),
-                ("disclaimer_text", "TEXT")
+                ("disclaimer_text", "TEXT"),
+                ("logo_url", "TEXT")
             ]:
                 try:
                     session.execute(text(f'ALTER TABLE "event" ADD COLUMN {col_name} {col_type}'))

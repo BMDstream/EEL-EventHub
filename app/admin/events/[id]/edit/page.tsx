@@ -76,6 +76,7 @@ export default function EditEventPage() {
   const [saving, setSaving] = useState(false);
   const [clients, setClients] = useState<any[]>([]);
   const [originalBanner, setOriginalBanner] = useState("");
+  const [originalLogo, setOriginalLogo] = useState("");
   const [formData, setFormData] = useState({
     title: "",
     slug: "",
@@ -86,6 +87,7 @@ export default function EditEventPage() {
     capacity: 100,
     duration_days: 1,
     banner_url: "",
+    logo_url: "",
     client_id: "",
     collect_company: true,
     allowed_domains: "",
@@ -149,6 +151,7 @@ export default function EditEventPage() {
           capacity: data.capacity,
           duration_days: data.duration_days || 1,
           banner_url: data.banner_url || "",
+          logo_url: data.logo_url || "",
           client_id: data.client_id ? data.client_id.toString() : "",
           collect_company: data.collect_company !== false,
           allowed_domains: data.allowed_domains ? data.allowed_domains.join(", ") : "",
@@ -165,6 +168,7 @@ export default function EditEventPage() {
           disclaimer_text: data.disclaimer_text || "",
         });
         setOriginalBanner(data.banner_url || "");
+        setOriginalLogo(data.logo_url || "");
         setLoading(false);
       })
       .catch((err) => {
@@ -178,7 +182,7 @@ export default function EditEventPage() {
     setSaving(true);
 
     try {
-      const { banner_size, banner_position, banner_theme, banner_primary_color, banner_accent_color, banner_layout, banner_url, ...submitData } = formData;
+      const { banner_size, banner_position, banner_theme, banner_primary_color, banner_accent_color, banner_layout, banner_url, logo_url, ...submitData } = formData;
       
       const payload: any = {
         ...submitData,
@@ -202,6 +206,11 @@ export default function EditEventPage() {
       // Only send banner_url if it has changed to avoid payload limit issues (413)
       if (formData.banner_url !== originalBanner) {
         payload.banner_url = formData.banner_url;
+      }
+
+      // Only send logo_url if it has changed to avoid payload limit issues (413)
+      if (formData.logo_url !== originalLogo) {
+        payload.logo_url = formData.logo_url;
       }
 
       const response = await fetch(`/api/py/events/${id}`, {
@@ -505,6 +514,52 @@ export default function EditEventPage() {
                   </div>
                 </div>
               )}
+
+              <div className="space-y-3">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center justify-between">
+                  Event Email Logo Override
+                  {formData.logo_url && <button type="button" onClick={() => setFormData({...formData, logo_url: ""})} className="text-red-500 hover:underline">Remove</button>}
+                </label>
+                <div className="relative group">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        try {
+                          const compressed = await compressImage(file, 800, 800, 0.85);
+                          setFormData(prev => ({ ...prev, logo_url: compressed }));
+                        } catch (err) {
+                          console.error("Compression failed, using original", err);
+                          const reader = new FileReader();
+                          reader.onloadend = () => {
+                            setFormData(prev => ({ ...prev, logo_url: reader.result as string }));
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }
+                    }}
+                    className="absolute inset-0 opacity-0 cursor-pointer z-10"
+                  />
+                  <div className={`w-full h-24 rounded-2xl border-2 border-dashed ${formData.logo_url ? 'border-green-500/30 bg-green-50/50' : 'border-slate-200 bg-slate-50/50'} relative transition-all overflow-hidden`}>
+                    {formData.logo_url ? (
+                      <div className="absolute inset-0 flex items-center justify-center p-4 bg-slate-900/5">
+                        <img 
+                          src={formData.logo_url} 
+                          alt="Logo Preview" 
+                          className="max-h-full max-w-full object-contain"
+                        />
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center h-full">
+                        <p className="text-[10px] font-black text-slate-400 uppercase">Upload Custom Email Logo</p>
+                        <p className="text-[8px] text-slate-300 uppercase mt-1">Overrides client/default logo for this event</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
 
               <div className="space-y-3">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Registration Form Design Style</label>
