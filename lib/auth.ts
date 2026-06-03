@@ -132,7 +132,7 @@ export const authOptions: NextAuthOptions = {
               FROM "user" u
               LEFT JOIN userclientlink l ON l.user_id = u.id
               LEFT JOIN client c ON c.id = l.client_id
-              WHERE LOWER(token.email.toLowerCase()) = LOWER(u.email)
+              WHERE LOWER(u.email) = ${token.email.toLowerCase()}
               GROUP BY u.id
               LIMIT 1
             `;

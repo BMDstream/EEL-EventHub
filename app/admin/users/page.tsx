@@ -11,7 +11,7 @@ interface User {
   email: string;
   role: string;
   is_active: boolean;
-  clients?: Array<{ id: number; name: string; slug: string }>;
+  clients?: Array<{ id: number; name: string; slug: string; role?: string }>;
 }
 
 export default function UserManagementPage() {
