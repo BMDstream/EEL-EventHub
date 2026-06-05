@@ -370,7 +370,7 @@ export default function PublicRegistrationPage() {
         </div>
       ) : null,
       rightPanel: "p-12 lg:p-24 flex flex-col justify-center bg-zinc-900/40 backdrop-blur-md border-l border-white/5 relative",
-      title: "text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-black mb-6 lg:mb-10 leading-[0.9] tracking-tighter font-bricolage italic break-words text-white relative z-10",
+      title: "text-3xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-black mb-6 lg:mb-10 leading-[0.9] tracking-tighter font-bricolage italic break-normal text-white relative z-10",
       heading: "text-5xl font-black text-white mb-6 tracking-tight font-bricolage italic",
       subHeading: "text-zinc-500 text-lg font-medium leading-relaxed",
       label: "text-[10px] font-black uppercase tracking-[0.3em] text-zinc-400 ml-1",
@@ -428,7 +428,7 @@ export default function PublicRegistrationPage() {
         </div>
       ) : null,
       rightPanel: "p-12 lg:p-24 flex flex-col justify-center bg-white/70 backdrop-blur-md border-l border-slate-200/40 relative",
-      title: "text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-black mb-6 lg:mb-10 leading-[0.9] tracking-tighter font-outfit break-words text-slate-900 relative z-10",
+      title: "text-3xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-black mb-6 lg:mb-10 leading-[0.9] tracking-tighter font-outfit break-normal text-slate-900 relative z-10",
       heading: "text-5xl font-black text-slate-900 mb-6 tracking-tight font-outfit",
       subHeading: "text-slate-500 text-lg font-medium leading-relaxed",
       label: "text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 ml-1",
@@ -486,7 +486,7 @@ export default function PublicRegistrationPage() {
         </div>
       ) : null,
       rightPanel: "p-12 lg:p-24 flex flex-col justify-center bg-white/5 backdrop-blur-md border-l border-white/10 relative",
-      title: "text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-black mb-6 lg:mb-10 leading-[0.9] tracking-tighter font-outfit text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-100 to-indigo-200 relative z-10",
+      title: "text-3xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-black mb-6 lg:mb-10 leading-[0.9] tracking-tighter font-outfit text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-100 to-indigo-200 relative z-10 break-normal",
       heading: "text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-indigo-200 mb-6 tracking-tight font-outfit",
       subHeading: "text-indigo-200/50 text-lg font-medium leading-relaxed",
       label: "text-[10px] font-black uppercase tracking-[0.3em] text-indigo-200/70 ml-1",
@@ -544,7 +544,7 @@ export default function PublicRegistrationPage() {
         </div>
       ) : null,
       rightPanel: "p-12 lg:p-24 flex flex-col justify-center bg-[#fffbf0]/80 backdrop-blur-md relative border-l-[3px] border-black",
-      title: "text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-black mb-6 lg:mb-10 leading-[0.9] tracking-tighter uppercase relative z-10 font-mono text-black",
+      title: "text-3xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-black mb-6 lg:mb-10 leading-[0.9] tracking-tighter uppercase relative z-10 font-mono text-black break-normal",
       heading: "text-4xl font-black text-black mb-6 tracking-tight uppercase border-b-4 border-black pb-4 font-mono",
       subHeading: "text-black/80 font-mono text-base font-bold",
       label: "text-xs font-black uppercase tracking-widest text-black ml-1 block font-mono",
@@ -602,7 +602,7 @@ export default function PublicRegistrationPage() {
         </div>
       ) : null,
       rightPanel: "p-12 lg:p-24 flex flex-col justify-center bg-slate-950/20 backdrop-blur-sm border-l border-[#d4af37]/15 relative",
-      title: "text-3xl sm:text-4xl md:text-5xl font-serif font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-yellow-100 to-amber-300 leading-tight font-serif",
+      title: "text-3xl sm:text-4xl md:text-5xl font-serif font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-yellow-100 to-amber-300 leading-tight font-serif break-normal",
       heading: "text-4xl font-serif font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-200 to-yellow-100 mb-4 tracking-tight uppercase font-serif",
       subHeading: "text-slate-400 text-sm font-medium leading-relaxed font-serif italic",
       label: "text-[10px] font-bold uppercase tracking-[0.2em] text-[#d4af37]/80 ml-1 block font-serif",
@@ -660,7 +660,7 @@ export default function PublicRegistrationPage() {
         </div>
       ) : null,
       rightPanel: "p-12 lg:p-24 flex flex-col justify-center bg-[#070114]/70 backdrop-blur-md border-l border-[#00ffff]/10 relative",
-      title: "text-4xl sm:text-5xl md:text-6xl font-black mb-6 leading-[0.9] tracking-tighter uppercase italic text-transparent bg-clip-text bg-gradient-to-r from-[#ff007f] via-[#b900ff] to-[#00ffff] drop-shadow-[0_2px_10px_rgba(255,0,127,0.4)] relative z-10 font-outfit",
+      title: "text-3xl sm:text-5xl md:text-6xl font-black mb-6 leading-[0.9] tracking-tighter uppercase italic text-transparent bg-clip-text bg-gradient-to-r from-[#ff007f] via-[#b900ff] to-[#00ffff] drop-shadow-[0_2px_10px_rgba(255,0,127,0.4)] relative z-10 font-outfit break-normal",
       heading: "text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#ff007f] to-[#00ffff] mb-6 tracking-tight uppercase italic font-outfit",
       subHeading: "text-[#b900ff] text-base font-semibold tracking-wide uppercase",
       label: "text-[10px] font-black uppercase tracking-[0.25em] text-[#00ffff] ml-1 block font-outfit",
@@ -718,7 +718,7 @@ export default function PublicRegistrationPage() {
         </div>
       ) : null,
       rightPanel: "p-12 lg:p-24 flex flex-col justify-center bg-white/40 backdrop-blur-sm relative border-l border-[#2d4a39]/15",
-      title: "text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-[#1c2e24] mb-2 leading-tight font-outfit",
+      title: "text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-[#1c2e24] mb-2 leading-tight font-outfit break-normal",
       heading: "text-3xl sm:text-4xl font-bold text-[#1c2e24] mb-4 tracking-tight font-outfit",
       subHeading: "text-[#5c7a67] text-sm font-medium leading-relaxed font-sans",
       label: "text-[10px] font-black uppercase tracking-[0.25em] text-[#2d4a39] ml-1 block font-outfit",
@@ -776,7 +776,7 @@ export default function PublicRegistrationPage() {
         </div>
       ) : null,
       rightPanel: "p-12 lg:p-24 flex flex-col justify-center bg-slate-950/20 backdrop-blur-md relative border-l border-white/5",
-      title: "text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-teal-200 via-emerald-100 to-indigo-200 leading-tight font-outfit",
+      title: "text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-teal-200 via-emerald-100 to-indigo-200 leading-tight font-outfit break-normal",
       heading: "text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-teal-200 to-indigo-200 mb-4 tracking-tight uppercase font-outfit",
       subHeading: "text-teal-200/50 text-sm font-medium leading-relaxed font-sans",
       label: "text-[10px] font-bold uppercase tracking-[0.2em] text-teal-200/70 ml-1 block font-outfit",
@@ -834,7 +834,7 @@ export default function PublicRegistrationPage() {
         </div>
       ) : null,
       rightPanel: "p-12 lg:p-24 flex flex-col justify-center bg-black/10 backdrop-blur-sm relative border-l border-white/5",
-      title: "text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-rose-100 to-amber-300 leading-tight font-outfit",
+      title: "text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-rose-100 to-amber-300 leading-tight font-outfit break-normal",
       heading: "text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-amber-200 to-rose-200 mb-4 tracking-tight uppercase font-outfit",
       subHeading: "text-rose-200/50 text-sm font-medium leading-relaxed font-sans",
       label: "text-[10px] font-bold uppercase tracking-[0.2em] text-rose-200/70 ml-1 block font-outfit",
@@ -892,7 +892,7 @@ export default function PublicRegistrationPage() {
         </div>
       ) : null,
       rightPanel: "p-12 lg:p-24 flex flex-col justify-center bg-black/70 backdrop-blur-md relative border-l border-[#39ff14]/25",
-      title: "text-3xl sm:text-4xl md:text-5xl font-black mb-6 leading-tight tracking-widest uppercase italic text-transparent bg-clip-text bg-gradient-to-r from-[#39ff14] via-[#20c20e] to-[#128a07] drop-shadow-[0_2px_10px_rgba(57,255,20,0.3)] relative z-10 font-mono",
+      title: "text-3xl sm:text-4xl md:text-5xl font-black mb-6 leading-tight tracking-widest uppercase italic text-transparent bg-clip-text bg-gradient-to-r from-[#39ff14] via-[#20c20e] to-[#128a07] drop-shadow-[0_2px_10px_rgba(57,255,20,0.3)] relative z-10 font-mono break-normal",
       heading: "text-4xl font-black text-[#39ff14] mb-6 tracking-widest uppercase border-b-2 border-[#39ff14] pb-4 font-mono",
       subHeading: "text-[#39ff14]/60 text-xs font-medium leading-relaxed tracking-wider uppercase font-mono",
       label: "text-[10px] font-black uppercase tracking-[0.25em] text-[#39ff14] ml-1 block font-mono",
@@ -950,7 +950,7 @@ export default function PublicRegistrationPage() {
         </div>
       ) : null,
       rightPanel: "p-12 lg:p-24 flex flex-col justify-center bg-white relative",
-      title: "text-4xl sm:text-5xl lg:text-6xl font-outfit font-extrabold tracking-tighter text-white mb-6 uppercase italic",
+      title: "text-3xl sm:text-5xl lg:text-6xl font-outfit font-extrabold tracking-tighter text-white mb-6 uppercase italic break-normal",
       heading: "text-4xl font-extrabold text-slate-900 mb-6 tracking-tight italic font-outfit",
       subHeading: "text-slate-400 text-sm font-medium leading-relaxed uppercase tracking-wider",
       label: "text-[10px] font-black uppercase tracking-[0.25em] text-slate-500 ml-1 block font-outfit",
@@ -1008,7 +1008,7 @@ export default function PublicRegistrationPage() {
         </div>
       ) : null,
       rightPanel: "p-12 lg:p-24 flex flex-col justify-center bg-[#faf9f6] relative",
-      title: "text-4xl sm:text-5xl lg:text-6xl font-light font-serif tracking-tight text-slate-900 mb-6 italic break-words",
+      title: "text-3xl sm:text-5xl lg:text-6xl font-light font-serif tracking-tight text-slate-900 mb-6 italic break-normal",
       heading: "text-4xl font-light font-serif text-slate-900 mb-6 italic border-b border-slate-200 pb-4",
       subHeading: "text-slate-500 text-sm font-medium leading-relaxed font-sans uppercase tracking-wider",
       label: "text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 ml-1 block font-sans",
@@ -1066,7 +1066,7 @@ export default function PublicRegistrationPage() {
         </div>
       ) : null,
       rightPanel: "p-12 lg:p-24 flex flex-col justify-center bg-[#0d0e12]/80 backdrop-blur-md relative",
-      title: "text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight text-white mb-6 uppercase font-outfit italic break-words",
+      title: "text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight text-white mb-6 uppercase font-outfit italic break-normal",
       heading: "text-4xl font-black text-white mb-6 tracking-tight font-outfit italic uppercase",
       subHeading: "text-zinc-500 text-sm font-medium leading-relaxed uppercase tracking-wider",
       label: "text-[10px] font-black uppercase tracking-[0.25em] text-zinc-400 ml-1 block font-outfit",
@@ -1124,7 +1124,7 @@ export default function PublicRegistrationPage() {
         </div>
       ) : null,
       rightPanel: "p-12 lg:p-24 flex flex-col justify-center bg-white/40 backdrop-blur-sm border-l border-[#e3dac9] relative",
-      title: "text-3xl sm:text-4xl font-light font-serif tracking-tight text-[#4a3f35] mb-6",
+      title: "text-3xl sm:text-4xl font-light font-serif tracking-tight text-[#4a3f35] mb-6 break-normal",
       heading: "text-3xl font-light font-serif text-[#4a3f35] mb-4 tracking-tight border-b border-[#e3dac9] pb-4",
       subHeading: "text-stone-400 text-xs font-semibold tracking-wide uppercase font-sans",
       label: "text-[10px] font-bold uppercase tracking-[0.2em] text-[#4a3f35]/70 ml-1 block font-sans",
@@ -1182,7 +1182,7 @@ export default function PublicRegistrationPage() {
         </div>
       ) : null,
       rightPanel: "p-12 lg:p-24 flex flex-col justify-center bg-slate-900/30 backdrop-blur-md relative border-l border-slate-800/50",
-      title: "text-4xl sm:text-5xl lg:text-6xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-slate-100 via-slate-300 to-slate-500 mb-6 uppercase italic font-outfit break-words",
+      title: "text-3xl sm:text-5xl lg:text-6xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-slate-100 via-slate-300 to-slate-500 mb-6 uppercase italic font-outfit break-normal",
       heading: "text-4xl font-black text-white mb-6 tracking-tight font-outfit italic uppercase border-b-2 border-slate-800 pb-4",
       subHeading: "text-slate-400 text-xs font-semibold tracking-wider uppercase",
       label: "text-[10px] font-black uppercase tracking-[0.25em] text-slate-400 ml-1 block font-outfit",
