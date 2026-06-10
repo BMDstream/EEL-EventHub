@@ -149,7 +149,16 @@ def register_attendee(
             is_new_registration = False
             print(f"Updating existing registration {registration.id} for attendee {attendee.id}")
             message = "Duplicate detected: You are already registered for this event. Your record has been updated." if is_attending else "Your registration has been submitted."
-            registration.custom_answers = encrypted_custom_answers
+            
+            # Merge custom answers to avoid overwriting previously stored answers (e.g. Partner details)
+            existing_answers = {}
+            if registration.custom_answers:
+                existing_answers = decrypt_dict(registration.custom_answers)
+                if "error" in existing_answers:
+                    existing_answers = {}
+            
+            merged_answers = {**existing_answers, **custom_answers}
+            registration.custom_answers = encrypt_dict(merged_answers)
             registration.status = reg_status
             if reg_status == "declined":
                 registration.checked_in = False

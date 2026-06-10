@@ -188,6 +188,7 @@ export default function PublicRegistrationPage() {
 function PublicRegistrationPageContent() {
   const { slug } = useParams();
   const searchParams = useSearchParams();
+  const isUpdateFlow = !!searchParams.get("email");
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
   const [registering, setRegistering] = useState(false);
@@ -314,6 +315,7 @@ function PublicRegistrationPageContent() {
     if (isAttending && event.custom_fields_schema) {
       for (const field of event.custom_fields_schema) {
         if (field.type === "partner_card") {
+          if (isUpdateFlow) continue;
           const partnerData = customAnswers[field.id];
           if (field.required && (!partnerData?.first_name?.trim() || !partnerData?.last_name?.trim() || !partnerData?.email?.trim())) {
             setSubmitError("Please fill out all partner details.");
@@ -1438,6 +1440,11 @@ function PublicRegistrationPageContent() {
               <p className={`text-[10px] font-black uppercase tracking-[0.3em] ${isLightTheme ? "client-text-primary" : "client-text-accent"}`}>Additional Details</p>
             </div>
             {event.custom_fields_schema.map((field) => {
+              // Hide partner card field if in update flow
+              if (field.type === "partner_card" && isUpdateFlow) {
+                return null;
+              }
+
               // Evaluation of conditional rendering
               if (field.dependsOn) {
                 const parentVal = customAnswers[field.dependsOn.fieldId];
