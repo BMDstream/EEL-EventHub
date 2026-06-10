@@ -31,6 +31,17 @@ import FormBuilder from "@/components/FormBuilder";
 import QRScanner from "@/components/QRScanner";
 import StaffAssignment from "@/components/StaffAssignment";
 
+const getAnswerString = (ans: any): string => {
+  if (ans === null || ans === undefined) return "—";
+  if (typeof ans === "object") {
+    if (ans.first_name || ans.last_name || ans.email) {
+      return `${ans.first_name || ""} ${ans.last_name || ""} (${ans.email || ""})`.trim();
+    }
+    return JSON.stringify(ans);
+  }
+  return String(ans);
+};
+
 interface Attendee {
   id: number;
   email: string;
@@ -1280,11 +1291,11 @@ export default function EventDetailsPage() {
                     </div>
                     <div>
                        <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">Company</p>
-                       <p className="font-bold text-[#0f172a]">{selectedReg.attendee.company || "—"}</p>
+                       <p className="font-bold text-[#0f172a]">{selectedReg.attendee?.company || "—"}</p>
                     </div>
                     <div>
                        <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">Email Address</p>
-                       <p className="font-bold text-[#0f172a]">{selectedReg.attendee.email}</p>
+                       <p className="font-bold text-[#0f172a]">{selectedReg.attendee?.email || ""}</p>
                     </div>
                     <div>
                        <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">Registered On</p>
@@ -1299,13 +1310,13 @@ export default function EventDetailsPage() {
                  <div className="pt-8 border-t border-slate-50">
                     <h4 className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] mb-6">Custom Field Responses</h4>
                     <div className="space-y-6">
-                       {event.custom_fields_schema?.length === 0 ? (
+                       {(!event.custom_fields_schema || event.custom_fields_schema.length === 0) ? (
                          <p className="text-slate-400 text-xs italic">No custom fields defined for this event.</p>
                        ) : (
                          event.custom_fields_schema.map(field => (
                            <div key={field.id} className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
                               <p className="text-[10px] font-black text-yellow-600 uppercase tracking-widest mb-2">{field.label}</p>
-                              <p className="font-bold text-[#0f172a]">{selectedReg.custom_answers?.[field.id] || "—"}</p>
+                              <p className="font-bold text-[#0f172a]">{getAnswerString(selectedReg.custom_answers?.[field.id])}</p>
                            </div>
                          ))
                        )}

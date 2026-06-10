@@ -6,7 +6,18 @@ from backend.email_service import send_confirmation_email, send_broadcast_email
 # Read configuration from the environment
 QSTASH_TOKEN = os.getenv("QSTASH_TOKEN")
 # Base URL of this backend application for callbacks
-APP_BASE_URL = os.getenv("APP_BASE_URL", "http://localhost:8000")
+APP_BASE_URL = os.getenv("APP_BASE_URL", "")
+
+# Override base URL dynamically for Vercel preview environments so QStash targets the correct deployment
+vercel_env = os.getenv("VERCEL_ENV", "")
+vercel_url = os.getenv("VERCEL_URL", "")
+if vercel_env == "preview" and vercel_url:
+    APP_BASE_URL = f"https://{vercel_url}"
+elif not APP_BASE_URL:
+    if vercel_url:
+        APP_BASE_URL = f"https://{vercel_url}"
+    else:
+        APP_BASE_URL = "http://localhost:8000"
 
 def dispatch_send_confirmation_email(
     background_tasks: BackgroundTasks,
