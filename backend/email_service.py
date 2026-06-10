@@ -3,7 +3,7 @@ import resend
 import qrcode
 import base64
 from io import BytesIO
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from dotenv import load_dotenv
 from urllib.parse import quote
 
@@ -146,6 +146,7 @@ def send_confirmation_email(
     qr_block_html = ""
     warning_block_html = ""
     button_block_html = ""
+    urgent_banner_html = ""
     if is_attending:
         qr_base64 = generate_qr_base64(clearance_id)
         qr_block_html = f"""
@@ -165,13 +166,26 @@ def send_confirmation_email(
         </div>
         """
         if profile_update_link:
+            urgent_banner_html = f"""
+            <div style="background-color: #fff7ed; border: 2px solid #ea580c; padding: 24px; border-radius: 20px; margin-bottom: 32px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+                <p style="color: #c2410c; font-size: 11px; font-weight: 950; text-transform: uppercase; letter-spacing: 0.15em; margin: 0 0 8px 0;">
+                    ⚠️ Action Required ASAP
+                </p>
+                <p style="color: #7c2d12; font-size: 15px; font-weight: 800; margin: 0 0 12px 0; line-height: 1.4;">
+                    Complete your registration details to secure your spot.
+                </p>
+                <p style="color: #9a3412; font-size: 13px; line-height: 1.5; margin: 0;">
+                    Your partner has registered you, but we still need your specific information (such as T-shirt size and dietary preferences) to complete your booking. Please click the <strong>"Update Your Ticket Details"</strong> button below to submit this information immediately.
+                </p>
+            </div>
+            """
             button_block_html = f"""
             <div style="text-align: center; margin-top: 10px; margin-bottom: 40px;">
                 <a href="{profile_update_link}" target="_blank" style="background-color: #eab308; color: #000000; padding: 16px 32px; border-radius: 16px; font-size: 13px; font-weight: 950; text-decoration: none; text-transform: uppercase; letter-spacing: 0.1em; display: inline-block; box-shadow: 0 4px 12px rgba(234,179,8,0.2);">
                     Update Your Ticket Details
                 </a>
-                <p style="font-size: 11px; color: #64748b; margin-top: 10px; margin-bottom: 0; font-weight: 500;">
-                    Dietary requirements, T-shirt size, and options.
+                <p style="font-size: 11px; color: #b45309; margin-top: 10px; margin-bottom: 0; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;">
+                    ⚠️ MUST DO ASAP - Required to finalize registration!
                 </p>
             </div>
             """
@@ -219,6 +233,8 @@ def send_confirmation_email(
                 <h2 style="font-size: 38px; font-weight: 900; color: {primary_color}; margin-bottom: 28px; text-transform: uppercase; font-style: italic; letter-spacing: -0.04em; line-height: 1; margin-top: 0;">
                     {heading_title} <span style="color: {accent_color};">{heading_subtitle}</span>
                 </h2>
+                
+                {urgent_banner_html}
                 
                 <p style="font-size: 17px; line-height: 1.7; margin-bottom: 40px; color: #475569;">
                     Hello <strong>{first_name}</strong>,<br><br>
