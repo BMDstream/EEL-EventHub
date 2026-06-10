@@ -50,9 +50,9 @@ def send_confirmation_email(
         config = {
             "primary_color": "#0f172a",
             "accent_color": "#94a3b8",
-            "heading_text": "Access Granted.",
-            "body_text": "Your registration for **{event_title}** has been confirmed. Below are your secure credentials for terminal verification.",
-            "footer_text": "Automated Event Management System\nSecurity Tier: Level 4 Authorized"
+            "heading_text": "Registration Confirmed.",
+            "body_text": "Your registration for **{event_title}** has been successfully confirmed. We look forward to seeing you at the event!",
+            "footer_text": "Excellence Logistics & Entertainment\nAutomated Event Hub System"
         }
 
     # Process branding colors and headers
@@ -62,13 +62,13 @@ def send_confirmation_email(
     logo_url = config.get("logo_url")
 
     # Set badge, heading, and body texts depending on RSVP status
-    badge_text = "Official Dispatch" if is_attending else "Response Recorded"
+    badge_text = "Attendee Pass" if is_attending else "Response Recorded"
     
     if is_attending:
-        heading_text = config.get("heading_text", "Access Granted.")
+        heading_text = config.get("heading_text", "Registration Confirmed.")
         body_text_raw = config.get("body_text", "")
         if not body_text_raw:
-            body_text_raw = "Your registration for **{event_title}** has been confirmed. Below are your secure credentials for terminal verification."
+            body_text_raw = "Your registration for **{event_title}** has been successfully confirmed. We look forward to seeing you at the event!"
     else:
         heading_text = config.get("decline_heading_text", "Response Recorded.")
         body_text_raw = config.get(
@@ -148,11 +148,11 @@ def send_confirmation_email(
     button_block_html = ""
     urgent_banner_html = ""
     if is_attending:
-        qr_base64 = generate_qr_base64(clearance_id)
+        qr_url = f"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={quote(clearance_id)}"
         qr_block_html = f"""
         <div style="background: #f8fafc; padding: 48px; border-radius: 32px; text-align: center; border: 1px solid #f1f5f9; margin-bottom: 40px; position: relative; overflow: hidden;">
-            <img src="data:image/png;base64,{qr_base64}" width="200" height="200" alt="Clearance QR Code" style="margin-bottom: 32px; border-radius: 20px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.15);" />
-            <p style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.3em; color: #64748b; margin-bottom: 16px;">Unique Clearance ID</p>
+            <img src="{qr_url}" width="200" height="200" alt="Registration QR Code" style="margin-bottom: 32px; border-radius: 20px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.15);" />
+            <p style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.3em; color: #64748b; margin-bottom: 16px;">Ticket Reference ID</p>
             <div style="display: inline-block; background: #ffffff; padding: 16px 32px; border-radius: 20px; border: 2px solid {primary_color};">
                 <code style="font-size: 32px; font-weight: 900; color: {primary_color}; letter-spacing: 0.25em;">{clearance_id}</code>
             </div>
@@ -161,7 +161,7 @@ def send_confirmation_email(
         warning_block_html = f"""
         <div style="background: #fffbeb; padding: 28px; border-radius: 24px; border: 1px solid #fef3c7; margin-bottom: 40px; text-align: center;">
             <p style="color: #b45309; font-size: 14px; font-weight: 700; margin: 0; line-height: 1.5; text-transform: uppercase; letter-spacing: 0.05em;">
-                Present this digital clearance at the registration desk.
+                Please present this QR code or code at the check-in desk.
             </p>
         </div>
         """
@@ -258,7 +258,7 @@ def send_confirmation_email(
                           {footer_html}
                       </p>
                       <p style="font-size: 9px; color: #cbd5e1; text-transform: uppercase; letter-spacing: 0.1em; margin: 0;">
-                          Confidentiality Notice: This dispatch is intended solely for {to_email}.
+                          This confirmation email was sent to {to_email}.
                       </p>
                     </td>
                   </tr>
@@ -286,7 +286,10 @@ def send_confirmation_email(
             sender_email = "events@eelogistics.co.za"
             
         from_address = f"{sender_name} <{sender_email}>"
-        subject = f"Access Granted: {event_title}" if is_attending else f"RSVP Confirmed: {event_title}"
+        if profile_update_link:
+            subject = f"Action Required: Complete your details for {event_title}"
+        else:
+            subject = f"Registration Confirmed: {event_title}" if is_attending else f"RSVP Recorded: {event_title}"
         
         email_params = {
             "from": from_address,

@@ -148,7 +148,7 @@ def register_attendee(
         if registration:
             is_new_registration = False
             print(f"Updating existing registration {registration.id} for attendee {attendee.id}")
-            message = "Duplicate detected: You are already registered for this event. Your record has been updated." if is_attending else "Your registration has been submitted."
+            message = "Your record has been updated." if is_attending else "Your registration has been submitted."
             
             # Merge custom answers to avoid overwriting previously stored answers (e.g. Partner details)
             existing_answers = {}
