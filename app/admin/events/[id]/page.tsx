@@ -1045,15 +1045,15 @@ export default function EventDetailsPage() {
                      <div className="space-y-4">
                        <input 
                          type="text" 
-                         maxLength={4}
-                         placeholder="ENTER 4-DIGIT PIN"
+                         maxLength={6}
+                         placeholder="ENTER CLEARANCE PIN"
                          value={pin}
                          onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
                          className="w-full text-center text-2xl md:text-4xl font-black py-8 bg-white rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none text-[#0f172a] placeholder-slate-200 tracking-[0.2em] md:tracking-[0.5em]"
                        />
                        <button 
                          onClick={async () => {
-                           if (pin.length !== 4) return;
+                           if (pin.length !== 4 && pin.length !== 6) return;
                            setPinStatus("processing");
                            setPinMessage("Verifying PIN...");
                            try {
@@ -1091,7 +1091,7 @@ export default function EventDetailsPage() {
                              setTimeout(() => setPinStatus("idle"), 4000);
                            }
                          }}
-                         disabled={pin.length !== 4}
+                         disabled={pin.length !== 4 && pin.length !== 6}
                         className="w-full bg-[#0f172a] hover:bg-black disabled:bg-slate-200 text-white font-black py-6 rounded-2xl transition-all uppercase tracking-widest text-xs"
                        >
                          Verify & Check In
@@ -1128,7 +1128,7 @@ export default function EventDetailsPage() {
 
                  <div className="p-8 bg-yellow-400/5 rounded-[2rem] border border-yellow-400/10">
                    <p className="text-[10px] font-medium text-yellow-600/70 leading-relaxed uppercase tracking-wider">
-                     Attendees can find their 4-digit Unique Clearance ID at the bottom of their confirmation email or below their QR code.
+                     Attendees can find their Unique Clearance ID (4 or 6 digits) at the bottom of their confirmation email or below their QR code.
                    </p>
                  </div>
                </div>
@@ -1210,7 +1210,7 @@ export default function EventDetailsPage() {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-bold">
                          <div className="text-slate-600"><code className="bg-white border border-slate-200/60 px-1.5 py-0.5 rounded text-yellow-600">{"{first_name}"}</code> - Guest's first name</div>
                          <div className="text-slate-600"><code className="bg-white border border-slate-200/60 px-1.5 py-0.5 rounded text-yellow-600">{"{last_name}"}</code> - Guest's last name</div>
-                         <div className="text-slate-600"><code className="bg-white border border-slate-200/60 px-1.5 py-0.5 rounded text-yellow-600">{"{pin}"}</code> - Guest's unique 4-digit PIN</div>
+                         <div className="text-slate-600"><code className="bg-white border border-slate-200/60 px-1.5 py-0.5 rounded text-yellow-600">{"{pin}"}</code> - Guest's unique Clearance PIN</div>
                          <div className="text-slate-600"><code className="bg-white border border-slate-200/60 px-1.5 py-0.5 rounded text-yellow-600">{"{qr_code}"}</code> - Unique Check-in QR code</div>
                       </div>
                    </div>
@@ -1364,7 +1364,7 @@ export default function EventDetailsPage() {
 
               <div className="p-10 overflow-y-auto space-y-6 flex-1">
                 <p className="text-slate-500 font-medium text-sm">
-                  Import a bulk register of attendees. The system will automatically add them, generate a unique 4-digit PIN, create a QR code, and send the registration confirmation email.
+                  Import a bulk register of attendees. The system will automatically add them, generate a unique clearance PIN, create a QR code, and send the registration confirmation email.
                 </p>
 
                 <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
