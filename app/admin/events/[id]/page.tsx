@@ -1261,11 +1261,11 @@ export default function EventDetailsPage() {
               <div className="p-10 border-b border-slate-50 flex justify-between items-center bg-slate-50/30">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 bg-[#0f172a] text-white rounded-[1.2rem] flex items-center justify-center font-black text-lg">
-                    {selectedReg.attendee.first_name[0]}{selectedReg.attendee.last_name[0]}
+                    {(selectedReg.attendee?.first_name?.[0] || "")}{(selectedReg.attendee?.last_name?.[0] || "")}
                   </div>
                   <div>
                     <h3 className="text-2xl font-black text-[#0f172a] font-bricolage italic uppercase tracking-tight">Registration <span className="text-slate-300">Details</span></h3>
-                    <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">{selectedReg.attendee.first_name} {selectedReg.attendee.last_name}</p>
+                    <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">{selectedReg.attendee?.first_name || ""} {selectedReg.attendee?.last_name || ""}</p>
                   </div>
                 </div>
                 <button onClick={() => setSelectedReg(null)} className="p-3 bg-slate-50 rounded-xl hover:bg-slate-100 transition-all">
@@ -1288,7 +1288,7 @@ export default function EventDetailsPage() {
                     </div>
                     <div>
                        <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">Registered On</p>
-                       <p className="font-bold text-[#0f172a]">{new Date(selectedReg.created_at).toLocaleString()}</p>
+                       <p className="font-bold text-[#0f172a]">{selectedReg.created_at ? new Date(selectedReg.created_at).toLocaleString() : "—"}</p>
                     </div>
                     <div>
                        <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">Clearance ID (PIN)</p>

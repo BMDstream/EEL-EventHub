@@ -58,17 +58,29 @@ def send_confirmation_email(
     # Process branding colors and headers
     primary_color = config.get("primary_color", "#0f172a")
     accent_color = config.get("accent_color", "#94a3b8")
-    footer_html = config.get("footer_text", "").replace("\n", "<br>")
+    
+    footer_text_raw = config.get("footer_text", "")
+    if "Security Tier" in footer_text_raw or "Level 4 Authorized" in footer_text_raw:
+        footer_html = "Excellence Logistics & Entertainment<br>Automated Event Hub System"
+    else:
+        footer_html = footer_text_raw.replace("\n", "<br>")
+        
     logo_url = config.get("logo_url")
 
     # Set badge, heading, and body texts depending on RSVP status
     badge_text = "Attendee Pass" if is_attending else "Response Recorded"
     
     if is_attending:
-        heading_text = config.get("heading_text", "Registration Confirmed.")
-        body_text_raw = config.get("body_text", "")
-        if not body_text_raw:
-            body_text_raw = "Your registration for **{event_title}** has been successfully confirmed. We look forward to seeing you at the event!"
+        if profile_update_link:
+            heading_text = "Action Required."
+            body_text_raw = "Your partner has registered you for **{event_title}**. Please complete your ticket details to finalize your registration."
+        else:
+            heading_text = config.get("heading_text", "Registration Confirmed.")
+            if "Access Granted" in heading_text:
+                heading_text = "Registration Confirmed."
+            body_text_raw = config.get("body_text", "")
+            if not body_text_raw or "credentials" in body_text_raw or "terminal verification" in body_text_raw:
+                body_text_raw = "Your registration for **{event_title}** has been successfully confirmed. We look forward to seeing you at the event!"
     else:
         heading_text = config.get("decline_heading_text", "Response Recorded.")
         body_text_raw = config.get(

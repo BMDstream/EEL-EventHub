@@ -332,6 +332,12 @@ def register_attendee(
                 )
                 session.add(partner_checkin)
                 
+            # Synchronize core registration PINs with tournament check-in PINs
+            registration.pin = challenger_checkin.pin
+            partner_reg.pin = partner_checkin.pin
+            session.add(registration)
+            session.add(partner_reg)
+                
             # Create Match in matches table
             existing_match = session.exec(
                 select(Match)
