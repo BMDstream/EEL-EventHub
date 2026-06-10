@@ -113,6 +113,17 @@ export const authOptions: NextAuthOptions = {
     })
   ],
   callbacks: {
+    async redirect({ url, baseUrl }) {
+      if (url.startsWith("/")) return `${baseUrl}${url}`;
+      try {
+        const parsedUrl = new URL(url);
+        const parsedBase = new URL(baseUrl);
+        if (parsedUrl.hostname.endsWith(".vercel.app") || parsedUrl.hostname === parsedBase.hostname) {
+          return url;
+        }
+      } catch (_) {}
+      return baseUrl;
+    },
     async jwt({ token, user }) {
       // Only query the DB on initial sign-in (when `user` is present).
       // Subsequent requests reuse the token — no extra DB hit per request.
