@@ -148,7 +148,21 @@ def register_attendee(
         if registration:
             is_new_registration = False
             print(f"Updating existing registration {registration.id} for attendee {attendee.id}")
-            message = "Your record has been updated." if is_attending else "Your registration has been submitted."
+            is_partner = False
+            try:
+                from backend.routers.tournament import Player, Match
+                player = session.exec(select(Player).where(Player.email == email)).first()
+                if player:
+                    match = session.exec(select(Match).where(Match.partner_id == player.id)).first()
+                    if match:
+                        is_partner = True
+            except Exception as e:
+                print(f"Error checking if partner: {e}")
+
+            if is_partner or data.get("is_partner_update", False):
+                message = "Your record has been updated." if is_attending else "Your registration has been submitted."
+            else:
+                message = "Duplicate detected: You are already registered for this event. Your record has been updated." if is_attending else "Your registration has been submitted."
             
             # Merge custom answers to avoid overwriting previously stored answers (e.g. Partner details)
             existing_answers = {}

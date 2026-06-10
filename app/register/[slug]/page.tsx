@@ -356,7 +356,8 @@ function PublicRegistrationPageContent() {
           event_id: event.id,
           ...formData,
           custom_answers: customAnswers,
-          is_attending: isAttending
+          is_attending: isAttending,
+          is_partner_update: isUpdateFlow
         })
       });
 
