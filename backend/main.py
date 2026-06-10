@@ -176,6 +176,14 @@ def on_startup():
                 session.commit()
                 print("Database sweep correction complete and marked.")
                 
+            # 7. Safely ensure tournament tables are created (fallback for serverless cold start)
+            try:
+                from backend.routers.tournament import Player, EventCheckin, Match
+                Player.metadata.create_all(engine)
+                print("Tournament tables created/verified.")
+            except Exception as e:
+                print(f"Tournament tables creation warning: {e}")
+                
     except Exception as e:
         print(f"Database initialization/seeding warning: {e}")
 
