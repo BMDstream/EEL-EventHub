@@ -26,7 +26,7 @@ const THEME_DEFAULTS = {
 interface FormField {
   id: string;
   label: string;
-  type: "text" | "select" | "checkbox";
+  type: "text" | "select" | "checkbox" | "partner_card";
   required: boolean;
   options?: string[];
   dependsOn?: {
@@ -283,6 +283,39 @@ export default function PublicRegistrationPage() {
     if (isAttending && event.disclaimer_enabled && event.disclaimer_text && !disclaimerAccepted) {
       setSubmitError("You must read and accept the Disclaimer and Indemnity to register.");
       return;
+    }
+    
+    // Validate partner card fields (identical check and corporate domain validation)
+    if (isAttending && event.custom_fields_schema) {
+      for (const field of event.custom_fields_schema) {
+        if (field.type === "partner_card") {
+          const partnerData = customAnswers[field.id];
+          if (field.required && (!partnerData?.first_name?.trim() || !partnerData?.last_name?.trim() || !partnerData?.email?.trim())) {
+            setSubmitError("Please fill out all partner details.");
+            return;
+          }
+          if (partnerData?.email?.trim()) {
+            const registrantEmail = formData.email.trim().toLowerCase();
+            const partnerEmail = partnerData.email.trim().toLowerCase();
+            
+            if (registrantEmail === partnerEmail) {
+              setSubmitError("Your email and your partner's email cannot be the same.");
+              return;
+            }
+            
+            const registrantParts = registrantEmail.split("@");
+            const partnerParts = partnerEmail.split("@");
+            if (registrantParts.length > 1 && partnerParts.length > 1) {
+              const registrantDomain = registrantParts[1];
+              const partnerDomain = partnerParts[1];
+              if (registrantDomain !== partnerDomain) {
+                setSubmitError(`Partner's email must be from the same company (ending in @${registrantDomain}).`);
+                return;
+              }
+            }
+          }
+        }
+      }
     }
     
     setRegistering(true);
@@ -1439,6 +1472,59 @@ export default function PublicRegistrationPage() {
                        />
                        <span className={style.checkboxText}>Yes, I agree / confirm</span>
                     </label>
+                  )}
+
+                  {field.type === "partner_card" && (
+                    <div className={`space-y-6 p-6 rounded-2xl border ${
+                      isLightTheme 
+                        ? "bg-slate-50 border-slate-200 text-slate-850" 
+                        : "bg-zinc-900/30 border-white/5 text-zinc-100"
+                    }`}>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Partner First Name *</label>
+                          <input
+                            required={field.required}
+                            type="text"
+                            placeholder="e.g. Alan"
+                            value={customAnswers[field.id]?.first_name || ""}
+                            onChange={(e) => handleCustomChange(field.id, {
+                              ...customAnswers[field.id],
+                              first_name: e.target.value
+                            })}
+                            className={style.input}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Partner Last Name *</label>
+                          <input
+                            required={field.required}
+                            type="text"
+                            placeholder="e.g. Turing"
+                            value={customAnswers[field.id]?.last_name || ""}
+                            onChange={(e) => handleCustomChange(field.id, {
+                              ...customAnswers[field.id],
+                              last_name: e.target.value
+                            })}
+                            className={style.input}
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Partner Email *</label>
+                        <input
+                          required={field.required}
+                          type="email"
+                          placeholder="partner@company.com"
+                          value={customAnswers[field.id]?.email || ""}
+                          onChange={(e) => handleCustomChange(field.id, {
+                            ...customAnswers[field.id],
+                            email: e.target.value
+                          })}
+                          className={style.input}
+                        />
+                      </div>
+                    </div>
                   )}
                 </div>
               );

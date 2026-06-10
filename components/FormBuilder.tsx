@@ -1,14 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Trash2, GripVertical, Type, List, CheckSquare, Save, Loader2, Sparkles, ArrowUp, ArrowDown } from "lucide-react";
+import { Plus, Trash2, GripVertical, Type, List, CheckSquare, Save, Loader2, Sparkles, ArrowUp, ArrowDown, Users } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSession } from "next-auth/react";
 
 interface FormField {
   id: string;
   label: string;
-  type: "text" | "select" | "checkbox";
+  type: "text" | "select" | "checkbox" | "partner_card";
   required: boolean;
   options?: string[]; // For select type
   dependsOn?: {
@@ -80,12 +80,12 @@ export default function FormBuilder({ eventId, initialSchema, onSave }: { eventI
     setFields(validatedFields);
   };
 
-  const addField = (type: "text" | "select" | "checkbox") => {
+  const addField = (type: "text" | "select" | "checkbox" | "partner_card") => {
     const newField: FormField = {
       id: `field_${Date.now()}`,
-      label: "New Question",
+      label: type === "partner_card" ? "Partner Details" : "New Question",
       type,
-      required: false,
+      required: type === "partner_card" ? true : false,
       options: type === "select" ? ["Option 1", "Option 2"] : undefined
     };
     setFields([...fields, newField]);
@@ -163,6 +163,7 @@ export default function FormBuilder({ eventId, initialSchema, onSave }: { eventI
              { type: "text" as const, label: "Short Answer", icon: Type },
              { type: "select" as const, label: "Dropdown Menu", icon: List },
              { type: "checkbox" as const, label: "Toggle / Check", icon: CheckSquare },
+             { type: "partner_card" as const, label: "Partner Card", icon: Users },
            ].map((tool) => (
              <motion.button 
                whileHover={{ scale: 1.02 }}
@@ -261,7 +262,8 @@ export default function FormBuilder({ eventId, initialSchema, onSave }: { eventI
                                       {field.type === "text" && <Type size={14} />}
                                       {field.type === "select" && <List size={14} />}
                                       {field.type === "checkbox" && <CheckSquare size={14} />}
-                                      {field.type}
+                                      {field.type === "partner_card" && <Users size={14} />}
+                                      {field.type === "partner_card" ? "Partner Card" : field.type}
                                    </div>
                                 </div>
                              </div>
@@ -276,6 +278,18 @@ export default function FormBuilder({ eventId, initialSchema, onSave }: { eventI
                                   className="w-full px-6 py-4 bg-slate-50 rounded-xl border-none outline-none font-bold text-[#0f172a] focus:ring-2 focus:ring-yellow-400"
                                 />
                              </div>
+
+                             {field.type === "partner_card" && (
+                                <div className="space-y-4 pt-4 border-t border-slate-50 bg-slate-50 p-6 rounded-2xl border border-slate-100">
+                                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Partner Card Fields Preview</p>
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <input disabled type="text" placeholder="Partner First Name" className="w-full px-6 py-4 bg-white rounded-xl border border-slate-200 text-slate-400 font-bold opacity-60" />
+                                    <input disabled type="text" placeholder="Partner Last Name" className="w-full px-6 py-4 bg-white rounded-xl border border-slate-200 text-slate-400 font-bold opacity-60" />
+                                  </div>
+                                  <input disabled type="text" placeholder="Partner Email Address" className="w-full px-6 py-4 bg-white rounded-xl border border-slate-200 text-slate-400 font-bold opacity-60" />
+                                  <p className="text-[10px] italic text-slate-400">Note: Frontend validation will enforce that the partner's email domain matches the registrant's email domain.</p>
+                                </div>
+                              )}
 
                              {field.type === "select" && (
                                <div className="space-y-4 pt-4 border-t border-slate-50">

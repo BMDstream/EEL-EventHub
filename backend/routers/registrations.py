@@ -192,32 +192,193 @@ def register_attendee(
     }
     trigger_webhooks(webhook_event, webhook_payload, session, background_tasks, client_id=event.client_id)
 
-    # 4. Send confirmation email (asynchronously via dispatch abstraction layer)
-    try:
-        if event:
-            config = get_event_email_config(event, session)
-            dispatch_send_confirmation_email(
-                background_tasks=background_tasks,
-                to_email=attendee.email,
-                first_name=attendee.first_name,
-                event_title=event.title,
-                clearance_id=registration.pin,
-                event_details={
-                    "start_date": event.start_date,
-                    "location": event.location,
-                    "address": event.address
-                },
-                config=config,
-                is_attending=is_attending
+    # 4. Check if partner card is present and execute tournament co-registration
+    partner_details = None
+    if event and event.custom_fields_schema:
+        for field in event.custom_fields_schema:
+            if field.get("type") == "partner_card":
+                field_id = field.get("id")
+                ans = custom_answers.get(field_id)
+                if isinstance(ans, dict) and ans.get("email") and ans.get("first_name") and ans.get("last_name"):
+                    partner_details = {
+                        "first_name": str(ans["first_name"]).strip(),
+                        "last_name": str(ans["last_name"]).strip(),
+                        "email": str(ans["email"]).strip().lower()
+                    }
+                break
+
+    if partner_details and is_attending:
+        try:
+            partner_email = partner_details["email"]
+            partner_first = partner_details["first_name"]
+            partner_last = partner_details["last_name"]
+            
+            # Co-register partner as a core Attendee
+            partner_attendee = session.exec(
+                select(Attendee)
+                .where(func.lower(Attendee.email) == partner_email)
+                .where(func.lower(Attendee.first_name) == partner_first.lower())
+                .where(func.lower(Attendee.last_name) == partner_last.lower())
+            ).first()
+            
+            if not partner_attendee:
+                print(f"Tournament co-registration: Creating core attendee for partner {partner_first} {partner_last}")
+                partner_attendee = Attendee(
+                    email=partner_email,
+                    first_name=partner_first,
+                    last_name=partner_last,
+                    company=company or attendee.company
+                )
+                session.add(partner_attendee)
+                session.commit()
+                session.refresh(partner_attendee)
+            
+            # Co-register partner as a core Registration for the event
+            partner_reg = session.exec(
+                select(Registration)
+                .where(Registration.event_id == event_id)
+                .where(Registration.attendee_id == partner_attendee.id)
+            ).first()
+            
+            if not partner_reg:
+                print(f"Tournament co-registration: Creating core registration for partner {partner_attendee.id}")
+                partner_pin = str(random.randint(1000, 9999))
+                partner_reg = Registration(
+                    event_id=event_id,
+                    attendee_id=partner_attendee.id,
+                    pin=partner_pin,
+                    status="confirmed"
+                )
+                session.add(partner_reg)
+                session.commit()
+                session.refresh(partner_reg)
+
+            # Tournament database setup
+            from backend.routers.tournament import Player, EventCheckin, Match, generate_backup_pin, send_resend_email
+            from uuid import uuid4
+            
+            # Upsert Challenger Player Profile
+            challenger_player = session.exec(
+                select(Player).where(Player.email == email)
+            ).first()
+            if not challenger_player:
+                challenger_player = Player(name=f"{first_name} {last_name}", email=email)
+                session.add(challenger_player)
+            else:
+                challenger_player.name = f"{first_name} {last_name}"
+                session.add(challenger_player)
+                
+            # Upsert Partner Player Profile
+            partner_player = session.exec(
+                select(Player).where(Player.email == partner_email)
+            ).first()
+            if not partner_player:
+                partner_player = Player(name=f"{partner_first} {partner_last}", email=partner_email)
+                session.add(partner_player)
+            else:
+                partner_player.name = f"{partner_first} {partner_last}"
+                session.add(partner_player)
+                
+            session.flush()
+            
+            # Create Challenger Pass Check-in
+            challenger_checkin = session.exec(
+                select(EventCheckin).where(EventCheckin.player_id == challenger_player.id)
+            ).first()
+            if not challenger_checkin:
+                challenger_pass_pin = generate_backup_pin()
+                challenger_checkin = EventCheckin(
+                    player_id=challenger_player.id,
+                    qr_hash=uuid4(),
+                    pin=challenger_pass_pin,
+                    checked_in=False
+                )
+                session.add(challenger_checkin)
+                
+            # Create Partner Pass Check-in
+            partner_checkin = session.exec(
+                select(EventCheckin).where(EventCheckin.player_id == partner_player.id)
+            ).first()
+            if not partner_checkin:
+                partner_pass_pin = generate_backup_pin()
+                partner_checkin = EventCheckin(
+                    player_id=partner_player.id,
+                    qr_hash=uuid4(),
+                    pin=partner_pass_pin,
+                    checked_in=False
+                )
+                session.add(partner_checkin)
+                
+            # Create Match in matches table
+            existing_match = session.exec(
+                select(Match)
+                .where(Match.challenger_id == challenger_player.id)
+                .where(Match.partner_id == partner_player.id)
+            ).first()
+            if not existing_match:
+                tournament_match = Match(
+                    challenger_id=challenger_player.id,
+                    partner_id=partner_player.id,
+                    status="pending"
+                )
+                session.add(tournament_match)
+                
+            session.commit()
+            session.refresh(challenger_checkin)
+            session.refresh(partner_checkin)
+            
+            # Send Tournament Branded Emails
+            send_resend_email(
+                to_email=email,
+                name=f"{first_name} {last_name}",
+                role="Challenger",
+                opponent_name=f"{partner_first} {partner_last}",
+                pin=challenger_checkin.pin,
+                qr_hash=str(challenger_checkin.qr_hash)
             )
-    except Exception as e:
-        print(f"Error dispatching confirmation email: {e}")
+            
+            send_resend_email(
+                to_email=partner_email,
+                name=f"{partner_first} {partner_last}",
+                role="Challenged Partner",
+                opponent_name=f"{first_name} {last_name}",
+                pin=partner_checkin.pin,
+                qr_hash=str(partner_checkin.qr_hash)
+            )
+            
+            print(f"Tournament co-registration and match creation complete for Challenger: {email} & Partner: {partner_email}")
+            
+        except Exception as e:
+            session.rollback()
+            print(f"Error executing tournament partner co-registration: {e}")
+
+    # 5. Send confirmation email (only if NOT a tournament registration)
+    if not partner_details or not is_attending:
+        try:
+            if event:
+                config = get_event_email_config(event, session)
+                dispatch_send_confirmation_email(
+                    background_tasks=background_tasks,
+                    to_email=attendee.email,
+                    first_name=attendee.first_name,
+                    event_title=event.title,
+                    clearance_id=registration.pin,
+                    event_details={
+                        "start_date": event.start_date,
+                        "location": event.location,
+                        "address": event.address
+                    },
+                    config=config,
+                    is_attending=is_attending
+                )
+        except Exception as e:
+            print(f"Error dispatching confirmation email: {e}")
 
     return {
         "id": str(registration.id),
         "pin": registration.pin,
         "message": message,
-        "version": "1.3-multi-identity"
+        "version": "1.4-tournament-integrated"
     }
 
 @router.get("/events/{event_id}/registrations")
