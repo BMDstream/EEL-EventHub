@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useEffect, useState, Suspense } from "react";
+import { useParams, useSearchParams } from "next/navigation";
 import { Calendar, MapPin, CheckCircle2, Loader2, AlertCircle, ChevronDown } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 
@@ -178,7 +178,16 @@ interface Event {
 }
 
 export default function PublicRegistrationPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-black text-white font-sans"><Loader2 className="animate-spin text-yellow-400" size={32} /></div>}>
+      <PublicRegistrationPageContent />
+    </Suspense>
+  );
+}
+
+function PublicRegistrationPageContent() {
   const { slug } = useParams();
+  const searchParams = useSearchParams();
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
   const [registering, setRegistering] = useState(false);
@@ -198,6 +207,22 @@ export default function PublicRegistrationPage() {
 
   const [customAnswers, setCustomAnswers] = useState<Record<string, any>>({});
   const [disclaimerAccepted, setDisclaimerAccepted] = useState(false);
+
+  // Pre-fill fields from search params (staged partner completion)
+  useEffect(() => {
+    const emailParam = searchParams.get("email");
+    const firstParam = searchParams.get("first_name");
+    const lastParam = searchParams.get("last_name");
+    
+    if (emailParam || firstParam || lastParam) {
+      setFormData((prev) => ({
+        ...prev,
+        email: emailParam ? decodeURIComponent(emailParam) : prev.email,
+        first_name: firstParam ? decodeURIComponent(firstParam) : prev.first_name,
+        last_name: lastParam ? decodeURIComponent(lastParam) : prev.last_name,
+      }));
+    }
+  }, [searchParams]);
 
   // Prune any custom answers for fields that are hidden because of conditional branching
   useEffect(() => {

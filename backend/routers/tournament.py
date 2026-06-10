@@ -89,7 +89,7 @@ def generate_backup_pin() -> str:
     """Generates a secure 6-digit numeric PIN string."""
     return "".join(random.choices(string.digits, k=6))
 
-def send_resend_email(to_email: str, name: str, role: str, opponent_name: str, pin: str, qr_hash: str) -> Optional[str]:
+def send_resend_email(to_email: str, name: str, role: str, opponent_name: str, pin: str, qr_hash: str, profile_update_link: Optional[str] = None) -> Optional[str]:
     """Sends a single tournament check-in pass email via Resend."""
     resend.api_key = os.getenv("RESEND_API_KEY")
     mock_email = os.getenv("MOCK_EMAIL_SERVICE", "false").lower() == "true"
@@ -98,6 +98,19 @@ def send_resend_email(to_email: str, name: str, role: str, opponent_name: str, p
     
     subject = f"Tournament Registration Confirmed: {role} Pass"
     
+    button_html = ""
+    if profile_update_link:
+        button_html = f"""
+        <div style="text-align: center; margin-top: 10px; margin-bottom: 30px;">
+            <a href="{profile_update_link}" target="_blank" style="background-color: #eab308; color: #000000; padding: 14px 28px; border-radius: 12px; font-size: 13px; font-weight: 900; text-decoration: none; text-transform: uppercase; letter-spacing: 0.1em; display: inline-block; box-shadow: 0 4px 12px rgba(234,179,8,0.2);">
+                Update Your Ticket Details
+            </a>
+            <p style="font-size: 11px; color: #64748b; margin-top: 10px; margin-bottom: 0; font-weight: 500;">
+                Dietary requirements, T-shirt size, and options.
+            </p>
+        </div>
+        """
+
     html_content = f"""
     <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #030712; color: #ffffff; padding: 40px; border-radius: 24px; max-width: 600px; margin: 0 auto; border: 1px solid #1f2937;">
         <div style="text-align: center; margin-bottom: 30px;">
@@ -111,13 +124,13 @@ def send_resend_email(to_email: str, name: str, role: str, opponent_name: str, p
         <p style="font-size: 16px; color: #9ca3af; text-align: center; margin-bottom: 30px; font-weight: 500;">
             Hello <strong>{name}</strong>, you have been registered as the <strong>{role}</strong>.
         </p>
-
+ 
         <div style="background-color: #090d16; border: 1px solid #1e293b; border-radius: 20px; padding: 24px; margin-bottom: 30px; text-align: center;">
             <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.15em; color: #eab308; margin: 0 0 10px 0;">Matchup Details</p>
             <p style="font-size: 18px; font-weight: 800; color: #ffffff; margin: 0;">{name} vs {opponent_name}</p>
             <p style="font-size: 13px; color: #64748b; margin: 5px 0 0 0;">Sports Tournament Series</p>
         </div>
-
+ 
         <div style="background-color: #ffffff; padding: 32px; border-radius: 20px; text-align: center; margin-bottom: 30px; box-shadow: 0 10px 25px rgba(0,0,0,0.3);">
             <img src="{qr_img_url}" width="200" height="200" alt="Check-in QR Code" style="display: block; margin: 0 auto 20px auto; border-radius: 12px;" />
             <p style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.25em; color: #64748b; margin: 0 0 8px 0;">Backup Clearance PIN</p>
@@ -126,12 +139,14 @@ def send_resend_email(to_email: str, name: str, role: str, opponent_name: str, p
             </div>
         </div>
 
+        {button_html}
+ 
         <div style="background-color: #1c1917; padding: 20px; border-radius: 16px; border: 1px solid #292524; text-align: center; margin-bottom: 30px;">
             <p style="color: #e7e5e4; font-size: 12px; font-weight: 600; margin: 0; line-height: 1.5;">
                 Present this QR code or backup PIN at the venue gates for terminal clearance.
             </p>
         </div>
-
+ 
         <hr style="border: 0; border-top: 1px solid #1f2937; margin: 30px 0;" />
         
         <div style="text-align: center;">

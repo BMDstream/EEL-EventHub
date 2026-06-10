@@ -327,6 +327,12 @@ def register_attendee(
             session.refresh(challenger_checkin)
             session.refresh(partner_checkin)
             
+            # Get host dynamically to construct absolute URLs
+            host = request.headers.get("host", "eel-event-hub-q61e.vercel.app")
+            scheme = "http" if "localhost" in host else "https"
+            challenger_update_link = f"{scheme}://{host}/register/{event.slug}?email={email}&first_name={first_name}&last_name={last_name}"
+            partner_update_link = f"{scheme}://{host}/register/{event.slug}?email={partner_email}&first_name={partner_first}&last_name={partner_last}"
+
             # Send Tournament Branded Emails
             send_resend_email(
                 to_email=email,
@@ -334,7 +340,8 @@ def register_attendee(
                 role="Challenger",
                 opponent_name=f"{partner_first} {partner_last}",
                 pin=challenger_checkin.pin,
-                qr_hash=str(challenger_checkin.qr_hash)
+                qr_hash=str(challenger_checkin.qr_hash),
+                profile_update_link=challenger_update_link
             )
             
             send_resend_email(
@@ -343,7 +350,8 @@ def register_attendee(
                 role="Challenged Partner",
                 opponent_name=f"{first_name} {last_name}",
                 pin=partner_checkin.pin,
-                qr_hash=str(partner_checkin.qr_hash)
+                qr_hash=str(partner_checkin.qr_hash),
+                profile_update_link=partner_update_link
             )
             
             print(f"Tournament co-registration and match creation complete for Challenger: {email} & Partner: {partner_email}")
