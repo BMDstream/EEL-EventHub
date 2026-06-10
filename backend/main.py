@@ -184,6 +184,28 @@ def on_startup():
             except Exception as e:
                 print(f"Tournament tables creation warning: {e}")
                 
+            # 8. Safely ensure database performance indexes are created
+            try:
+                indexes_to_create = [
+                    ("idx_attendee_email", "attendee", "email"),
+                    ("idx_registration_event_id", "registration", "event_id"),
+                    ("idx_registration_attendee_id", "registration", "attendee_id"),
+                    ("idx_registration_pin", "registration", "pin"),
+                    ("idx_event_checkins_player_id", "event_checkins", "player_id"),
+                    ("idx_matches_challenger_id", "matches", "challenger_id"),
+                    ("idx_matches_partner_id", "matches", "partner_id"),
+                    ("idx_matches_status", "matches", "status")
+                ]
+                for idx_name, table, column in indexes_to_create:
+                    try:
+                        session.execute(text(f"CREATE INDEX IF NOT EXISTS {idx_name} ON {table} ({column})"))
+                        session.commit()
+                    except Exception:
+                        session.rollback()
+                print("Performance indexes verified/created.")
+            except Exception as e:
+                print(f"Performance indexes creation warning: {e}")
+                
     except Exception as e:
         print(f"Database initialization/seeding warning: {e}")
 
