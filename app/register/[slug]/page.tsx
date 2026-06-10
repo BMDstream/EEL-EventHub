@@ -1440,8 +1440,11 @@ function PublicRegistrationPageContent() {
               <p className={`text-[10px] font-black uppercase tracking-[0.3em] ${isLightTheme ? "client-text-primary" : "client-text-accent"}`}>Additional Details</p>
             </div>
             {event.custom_fields_schema.map((field) => {
-              // Hide partner card field if in update flow
-              if (field.type === "partner_card" && isUpdateFlow) {
+              // Hide partner card field & partner-related details if in update flow
+              const isPartnerRelated = field.type === "partner_card" || 
+                                       field.label?.toLowerCase().includes("partner") || 
+                                       field.description?.toLowerCase().includes("partner");
+              if (isUpdateFlow && isPartnerRelated) {
                 return null;
               }
 

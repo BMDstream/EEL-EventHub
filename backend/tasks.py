@@ -16,7 +16,9 @@ def dispatch_send_confirmation_email(
     clearance_id: str,
     event_details: dict = None,
     config: dict = None,
-    is_attending: bool = True
+    is_attending: bool = True,
+    matchup: str = None,
+    profile_update_link: str = None
 ):
     """Abstraction layer to dispatch confirmation email tasks asynchronously."""
     args = {
@@ -26,7 +28,9 @@ def dispatch_send_confirmation_email(
         "clearance_id": clearance_id,
         "event_details": event_details,
         "config": config,
-        "is_attending": is_attending
+        "is_attending": is_attending,
+        "matchup": matchup,
+        "profile_update_link": profile_update_link
     }
     
     if QSTASH_TOKEN:

@@ -342,24 +342,41 @@ def register_attendee(
             challenger_update_link = f"{scheme}://{host}/register/{event.slug}?email={email}&first_name={first_name}&last_name={last_name}"
             partner_update_link = f"{scheme}://{host}/register/{event.slug}?email={partner_email}&first_name={partner_first}&last_name={partner_last}"
 
-            # Send Tournament Branded Emails
-            send_resend_email(
-                to_email=email,
-                name=f"{first_name} {last_name}",
-                role="Challenger",
-                opponent_name=f"{partner_first} {partner_last}",
-                pin=challenger_checkin.pin,
-                qr_hash=str(challenger_checkin.qr_hash),
-                profile_update_link=challenger_update_link
-            )
+            # Send standardised confirmation emails using dispatch_send_confirmation_email
+            config = get_event_email_config(event, session)
             
-            send_resend_email(
+            # 1. Send Challenger confirmation email (with matchup details, NO profile update link)
+            dispatch_send_confirmation_email(
+                background_tasks=background_tasks,
+                to_email=email,
+                first_name=first_name,
+                event_title=event.title,
+                clearance_id=challenger_checkin.pin,
+                event_details={
+                    "start_date": event.start_date,
+                    "location": event.location,
+                    "address": event.address
+                },
+                config=config,
+                is_attending=is_attending,
+                matchup=f"{first_name} {last_name} vs {partner_first} {partner_last}"
+            )
+
+            # 2. Send Partner confirmation email (with matchup details AND profile update link)
+            dispatch_send_confirmation_email(
+                background_tasks=background_tasks,
                 to_email=partner_email,
-                name=f"{partner_first} {partner_last}",
-                role="Challenged Partner",
-                opponent_name=f"{first_name} {last_name}",
-                pin=partner_checkin.pin,
-                qr_hash=str(partner_checkin.qr_hash),
+                first_name=partner_first,
+                event_title=event.title,
+                clearance_id=partner_checkin.pin,
+                event_details={
+                    "start_date": event.start_date,
+                    "location": event.location,
+                    "address": event.address
+                },
+                config=config,
+                is_attending=is_attending,
+                matchup=f"{partner_first} {partner_last} vs {first_name} {last_name}",
                 profile_update_link=partner_update_link
             )
             

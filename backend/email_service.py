@@ -29,10 +29,21 @@ def generate_qr_base64(data: str):
     img.save(buffered, format="PNG")
     return base64.b64encode(buffered.getvalue()).decode()
 
-def send_confirmation_email(to_email: str, first_name: str, event_title: str, clearance_id: str, event_details: Dict[str, Any] = None, qr_code_url: str = None, config: Dict[str, Any] = None, is_attending: bool = True):
+def send_confirmation_email(
+    to_email: str, 
+    first_name: str, 
+    event_title: str, 
+    clearance_id: str, 
+    event_details: Dict[str, Any] = None, 
+    qr_code_url: str = None, 
+    config: Dict[str, Any] = None, 
+    is_attending: bool = True,
+    matchup: Optional[str] = None,
+    profile_update_link: Optional[str] = None
+):
     """Sends a registration confirmation email with an embedded QR code and event details."""
     if not resend.api_key or MOCK_EMAIL_SERVICE:
-        print(f"MOCK CONFIRMATION to {to_email} (attending={is_attending}): Welcome to {event_title}! Your ID is {clearance_id}")
+        print(f"MOCK CONFIRMATION to {to_email} (attending={is_attending}): Welcome to {event_title}! Your ID is {clearance_id}. Matchup: {matchup}. Link: {profile_update_link}")
         return {"id": "mock-confirmation-id"}
 
     if not config:
@@ -99,6 +110,16 @@ def send_confirmation_email(to_email: str, first_name: str, event_title: str, cl
             </div>
             """
 
+        matchup_html = ""
+        if matchup:
+            matchup_html = f"""
+            <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #f1f5f9;">
+                <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.15em; color: #eab308; margin: 0 0 4px 0;">Matchup Details</p>
+                <p style="font-size: 18px; font-weight: 800; color: {primary_color}; margin: 0;">{matchup}</p>
+                <p style="font-size: 11px; color: #64748b; margin: 2px 0 0 0;">Sports Tournament Series</p>
+            </div>
+            """
+
         details_html = f"""
         <div style="background: #ffffff; padding: 32px; border: 1px solid #f1f5f9; border-radius: 32px; margin-bottom: 40px;">
             <p style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.3em; color: {accent_color}; margin-bottom: 24px;">Engagement Details</p>
@@ -118,13 +139,13 @@ def send_confirmation_email(to_email: str, first_name: str, event_title: str, cl
                 <p style="font-size: 16px; font-weight: 700; color: #0f172a; margin: 0;">{event_details.get('location', 'TBA')}</p>
             </div>
             {address_html}
+            {matchup_html}
         </div>
         """
 
-
-
     qr_block_html = ""
     warning_block_html = ""
+    button_block_html = ""
     if is_attending:
         qr_base64 = generate_qr_base64(clearance_id)
         qr_block_html = f"""
@@ -137,12 +158,23 @@ def send_confirmation_email(to_email: str, first_name: str, event_title: str, cl
         </div>
         """
         warning_block_html = f"""
-        <div style="background: #fffbeb; padding: 28px; border-radius: 24px; border: 1px solid #fef3c7; margin-bottom: 48px; text-align: center;">
+        <div style="background: #fffbeb; padding: 28px; border-radius: 24px; border: 1px solid #fef3c7; margin-bottom: 40px; text-align: center;">
             <p style="color: #b45309; font-size: 14px; font-weight: 700; margin: 0; line-height: 1.5; text-transform: uppercase; letter-spacing: 0.05em;">
                 Present this digital clearance at the registration desk.
             </p>
         </div>
         """
+        if profile_update_link:
+            button_block_html = f"""
+            <div style="text-align: center; margin-top: 10px; margin-bottom: 40px;">
+                <a href="{profile_update_link}" target="_blank" style="background-color: #eab308; color: #000000; padding: 16px 32px; border-radius: 16px; font-size: 13px; font-weight: 950; text-decoration: none; text-transform: uppercase; letter-spacing: 0.1em; display: inline-block; box-shadow: 0 4px 12px rgba(234,179,8,0.2);">
+                    Update Your Ticket Details
+                </a>
+                <p style="font-size: 11px; color: #64748b; margin-top: 10px; margin-bottom: 0; font-weight: 500;">
+                    Dietary requirements, T-shirt size, and options.
+                </p>
+            </div>
+            """
 
     # Format header details
     heading_parts = heading_text.split('.')
@@ -198,6 +230,8 @@ def send_confirmation_email(to_email: str, first_name: str, event_title: str, cl
                 {qr_block_html}
 
                 {warning_block_html}
+
+                {button_block_html}
                 
                 <hr style="border: 0; border-top: 1px solid #f1f5f9; margin-bottom: 40px; margin-top: 40px;" />
                 
