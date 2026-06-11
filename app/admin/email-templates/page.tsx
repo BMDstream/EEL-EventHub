@@ -19,7 +19,13 @@ import {
   ChevronRight,
   Sparkles,
   Layers,
-  Award
+  Award,
+  Sliders,
+  Palette,
+  Type,
+  Layout,
+  AlertTriangle,
+  Link
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSession } from "next-auth/react";
@@ -59,7 +65,7 @@ const MOCK_PREVIEW_DATA: Record<string, Record<string, string>> = {
       <p style="font-size: 16px; font-weight: 800; color: #0f172a; margin: 0 0 12px 0; font-family: sans-serif;">Padels Tournament 2026</p>
       <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; color: #94a3b8; margin: 0 0 4px 0; font-family: sans-serif;">Date & Time</p>
       <p style="font-size: 14px; font-weight: 700; color: #0f172a; margin: 0 0 12px 0; font-family: sans-serif;">Thursday, June 25, 2026 @ 10:00 AM</p>
-      <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; color: #94a3b8; margin: 0 0 4px 0; font-family: sans-serif;">Venue</p>
+      <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; color: #94a3b8; margin: 0; font-family: sans-serif;">Venue</p>
       <p style="font-size: 14px; font-weight: 700; color: #0f172a; margin: 0; font-family: sans-serif;">Arena Center</p>
     </div>`,
     qr_block_html: `<div style="background: #f8fafc; padding: 32px; border-radius: 20px; text-align: center; border: 1px solid #f1f5f9; margin-bottom: 20px;">
@@ -214,6 +220,343 @@ const CHEATSHEET_VARIABLES: Record<string, Array<{ name: string; description: st
   ]
 };
 
+const DEFAULT_FORM_FIELDS: Record<string, Record<string, string>> = {
+  registration_confirmed: {
+    primary_color: "#0f172a",
+    accent_color: "#94a3b8",
+    heading_title: "Registration",
+    heading_subtitle: "Confirmed",
+    body_text: "Your registration has been successfully confirmed. Below are your secure credentials for terminal verification.",
+    warning_text: "Please present this QR code or code at the check-in desk.",
+    footer_text: "Excellence Logistics & Entertainment\nAutomated Event Hub System",
+  },
+  registration_declined: {
+    primary_color: "#0f172a",
+    accent_color: "#94a3b8",
+    heading_title: "Response",
+    heading_subtitle: "Recorded",
+    body_text: "We have recorded your response that you are unable to attend the event. Thank you for letting us know, and we hope to connect with you at future events.",
+    footer_text: "Excellence Logistics & Entertainment\nAutomated Event Hub System",
+  },
+  partner_pending: {
+    primary_color: "#0f172a",
+    accent_color: "#eab308",
+    heading_title: "Action",
+    heading_subtitle: "Required",
+    urgent_title: "⚠️ Action Required ASAP",
+    urgent_body: "Complete your registration details to secure your spot. Your partner has registered you, but we still need your specific information (such as T-shirt size and dietary preferences) to complete your booking.",
+    body_text: "Your partner has registered you. Please complete your ticket details to finalize your registration.",
+    button_text: "Update Your Ticket Details",
+    footer_text: "Excellence Logistics & Entertainment\nAutomated Event Hub System",
+  },
+  broadcast: {
+    primary_color: "#0f172a",
+    accent_color: "#eab308",
+    body_text: "This is a customized broadcast update message for you. Please make sure to arrive 30 minutes before the start time.",
+    signature: "The Championship Tournament Team",
+    footer_text: "Automated Event Management System • Security Tier 4",
+  },
+  tournament_matchup: {
+    primary_color: "#030712",
+    accent_color: "#eab308",
+    heading_title: "Championship",
+    heading_subtitle: "Access Granted",
+    body_text: "Hello, you have been registered as the Challenger.",
+    details_title: "Partnered With",
+    pin_label: "Backup Clearance PIN",
+    button_text: "Update Your Ticket Details",
+    footer_text: "EXCELLENCE ENTERTAINMENT LOGISTICS\nClearance Level: Tier 1 Authorized Tournament Series",
+  }
+};
+
+const parseTemplateMeta = (html: string): Record<string, string> | null => {
+  const match = html.match(/<!-- TEMPLATE_META: ({.*?}) -->/);
+  if (match) {
+    try {
+      return JSON.parse(match[1]);
+    } catch (e) {
+      console.error("Failed to parse template meta", e);
+    }
+  }
+  return null;
+};
+
+const compileTemplateHtml = (key: string, values: Record<string, string>) => {
+  const metaComment = `<!-- TEMPLATE_META: ${JSON.stringify(values)} -->`;
+  let html = "";
+  if (key === "registration_confirmed") {
+    const warningHtml = values.warning_text ? `
+            <div style="background: #fffbeb; padding: 28px; border-radius: 24px; border: 1px solid #fef3c7; margin-bottom: 40px; text-align: center;">
+                <p style="color: #b45309; font-size: 14px; font-weight: 700; margin: 0; line-height: 1.5; text-transform: uppercase; letter-spacing: 0.05em; font-family: sans-serif;">
+                    ${values.warning_text}
+                </p>
+            </div>
+    ` : "";
+
+    html = `
+<table width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; table-layout: fixed; margin: 0; padding: 0;">
+  <tr>
+    <td align="center" style="padding: 40px 0;">
+      <table width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; max-width: 600px; border: 1px solid #f1f5f9; border-radius: 40px; background-color: #ffffff; color: ${values.primary_color}; box-shadow: 0 20px 50px rgba(0,0,0,0.05); overflow: hidden; border-collapse: separate;">
+        <tr>
+          <td style="padding: 40px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
+            <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 48px;">
+              <tr>
+                <td align="left" valign="middle">
+                  <table border="0" cellspacing="0" cellpadding="0" style="display: inline-block;">
+                    <tr>
+                      <td align="center" style="background: ${values.primary_color}; padding: 12px 28px; border-radius: 16px;">
+                        <span style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.4em; color: #ffffff;">Attendee Pass</span>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+                {logo_html}
+              </tr>
+            </table>
+            <h2 style="font-size: 38px; font-weight: 900; color: ${values.primary_color}; margin-bottom: 28px; text-transform: uppercase; font-style: italic; letter-spacing: -0.04em; line-height: 1; margin-top: 0;">
+                ${values.heading_title} <span style="color: ${values.accent_color};">${values.heading_subtitle}</span>
+            </h2>
+            <p style="font-size: 17px; line-height: 1.7; margin-bottom: 40px; color: #475569;">
+                Hello <strong>{first_name}</strong>,<br><br>
+                ${values.body_text.replace(/\n/g, "<br>")}
+            </p>
+            {details_html}
+            {qr_block_html}
+            ${warningHtml}
+            {button_block_html}
+            <hr style="border: 0; border-top: 1px solid #f1f5f9; margin-bottom: 40px; margin-top: 40px;" />
+            <table width="100%" border="0" cellspacing="0" cellpadding="0">
+              <tr>
+                <td align="center">
+                  <p style="font-size: 11px; color: #94a3b8; margin-bottom: 32px; line-height: 1.6; margin-top: 0;">
+                      ${values.footer_text.replace(/\n/g, "<br>")}
+                  </p>
+                  <p style="font-size: 9px; color: #cbd5e1; text-transform: uppercase; letter-spacing: 0.1em; margin: 0;">
+                      This confirmation email was sent to {to_email}.
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>`;
+  } else if (key === "registration_declined") {
+    html = `
+<table width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; table-layout: fixed; margin: 0; padding: 0;">
+  <tr>
+    <td align="center" style="padding: 40px 0;">
+      <table width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; max-width: 600px; border: 1px solid #f1f5f9; border-radius: 40px; background-color: #ffffff; color: ${values.primary_color}; box-shadow: 0 20px 50px rgba(0,0,0,0.05); overflow: hidden; border-collapse: separate;">
+        <tr>
+          <td style="padding: 40px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
+            <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 48px;">
+              <tr>
+                <td align="left" valign="middle">
+                  <table border="0" cellspacing="0" cellpadding="0" style="display: inline-block;">
+                    <tr>
+                      <td align="center" style="background: ${values.primary_color}; padding: 12px 28px; border-radius: 16px;">
+                        <span style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.4em; color: #ffffff;">Response Recorded</span>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+                {logo_html}
+              </tr>
+            </table>
+            <h2 style="font-size: 38px; font-weight: 900; color: ${values.primary_color}; margin-bottom: 28px; text-transform: uppercase; font-style: italic; letter-spacing: -0.04em; line-height: 1; margin-top: 0;">
+                ${values.heading_title} <span style="color: ${values.accent_color};">${values.heading_subtitle}</span>
+            </h2>
+            <p style="font-size: 17px; line-height: 1.7; margin-bottom: 40px; color: #475569;">
+                Hello <strong>{first_name}</strong>,<br><br>
+                ${values.body_text.replace(/\n/g, "<br>")}
+            </p>
+            <hr style="border: 0; border-top: 1px solid #f1f5f9; margin-bottom: 40px; margin-top: 40px;" />
+            <table width="100%" border="0" cellspacing="0" cellpadding="0">
+              <tr>
+                <td align="center">
+                  <p style="font-size: 11px; color: #94a3b8; margin-bottom: 32px; line-height: 1.6; margin-top: 0;">
+                      ${values.footer_text.replace(/\n/g, "<br>")}
+                  </p>
+                  <p style="font-size: 9px; color: #cbd5e1; text-transform: uppercase; letter-spacing: 0.1em; margin: 0;">
+                      This email was sent to {to_email}.
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>`;
+  } else if (key === "partner_pending") {
+    html = `
+<table width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; table-layout: fixed; margin: 0; padding: 0;">
+  <tr>
+    <td align="center" style="padding: 40px 0;">
+      <table width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; max-width: 600px; border: 1px solid #f1f5f9; border-radius: 40px; background-color: #ffffff; color: ${values.primary_color}; box-shadow: 0 20px 50px rgba(0,0,0,0.05); overflow: hidden; border-collapse: separate;">
+        <tr>
+          <td style="padding: 40px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
+            <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 48px;">
+              <tr>
+                <td align="left" valign="middle">
+                  <table border="0" cellspacing="0" cellpadding="0" style="display: inline-block;">
+                    <tr>
+                      <td align="center" style="background: ${values.primary_color}; padding: 12px 28px; border-radius: 16px;">
+                        <span style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.4em; color: #ffffff;">Action Required</span>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+                {logo_html}
+              </tr>
+            </table>
+            <h2 style="font-size: 38px; font-weight: 900; color: ${values.primary_color}; margin-bottom: 28px; text-transform: uppercase; font-style: italic; letter-spacing: -0.04em; line-height: 1; margin-top: 0;">
+                ${values.heading_title} <span style="color: ${values.accent_color};">${values.heading_subtitle}</span>
+            </h2>
+            
+            <div style="background-color: #fff7ed; border: 2px solid #ea580c; padding: 24px; border-radius: 20px; margin-bottom: 32px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+                <p style="color: #c2410c; font-size: 11px; font-weight: 950; text-transform: uppercase; letter-spacing: 0.15em; margin: 0 0 8px 0; font-family: sans-serif;">
+                    ${values.urgent_title}
+                </p>
+                <p style="color: #7c2d12; font-size: 15px; font-weight: 800; margin: 0 0 12px 0; line-height: 1.4; font-family: sans-serif;">
+                    Complete your registration details to secure your spot.
+                </p>
+                <p style="color: #9a3412; font-size: 13px; line-height: 1.5; margin: 0; font-family: sans-serif;">
+                    ${values.urgent_body.replace(/\n/g, "<br>")}
+                </p>
+            </div>
+            
+            <p style="font-size: 17px; line-height: 1.7; margin-bottom: 40px; color: #475569;">
+                Hello <strong>{first_name}</strong>,<br><br>
+                ${values.body_text.replace(/\n/g, "<br>")}
+            </p>
+            
+            <div style="text-align: center; margin-top: 10px; margin-bottom: 40px;">
+                <a href="{profile_update_link}" target="_blank" style="background-color: #eab308; color: #000000; padding: 16px 32px; border-radius: 16px; font-size: 13px; font-weight: 950; text-decoration: none; text-transform: uppercase; letter-spacing: 0.1em; display: inline-block; box-shadow: 0 4px 12px rgba(234,179,8,0.2); font-family: sans-serif;">
+                    ${values.button_text}
+                </a>
+                <p style="font-size: 11px; color: #b45309; margin-top: 10px; margin-bottom: 0; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; font-family: sans-serif;">
+                    ⚠️ MUST DO ASAP - Required to finalize registration!
+                </p>
+            </div>
+            
+            <hr style="border: 0; border-top: 1px solid #f1f5f9; margin-bottom: 40px; margin-top: 40px;" />
+            <table width="100%" border="0" cellspacing="0" cellpadding="0">
+              <tr>
+                <td align="center">
+                  <p style="font-size: 11px; color: #94a3b8; margin-bottom: 32px; line-height: 1.6; margin-top: 0;">
+                      ${values.footer_text.replace(/\n/g, "<br>")}
+                  </p>
+                  <p style="font-size: 9px; color: #cbd5e1; text-transform: uppercase; letter-spacing: 0.1em; margin: 0;">
+                      This email was sent to {to_email}.
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>`;
+  } else if (key === "broadcast") {
+    html = `
+<table width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; table-layout: fixed; margin: 0; padding: 0;">
+  <tr>
+    <td align="center" style="padding: 40px 0;">
+      <table width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; max-width: 600px; border: 1px solid #f1f5f9; border-radius: 40px; background-color: #ffffff; color: ${values.primary_color}; box-shadow: 0 20px 50px rgba(0,0,0,0.05); overflow: hidden; border-collapse: separate;">
+        <tr>
+          <td style="padding: 40px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
+            <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 48px;">
+              <tr>
+                <td align="left" valign="middle">
+                  <table border="0" cellspacing="0" cellpadding="0" style="display: inline-block;">
+                    <tr>
+                      <td align="center" style="background: ${values.primary_color}; padding: 12px 28px; border-radius: 16px;">
+                        <span style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.4em; color: #ffffff;">Broadcast Dispatch</span>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+                {logo_html}
+              </tr>
+            </table>
+            <p style="font-size: 17px; line-height: 1.7; margin-bottom: 40px; color: #475569;">
+                Hello <strong>{first_name}</strong>,<br><br>
+                ${values.body_text.replace(/\n/g, "<br>")}
+            </p>
+            {details_html}
+            <p style="font-size: 15px; font-weight: 800; color: ${values.primary_color}; margin-top: 30px;">
+                ${values.signature.replace(/\n/g, "<br>")}
+            </p>
+            <hr style="border: 0; border-top: 1px solid #f1f5f9; margin-bottom: 40px; margin-top: 40px;" />
+            <table width="100%" border="0" cellspacing="0" cellpadding="0">
+              <tr>
+                <td align="center">
+                  <p style="font-size: 11px; color: #94a3b8; margin-bottom: 32px; line-height: 1.6; margin-top: 0;">
+                      ${values.footer_text.replace(/\n/g, "<br>")}
+                  </p>
+                  <p style="font-size: 9px; color: #cbd5e1; text-transform: uppercase; letter-spacing: 0.1em; margin: 0;">
+                      This email was sent to {to_email}.
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>`;
+  } else if (key === "tournament_matchup") {
+    html = `
+<div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: ${values.primary_color}; color: #ffffff; padding: 40px; border-radius: 24px; max-width: 600px; margin: 0 auto; border: 1px solid #1f2937;">
+    <div style="text-align: center; margin-bottom: 30px;">
+        <span style="background-color: ${values.accent_color}; color: #000000; padding: 8px 16px; border-radius: 12px; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.25em; font-family: sans-serif;">Tournament Dispatch</span>
+    </div>
+    
+    <h2 style="font-size: 28px; font-weight: 900; color: #ffffff; margin-bottom: 10px; font-style: italic; text-transform: uppercase; letter-spacing: -0.02em; text-align: center; font-family: sans-serif;">
+        ${values.heading_title} <span style="color: ${values.accent_color};">${values.heading_subtitle}</span>
+    </h2>
+    
+    <p style="font-size: 16px; color: #9ca3af; text-align: center; margin-bottom: 30px; font-weight: 500; font-family: sans-serif;">
+        ${values.body_text.replace(/\n/g, "<br>")}
+    </p>
+
+    <div style="background-color: #090d16; border: 1px solid #1e293b; border-radius: 20px; padding: 24px; margin-bottom: 30px; text-align: center;">
+        <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.15em; color: ${values.accent_color}; margin: 0 0 10px 0; font-family: sans-serif;">${values.details_title}</p>
+        <p style="font-size: 18px; font-weight: 800; color: #ffffff; margin: 0; font-family: sans-serif;">{name} vs {opponent_name}</p>
+        <p style="font-size: 13px; color: #64748b; margin: 5px 0 0 0; font-family: sans-serif;">Sports Tournament Series</p>
+    </div>
+
+    <div style="background-color: #ffffff; padding: 32px; border-radius: 20px; text-align: center; margin-bottom: 30px; box-shadow: 0 10px 25px rgba(0,0,0,0.3);">
+        <img src="{qr_code_url}" width="200" height="200" alt="Check-in QR Code" style="display: block; margin: 0 auto 20px auto; border-radius: 12px;" />
+        <p style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.25em; color: #64748b; margin: 0 0 8px 0; font-family: sans-serif;">${values.pin_label}</p>
+        <div style="display: inline-block; background-color: #f1f5f9; padding: 8px 20px; border-radius: 10px; border: 1.5px solid #0f172a;">
+            <code style="font-size: 24px; font-weight: 900; color: #0f172a; letter-spacing: 0.15em; font-family: monospace;">{pin}</code>
+        </div>
+    </div>
+
+    <div style="text-align: center; margin-top: 10px; margin-bottom: 20px;">
+      <a href="#" style="background-color: ${values.accent_color}; color: #000000; padding: 12px 24px; border-radius: 8px; font-size: 12px; font-weight: 900; text-decoration: none; text-transform: uppercase; display: inline-block; font-family: sans-serif;">
+        ${values.button_text}
+      </a>
+    </div>
+
+    <div style="background-color: #1c1917; padding: 20px; border-radius: 16px; border: 1px solid #292524; text-align: center; margin-bottom: 30px;">
+        <p style="color: #e7e5e4; font-size: 12px; font-weight: 600; margin: 0; line-height: 1.5; font-family: sans-serif;">
+            ${values.footer_text.replace(/\n/g, "<br>")}
+        </p>
+    </div>
+</div>`;
+  }
+  return (metaComment + "\n" + html).trim();
+};
+
 export default function EmailTemplatesPage() {
   const { data: session, status: sessionStatus } = useSession();
   const userRole = (session?.user as any)?.role || "staff";
@@ -231,6 +574,9 @@ export default function EmailTemplatesPage() {
   const [notification, setNotification] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [copiedVar, setCopiedVar] = useState<string | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
+
+  const [editorMode, setEditorMode] = useState<"visual" | "html">("visual");
+  const [formValues, setFormValues] = useState<Record<string, string>>({});
 
   const previewFrameRef = useRef<HTMLIFrameElement>(null);
 
@@ -265,6 +611,14 @@ export default function EmailTemplatesPage() {
           if (current) {
             setSubject(current.subject);
             setBodyHtml(current.body_html);
+            
+            // Sync Form values
+            const meta = parseTemplateMeta(current.body_html);
+            if (meta) {
+              setFormValues(meta);
+            } else {
+              setFormValues(DEFAULT_FORM_FIELDS[selectedKey] || {});
+            }
           }
         }
       } catch (err) {
@@ -307,7 +661,23 @@ export default function EmailTemplatesPage() {
       setSubject(target.subject);
       setBodyHtml(target.body_html);
       setHasUnsavedChanges(false);
+      
+      const meta = parseTemplateMeta(target.body_html);
+      if (meta) {
+        setFormValues(meta);
+      } else {
+        setFormValues(DEFAULT_FORM_FIELDS[key] || {});
+      }
     }
+  };
+
+  // Handle Visual Form change and compile to HTML
+  const handleFormChange = (field: string, val: string) => {
+    const nextValues = { ...formValues, [field]: val };
+    setFormValues(nextValues);
+    const compiled = compileTemplateHtml(selectedKey, nextValues);
+    setBodyHtml(compiled);
+    setHasUnsavedChanges(true);
   };
 
   // Handle Save
@@ -362,6 +732,15 @@ export default function EmailTemplatesPage() {
         setBodyHtml(resetTemplate.body_html);
         setTemplates(prev => prev.map(t => t.key === selectedKey ? resetTemplate : t));
         setHasUnsavedChanges(false);
+        
+        // Reset Visual Form Fields
+        const meta = parseTemplateMeta(resetTemplate.body_html);
+        if (meta) {
+          setFormValues(meta);
+        } else {
+          setFormValues(DEFAULT_FORM_FIELDS[selectedKey] || {});
+        }
+        
         setNotification({ type: "success", text: "Template restored to default layout successfully!" });
       } else {
         throw new Error("Failed to reset template");
@@ -410,7 +789,16 @@ export default function EmailTemplatesPage() {
     setTimeout(() => setCopiedVar(null), 2000);
   };
 
-  const selectedTemplate = templates.find(t => t.key === selectedKey);
+  // Handle Switch Editor Mode
+  const handleModeToggle = (mode: "visual" | "html") => {
+    if (mode === "visual") {
+      const meta = parseTemplateMeta(bodyHtml);
+      if (meta) {
+        setFormValues(meta);
+      }
+    }
+    setEditorMode(mode);
+  };
 
   if (sessionStatus === "loading") {
     return (
@@ -464,11 +852,11 @@ export default function EmailTemplatesPage() {
             </p>
           </div>
           
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 text-xs font-bold uppercase tracking-widest">
             <button
               onClick={handleReset}
               disabled={resetting || saving}
-              className="flex items-center gap-2 px-6 py-4 rounded-xl border border-slate-200 text-slate-500 hover:text-red-500 hover:border-red-100 hover:bg-red-50/30 transition-all font-bold text-xs uppercase tracking-widest disabled:opacity-50 dark:border-slate-800 dark:text-slate-400 dark:hover:bg-red-950/20"
+              className="flex items-center gap-2 px-6 py-4 rounded-xl border border-slate-200 text-slate-500 hover:text-red-500 hover:border-red-100 hover:bg-red-50/30 transition-all disabled:opacity-50 dark:border-slate-800 dark:text-slate-400 dark:hover:bg-red-950/20"
             >
               {resetting ? <Loader2 className="animate-spin" size={14} /> : <RefreshCw size={14} />}
               Restore Default
@@ -480,7 +868,7 @@ export default function EmailTemplatesPage() {
                 setIsTestModalOpen(true);
               }}
               disabled={saving || resetting}
-              className="flex items-center gap-2 px-6 py-4 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-black transition-all font-bold text-xs uppercase tracking-widest disabled:opacity-50 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800"
+              className="flex items-center gap-2 px-6 py-4 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-black transition-all disabled:opacity-50 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800"
             >
               <Send size={14} />
               Send Test
@@ -489,7 +877,7 @@ export default function EmailTemplatesPage() {
             <button
               onClick={handleSave}
               disabled={saving || resetting || !hasUnsavedChanges}
-              className={`flex items-center gap-2 px-8 py-4 rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-xl ${
+              className={`flex items-center gap-2 px-8 py-4 rounded-xl font-black transition-all shadow-xl ${
                 hasUnsavedChanges 
                   ? "bg-[#0f172a] text-white hover:bg-black shadow-slate-200 dark:bg-yellow-400 dark:text-black dark:shadow-yellow-500/10"
                   : "bg-slate-100 text-slate-400 cursor-not-allowed dark:bg-slate-800 dark:text-slate-600"
@@ -600,7 +988,7 @@ export default function EmailTemplatesPage() {
             </div>
           </div>
 
-          {/* 2. Middle Workspace: Monospaced Text Editor */}
+          {/* 2. Middle Workspace: Visual / Monospaced HTML Editor */}
           <div className="lg:col-span-5 space-y-6">
             {/* Subject Line Card */}
             <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-slate-100 dark:bg-[#0f172a] dark:border-slate-800 space-y-3">
@@ -619,28 +1007,303 @@ export default function EmailTemplatesPage() {
               />
             </div>
 
-            {/* HTML Editor Body Card */}
-            <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-slate-100 dark:bg-[#0f172a] dark:border-slate-800 flex flex-col min-h-[600px]">
-              <div className="flex items-center justify-between mb-4 ml-1">
+            {/* Main Editor Card */}
+            <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-slate-100 dark:bg-[#0f172a] dark:border-slate-800 flex flex-col min-h-[680px]">
+              {/* Header Toggle Mode */}
+              <div className="flex items-center justify-between mb-6 border-b border-slate-100 dark:border-slate-800 pb-4">
                 <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 flex items-center gap-2">
-                  <Code size={12} /> HTML Body Code
+                  <Sliders size={12} /> Customize Layout
                 </span>
-                {hasUnsavedChanges && (
-                  <span className="text-[10px] bg-yellow-100 text-yellow-800 font-bold px-2 py-0.5 rounded-full dark:bg-yellow-950/40 dark:text-yellow-400">
-                    Unsaved
-                  </span>
+                
+                <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+                  <button
+                    onClick={() => handleModeToggle("visual")}
+                    className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-all uppercase tracking-wider ${
+                      editorMode === "visual"
+                        ? "bg-white text-black shadow-sm dark:bg-[#0f172a] dark:text-yellow-400"
+                        : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                    }`}
+                  >
+                    Visual Editor
+                  </button>
+                  <button
+                    onClick={() => handleModeToggle("html")}
+                    className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-all uppercase tracking-wider ${
+                      editorMode === "html"
+                        ? "bg-white text-black shadow-sm dark:bg-[#0f172a] dark:text-yellow-400"
+                        : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                    }`}
+                  >
+                    HTML Code
+                  </button>
+                </div>
+              </div>
+
+              {/* Editor Workspace Views */}
+              <div className="flex-1 flex flex-col">
+                {editorMode === "html" ? (
+                  <textarea
+                    value={bodyHtml}
+                    onChange={(e) => {
+                      setBodyHtml(e.target.value);
+                      setHasUnsavedChanges(true);
+                    }}
+                    className="w-full flex-1 p-6 rounded-xl bg-slate-900 border border-slate-800 text-slate-100 focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400 outline-none font-mono text-xs leading-relaxed resize-none overflow-y-auto h-[530px]"
+                    style={{ tabSize: 2 }}
+                    spellCheck={false}
+                  />
+                ) : (
+                  <div className="space-y-6 overflow-y-auto max-h-[530px] pr-2 custom-scrollbar">
+                    {/* Theme Colors Section */}
+                    <div className="space-y-4 bg-slate-50/50 dark:bg-slate-800/20 p-5 rounded-2xl border border-slate-100/50 dark:border-slate-800/50">
+                      <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#0f172a] dark:text-white flex items-center gap-2">
+                        <Palette size={12} className="text-yellow-500" />
+                        Theme & Color Palette
+                      </h4>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+                        <div className="space-y-2">
+                          <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
+                            Primary Color
+                          </label>
+                          <div className="flex gap-2.5">
+                            <input 
+                              type="color"
+                              value={formValues.primary_color || "#0f172a"}
+                              onChange={(e) => handleFormChange("primary_color", e.target.value)}
+                              className="w-12 h-12 rounded-xl cursor-pointer border border-slate-200 dark:border-slate-700 bg-transparent p-0"
+                            />
+                            <input 
+                              type="text"
+                              value={formValues.primary_color || ""}
+                              onChange={(e) => handleFormChange("primary_color", e.target.value)}
+                              placeholder="#000000"
+                              className="flex-1 px-4 py-2.5 rounded-xl bg-white border border-slate-200 focus:border-yellow-400 outline-none font-bold text-sm text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white font-mono"
+                            />
+                          </div>
+                        </div>
+
+                        {selectedKey !== "broadcast" && (
+                          <div className="space-y-2">
+                            <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
+                              Accent Color
+                            </label>
+                            <div className="flex gap-2.5">
+                              <input 
+                                type="color"
+                                value={formValues.accent_color || "#eab308"}
+                                onChange={(e) => handleFormChange("accent_color", e.target.value)}
+                                className="w-12 h-12 rounded-xl cursor-pointer border border-slate-200 dark:border-slate-700 bg-transparent p-0"
+                              />
+                              <input 
+                                type="text"
+                                value={formValues.accent_color || ""}
+                                onChange={(e) => handleFormChange("accent_color", e.target.value)}
+                                placeholder="#000000"
+                                className="flex-1 px-4 py-2.5 rounded-xl bg-white border border-slate-200 focus:border-yellow-400 outline-none font-bold text-sm text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white font-mono"
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Header Titles Section (Only for relevant templates) */}
+                    {["registration_confirmed", "registration_declined", "partner_pending", "tournament_matchup"].includes(selectedKey) && (
+                      <div className="space-y-4 bg-slate-50/50 dark:bg-slate-800/20 p-5 rounded-2xl border border-slate-100/50 dark:border-slate-800/50">
+                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#0f172a] dark:text-white flex items-center gap-2">
+                          <Type size={12} className="text-blue-500" />
+                          Header Titles
+                        </h4>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-1.5">
+                            <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
+                              Heading Title
+                            </label>
+                            <input 
+                              type="text"
+                              value={formValues.heading_title || ""}
+                              onChange={(e) => handleFormChange("heading_title", e.target.value)}
+                              placeholder="e.g. Registration"
+                              className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 focus:border-yellow-400 outline-none font-bold text-sm text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                            />
+                          </div>
+                          
+                          <div className="space-y-1.5">
+                            <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
+                              Heading Subtitle (Colored)
+                            </label>
+                            <input 
+                              type="text"
+                              value={formValues.heading_subtitle || ""}
+                              onChange={(e) => handleFormChange("heading_subtitle", e.target.value)}
+                              placeholder="e.g. Confirmed"
+                              className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 focus:border-yellow-400 outline-none font-bold text-sm text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Alerts and Special Banners (Context Dependent) */}
+                    {selectedKey === "partner_pending" && (
+                      <div className="space-y-4 bg-orange-50/30 dark:bg-orange-950/10 p-5 rounded-2xl border border-orange-100/50 dark:border-orange-900/30">
+                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-600 dark:text-orange-400 flex items-center gap-2">
+                          <AlertTriangle size={12} />
+                          Urgent Call-out Alert Block
+                        </h4>
+                        
+                        <div className="space-y-3">
+                          <div className="space-y-1.5">
+                            <label className="text-[9px] font-black uppercase tracking-wider text-orange-500/80 block">
+                              Alert Heading/Title
+                            </label>
+                            <input 
+                              type="text"
+                              value={formValues.urgent_title || ""}
+                              onChange={(e) => handleFormChange("urgent_title", e.target.value)}
+                              className="w-full px-4 py-3 rounded-xl bg-white border border-orange-200/50 focus:border-orange-400 outline-none font-bold text-sm text-[#0f172a] dark:bg-slate-800 dark:border-slate-750 dark:text-white"
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <label className="text-[9px] font-black uppercase tracking-wider text-orange-500/80 block">
+                              Alert Details Body Text
+                            </label>
+                            <textarea 
+                              rows={3}
+                              value={formValues.urgent_body || ""}
+                              onChange={(e) => handleFormChange("urgent_body", e.target.value)}
+                              className="w-full px-4 py-3 rounded-xl bg-white border border-orange-200/50 focus:border-orange-400 outline-none font-medium text-sm text-[#0f172a] dark:bg-slate-800 dark:border-slate-750 dark:text-white resize-none"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Primary Text Content Section */}
+                    <div className="space-y-4 bg-slate-50/50 dark:bg-slate-800/20 p-5 rounded-2xl border border-slate-100/50 dark:border-slate-800/50">
+                      <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#0f172a] dark:text-white flex items-center gap-2">
+                        <Layout size={12} className="text-green-500" />
+                        Message Wording
+                      </h4>
+
+                      <div className="space-y-1.5">
+                        <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
+                          Main Body Message
+                        </label>
+                        <textarea 
+                          rows={6}
+                          value={formValues.body_text || ""}
+                          onChange={(e) => handleFormChange("body_text", e.target.value)}
+                          placeholder="Write your email body copy here..."
+                          className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 focus:border-yellow-400 outline-none font-medium text-sm text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                        />
+                        <p className="text-[10px] text-slate-400 leading-normal pt-0.5">
+                          Supports dynamic variables like <code>{`{first_name}`}</code> and <code>{`{event_title}`}</code>.
+                        </p>
+                      </div>
+
+                      {/* Warning copy for Confirmation Template */}
+                      {selectedKey === "registration_confirmed" && (
+                        <div className="space-y-1.5">
+                          <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
+                            Alert Note (QR check-in instructions)
+                          </label>
+                          <input 
+                            type="text"
+                            value={formValues.warning_text || ""}
+                            onChange={(e) => handleFormChange("warning_text", e.target.value)}
+                            placeholder="e.g. Please present this QR code at the check-in desk."
+                            className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 focus:border-yellow-400 outline-none font-medium text-sm text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                          />
+                        </div>
+                      )}
+
+                      {/* Button text config (Pending details or matchup button) */}
+                      {["partner_pending", "tournament_matchup"].includes(selectedKey) && (
+                        <div className="space-y-1.5">
+                          <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block flex items-center gap-1.5">
+                            <Link size={10} /> Button Call-to-Action Label
+                          </label>
+                          <input 
+                            type="text"
+                            value={formValues.button_text || ""}
+                            onChange={(e) => handleFormChange("button_text", e.target.value)}
+                            placeholder="e.g. Update Your Ticket Details"
+                            className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 focus:border-yellow-400 outline-none font-bold text-sm text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                          />
+                        </div>
+                      )}
+
+                      {/* Broadcaster signature configuration */}
+                      {selectedKey === "broadcast" && (
+                        <div className="space-y-1.5">
+                          <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
+                            Sender Signature / Sign-off
+                          </label>
+                          <textarea 
+                            rows={2}
+                            value={formValues.signature || ""}
+                            onChange={(e) => handleFormChange("signature", e.target.value)}
+                            placeholder="e.g. The Championship Tournament Team"
+                            className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 focus:border-yellow-400 outline-none font-medium text-sm text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white resize-none"
+                          />
+                        </div>
+                      )}
+
+                      {/* Matchup details customization (Tournament Matchup only) */}
+                      {selectedKey === "tournament_matchup" && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-1.5">
+                            <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
+                              Details Header Label
+                            </label>
+                            <input 
+                              type="text"
+                              value={formValues.details_title || ""}
+                              onChange={(e) => handleFormChange("details_title", e.target.value)}
+                              className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 focus:border-yellow-400 outline-none font-bold text-sm text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                            />
+                          </div>
+                          
+                          <div className="space-y-1.5">
+                            <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
+                              PIN Instruction Label
+                            </label>
+                            <input 
+                              type="text"
+                              value={formValues.pin_label || ""}
+                              onChange={(e) => handleFormChange("pin_label", e.target.value)}
+                              className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 focus:border-yellow-400 outline-none font-bold text-sm text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Footer Section */}
+                    <div className="space-y-4 bg-slate-50/50 dark:bg-slate-800/20 p-5 rounded-2xl border border-slate-100/50 dark:border-slate-800/50">
+                      <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#0f172a] dark:text-white flex items-center gap-2">
+                        <Layout size={12} className="text-purple-500" />
+                        Footer & Legal note
+                      </h4>
+
+                      <div className="space-y-1.5">
+                        <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
+                          Footer Text Copy
+                        </label>
+                        <textarea 
+                          rows={3}
+                          value={formValues.footer_text || ""}
+                          onChange={(e) => handleFormChange("footer_text", e.target.value)}
+                          className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 focus:border-yellow-400 outline-none font-medium text-sm text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white font-mono"
+                        />
+                      </div>
+                    </div>
+                  </div>
                 )}
               </div>
-              <textarea
-                value={bodyHtml}
-                onChange={(e) => {
-                  setBodyHtml(e.target.value);
-                  setHasUnsavedChanges(true);
-                }}
-                className="w-full flex-1 p-6 rounded-xl bg-slate-900 border border-slate-800 text-slate-100 focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400 outline-none font-mono text-xs leading-relaxed resize-none overflow-y-auto"
-                style={{ tabSize: 2 }}
-                spellCheck={false}
-              />
             </div>
           </div>
 
