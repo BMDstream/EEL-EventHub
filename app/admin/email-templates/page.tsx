@@ -215,7 +215,7 @@ const CHEATSHEET_VARIABLES: Record<string, Array<{ name: string; description: st
 };
 
 export default function EmailTemplatesPage() {
-  const { data: session } = useSession();
+  const { data: session, status: sessionStatus } = useSession();
   const userRole = (session?.user as any)?.role || "staff";
 
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
@@ -234,24 +234,19 @@ export default function EmailTemplatesPage() {
 
   const previewFrameRef = useRef<HTMLIFrameElement>(null);
 
-  // Guard access to admins only
-  if (userRole === "staff") {
-    return (
-      <AdminLayout>
-        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-6">
-          <div className="w-24 h-24 bg-red-50 rounded-full flex items-center justify-center mb-8">
-            <Lock className="text-red-500" size={48} />
-          </div>
-          <h1 className="text-4xl font-black text-[#0f172a] mb-4 uppercase italic font-bricolage tracking-tight dark:text-white">
-            Access <span className="text-red-500">Restricted</span>
-          </h1>
-          <p className="text-slate-500 font-medium max-w-md">
-            You do not have the admin clearance level required to customize email templates.
-          </p>
-        </div>
-      </AdminLayout>
-    );
-  }
+  // Compile preview HTML locally
+  const getPreviewHtml = () => {
+    let html = bodyHtml;
+    const mockVars = MOCK_PREVIEW_DATA[selectedKey] || {};
+    
+    // Perform simple string replacements
+    Object.entries(mockVars).forEach(([key, value]) => {
+      const placeholder = `{${key}}`;
+      html = html.replaceAll(placeholder, value);
+    });
+    
+    return html;
+  };
 
   // Load all templates from API
   useEffect(() => {
@@ -264,9 +259,9 @@ export default function EmailTemplatesPage() {
         });
         if (res.ok) {
           const data = await res.json();
-          setTemplates(data);
+          setTemplates(Array.isArray(data) ? data : []);
           // Initialize form with default selected template
-          const current = data.find((t: EmailTemplate) => t.key === selectedKey);
+          const current = Array.isArray(data) ? data.find((t: EmailTemplate) => t.key === selectedKey) : null;
           if (current) {
             setSubject(current.subject);
             setBodyHtml(current.body_html);
@@ -278,10 +273,26 @@ export default function EmailTemplatesPage() {
         setLoading(false);
       }
     }
-    if (session?.user?.email) {
+    // Only fetch if session is loaded and user is an admin
+    if (session?.user?.email && userRole === "admin") {
       loadTemplates();
+    } else if (sessionStatus === "unauthenticated" || (sessionStatus === "authenticated" && userRole !== "admin")) {
+      setLoading(false);
     }
-  }, [session, selectedKey]);
+  }, [session, sessionStatus, selectedKey, userRole]);
+
+  // Write compiled content directly into iframe
+  useEffect(() => {
+    if (previewFrameRef.current && userRole === "admin") {
+      const iframe = previewFrameRef.current;
+      const doc = iframe.contentDocument || iframe.contentWindow?.document;
+      if (doc) {
+        doc.open();
+        doc.write(getPreviewHtml());
+        doc.close();
+      }
+    }
+  }, [bodyHtml, selectedKey, userRole]);
 
   // Track template selection change
   const handleSelectTemplate = (key: string) => {
@@ -298,33 +309,6 @@ export default function EmailTemplatesPage() {
       setHasUnsavedChanges(false);
     }
   };
-
-  // Compile preview HTML locally
-  const getPreviewHtml = () => {
-    let html = bodyHtml;
-    const mockVars = MOCK_PREVIEW_DATA[selectedKey] || {};
-    
-    // Perform simple string replacements
-    Object.entries(mockVars).forEach(([key, value]) => {
-      const placeholder = `{${key}}`;
-      html = html.replaceAll(placeholder, value);
-    });
-    
-    return html;
-  };
-
-  // Write compiled content directly into iframe
-  useEffect(() => {
-    if (previewFrameRef.current) {
-      const iframe = previewFrameRef.current;
-      const doc = iframe.contentDocument || iframe.contentWindow?.document;
-      if (doc) {
-        doc.open();
-        doc.write(getPreviewHtml());
-        doc.close();
-      }
-    }
-  }, [bodyHtml, selectedKey]);
 
   // Handle Save
   const handleSave = async () => {
@@ -427,6 +411,34 @@ export default function EmailTemplatesPage() {
   };
 
   const selectedTemplate = templates.find(t => t.key === selectedKey);
+
+  if (sessionStatus === "loading") {
+    return (
+      <AdminLayout>
+        <div className="flex justify-center items-center min-h-[50vh]">
+          <Loader2 className="animate-spin text-[#0f172a]" size={48} />
+        </div>
+      </AdminLayout>
+    );
+  }
+
+  if (sessionStatus === "unauthenticated" || userRole === "staff") {
+    return (
+      <AdminLayout>
+        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-6">
+          <div className="w-24 h-24 bg-red-50 rounded-full flex items-center justify-center mb-8">
+            <Lock className="text-red-500" size={48} />
+          </div>
+          <h1 className="text-4xl font-black text-[#0f172a] mb-4 uppercase italic font-bricolage tracking-tight dark:text-white">
+            Access <span className="text-red-500">Restricted</span>
+          </h1>
+          <p className="text-slate-500 font-medium max-w-md">
+            You do not have the admin clearance level required to customize email templates.
+          </p>
+        </div>
+      </AdminLayout>
+    );
+  }
 
   if (loading) {
     return (
