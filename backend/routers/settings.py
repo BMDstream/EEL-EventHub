@@ -50,37 +50,7 @@ def get_sender_domains(
     sender_emails = [f"events@{domain}" for domain in domains_list]
     return sender_emails
 
-@router.get("/settings/{key}")
-def get_setting(
-    key: str,
-    session: Session = Depends(get_session),
-    current_user: Optional[User] = Depends(get_current_user_from_request)
-):
-    if not current_user:
-        raise HTTPException(status_code=401, detail="Authentication required")
-    setting = session.exec(select(SystemSetting).where(SystemSetting.key == key)).first()
-    if not setting:
-        return {"key": key, "value": {}}
-    return setting
 
-@router.put("/settings/{key}")
-def update_setting(
-    key: str,
-    data: Dict[str, Any],
-    session: Session = Depends(get_session),
-    current_user: Optional[User] = Depends(get_current_user_from_request)
-):
-    if not current_user or current_user.role not in ["admin", "manager"]:
-        raise HTTPException(status_code=403, detail="Clearance level not met to update settings")
-    setting = session.exec(select(SystemSetting).where(SystemSetting.key == key)).first()
-    if not setting:
-        setting = SystemSetting(key=key, value=data)
-    else:
-        setting.value = data
-    session.add(setting)
-    session.commit()
-    session.refresh(setting)
-    return setting
 
 @router.get("/clients", response_model=List[Client])
 def get_clients(
@@ -419,3 +389,35 @@ def test_send_template(
         return {"status": "success", "success": success, "details": details}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to send test email: {str(e)}")
+
+@router.get("/settings/{key}")
+def get_setting(
+    key: str,
+    session: Session = Depends(get_session),
+    current_user: Optional[User] = Depends(get_current_user_from_request)
+):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    setting = session.exec(select(SystemSetting).where(SystemSetting.key == key)).first()
+    if not setting:
+        return {"key": key, "value": {}}
+    return setting
+
+@router.put("/settings/{key}")
+def update_setting(
+    key: str,
+    data: Dict[str, Any],
+    session: Session = Depends(get_session),
+    current_user: Optional[User] = Depends(get_current_user_from_request)
+):
+    if not current_user or current_user.role not in ["admin", "manager"]:
+        raise HTTPException(status_code=403, detail="Clearance level not met to update settings")
+    setting = session.exec(select(SystemSetting).where(SystemSetting.key == key)).first()
+    if not setting:
+        setting = SystemSetting(key=key, value=data)
+    else:
+        setting.value = data
+    session.add(setting)
+    session.commit()
+    session.refresh(setting)
+    return setting
