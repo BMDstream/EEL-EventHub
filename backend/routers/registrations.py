@@ -20,6 +20,7 @@ from backend.utils import (
     get_current_user_from_request,
     verify_event_access,
     verify_client_access,
+    verify_event_manager_access,
     get_event_email_config,
     perform_checkin_logic,
     limiter
@@ -931,10 +932,15 @@ def bulk_send_tickets_task(event_id: int, session_factory):
 def resend_all_tickets(
     event_id: int,
     background_tasks: BackgroundTasks,
+    session: Session = Depends(get_session),
     current_user: Optional[User] = Depends(get_current_user_from_request)
 ):
     if not current_user:
         raise HTTPException(status_code=401, detail="Authentication required")
+    event = session.get(Event, event_id)
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+    verify_event_manager_access(current_user, event, session)
     background_tasks.add_task(bulk_send_tickets_task, event_id, engine)
     return {"ok": True, "message": "Bulk ticket dispatch started in the background."}
 
@@ -943,11 +949,15 @@ def broadcast_to_attendees(
     event_id: int,
     data: Dict[str, Any],
     background_tasks: BackgroundTasks,
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    current_user: Optional[User] = Depends(get_current_user_from_request)
 ):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Authentication required")
     event = session.get(Event, event_id)
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
+    verify_event_manager_access(current_user, event, session)
     
     subject = data.get("subject", f"Reminder: {event.title}")
     body = data.get("body", "")

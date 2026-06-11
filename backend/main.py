@@ -75,7 +75,17 @@ def on_startup():
                 except Exception:
                     session.rollback()
 
-            # 3. Safely ensure registration, disclaimer, and sender_email columns are added to event table (fallback migration)
+            # 3. Safely ensure role column is added to usereventlink table (fallback migration)
+            uel_columns = [col['name'] for col in inspector.get_columns('usereventlink')] if inspector.has_table('usereventlink') else []
+            if uel_columns and 'role' not in uel_columns:
+                try:
+                    session.execute(text('ALTER TABLE "usereventlink" ADD COLUMN role TEXT DEFAULT \'staff\''))
+                    session.commit()
+                    print("Role column added to usereventlink table.")
+                except Exception:
+                    session.rollback()
+
+            # 4. Safely ensure registration, disclaimer, and sender_email columns are added to event table (fallback migration)
             event_columns = [col['name'] for col in inspector.get_columns('event')] if inspector.has_table('event') else []
             if event_columns:
                 dialect_name = session.bind.dialect.name

@@ -40,10 +40,16 @@ export default function StaffAssignment({ eventId, clientId }: { eventId: string
       });
   }, [eventId, session]);
 
-  const handleToggle = (id: number) => {
+  const handleRoleChange = (id: number, val: string) => {
     setStaff((prev) =>
       prev.map((member) =>
-        member.id === id ? { ...member, assigned: !member.assigned } : member
+        member.id === id
+          ? {
+              ...member,
+              assigned: val !== "none",
+              role: val === "none" ? member.role : val
+            }
+          : member
       )
     );
   };
@@ -53,7 +59,9 @@ export default function StaffAssignment({ eventId, clientId }: { eventId: string
     setSaving(true);
     setMessage(null);
 
-    const assignedIds = staff.filter((m) => m.assigned).map((m) => m.id);
+    const assignments = staff
+      .filter((m) => m.assigned)
+      .map((m) => ({ user_id: m.id, role: m.role }));
 
     try {
       const res = await fetch(`/api/py/events/${eventId}/staff`, {
@@ -62,7 +70,7 @@ export default function StaffAssignment({ eventId, clientId }: { eventId: string
           "Content-Type": "application/json",
           "x-user-email": session.user.email
         },
-        body: JSON.stringify({ user_ids: assignedIds })
+        body: JSON.stringify({ assignments })
       });
 
       if (res.ok) {
@@ -99,7 +107,7 @@ export default function StaffAssignment({ eventId, clientId }: { eventId: string
           <h2 className="text-3xl font-black text-[#0f172a] font-bricolage italic uppercase tracking-tight">
             Staff <span className="text-slate-300">Assignment</span>
           </h2>
-          <p className="text-slate-500 font-medium">Assign specific staff members to manage and scan this event.</p>
+          <p className="text-slate-500 font-medium">Assign specific staff members and roles to manage and scan this event.</p>
         </div>
         <div>
           <button
@@ -143,8 +151,7 @@ export default function StaffAssignment({ eventId, clientId }: { eventId: string
             {staff.map((member) => (
               <div
                 key={member.id}
-                onClick={() => handleToggle(member.id)}
-                className="flex items-center justify-between p-6 hover:bg-slate-50/50 cursor-pointer transition-colors group"
+                className="flex items-center justify-between p-6 hover:bg-slate-50/50 transition-colors group"
               >
                 <div className="flex items-center gap-5">
                   <div className="w-12 h-12 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-500 font-bold text-sm">
@@ -155,22 +162,22 @@ export default function StaffAssignment({ eventId, clientId }: { eventId: string
                     <div className="flex items-center gap-2 mt-1">
                       <Shield size={12} className="text-slate-400" />
                       <span className="text-xs uppercase tracking-wider font-extrabold text-slate-400">
-                        {member.role}
+                        Client Role: {member.role}
                       </span>
                     </div>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-4">
-                  <div
-                    className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${
-                      member.assigned
-                        ? "bg-yellow-400 border-yellow-400 text-black"
-                        : "border-slate-200 group-hover:border-slate-300"
-                    }`}
+                  <select
+                    value={member.assigned ? member.role : "none"}
+                    onChange={(e) => handleRoleChange(member.id, e.target.value)}
+                    className="bg-white border border-slate-200 text-[#0f172a] rounded-xl px-4 py-2.5 text-xs font-black uppercase tracking-wider outline-none transition-all cursor-pointer focus:ring-2 focus:ring-slate-100"
                   >
-                    {member.assigned && <CheckCircle2 size={16} className="text-black font-bold" />}
-                  </div>
+                    <option value="none">No Access</option>
+                    <option value="staff">Staff (Scanner)</option>
+                    <option value="manager">Manager (Editor)</option>
+                  </select>
                 </div>
               </div>
             ))}

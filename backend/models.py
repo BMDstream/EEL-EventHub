@@ -11,6 +11,7 @@ class UserClientLink(SQLModel, table=True):
 class UserEventLink(SQLModel, table=True):
     user_id: int = Field(foreign_key="user.id", primary_key=True)
     event_id: int = Field(foreign_key="event.id", primary_key=True)
+    role: str = Field(default="staff")
 
 class Client(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)

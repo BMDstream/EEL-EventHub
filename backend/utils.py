@@ -80,6 +80,31 @@ def verify_event_access(user: Optional[User], event: Event, session: Session):
         raise HTTPException(status_code=403, detail="Forbidden: You are not assigned to this event")
     return True
 
+def verify_event_manager_access(user: Optional[User], event: Event, session: Session):
+    if not user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    if user.role == "admin":
+        return True
+        
+    # 1. Check if user is a client-level manager
+    if event.client_id:
+        link = session.execute(
+            text('SELECT role FROM "userclientlink" WHERE user_id = :user_id AND client_id = :client_id'),
+            {"user_id": user.id, "client_id": event.client_id}
+        ).first()
+        if link and link[0] == "manager":
+            return True
+            
+    # 2. Check if user has a manager role on this specific event
+    event_link = session.execute(
+        text('SELECT role FROM "usereventlink" WHERE user_id = :user_id AND event_id = :event_id'),
+        {"user_id": user.id, "event_id": event.id}
+    ).first()
+    if event_link and event_link[0] == "manager":
+        return True
+        
+    raise HTTPException(status_code=403, detail="Forbidden: Event manager privileges required")
+
 def get_event_email_config(event: Event, session: Session):
     client = session.get(Client, event.client_id) if event.client_id else None
     if client:

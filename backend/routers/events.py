@@ -9,6 +9,7 @@ from backend.utils import (
     get_current_user_from_request,
     verify_client_access,
     verify_event_access,
+    verify_event_manager_access,
     limiter
 )
 
@@ -96,13 +97,24 @@ def read_event_by_id(
     user_role = "staff"
     if current_user.role == "admin":
         user_role = "admin"
-    elif event.client_id:
-        link = session.execute(
-            text('SELECT role FROM "userclientlink" WHERE user_id = :user_id AND client_id = :client_id'),
-            {"user_id": current_user.id, "client_id": event.client_id}
-        ).first()
-        if link:
-            user_role = link[0]
+    else:
+        # 1. Check client-level role
+        if event.client_id:
+            link = session.execute(
+                text('SELECT role FROM "userclientlink" WHERE user_id = :user_id AND client_id = :client_id'),
+                {"user_id": current_user.id, "client_id": event.client_id}
+            ).first()
+            if link:
+                user_role = link[0]
+                
+        # 2. Check event-level role if not already manager/admin
+        if user_role != "manager":
+            event_link = session.execute(
+                text('SELECT role FROM "usereventlink" WHERE user_id = :user_id AND event_id = :event_id'),
+                {"user_id": current_user.id, "event_id": event.id}
+            ).first()
+            if event_link:
+                user_role = event_link[0]
             
     event_dict = event.dict()
     event_dict["client"] = client.dict() if client else None
@@ -119,7 +131,7 @@ def update_event(
     db_event = session.get(Event, event_id)
     if not db_event:
         raise HTTPException(status_code=404, detail="Event not found")
-    verify_client_access(current_user, db_event.client_id, session)
+    verify_event_manager_access(current_user, db_event, session)
     if event_data.client_id != db_event.client_id:
         verify_client_access(current_user, event_data.client_id, session)
     
@@ -539,7 +551,7 @@ def get_event_staff(
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
         
-    verify_client_access(current_user, event.client_id, session)
+    verify_event_manager_access(current_user, event, session)
     
     # 1. Fetch all users associated with this event's client (non-admin)
     stmt = text("""
@@ -551,18 +563,19 @@ def get_event_staff(
     rows = session.execute(stmt, {"client_id": event.client_id}).all()
     
     # 2. Fetch currently assigned users for this event
-    stmt_assigned = text('SELECT user_id FROM "usereventlink" WHERE event_id = :event_id')
+    stmt_assigned = text('SELECT user_id, role FROM "usereventlink" WHERE event_id = :event_id')
     assigned_rows = session.execute(stmt_assigned, {"event_id": event_id}).all()
-    assigned_ids = {row[0] for row in assigned_rows}
+    assigned_roles = {row[0]: row[1] for row in assigned_rows}
     
     # 3. Build response list
     result = []
     for row in rows:
+        user_id = row[0]
         result.append({
-            "id": row[0],
+            "id": user_id,
             "email": row[1],
-            "role": row[2],
-            "assigned": row[0] in assigned_ids
+            "role": assigned_roles.get(user_id) if user_id in assigned_roles else row[2],
+            "assigned": user_id in assigned_roles
         })
     return result
 
@@ -580,28 +593,43 @@ def update_event_staff(
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
         
-    verify_client_access(current_user, event.client_id, session)
+    verify_event_manager_access(current_user, event, session)
     
+    assignments = payload.get("assignments", [])
     user_ids = payload.get("user_ids", [])
-    if not isinstance(user_ids, list):
-        raise HTTPException(status_code=422, detail="user_ids must be a list")
-        
+    
     # Delete existing mappings for this event
     session.execute(text('DELETE FROM "usereventlink" WHERE event_id = :event_id'), {"event_id": event_id})
     session.commit()
     
     # Insert new assignments
-    for u_id in user_ids:
-        # Verify the user is linked to the event's client
-        link_exists = session.execute(
-            text('SELECT 1 FROM "userclientlink" WHERE user_id = :user_id AND client_id = :client_id'),
-            {"user_id": u_id, "client_id": event.client_id}
-        ).first()
-        if link_exists:
-            session.execute(
-                text('INSERT INTO "usereventlink" (user_id, event_id) VALUES (:user_id, :event_id)'),
-                {"user_id": u_id, "event_id": event_id}
-            )
+    if assignments:
+        for item in assignments:
+            u_id = item.get("user_id")
+            role = item.get("role", "staff")
+            
+            # Verify the user is linked to the event's client
+            link_exists = session.execute(
+                text('SELECT 1 FROM "userclientlink" WHERE user_id = :user_id AND client_id = :client_id'),
+                {"user_id": u_id, "client_id": event.client_id}
+            ).first()
+            if link_exists:
+                session.execute(
+                    text('INSERT INTO "usereventlink" (user_id, event_id, role) VALUES (:user_id, :event_id, :role)'),
+                    {"user_id": u_id, "event_id": event_id, "role": role}
+                )
+    elif user_ids:
+        # Fallback to backwards compatibility
+        for u_id in user_ids:
+            link_exists = session.execute(
+                text('SELECT 1 FROM "userclientlink" WHERE user_id = :user_id AND client_id = :client_id'),
+                {"user_id": u_id, "client_id": event.client_id}
+            ).first()
+            if link_exists:
+                session.execute(
+                    text('INSERT INTO "usereventlink" (user_id, event_id, role) VALUES (:user_id, :event_id, :role)'),
+                    {"user_id": u_id, "event_id": event_id, "role": "staff"}
+                )
             
     session.commit()
     return {"ok": True}
