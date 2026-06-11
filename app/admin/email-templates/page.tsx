@@ -259,6 +259,7 @@ const DEFAULT_FORM_FIELDS: Record<string, Record<string, string>> = {
     heading_subtitle: "Confirmed",
     body_text: "Your registration has been successfully confirmed. Below are your secure credentials for terminal verification.",
     warning_text: "Please present this QR code or code at the check-in desk.",
+    details_title: "Matchup Details",
     footer_text: "Excellence Logistics & Entertainment\nAutomated Event Hub System",
   },
   registration_declined: {
@@ -284,6 +285,7 @@ const DEFAULT_FORM_FIELDS: Record<string, Record<string, string>> = {
     urgent_body: "Complete your registration details to secure your spot. Your partner has registered you, but we still need your specific information (such as T-shirt size and dietary preferences) to complete your booking.",
     body_text: "Your partner has registered you. Please complete your ticket details to finalize your registration.",
     button_text: "Update Your Ticket Details",
+    details_title: "Matchup Details",
     footer_text: "Excellence Logistics & Entertainment\nAutomated Event Hub System",
   },
   broadcast: {
@@ -667,11 +669,13 @@ export default function EmailTemplatesPage() {
     
     mockVars.logo_html = logoHtmlStr;
 
-    // Dynamically replace theme colors in mock blocks
+    // Dynamically replace theme colors and details title in mock blocks
     if (mockVars.details_html) {
+      const detailsTitle = formValues.details_title || "Matchup Details";
       mockVars.details_html = mockVars.details_html
         .replaceAll("#0f172a", primaryCol)
-        .replaceAll("#eab308", accentCol);
+        .replaceAll("#eab308", accentCol)
+        .replace("Matchup Details", detailsTitle);
     }
     if (mockVars.qr_block_html) {
       mockVars.qr_block_html = mockVars.qr_block_html
@@ -1582,12 +1586,12 @@ export default function EmailTemplatesPage() {
                         </div>
                       )}
 
-                      {/* Matchup details customization (Tournament Matchup only) */}
-                      {selectedKey === "tournament_matchup" && (
+                      {/* Matchup details customization (For confirmed, pending, and matchup templates) */}
+                      {["registration_confirmed", "partner_pending", "tournament_matchup"].includes(selectedKey) && (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="space-y-1.5">
                             <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
-                              Details Header Label
+                              Details Header Label (e.g. Matchup Details)
                             </label>
                             <input 
                               type="text"
@@ -1597,17 +1601,19 @@ export default function EmailTemplatesPage() {
                             />
                           </div>
                           
-                          <div className="space-y-1.5">
-                            <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
-                              PIN Instruction Label
-                            </label>
-                            <input 
-                              type="text"
-                              value={formValues.pin_label || ""}
-                              onChange={(e) => handleFormChange("pin_label", e.target.value)}
-                              className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 focus:border-yellow-400 outline-none font-bold text-sm text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white"
-                            />
-                          </div>
+                          {selectedKey === "tournament_matchup" && (
+                            <div className="space-y-1.5">
+                              <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
+                                PIN Instruction Label
+                              </label>
+                              <input 
+                                type="text"
+                                value={formValues.pin_label || ""}
+                                onChange={(e) => handleFormChange("pin_label", e.target.value)}
+                                className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 focus:border-yellow-400 outline-none font-bold text-sm text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                              />
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
