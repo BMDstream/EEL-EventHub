@@ -260,6 +260,7 @@ const DEFAULT_FORM_FIELDS: Record<string, Record<string, string>> = {
     body_text: "Your registration has been successfully confirmed. Below are your secure credentials for terminal verification.",
     warning_text: "Please present this QR code or code at the check-in desk.",
     details_title: "Matchup Details",
+    engagement_title: "Engagement Details",
     footer_text: "Excellence Logistics & Entertainment\nAutomated Event Hub System",
   },
   registration_declined: {
@@ -286,6 +287,7 @@ const DEFAULT_FORM_FIELDS: Record<string, Record<string, string>> = {
     body_text: "Your partner has registered you. Please complete your ticket details to finalize your registration.",
     button_text: "Update Your Ticket Details",
     details_title: "Matchup Details",
+    engagement_title: "Engagement Details",
     footer_text: "Excellence Logistics & Entertainment\nAutomated Event Hub System",
   },
   broadcast: {
@@ -672,10 +674,12 @@ export default function EmailTemplatesPage() {
     // Dynamically replace theme colors and details title in mock blocks
     if (mockVars.details_html) {
       const detailsTitle = formValues.details_title || "Matchup Details";
+      const engagementTitle = formValues.engagement_title || "Engagement Details";
       mockVars.details_html = mockVars.details_html
         .replaceAll("#0f172a", primaryCol)
         .replaceAll("#eab308", accentCol)
-        .replace("Matchup Details", detailsTitle);
+        .replace("Matchup Details", detailsTitle)
+        .replace("Engagement Details", engagementTitle);
     }
     if (mockVars.qr_block_html) {
       mockVars.qr_block_html = mockVars.qr_block_html
@@ -1586,12 +1590,12 @@ export default function EmailTemplatesPage() {
                         </div>
                       )}
 
-                      {/* Matchup details customization (For confirmed, pending, and matchup templates) */}
+                      {/* Matchup & Card Wording customization */}
                       {["registration_confirmed", "partner_pending", "tournament_matchup"].includes(selectedKey) && (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="space-y-1.5">
                             <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
-                              Details Header Label (e.g. Matchup Details)
+                              Matchup Header Label (e.g. Matchup Details)
                             </label>
                             <input 
                               type="text"
@@ -1600,6 +1604,20 @@ export default function EmailTemplatesPage() {
                               className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 focus:border-yellow-400 outline-none font-bold text-sm text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white"
                             />
                           </div>
+
+                          {["registration_confirmed", "partner_pending"].includes(selectedKey) && (
+                            <div className="space-y-1.5">
+                              <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
+                                Engagement Card Title (e.g. Engagement Details)
+                              </label>
+                              <input 
+                                type="text"
+                                value={formValues.engagement_title || ""}
+                                onChange={(e) => handleFormChange("engagement_title", e.target.value)}
+                                className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 focus:border-yellow-400 outline-none font-bold text-sm text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                              />
+                            </div>
+                          )}
                           
                           {selectedKey === "tournament_matchup" && (
                             <div className="space-y-1.5">

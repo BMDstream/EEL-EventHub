@@ -215,9 +215,10 @@ def send_confirmation_email(
             </div>
             """
 
+        engagement_title = meta.get("engagement_title", "Engagement Details")
         details_html = f"""
         <div style="background: #ffffff; padding: 32px; border: 1px solid #f1f5f9; border-radius: 32px; margin-bottom: 40px;">
-            <p style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.3em; color: {accent_color}; margin-bottom: 24px;">Engagement Details</p>
+            <p style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.3em; color: {accent_color}; margin-bottom: 24px;">{engagement_title}</p>
             
             <div style="margin-bottom: 20px;">
                 <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin: 0 0 4px 0;">Event</p>
