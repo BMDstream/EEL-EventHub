@@ -107,3 +107,12 @@ class SystemSetting(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     key: str = Field(unique=True, index=True)
     value: Dict[str, Any] = Field(default={}, sa_column=Column(JSON))
+
+class EmailTemplate(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    key: str = Field(unique=True, index=True)
+    name: str
+    subject: str
+    body_html: str
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)

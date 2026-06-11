@@ -12,6 +12,7 @@ from sqlmodel import SQLModel, Field, Session, select
 import resend
 
 from backend.database import get_session
+from backend.email_service import get_template_from_db, parse_template
 
 # Create FastAPI Router
 router = APIRouter(prefix="/api/py/tournament", tags=["tournament"])
@@ -57,40 +58,37 @@ class DualRegistrationRequest(BaseModel):
     partner_name: str
     partner_email: str
 
+    @field_validator("challenger_name", "partner_name")
+    def validate_name_not_empty(cls, v: str) -> str:
+        cleaned = v.strip()
+        if not cleaned:
+            raise ValueError("Name cannot be empty")
+        return cleaned
+
     @field_validator("challenger_email", "partner_email")
-    @classmethod
     def validate_email(cls, v: str) -> str:
         cleaned = v.strip().lower()
         if not email_regex.match(cleaned):
             raise ValueError("Invalid email address format")
         return cleaned
 
-    @field_validator("challenger_name", "partner_name")
-    @classmethod
-    def validate_name(cls, v: str) -> str:
-        cleaned = v.strip()
-        if len(cleaned) < 2:
-            raise ValueError("Name must be at least 2 characters long")
-        return cleaned
-
     @field_validator("partner_email")
-    @classmethod
-    def prevent_self_match(cls, v: str, info: ValidationInfo) -> str:
+    def validate_different_emails(cls, v: str, info: ValidationInfo) -> str:
         challenger_email = info.data.get("challenger_email")
         if challenger_email and v.strip().lower() == challenger_email.strip().lower():
             raise ValueError("Challenger and Partner emails cannot be the same")
-        return v
+        return v.strip().lower()
 
 # ---------------------------------------------------------
 # 3. Helper Functions
 # ---------------------------------------------------------
 
 def generate_backup_pin() -> str:
-    """Generates a secure 6-digit numeric PIN string."""
+    """Generates a secure 6-digit numeric PIN code."""
     return "".join(random.choices(string.digits, k=6))
 
 def send_resend_email(to_email: str, name: str, role: str, opponent_name: str, pin: str, qr_hash: str, profile_update_link: Optional[str] = None) -> Optional[str]:
-    """Sends a single tournament check-in pass email via Resend."""
+    """Sends a tournament matchup pass email, checking the database for the customizable template first."""
     resend.api_key = os.getenv("RESEND_API_KEY")
     mock_email = os.getenv("MOCK_EMAIL_SERVICE", "false").lower() == "true"
     
@@ -160,16 +158,39 @@ def send_resend_email(to_email: str, name: str, role: str, opponent_name: str, p
     </div>
     """
 
+    db_subject = None
+    db_html = None
+    try:
+        db_template = get_template_from_db("tournament_matchup")
+        if db_template:
+            variables = {
+                "name": name,
+                "role": role,
+                "opponent_name": opponent_name,
+                "pin": pin,
+                "qr_code_url": qr_img_url,
+                "button_html": button_html,
+                "event_title": "Sports Tournament Series",
+                "to_email": to_email
+            }
+            db_subject = parse_template(db_template.subject, variables)
+            db_html = parse_template(db_template.body_html, variables)
+    except Exception as ex:
+        print(f"Error applying database template override: {ex}")
+
     if not resend.api_key or mock_email:
-        print(f"MOCK EMAIL: Sent to {to_email} (Role: {role}). QR Hash: {qr_hash}, PIN: {pin}")
+        if db_subject and db_html:
+            print(f"MOCK EMAIL (DB Template): Sent to {to_email} (Role: {role}). Subject: {db_subject}")
+        else:
+            print(f"MOCK EMAIL: Sent to {to_email} (Role: {role}). QR Hash: {qr_hash}, PIN: {pin}")
         return "mock-email-id"
 
     try:
         email_params = {
             "from": "Tournament Hub <events@eelogistics.co.za>",
             "to": to_email,
-            "subject": subject,
-            "html": html_content
+            "subject": db_subject if (db_subject and db_html) else subject,
+            "html": db_html if (db_subject and db_html) else html_content
         }
         res = resend.Emails.send(email_params)
         print(f"Resend success for {to_email}: {res}")

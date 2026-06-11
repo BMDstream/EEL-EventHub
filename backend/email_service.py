@@ -6,6 +6,9 @@ from io import BytesIO
 from typing import List, Dict, Any, Optional
 from dotenv import load_dotenv
 from urllib.parse import quote
+from sqlmodel import Session, select
+from backend.database import engine
+from backend.models import EmailTemplate
 
 load_dotenv()
 
@@ -28,6 +31,23 @@ def generate_qr_base64(data: str):
     buffered = BytesIO()
     img.save(buffered, format="PNG")
     return base64.b64encode(buffered.getvalue()).decode()
+
+def get_template_from_db(key: str) -> Optional[EmailTemplate]:
+    try:
+        with Session(engine) as session:
+            template = session.exec(select(EmailTemplate).where(EmailTemplate.key == key)).first()
+            return template
+    except Exception as e:
+        print(f"Error fetching email template '{key}': {e}")
+        return None
+
+def parse_template(text: str, variables: Dict[str, Any]) -> str:
+    if not text:
+        return ""
+    for k, v in variables.items():
+        placeholder = "{" + k + "}"
+        text = text.replace(placeholder, str(v) if v is not None else "")
+    return text
 
 def send_confirmation_email(
     to_email: str, 
@@ -288,6 +308,41 @@ def send_confirmation_email(
     </table>
     """
 
+    # Database Template Override
+    db_subject = None
+    db_html = None
+    try:
+        t_key = "registration_confirmed"
+        if profile_update_link:
+            t_key = "partner_pending"
+        elif not is_attending:
+            t_key = "registration_declined"
+            
+        db_template = get_template_from_db(t_key)
+        if db_template:
+            variables = {
+                "first_name": first_name,
+                "event_title": event_title,
+                "to_email": to_email,
+                "pin": clearance_id,
+                "primary_color": primary_color,
+                "accent_color": accent_color,
+                "heading_title": heading_title,
+                "heading_subtitle": heading_subtitle,
+                "logo_html": logo_td_html,
+                "body_html": body_html,
+                "details_html": details_html,
+                "qr_block_html": qr_block_html,
+                "warning_block_html": warning_block_html,
+                "button_block_html": button_block_html,
+                "footer_text": footer_html,
+                "profile_update_link": profile_update_link or ""
+            }
+            db_subject = parse_template(db_template.subject, variables)
+            db_html = parse_template(db_template.body_html, variables)
+    except Exception as ex:
+        print(f"Error applying database template override: {ex}")
+
     try:
         sender_name = config.get("sender_name") if config else None
         if not sender_name:
@@ -298,10 +353,15 @@ def send_confirmation_email(
             sender_email = "events@eelogistics.co.za"
             
         from_address = f"{sender_name} <{sender_email}>"
-        if profile_update_link:
-            subject = f"Action Required: Complete your details for {event_title}"
+        
+        if db_subject and db_html:
+            subject = db_subject
+            html_content = db_html
         else:
-            subject = f"Registration Confirmed: {event_title}" if is_attending else f"RSVP Recorded: {event_title}"
+            if profile_update_link:
+                subject = f"Action Required: Complete your details for {event_title}"
+            else:
+                subject = f"Registration Confirmed: {event_title}" if is_attending else f"RSVP Recorded: {event_title}"
         
         email_params = {
             "from": from_address,
@@ -388,33 +448,34 @@ def send_broadcast_email(
         except:
             date_str = str(event_details.get('start_date', 'TBA'))
 
+    db_template = get_template_from_db("broadcast")
+
     for reg in registrations_data:
         to_email = reg["email"]
         first_name = reg["first_name"]
         last_name = reg["last_name"]
         pin = reg["pin"]
 
-        # Compile personalized subject and body
-        p_subject = (
-            subject.replace("{first_name}", first_name)
-            .replace("{last_name}", last_name)
-            .replace("{pin}", pin)
-            .replace("{event_title}", event_title)
-            .replace("{location}", location_str)
-            .replace("{start_date}", f"{date_str} @ {time_str}")
-        )
+        # Define variables dictionary for parsing templates
+        variables = {
+            "first_name": first_name,
+            "last_name": last_name,
+            "to_email": to_email,
+            "pin": pin,
+            "event_title": event_title,
+            "location": location_str,
+            "start_date": f"{date_str} @ {time_str}",
+            "primary_color": primary_color,
+            "accent_color": accent_color,
+            "logo_html": logo_td_html,
+            "broadcast_body": body.replace("{first_name}", first_name).replace("{last_name}", last_name).replace("{pin}", pin).replace("{event_title}", event_title).replace("\n", "<br>"),
+            "broadcast_signature": signature.replace("\n", "<br>") if signature else "",
+            "footer_text": "Automated Event Management System • Security Tier 4"
+        }
 
-        p_body = (
-            body.replace("{first_name}", first_name)
-            .replace("{last_name}", last_name)
-            .replace("{pin}", pin)
-            .replace("{event_title}", event_title)
-            .replace("{location}", location_str)
-            .replace("{start_date}", f"{date_str} @ {time_str}")
-        )
-
-        # Inject QR Code if requested
-        if "{qr_code}" in p_body:
+        # Inject QR Code if requested in custom template or default body
+        qr_code_html = ""
+        if (db_template and "{qr_code}" in db_template.body_html) or (not db_template and "{qr_code}" in body):
             qr_base64 = generate_qr_base64(pin)
             qr_code_html = f"""
             <div style="background: #f8fafc; padding: 32px; border-radius: 24px; text-align: center; border: 1px solid #e2e8f0; margin: 24px auto; max-width: 240px; box-shadow: 0 10px 25px rgba(0,0,0,0.03);">
@@ -425,70 +486,97 @@ def send_broadcast_email(
                 </div>
             </div>
             """
-            p_body = p_body.replace("{qr_code}", qr_code_html)
+        variables["qr_code"] = qr_code_html
 
-        signature_html = f'<div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #f1f5f9; font-style: italic; color: #64748b; font-size: 14px;">{signature.replace("\r\n", "<br>").replace("\n", "<br>")}</div>' if signature else ""
-
-        html_content = f"""
-        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; table-layout: fixed; margin: 0; padding: 0;">
-          <tr>
-            <td align="center" style="padding: 40px 0;">
-              <!--[if mso]>
-              <table width="600" border="0" cellspacing="0" cellpadding="0">
-                <tr>
-                  <td>
-              <![endif]-->
-              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; max-width: 600px; border: 1px solid #f1f5f9; border-radius: 40px; background-color: #ffffff; color: {primary_color}; box-shadow: 0 20px 50px rgba(0,0,0,0.05); overflow: hidden; border-collapse: separate;">
-                <tr>
-                  <td style="padding: 40px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
-                    <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 48px;">
-                      <tr>
-                        <td align="left" valign="middle">
-                          <table border="0" cellspacing="0" cellpadding="0" style="display: inline-block;">
-                            <tr>
-                              <td align="center" style="background: {primary_color}; padding: 12px 28px; border-radius: 16px;">
-                                <span style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.4em; color: #ffffff;">Broadcast Dispatch</span>
-                              </td>
-                            </tr>
-                          </table>
-                        </td>
-                        {logo_td_html}
-                      </tr>
-                    </table>
-
-                    <h2 style="font-size: 32px; font-weight: 900; color: {primary_color}; margin-bottom: 28px; text-transform: uppercase; font-style: italic; letter-spacing: -0.04em; line-height: 1.1; margin-top: 0;">
-                        Update: <span style="color: {accent_color};">{event_title}</span>
-                    </h2>
-                    
-                    <div style="font-size: 16px; line-height: 1.8; color: #334155; margin-bottom: 40px;">
-                        {p_body.replace("\r\n", "<br>").replace("\n", "<br>")}
-                    </div>
-
-                    {signature_html}
-                    
-                    <hr style="border: 0; border-top: 1px solid #f1f5f9; margin-bottom: 40px; margin-top: 40px;" />
-                    
-                    <table width="100%" border="0" cellspacing="0" cellpadding="0">
-                      <tr>
-                        <td align="center">
-                          <p style="font-size: 10px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.2em; margin: 0;">
-                              Automated Event Management System • Security Tier 4
-                          </p>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>
-              <!--[if mso]>
-                  </td>
-                </tr>
-              </table>
-              <![endif]-->
-            </td>
-          </tr>
-        </table>
+        details_html = f"""
+        <div style="background: #ffffff; padding: 24px; border: 1px solid #f1f5f9; border-radius: 24px; margin-bottom: 24px; margin-top: 24px;">
+            <div style="margin-bottom: 12px;">
+                <p style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin: 0 0 2px 0;">Event</p>
+                <p style="font-size: 15px; font-weight: 800; color: {primary_color}; margin: 0;">{event_title}</p>
+            </div>
+            <div style="margin-bottom: 12px;">
+                <p style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin: 0 0 2px 0;">Date & Time</p>
+                <p style="font-size: 15px; font-weight: 800; color: {primary_color}; margin: 0;">{date_str} @ {time_str}</p>
+            </div>
+            <div style="margin-bottom: 12px;">
+                <p style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin: 0 0 2px 0;">Venue</p>
+                <p style="font-size: 15px; font-weight: 800; color: {primary_color}; margin: 0;">{location_str}</p>
+            </div>
+        </div>
         """
+        variables["details_html"] = details_html
+
+        if db_template:
+            p_subject = parse_template(db_template.subject, variables)
+            html_content = parse_template(db_template.body_html, variables)
+        else:
+            # Fallback to hardcoded layout
+            p_subject = (
+                subject.replace("{first_name}", first_name)
+                .replace("{last_name}", last_name)
+                .replace("{pin}", pin)
+                .replace("{event_title}", event_title)
+                .replace("{location}", location_str)
+                .replace("{start_date}", f"{date_str} @ {time_str}")
+            )
+
+            p_body = (
+                body.replace("{first_name}", first_name)
+                .replace("{last_name}", last_name)
+                .replace("{pin}", pin)
+                .replace("{event_title}", event_title)
+                .replace("{location}", location_str)
+                .replace("{start_date}", f"{date_str} @ {time_str}")
+            )
+            if "{qr_code}" in p_body:
+                p_body = p_body.replace("{qr_code}", qr_code_html)
+
+            signature_html = f'<div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #f1f5f9; font-style: italic; color: #64748b; font-size: 14px;">{signature.replace("\n", "<br>")}</div>' if signature else ""
+
+            html_content = f"""
+            <table width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; table-layout: fixed; margin: 0; padding: 0;">
+              <tr>
+                <td align="center" style="padding: 40px 0;">
+                  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; max-width: 600px; border: 1px solid #f1f5f9; border-radius: 40px; background-color: #ffffff; color: {primary_color}; box-shadow: 0 20px 50px rgba(0,0,0,0.05); overflow: hidden; border-collapse: separate;">
+                    <tr>
+                      <td style="padding: 40px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
+                        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 48px;">
+                          <tr>
+                            <td align="left" valign="middle">
+                              <table border="0" cellspacing="0" cellpadding="0" style="display: inline-block;">
+                                <tr>
+                                  <td align="center" style="background: {primary_color}; padding: 12px 28px; border-radius: 16px;">
+                                    <span style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.4em; color: #ffffff;">Broadcast Dispatch</span>
+                                  </td>
+                                </tr>
+                              </table>
+                            </td>
+                            {logo_td_html}
+                          </tr>
+                        </table>
+                        <h2 style="font-size: 32px; font-weight: 900; color: {primary_color}; margin-bottom: 28px; text-transform: uppercase; font-style: italic; letter-spacing: -0.04em; line-height: 1.1; margin-top: 0;">
+                            Update: <span style="color: {accent_color};">{event_title}</span>
+                        </h2>
+                        <div style="font-size: 16px; line-height: 1.8; color: #334155; margin-bottom: 40px;">
+                            {p_body.replace("\n", "<br>")}
+                        </div>
+                        {signature_html}
+                        <hr style="border: 0; border-top: 1px solid #f1f5f9; margin-bottom: 40px; margin-top: 40px;" />
+                        <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                          <tr>
+                            <td align="center">
+                              <p style="font-size: 10px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.2em; margin: 0;">
+                                  Automated Event Management System • Security Tier 4
+                              </p>
+                            </td>
+                          </tr>
+                        </table>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>"""
 
         email_params = {
             "from": from_address,

@@ -1,12 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from sqlmodel import Session, select
+from sqlmodel import Session, select, SQLModel
 from slowapi.errors import RateLimitExceeded
 from slowapi import _rate_limit_exceeded_handler
 
 from backend.database import init_db, engine, IS_SERVERLESS
 from backend.utils import limiter
-from backend.models import SystemSetting, Client
+from backend.models import SystemSetting, Client, EmailTemplate
 from backend.routers import auth, events, registrations, settings, users, webhooks, tasks, tournament
 
 app = FastAPI(docs_url="/api/py/docs", openapi_url="/api/py/openapi.json")
@@ -39,7 +39,7 @@ def on_startup():
         
         with Session(engine) as session:
             # Use SQLAlchemy inspector to check for existing columns and avoid throwing/catching database exceptions
-            from sqlalchemy import inspect, text
+            from sqlalchemy import inspect, text, func
             inspector = inspect(engine)
             
             # 1. Safely ensure permissions column is added to user table (fallback migration)
@@ -126,7 +126,37 @@ def on_startup():
                 session.commit()
                 print("Default system email settings seeded.")
 
-            # 5. Seed default BMD client if it doesn't exist yet.
+            # 5. Ensure emailtemplate table exists (fallback migration) and seed defaults
+            if not inspector.has_table('emailtemplate'):
+                try:
+                    SQLModel.metadata.tables['emailtemplate'].create(engine)
+                    session.commit()
+                    print("Created emailtemplate table.")
+                except Exception as e:
+                    session.rollback()
+                    print(f"Error creating emailtemplate table: {e}")
+                    
+            try:
+                # Re-verify table exists before querying
+                inspector = inspect(engine)
+                if inspector.has_table('emailtemplate'):
+                    templates_count = session.exec(select(func.count(EmailTemplate.id))).one()
+                    if templates_count == 0:
+                        from backend.default_templates import DEFAULT_TEMPLATES
+                        for k, val in DEFAULT_TEMPLATES.items():
+                            session.add(EmailTemplate(
+                                key=k,
+                                name=val["name"],
+                                subject=val["subject"],
+                                body_html=val["body_html"]
+                            ))
+                        session.commit()
+                        print("Default email templates seeded successfully.")
+            except Exception as e:
+                session.rollback()
+                print(f"Email template seeding error: {e}")
+
+            # 6. Seed default BMD client if it doesn't exist yet.
             default_client = session.exec(select(Client).where(Client.slug == "bmd")).first()
             if not default_client:
                 default_client = Client(

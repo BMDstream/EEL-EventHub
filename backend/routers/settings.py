@@ -4,8 +4,10 @@ from sqlalchemy import text
 from typing import List, Dict, Any, Optional
 
 from backend.database import get_session
-from backend.models import User, Client, SystemSetting, Event
+from backend.models import User, Client, SystemSetting, Event, EmailTemplate
 from backend.utils import get_current_user_from_request
+from datetime import datetime
+from pydantic import BaseModel
 
 router = APIRouter()
 
@@ -209,3 +211,166 @@ def sync_user_clients(
                 )
     session.commit()
     return {"ok": True}
+
+# Pydantic models for request bodies
+class EmailTemplateUpdate(BaseModel):
+    subject: str
+    body_html: str
+
+class SendTestEmailPayload(BaseModel):
+    email: str
+
+@router.get("/settings/templates", response_model=List[EmailTemplate])
+def get_all_templates(
+    session: Session = Depends(get_session),
+    current_user: Optional[User] = Depends(get_current_user_from_request)
+):
+    if not current_user or current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only admins can view email templates")
+    return session.exec(select(EmailTemplate)).all()
+
+@router.get("/settings/templates/{key}", response_model=EmailTemplate)
+def get_template(
+    key: str,
+    session: Session = Depends(get_session),
+    current_user: Optional[User] = Depends(get_current_user_from_request)
+):
+    if not current_user or current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only admins can view email templates")
+    template = session.exec(select(EmailTemplate).where(EmailTemplate.key == key)).first()
+    if not template:
+        raise HTTPException(status_code=404, detail="Email template not found")
+    return template
+
+@router.put("/settings/templates/{key}", response_model=EmailTemplate)
+def update_template(
+    key: str,
+    payload: EmailTemplateUpdate,
+    session: Session = Depends(get_session),
+    current_user: Optional[User] = Depends(get_current_user_from_request)
+):
+    if not current_user or current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only admins can edit email templates")
+    template = session.exec(select(EmailTemplate).where(EmailTemplate.key == key)).first()
+    if not template:
+        raise HTTPException(status_code=404, detail="Email template not found")
+    
+    template.subject = payload.subject
+    template.body_html = payload.body_html
+    template.updated_at = datetime.utcnow()
+    
+    session.add(template)
+    session.commit()
+    session.refresh(template)
+    return template
+
+@router.post("/settings/templates/{key}/reset", response_model=EmailTemplate)
+def reset_template(
+    key: str,
+    session: Session = Depends(get_session),
+    current_user: Optional[User] = Depends(get_current_user_from_request)
+):
+    if not current_user or current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only admins can reset email templates")
+    template = session.exec(select(EmailTemplate).where(EmailTemplate.key == key)).first()
+    if not template:
+        raise HTTPException(status_code=404, detail="Email template not found")
+    
+    from backend.default_templates import DEFAULT_TEMPLATES
+    if key not in DEFAULT_TEMPLATES:
+        raise HTTPException(status_code=400, detail="Default template not configured for this key")
+        
+    default_t = DEFAULT_TEMPLATES[key]
+    template.subject = default_t["subject"]
+    template.body_html = default_t["body_html"]
+    template.updated_at = datetime.utcnow()
+    
+    session.add(template)
+    session.commit()
+    session.refresh(template)
+    return template
+
+@router.post("/settings/templates/{key}/test")
+def test_send_template(
+    key: str,
+    payload: SendTestEmailPayload,
+    session: Session = Depends(get_session),
+    current_user: Optional[User] = Depends(get_current_user_from_request)
+):
+    if not current_user or current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only admins can send test emails")
+    
+    # Verify template exists
+    template = session.exec(select(EmailTemplate).where(EmailTemplate.key == key)).first()
+    if not template:
+        raise HTTPException(status_code=404, detail="Email template not found")
+        
+    from backend.email_service import send_confirmation_email, send_broadcast_email
+    from backend.routers.tournament import send_resend_email
+    
+    test_email = payload.email
+    success = False
+    details = ""
+    
+    try:
+        if key == "registration_confirmed":
+            res = send_confirmation_email(
+                to_email=test_email,
+                first_name="John",
+                event_title="Padels Tournament 2026",
+                clearance_id="ABCDEF",
+                event_details={"start_date": "2026-06-25T10:00:00Z", "location": "Arena Center", "address": "123 Padel Court Way"},
+                is_attending=True
+            )
+            success = res is not None
+            details = f"Confirmation email send result: {res}"
+        elif key == "registration_declined":
+            res = send_confirmation_email(
+                to_email=test_email,
+                first_name="John",
+                event_title="Padels Tournament 2026",
+                clearance_id="ABCDEF",
+                is_attending=False
+            )
+            success = res is not None
+            details = f"Decline email send result: {res}"
+        elif key == "partner_pending":
+            res = send_confirmation_email(
+                to_email=test_email,
+                first_name="John",
+                event_title="Padels Tournament 2026",
+                clearance_id="ABCDEF",
+                is_attending=True,
+                profile_update_link="https://events.eelogistics.co.za/update/ABCDEF"
+            )
+            success = res is not None
+            details = f"Partner details pending email send result: {res}"
+        elif key == "broadcast":
+            res = send_broadcast_email(
+                registrations_data=[{"email": test_email, "first_name": "John", "last_name": "Doe", "pin": "123456"}],
+                subject="Test Broadcast Subject",
+                body="This is a test broadcast email message. Custom variables like {first_name} parse automatically.",
+                event_title="Padels Tournament 2026",
+                signature="Event Logistics Admin Team",
+                event_details={"start_date": "2026-06-25T10:00:00Z", "location": "Arena Center"}
+            )
+            success = res is True
+            details = f"Broadcast dispatch status: {res}"
+        elif key == "tournament_matchup":
+            res = send_resend_email(
+                to_email=test_email,
+                name="John Doe",
+                role="Challenger",
+                opponent_name="Jane Smith",
+                pin="123456",
+                qr_hash="test-qr-hash",
+                profile_update_link="https://events.eelogistics.co.za/update/ABCDEF"
+            )
+            success = res is not None
+            details = f"Tournament matchup send result: {res}"
+        else:
+            raise HTTPException(status_code=400, detail="Unknown template key")
+            
+        return {"status": "success", "success": success, "details": details}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to send test email: {str(e)}")
