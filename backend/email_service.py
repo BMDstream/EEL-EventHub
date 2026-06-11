@@ -36,9 +36,24 @@ def get_template_from_db(key: str) -> Optional[EmailTemplate]:
     try:
         with Session(engine) as session:
             template = session.exec(select(EmailTemplate).where(EmailTemplate.key == key)).first()
+            if not template:
+                # Self-healing: Check if this is a default template and seed it
+                from backend.default_templates import DEFAULT_TEMPLATES
+                if key in DEFAULT_TEMPLATES:
+                    val = DEFAULT_TEMPLATES[key]
+                    template = EmailTemplate(
+                        key=key,
+                        name=val["name"],
+                        subject=val["subject"],
+                        body_html=val["body_html"]
+                    )
+                    session.add(template)
+                    session.commit()
+                    session.refresh(template)
+                    print(f"Auto-seeded missing template '{key}' during email dispatch.")
             return template
     except Exception as e:
-        print(f"Error fetching email template '{key}': {e}")
+        print(f"Error fetching/seeding email template '{key}': {e}")
         return None
 
 def parse_template(text: str, variables: Dict[str, Any]) -> str:

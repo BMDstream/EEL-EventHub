@@ -140,18 +140,22 @@ def on_startup():
                 # Re-verify table exists before querying
                 inspector = inspect(engine)
                 if inspector.has_table('emailtemplate'):
-                    templates_count = session.exec(select(func.count(EmailTemplate.id))).one()
-                    if templates_count == 0:
-                        from backend.default_templates import DEFAULT_TEMPLATES
-                        for k, val in DEFAULT_TEMPLATES.items():
+                    from backend.default_templates import DEFAULT_TEMPLATES
+                    existing = session.exec(select(EmailTemplate)).all()
+                    existing_keys = {t.key for t in existing}
+                    added_any = False
+                    for k, val in DEFAULT_TEMPLATES.items():
+                        if k not in existing_keys:
                             session.add(EmailTemplate(
                                 key=k,
                                 name=val["name"],
                                 subject=val["subject"],
                                 body_html=val["body_html"]
                             ))
+                            added_any = True
+                    if added_any:
                         session.commit()
-                        print("Default email templates seeded successfully.")
+                        print("Seeded missing default email templates successfully.")
             except Exception as e:
                 session.rollback()
                 print(f"Email template seeding error: {e}")

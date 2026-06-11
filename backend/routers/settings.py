@@ -227,7 +227,34 @@ def get_all_templates(
 ):
     if not current_user or current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Only admins can view email templates")
-    return session.exec(select(EmailTemplate)).all()
+    
+    # Self-healing: Check if any default templates are missing and seed them on the fly
+    from backend.default_templates import DEFAULT_TEMPLATES
+    existing_templates = session.exec(select(EmailTemplate)).all()
+    existing_keys = {t.key for t in existing_templates}
+    
+    added_any = False
+    for key, val in DEFAULT_TEMPLATES.items():
+        if key not in existing_keys:
+            new_template = EmailTemplate(
+                key=key,
+                name=val["name"],
+                subject=val["subject"],
+                body_html=val["body_html"]
+            )
+            session.add(new_template)
+            added_any = True
+            
+    if added_any:
+        try:
+            session.commit()
+            # Refresh list
+            existing_templates = session.exec(select(EmailTemplate)).all()
+        except Exception as e:
+            session.rollback()
+            print(f"Error seeding missing templates: {e}")
+            
+    return existing_templates
 
 @router.get("/settings/templates/{key}", response_model=EmailTemplate)
 def get_template(
@@ -239,7 +266,25 @@ def get_template(
         raise HTTPException(status_code=403, detail="Only admins can view email templates")
     template = session.exec(select(EmailTemplate).where(EmailTemplate.key == key)).first()
     if not template:
-        raise HTTPException(status_code=404, detail="Email template not found")
+        # Self-healing: Check if this is a default template and seed it
+        from backend.default_templates import DEFAULT_TEMPLATES
+        if key in DEFAULT_TEMPLATES:
+            val = DEFAULT_TEMPLATES[key]
+            template = EmailTemplate(
+                key=key,
+                name=val["name"],
+                subject=val["subject"],
+                body_html=val["body_html"]
+            )
+            session.add(template)
+            try:
+                session.commit()
+                session.refresh(template)
+            except Exception as e:
+                session.rollback()
+                raise HTTPException(status_code=500, detail=f"Failed to auto-seed template: {e}")
+        else:
+            raise HTTPException(status_code=404, detail="Email template not found")
     return template
 
 @router.put("/settings/templates/{key}", response_model=EmailTemplate)
