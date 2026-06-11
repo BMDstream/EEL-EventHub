@@ -25,7 +25,10 @@ import {
   Type,
   Layout,
   AlertTriangle,
-  Link
+  Link,
+  Bold,
+  Italic,
+  Underline
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSession } from "next-auth/react";
@@ -224,6 +227,9 @@ const DEFAULT_FORM_FIELDS: Record<string, Record<string, string>> = {
   registration_confirmed: {
     primary_color: "#0f172a",
     accent_color: "#94a3b8",
+    logo_text: "BMD",
+    logo_image_url: "",
+    show_logo: "true",
     heading_title: "Registration",
     heading_subtitle: "Confirmed",
     body_text: "Your registration has been successfully confirmed. Below are your secure credentials for terminal verification.",
@@ -233,6 +239,9 @@ const DEFAULT_FORM_FIELDS: Record<string, Record<string, string>> = {
   registration_declined: {
     primary_color: "#0f172a",
     accent_color: "#94a3b8",
+    logo_text: "BMD",
+    logo_image_url: "",
+    show_logo: "true",
     heading_title: "Response",
     heading_subtitle: "Recorded",
     body_text: "We have recorded your response that you are unable to attend the event. Thank you for letting us know, and we hope to connect with you at future events.",
@@ -241,6 +250,9 @@ const DEFAULT_FORM_FIELDS: Record<string, Record<string, string>> = {
   partner_pending: {
     primary_color: "#0f172a",
     accent_color: "#eab308",
+    logo_text: "BMD",
+    logo_image_url: "",
+    show_logo: "true",
     heading_title: "Action",
     heading_subtitle: "Required",
     urgent_title: "⚠️ Action Required ASAP",
@@ -252,6 +264,9 @@ const DEFAULT_FORM_FIELDS: Record<string, Record<string, string>> = {
   broadcast: {
     primary_color: "#0f172a",
     accent_color: "#eab308",
+    logo_text: "BMD",
+    logo_image_url: "",
+    show_logo: "true",
     body_text: "This is a customized broadcast update message for you. Please make sure to arrive 30 minutes before the start time.",
     signature: "The Championship Tournament Team",
     footer_text: "Automated Event Management System • Security Tier 4",
@@ -259,6 +274,9 @@ const DEFAULT_FORM_FIELDS: Record<string, Record<string, string>> = {
   tournament_matchup: {
     primary_color: "#030712",
     accent_color: "#eab308",
+    logo_text: "BMD",
+    logo_image_url: "",
+    show_logo: "true",
     heading_title: "Championship",
     heading_subtitle: "Access Granted",
     body_text: "Hello, you have been registered as the Challenger.",
@@ -579,11 +597,49 @@ export default function EmailTemplatesPage() {
   const [formValues, setFormValues] = useState<Record<string, string>>({});
 
   const previewFrameRef = useRef<HTMLIFrameElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const applyFormat = (tagOpen: string, tagClose: string) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = textarea.value;
+    const selected = text.substring(start, end);
+    const replacement = tagOpen + selected + tagClose;
+    
+    const newValue = text.substring(0, start) + replacement + text.substring(end);
+    handleFormChange("body_text", newValue);
+    
+    // Set selection back
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(start + tagOpen.length, start + tagOpen.length + selected.length);
+    }, 0);
+  };
 
   // Compile preview HTML locally
   const getPreviewHtml = () => {
     let html = bodyHtml;
-    const mockVars = MOCK_PREVIEW_DATA[selectedKey] || {};
+    const mockVars = { ...(MOCK_PREVIEW_DATA[selectedKey] || {}) };
+    
+    // Construct dynamic logo_html based on formValues
+    const logoText = formValues.logo_text || "BMD";
+    const logoImgUrl = formValues.logo_image_url || "";
+    const primaryCol = formValues.primary_color || "#0f172a";
+    const showLogo = formValues.show_logo !== "false";
+    
+    let logoHtmlStr = "";
+    if (showLogo) {
+      if (logoImgUrl) {
+        logoHtmlStr = `<td align="right" valign="middle"><img src="${logoImgUrl}" style="max-height: 48px; max-width: 140px; object-fit: contain; display: block;" alt="Logo" /></td>`;
+      } else {
+        logoHtmlStr = `<td align="right" valign="middle"><div style="background-color:${primaryCol};padding:8px 16px;border-radius:8px;color:#fff;font-weight:bold;font-size:14px;display:inline-block;font-family:sans-serif;">${logoText}</div></td>`;
+      }
+    }
+    
+    mockVars.logo_html = logoHtmlStr;
     
     // Perform simple string replacements
     Object.entries(mockVars).forEach(([key, value]) => {
@@ -614,11 +670,8 @@ export default function EmailTemplatesPage() {
             
             // Sync Form values
             const meta = parseTemplateMeta(current.body_html);
-            if (meta) {
-              setFormValues(meta);
-            } else {
-              setFormValues(DEFAULT_FORM_FIELDS[selectedKey] || {});
-            }
+            const defaults = DEFAULT_FORM_FIELDS[selectedKey] || {};
+            setFormValues({ ...defaults, ...meta });
           }
         }
       } catch (err) {
@@ -663,11 +716,8 @@ export default function EmailTemplatesPage() {
       setHasUnsavedChanges(false);
       
       const meta = parseTemplateMeta(target.body_html);
-      if (meta) {
-        setFormValues(meta);
-      } else {
-        setFormValues(DEFAULT_FORM_FIELDS[key] || {});
-      }
+      const defaults = DEFAULT_FORM_FIELDS[key] || {};
+      setFormValues({ ...defaults, ...meta });
     }
   };
 
@@ -735,11 +785,8 @@ export default function EmailTemplatesPage() {
         
         // Reset Visual Form Fields
         const meta = parseTemplateMeta(resetTemplate.body_html);
-        if (meta) {
-          setFormValues(meta);
-        } else {
-          setFormValues(DEFAULT_FORM_FIELDS[selectedKey] || {});
-        }
+        const defaults = DEFAULT_FORM_FIELDS[selectedKey] || {};
+        setFormValues({ ...defaults, ...meta });
         
         setNotification({ type: "success", text: "Template restored to default layout successfully!" });
       } else {
@@ -793,8 +840,9 @@ export default function EmailTemplatesPage() {
   const handleModeToggle = (mode: "visual" | "html") => {
     if (mode === "visual") {
       const meta = parseTemplateMeta(bodyHtml);
+      const defaults = DEFAULT_FORM_FIELDS[selectedKey] || {};
       if (meta) {
-        setFormValues(meta);
+        setFormValues({ ...defaults, ...meta });
       }
     }
     setEditorMode(mode);
@@ -1108,6 +1156,88 @@ export default function EmailTemplatesPage() {
                       </div>
                     </div>
 
+                    {/* Logo & Branding Header Section */}
+                    <div className="space-y-4 bg-slate-50/50 dark:bg-slate-800/20 p-5 rounded-2xl border border-slate-100/50 dark:border-slate-800/50">
+                      <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#0f172a] dark:text-white flex items-center gap-2">
+                        <Sparkles size={12} className="text-purple-500" />
+                        Logo & Branding Header
+                      </h4>
+                      
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <label className="text-[9px] font-black uppercase tracking-wider text-slate-400">
+                            Show Logo in Email Header
+                          </label>
+                          <input
+                            type="checkbox"
+                            checked={formValues.show_logo !== "false"}
+                            onChange={(e) => handleFormChange("show_logo", e.target.checked ? "true" : "false")}
+                            className="w-4 h-4 text-yellow-500 bg-slate-100 border-slate-300 rounded focus:ring-yellow-500 focus:ring-2 dark:bg-slate-800"
+                          />
+                        </div>
+
+                        {formValues.show_logo !== "false" && (
+                          <>
+                            <div className="space-y-1.5">
+                              <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
+                                Logo Type
+                              </label>
+                              <div className="flex gap-4">
+                                <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-350 cursor-pointer">
+                                  <input
+                                    type="radio"
+                                    name="logo_type"
+                                    checked={!formValues.logo_image_url}
+                                    onChange={() => handleFormChange("logo_image_url", "")}
+                                    className="text-yellow-500 focus:ring-yellow-500"
+                                  />
+                                  Text Logo
+                                </label>
+                                <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-350 cursor-pointer">
+                                  <input
+                                    type="radio"
+                                    name="logo_type"
+                                    checked={!!formValues.logo_image_url}
+                                    onChange={() => handleFormChange("logo_image_url", "https://")}
+                                    className="text-yellow-500 focus:ring-yellow-500"
+                                  />
+                                  Image URL Logo
+                                </label>
+                              </div>
+                            </div>
+
+                            {!formValues.logo_image_url ? (
+                              <div className="space-y-1.5">
+                                <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
+                                  Logo Text
+                                </label>
+                                <input
+                                  type="text"
+                                  value={formValues.logo_text || "BMD"}
+                                  onChange={(e) => handleFormChange("logo_text", e.target.value)}
+                                  placeholder="e.g. BMD"
+                                  className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 focus:border-yellow-400 outline-none font-bold text-sm text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                                />
+                              </div>
+                            ) : (
+                              <div className="space-y-1.5">
+                                <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
+                                  Logo Image URL
+                                </label>
+                                <input
+                                  type="text"
+                                  value={formValues.logo_image_url === "https://" ? "" : formValues.logo_image_url}
+                                  onChange={(e) => handleFormChange("logo_image_url", e.target.value || "https://")}
+                                  placeholder="https://example.com/logo.png"
+                                  className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 focus:border-yellow-400 outline-none font-medium text-sm text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white font-mono"
+                                />
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </div>
+
                     {/* Header Titles Section (Only for relevant templates) */}
                     {["registration_confirmed", "registration_declined", "partner_pending", "tournament_matchup"].includes(selectedKey) && (
                       <div className="space-y-4 bg-slate-50/50 dark:bg-slate-800/20 p-5 rounded-2xl border border-slate-100/50 dark:border-slate-800/50">
@@ -1192,12 +1322,89 @@ export default function EmailTemplatesPage() {
                         <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
                           Main Body Message
                         </label>
+                        
+                        {/* Rich Text Styling Toolbar */}
+                        <div className="flex flex-wrap items-center gap-1 p-1.5 bg-slate-50 dark:bg-slate-800 rounded-t-2xl border-t border-x border-slate-200 dark:border-slate-700">
+                          {/* Font Dropdown */}
+                          <select
+                            onChange={(e) => {
+                              if (e.target.value) {
+                                applyFormat(`<span style="font-family: ${e.target.value};">`, "</span>");
+                                e.target.value = ""; // Reset dropdown
+                              }
+                            }}
+                            className="px-2 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 outline-none cursor-pointer"
+                            defaultValue=""
+                          >
+                            <option value="" disabled hidden>Font</option>
+                            <option value="sans-serif">Sans-serif</option>
+                            <option value="Georgia, serif">Georgia</option>
+                            <option value="Courier New, monospace">Courier</option>
+                            <option value="Arial, Helvetica, sans-serif">Arial</option>
+                            <option value="Times New Roman, Times, serif">Times</option>
+                            <option value="Trebuchet MS, sans-serif">Trebuchet</option>
+                          </select>
+
+                          {/* Size Dropdown */}
+                          <select
+                            onChange={(e) => {
+                              if (e.target.value) {
+                                applyFormat(`<span style="font-size: ${e.target.value};">`, "</span>");
+                                e.target.value = ""; // Reset dropdown
+                              }
+                            }}
+                            className="px-2 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 outline-none cursor-pointer"
+                            defaultValue=""
+                          >
+                            <option value="" disabled hidden>Size</option>
+                            <option value="12px">Small (12px)</option>
+                            <option value="15px">Normal (15px)</option>
+                            <option value="18px">Large (18px)</option>
+                            <option value="24px">X-Large (24px)</option>
+                            <option value="32px">Huge (32px)</option>
+                          </select>
+
+                          {/* Divider */}
+                          <div className="w-px h-5 bg-slate-350 dark:bg-slate-650 mx-1.5" />
+
+                          {/* Bold Button */}
+                          <button
+                            type="button"
+                            onClick={() => applyFormat("<strong>", "</strong>")}
+                            className="p-2 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-705 text-slate-600 dark:text-slate-350 transition-colors"
+                            title="Bold"
+                          >
+                            <Bold size={14} />
+                          </button>
+
+                          {/* Italic Button */}
+                          <button
+                            type="button"
+                            onClick={() => applyFormat("<em>", "</em>")}
+                            className="p-2 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-705 text-slate-600 dark:text-slate-350 transition-colors"
+                            title="Italic"
+                          >
+                            <Italic size={14} />
+                          </button>
+
+                          {/* Underline Button */}
+                          <button
+                            type="button"
+                            onClick={() => applyFormat("<u>", "</u>")}
+                            className="p-2 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-705 text-slate-600 dark:text-slate-350 transition-colors"
+                            title="Underline"
+                          >
+                            <Underline size={14} />
+                          </button>
+                        </div>
+
                         <textarea 
+                          ref={textareaRef}
                           rows={6}
                           value={formValues.body_text || ""}
                           onChange={(e) => handleFormChange("body_text", e.target.value)}
                           placeholder="Write your email body copy here..."
-                          className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 focus:border-yellow-400 outline-none font-medium text-sm text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                          className="w-full px-4 py-3 rounded-b-2xl bg-white border border-t-0 border-slate-200 focus:border-yellow-400 focus:ring-0 outline-none font-medium text-sm text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white"
                         />
                         <p className="text-[10px] text-slate-400 leading-normal pt-0.5">
                           Supports dynamic variables like <code>{`{first_name}`}</code> and <code>{`{event_title}`}</code>.

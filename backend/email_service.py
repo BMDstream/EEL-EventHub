@@ -64,6 +64,47 @@ def parse_template(text: str, variables: Dict[str, Any]) -> str:
         text = text.replace(placeholder, str(v) if v is not None else "")
     return text
 
+def parse_template_meta(html: str) -> dict:
+    import re
+    import json
+    if not html:
+        return {}
+    match = re.search(r'<!-- TEMPLATE_META: ({.*?}) -->', html)
+    if match:
+        try:
+            return json.loads(match.group(1))
+        except Exception as e:
+            print(f"Failed to parse template meta in email service: {e}")
+    return {}
+
+def get_logo_html(config: Optional[dict], meta: dict, primary_color: str) -> str:
+    logo_url = config.get("logo_url") if config else None
+    if logo_url:
+        return f"""
+        <td align="right" valign="middle" style="padding-bottom: 0px;">
+            <img src="{logo_url}" style="max-height: 48px; max-width: 140px; object-fit: contain; display: block;" alt="Client Logo" />
+        </td>
+        """
+    show_logo = meta.get("show_logo", "true") != "false"
+    if show_logo:
+        logo_image_url = meta.get("logo_image_url")
+        if logo_image_url:
+            return f"""
+            <td align="right" valign="middle" style="padding-bottom: 0px;">
+                <img src="{logo_image_url}" style="max-height: 48px; max-width: 140px; object-fit: contain; display: block;" alt="Logo" />
+            </td>
+            """
+        logo_text = meta.get("logo_text", "BMD")
+        logo_bg = primary_color or meta.get("primary_color", "#0f172a")
+        return f"""
+        <td align="right" valign="middle">
+            <div style="background-color:{logo_bg};padding:8px 16px;border-radius:8px;color:#fff;font-weight:bold;font-size:14px;display:inline-block;font-family:sans-serif;">
+                {logo_text}
+            </div>
+        </td>
+        """
+    return ""
+
 def send_confirmation_email(
     to_email: str, 
     first_name: str, 
@@ -100,7 +141,13 @@ def send_confirmation_email(
     else:
         footer_html = footer_text_raw.replace("\n", "<br>")
         
-    logo_url = config.get("logo_url")
+    t_key = "registration_confirmed"
+    if profile_update_link:
+        t_key = "partner_pending"
+    elif not is_attending:
+        t_key = "registration_declined"
+    db_template = get_template_from_db(t_key)
+    meta = parse_template_meta(db_template.body_html) if db_template else {}
 
     # Set badge, heading, and body texts depending on RSVP status
     badge_text = "Attendee Pass" if is_attending else "Response Recorded"
@@ -242,13 +289,7 @@ def send_confirmation_email(
     heading_title = heading_parts[0]
     heading_subtitle = heading_parts[1] if len(heading_parts) > 1 else ''
 
-    logo_td_html = ""
-    if logo_url:
-        logo_td_html = f"""
-        <td align="right" valign="middle" style="padding-bottom: 0px;">
-            <img src="{logo_url}" style="max-height: 48px; max-width: 140px; object-fit: contain; display: block;" alt="Client Logo" />
-        </td>
-        """
+    logo_td_html = get_logo_html(config, meta, primary_color)
 
     html_content = f"""
     <table width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; table-layout: fixed; margin: 0; padding: 0;">
@@ -327,13 +368,6 @@ def send_confirmation_email(
     db_subject = None
     db_html = None
     try:
-        t_key = "registration_confirmed"
-        if profile_update_link:
-            t_key = "partner_pending"
-        elif not is_attending:
-            t_key = "registration_declined"
-            
-        db_template = get_template_from_db(t_key)
         if db_template:
             variables = {
                 "first_name": first_name,
@@ -424,15 +458,10 @@ def send_broadcast_email(
 
     primary_color = config.get("primary_color", "#0f172a")
     accent_color = config.get("accent_color", "#94a3b8")
-    logo_url = config.get("logo_url")
-
-    logo_td_html = ""
-    if logo_url:
-        logo_td_html = f"""
-        <td align="right" valign="middle" style="padding-bottom: 0px;">
-            <img src="{logo_url}" style="max-height: 48px; max-width: 140px; object-fit: contain; display: block;" alt="Client Logo" />
-        </td>
-        """
+    
+    db_template = get_template_from_db("broadcast")
+    meta = parse_template_meta(db_template.body_html) if db_template else {}
+    logo_td_html = get_logo_html(config, meta, primary_color)
 
     sender_name = config.get("sender_name") if config else None
     if not sender_name:
@@ -463,7 +492,6 @@ def send_broadcast_email(
         except:
             date_str = str(event_details.get('start_date', 'TBA'))
 
-    db_template = get_template_from_db("broadcast")
 
     for reg in registrations_data:
         to_email = reg["email"]
