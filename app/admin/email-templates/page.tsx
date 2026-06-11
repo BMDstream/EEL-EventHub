@@ -692,6 +692,21 @@ export default function EmailTemplatesPage() {
     return html;
   };
 
+  // Warn before unload if there are unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = "You have unsaved changes. Are you sure you want to leave?";
+        return e.returnValue;
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [hasUnsavedChanges]);
+
   // Load all templates from API
   useEffect(() => {
     async function loadTemplates() {
@@ -1618,6 +1633,26 @@ export default function EmailTemplatesPage() {
                     </div>
                   </div>
                 )}
+              {/* Save Footer Bar at the bottom of the editor card */}
+              <div className="mt-6 pt-4 border-t border-slate-150 dark:border-slate-800 flex items-center justify-between gap-4">
+                <span className="text-xs font-bold text-slate-450 dark:text-slate-500">
+                  {hasUnsavedChanges ? "⚠️ You have unsaved changes" : "✅ All changes deployed"}
+                </span>
+                
+                <button
+                  type="button"
+                  onClick={handleSave}
+                  disabled={saving || resetting || !hasUnsavedChanges}
+                  className={`flex items-center gap-2 px-6 py-3.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-xl ${
+                    hasUnsavedChanges 
+                      ? "bg-[#0f172a] text-white hover:bg-black shadow-slate-200 dark:bg-yellow-400 dark:text-black dark:shadow-yellow-500/10"
+                      : "bg-slate-100 text-slate-400 cursor-not-allowed dark:bg-slate-800 dark:text-slate-650"
+                  }`}
+                >
+                  {saving ? <Loader2 className="animate-spin" size={14} /> : <Save size={14} />}
+                  {saving ? "Deploying..." : "Save Layout"}
+                </button>
+              </div>
               </div>
             </div>
           </div>
