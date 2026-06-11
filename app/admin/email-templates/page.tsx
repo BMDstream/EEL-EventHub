@@ -28,7 +28,8 @@ import {
   Link,
   Bold,
   Italic,
-  Underline
+  Underline,
+  Upload
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSession } from "next-auth/react";
@@ -63,23 +64,47 @@ const MOCK_PREVIEW_DATA: Record<string, Record<string, string>> = {
     heading_subtitle: "Confirmed",
     logo_html: '<td align="right" valign="middle"><div style="background-color:#0f172a;padding:8px 16px;border-radius:8px;color:#fff;font-weight:bold;font-size:14px;display:inline-block;">BMD</div></td>',
     body_html: "Your registration has been confirmed. Below are your secure credentials for terminal verification.",
-    details_html: `<div style="background: #ffffff; padding: 24px; border: 1px solid #f1f5f9; border-radius: 20px; margin-bottom: 20px;">
-      <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; color: #94a3b8; margin: 0 0 4px 0; font-family: sans-serif;">Event</p>
-      <p style="font-size: 16px; font-weight: 800; color: #0f172a; margin: 0 0 12px 0; font-family: sans-serif;">Padels Tournament 2026</p>
-      <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; color: #94a3b8; margin: 0 0 4px 0; font-family: sans-serif;">Date & Time</p>
-      <p style="font-size: 14px; font-weight: 700; color: #0f172a; margin: 0 0 12px 0; font-family: sans-serif;">Thursday, June 25, 2026 @ 10:00 AM</p>
-      <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; color: #94a3b8; margin: 0; font-family: sans-serif;">Venue</p>
-      <p style="font-size: 14px; font-weight: 700; color: #0f172a; margin: 0; font-family: sans-serif;">Arena Center</p>
-    </div>`,
-    qr_block_html: `<div style="background: #f8fafc; padding: 32px; border-radius: 20px; text-align: center; border: 1px solid #f1f5f9; margin-bottom: 20px;">
-      <div style="width: 140px; height: 140px; background-color: #0f172a; margin: 0 auto 16px auto; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 10px; font-weight: bold; font-family: sans-serif;">[QR CODE PREVIEW]</div>
-      <p style="font-size: 10px; font-weight: 900; text-transform: uppercase; color: #64748b; margin-bottom: 8px; font-family: sans-serif;">Ticket Reference ID</p>
-      <div style="display: inline-block; background: #ffffff; padding: 8px 16px; border-radius: 12px; border: 2px solid #0f172a;">
-        <code style="font-size: 20px; font-weight: 900; color: #0f172a; letter-spacing: 0.15em; font-family: monospace;">ABCDEF</code>
+    details_html: `<div style="background: #ffffff; padding: 32px; border: 1px solid #f1f5f9; border-radius: 32px; margin-bottom: 40px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
+      <p style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.3em; color: #eab308; margin-bottom: 24px;">Engagement Details</p>
+      
+      <div style="margin-bottom: 20px;">
+        <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin: 0 0 4px 0;">Event</p>
+        <p style="font-size: 18px; font-weight: 800; color: #0f172a; margin: 0;">Padels Tournament 2026</p>
+      </div>
+
+      <div style="margin-bottom: 20px;">
+        <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin: 0 0 4px 0;">Date & Time</p>
+        <p style="font-size: 16px; font-weight: 700; color: #0f172a; margin: 0;">Thursday, June 25, 2026 @ 10:00 AM</p>
+      </div>
+
+      <div style="margin-bottom: 20px;">
+        <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin: 0 0 4px 0;">Venue</p>
+        <p style="font-size: 16px; font-weight: 700; color: #0f172a; margin: 0;">Arena Center</p>
+      </div>
+
+      <div style="margin-bottom: 20px;">
+        <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin: 0 0 4px 0;">Address</p>
+        <p style="font-size: 16px; font-weight: 700; color: #0f172a; margin: 0 0 10px 0;">123 Padel Court Way</p>
+        <a href="#" style="display: inline-block; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.05em; color: #ffffff; background-color: #0f172a; text-decoration: none; padding: 10px 20px; border-radius: 12px; margin-top: 4px;">
+          🗺️ Open in Google Maps
+        </a>
+      </div>
+
+      <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #f1f5f9;">
+        <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.15em; color: #eab308; margin: 0 0 4px 0;">Matchup Details</p>
+        <p style="font-size: 18px; font-weight: 800; color: #0f172a; margin: 0;">John Doe vs Jane Smith</p>
+        <p style="font-size: 11px; color: #64748b; margin: 2px 0 0 0;">Sports Tournament Series</p>
       </div>
     </div>`,
-    warning_block_html: `<div style="background: #fffbeb; padding: 16px; border-radius: 12px; border: 1px solid #fef3c7; margin-bottom: 20px; text-align: center;">
-      <p style="color: #b45309; font-size: 12px; font-weight: 700; margin: 0; text-transform: uppercase; font-family: sans-serif;">Please present this QR code at the check-in desk.</p>
+    qr_block_html: `<div style="background: #f8fafc; padding: 48px; border-radius: 32px; text-align: center; border: 1px solid #f1f5f9; margin-bottom: 40px; position: relative; overflow: hidden; font-family: sans-serif;">
+      <div style="width: 200px; height: 200px; background-color: #0f172a; margin: 0 auto 32px auto; border-radius: 20px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 11px; font-weight: bold; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.15);">[QR CODE PREVIEW]</div>
+      <p style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.3em; color: #64748b; margin-bottom: 16px; font-family: sans-serif;">Ticket Reference ID</p>
+      <div style="display: inline-block; background: #ffffff; padding: 16px 32px; border-radius: 20px; border: 2px solid #0f172a;">
+        <code style="font-size: 32px; font-weight: 900; color: #0f172a; letter-spacing: 0.25em; font-family: monospace;">ABCDEF</code>
+      </div>
+    </div>`,
+    warning_block_html: `<div style="background: #fffbeb; padding: 28px; border-radius: 24px; border: 1px solid #fef3c7; margin-bottom: 40px; text-align: center; font-family: sans-serif;">
+      <p style="color: #b45309; font-size: 14px; font-weight: 700; margin: 0; line-height: 1.5; text-transform: uppercase; letter-spacing: 0.05em;">Please present this QR code or code at the check-in desk.</p>
     </div>`,
     button_block_html: "",
     footer_text: "Automated Event Management System • Security Tier 4",
@@ -628,6 +653,7 @@ export default function EmailTemplatesPage() {
     const logoText = formValues.logo_text || "BMD";
     const logoImgUrl = formValues.logo_image_url || "";
     const primaryCol = formValues.primary_color || "#0f172a";
+    const accentCol = formValues.accent_color || "#eab308";
     const showLogo = formValues.show_logo !== "false";
     
     let logoHtmlStr = "";
@@ -640,6 +666,22 @@ export default function EmailTemplatesPage() {
     }
     
     mockVars.logo_html = logoHtmlStr;
+
+    // Dynamically replace theme colors in mock blocks
+    if (mockVars.details_html) {
+      mockVars.details_html = mockVars.details_html
+        .replaceAll("#0f172a", primaryCol)
+        .replaceAll("#eab308", accentCol);
+    }
+    if (mockVars.qr_block_html) {
+      mockVars.qr_block_html = mockVars.qr_block_html
+        .replaceAll("#0f172a", primaryCol);
+    }
+    if (mockVars.button_block_html) {
+      mockVars.button_block_html = mockVars.button_block_html
+        .replaceAll("#0f172a", primaryCol)
+        .replaceAll("#eab308", accentCol);
+    }
     
     // Perform simple string replacements
     Object.entries(mockVars).forEach(([key, value]) => {
@@ -1205,8 +1247,87 @@ export default function EmailTemplatesPage() {
                                 </label>
                               </div>
                             </div>
+                                         {formValues.logo_image_url !== "" ? (
+                              <div className="space-y-3">
+                                <div className="space-y-1.5">
+                                  <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
+                                    Upload Logo / Image File
+                                  </label>
+                                  
+                                  {/* Drag and Drop Zone */}
+                                  <div
+                                    onDragOver={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                    }}
+                                    onDrop={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      const file = e.dataTransfer.files?.[0];
+                                      if (file) {
+                                        const reader = new FileReader();
+                                        reader.onloadend = () => {
+                                          handleFormChange("logo_image_url", reader.result as string);
+                                        };
+                                        reader.readAsDataURL(file);
+                                      }
+                                    }}
+                                    onClick={() => {
+                                      const input = document.createElement("input");
+                                      input.type = "file";
+                                      input.accept = "image/*";
+                                      input.onchange = (e) => {
+                                        const file = (e.target as HTMLInputElement).files?.[0];
+                                        if (file) {
+                                          const reader = new FileReader();
+                                          reader.onloadend = () => {
+                                            handleFormChange("logo_image_url", reader.result as string);
+                                          };
+                                          reader.readAsDataURL(file);
+                                        }
+                                      };
+                                      input.click();
+                                    }}
+                                    className="w-full h-28 rounded-2xl border-2 border-dashed border-slate-200 hover:border-yellow-400/50 bg-slate-50/50 dark:border-slate-800 dark:bg-slate-900/30 flex flex-col items-center justify-center gap-1 cursor-pointer transition-all hover:bg-slate-100/30 group relative overflow-hidden"
+                                  >
+                                    {formValues.logo_image_url && formValues.logo_image_url !== "https://" ? (
+                                      <div className="relative w-full h-full p-2 flex items-center justify-center">
+                                        <img src={formValues.logo_image_url} alt="Logo" className="max-h-full max-w-full object-contain" />
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleFormChange("logo_image_url", "https://");
+                                          }}
+                                          className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 text-[10px] font-black uppercase shadow-md transition-all"
+                                        >
+                                          Remove
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      <>
+                                        <Upload className="text-slate-400 group-hover:text-yellow-500 transition-colors mb-1" size={24} />
+                                        <span className="text-[10px] font-bold text-slate-400 group-hover:text-slate-650 transition-colors">Drag & Drop Logo Here</span>
+                                        <span className="text-[9px] text-slate-400 font-medium">Or click to browse files</span>
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
 
-                            {!formValues.logo_image_url ? (
+                                <div className="space-y-1.5">
+                                  <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
+                                    Or enter Logo Image URL
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={formValues.logo_image_url === "https://" ? "" : formValues.logo_image_url}
+                                    onChange={(e) => handleFormChange("logo_image_url", e.target.value || "https://")}
+                                    placeholder="https://example.com/logo.png"
+                                    className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 focus:border-yellow-400 outline-none font-medium text-sm text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white font-mono"
+                                  />
+                                </div>
+                              </div>
+                            ) : (
                               <div className="space-y-1.5">
                                 <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
                                   Logo Text
@@ -1217,19 +1338,6 @@ export default function EmailTemplatesPage() {
                                   onChange={(e) => handleFormChange("logo_text", e.target.value)}
                                   placeholder="e.g. BMD"
                                   className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 focus:border-yellow-400 outline-none font-bold text-sm text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white"
-                                />
-                              </div>
-                            ) : (
-                              <div className="space-y-1.5">
-                                <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
-                                  Logo Image URL
-                                </label>
-                                <input
-                                  type="text"
-                                  value={formValues.logo_image_url === "https://" ? "" : formValues.logo_image_url}
-                                  onChange={(e) => handleFormChange("logo_image_url", e.target.value || "https://")}
-                                  placeholder="https://example.com/logo.png"
-                                  className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 focus:border-yellow-400 outline-none font-medium text-sm text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white font-mono"
                                 />
                               </div>
                             )}
