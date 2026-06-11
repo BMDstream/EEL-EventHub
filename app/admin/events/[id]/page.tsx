@@ -443,9 +443,16 @@ export default function EventDetailsPage() {
 
       const customInfo = (event?.custom_fields_schema || []).map(f => {
         const val = reg.custom_answers?.[f.id];
+        if (val === null || val === undefined || val === "") return "";
         if (typeof val === "boolean") return val ? "Yes" : "No";
         if (Array.isArray(val)) return escapeCSV(val.join(", "));
-        return escapeCSV(val || "");
+        if (typeof val === "object") {
+          if (val.first_name || val.last_name || val.email) {
+            return escapeCSV(`${val.first_name || ""} ${val.last_name || ""} (${val.email || ""})`.trim());
+          }
+          return escapeCSV(JSON.stringify(val));
+        }
+        return escapeCSV(val);
       });
 
       return [...basicInfo, ...customInfo];
