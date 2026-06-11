@@ -4,15 +4,23 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+import urllib.parse
 db_url = os.getenv("DATABASE_URL")
-# The Neon SQL API endpoint is usually: https://ep-holy-firefly-a8yqsuey.eastus2.azure.neon.tech/sql
-# Let's extract the clean host
-host = "ep-holy-firefly-a8yqsuey.eastus2.azure.neon.tech"
+
+# Extract host and password/token from DATABASE_URL if available
+if db_url:
+    parsed = urllib.parse.urlparse(db_url)
+    host = parsed.hostname
+    token = parsed.password or ""
+else:
+    host = "ep-holy-firefly-a8yqsuey.eastus2.azure.neon.tech"
+    token = ""
+
 url = f"https://{host}/sql"
 
 headers = {
-    "Authorization": f"Bearer npg_UZBj3Y4acwJi",
-    "Neon-Connection-String": db_url,
+    "Authorization": f"Bearer {token}",
+    "Neon-Connection-String": db_url or "",
     "Content-Type": "application/json"
 }
 

@@ -1,6 +1,9 @@
+import os
 import psycopg2
+from dotenv import load_dotenv
 
-db_url = "postgresql://neondb_owner:npg_UZBj3Y4acwJi@ep-holy-firefly-a8yqsuey-pooler.eastus2.azure.neon.tech/neondb?sslmode=require"
+load_dotenv()
+db_url = os.getenv("DATABASE_URL")
 
 try:
     conn = psycopg2.connect(db_url)

@@ -126,7 +126,7 @@ def send_confirmation_email(
         if matchup:
             matchup_html = f"""
             <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #f1f5f9;">
-                <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.15em; color: #eab308; margin: 0 0 4px 0;">Matchup Details</p>
+                <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.15em; color: #eab308; margin: 0 0 4px 0;">Partnered With</p>
                 <p style="font-size: 18px; font-weight: 800; color: {primary_color}; margin: 0;">{matchup}</p>
                 <p style="font-size: 11px; color: #64748b; margin: 2px 0 0 0;">Sports Tournament Series</p>
             </div>

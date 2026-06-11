@@ -126,7 +126,7 @@ def send_resend_email(to_email: str, name: str, role: str, opponent_name: str, p
         </p>
  
         <div style="background-color: #090d16; border: 1px solid #1e293b; border-radius: 20px; padding: 24px; margin-bottom: 30px; text-align: center;">
-            <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.15em; color: #eab308; margin: 0 0 10px 0;">Matchup Details</p>
+            <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.15em; color: #eab308; margin: 0 0 10px 0;">Partnered With</p>
             <p style="font-size: 18px; font-weight: 800; color: #ffffff; margin: 0;">{name} vs {opponent_name}</p>
             <p style="font-size: 13px; color: #64748b; margin: 5px 0 0 0;">Sports Tournament Series</p>
         </div>
