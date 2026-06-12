@@ -27,8 +27,11 @@ export default function SettingsPage() {
     heading_text: "Access Granted.",
     body_text: "Your registration for **{event_title}** has been confirmed. Below are your secure credentials for terminal verification.",
     footer_text: "Automated Event Management System\nSecurity Tier: Level 4 Authorized",
-    logo_url: ""
+    logo_url: "",
+    sender_name: "BMD-EventHub",
+    sender_email: ""
   });
+  const [senderEmails, setSenderEmails] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -70,12 +73,32 @@ export default function SettingsPage() {
         setLoading(false);
       }
     }
+
+    async function fetchSenderDomains() {
+      try {
+        const res = await fetch("/api/py/settings/sender-domains", {
+          headers: { "x-user-email": session?.user?.email || "" }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data)) {
+            setSenderEmails(data);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch sender domains", err);
+      }
+    }
+
     if (session?.user?.email) {
       fetchSettings();
+      if (userRole === "admin" || userRole === "manager") {
+        fetchSenderDomains();
+      }
     } else if (session === null) {
       setLoading(false);
     }
-  }, [session]);
+  }, [session, userRole]);
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -207,6 +230,38 @@ export default function SettingsPage() {
                   <p className="text-[10px] text-slate-400 italic">Use a period (.) to separate the two colors (e.g. Access.Granted)</p>
                 </div>
 
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-1 flex items-center gap-2">
+                      <Type size={12} /> Email Sender Name
+                    </label>
+                    <input 
+                      type="text" 
+                      value={config.sender_name || ""}
+                      onChange={(e) => setConfig({ ...config, sender_name: e.target.value })}
+                      placeholder="e.g. BMD-EventHub"
+                      className="w-full px-6 py-4 rounded-2xl bg-slate-50 border border-slate-200 focus:border-yellow-400 outline-none font-bold text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                    />
+                    <p className="text-[10px] text-slate-400 italic">This name will appear as the sender in the recipient's inbox (e.g. "EEL-Events").</p>
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-1 flex items-center gap-2">
+                      <Mail size={12} /> Email Sender Email
+                    </label>
+                    <select
+                      value={config.sender_email || ""}
+                      onChange={(e) => setConfig({ ...config, sender_email: e.target.value })}
+                      className="w-full px-6 py-4 rounded-2xl bg-slate-50 border border-slate-200 focus:border-yellow-400 outline-none font-bold text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white appearance-none cursor-pointer"
+                    >
+                      <option value="">Default (events@eelogistics.co.za)</option>
+                      {(senderEmails.length > 0 ? senderEmails : ["events@eelogistics.co.za", "events@bmdcomputing.com"]).map((email) => (
+                        <option key={email} value={email}>{email}</option>
+                      ))}
+                    </select>
+                    <p className="text-[10px] text-slate-400 italic">The email address used to send emails (must be a verified Resend domain).</p>
+                  </div>
+                </div>
               </div>
             </div>
 

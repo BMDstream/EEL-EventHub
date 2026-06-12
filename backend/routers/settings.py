@@ -18,8 +18,8 @@ def get_sender_domains(
 ):
     if not current_user:
         raise HTTPException(status_code=401, detail="Authentication required")
-    if current_user.role != "admin":
-        raise HTTPException(status_code=403, detail="Only admins can list sender domains")
+    if current_user.role not in ["admin", "manager"]:
+        raise HTTPException(status_code=403, detail="Only admins and managers can list sender domains")
     
     import os
     import resend
@@ -327,6 +327,13 @@ def test_send_template(
     success = False
     details = ""
     
+    email_setting = session.exec(select(SystemSetting).where(SystemSetting.key == "email_config")).first()
+    config = email_setting.value if email_setting else {}
+    if not config.get("sender_name"):
+        config["sender_name"] = "BMD-EventHub"
+    if not config.get("sender_email"):
+        config["sender_email"] = "events@eelogistics.co.za"
+
     try:
         if key == "registration_confirmed":
             res = send_confirmation_email(
@@ -336,7 +343,8 @@ def test_send_template(
                 clearance_id="ABCDEF",
                 event_details={"start_date": "2026-06-25T10:00:00Z", "location": "Arena Center", "address": "123 Padel Court Way"},
                 is_attending=True,
-                matchup="John Doe vs Jane Smith"
+                matchup="John Doe vs Jane Smith",
+                config=config
             )
             success = res is not None
             details = f"Confirmation email send result: {res}"
@@ -346,7 +354,8 @@ def test_send_template(
                 first_name="John",
                 event_title="Padels Tournament 2026",
                 clearance_id="ABCDEF",
-                is_attending=False
+                is_attending=False,
+                config=config
             )
             success = res is not None
             details = f"Decline email send result: {res}"
@@ -359,7 +368,8 @@ def test_send_template(
                 event_details={"start_date": "2026-06-25T10:00:00Z", "location": "Arena Center", "address": "123 Padel Court Way"},
                 is_attending=True,
                 profile_update_link="https://events.eelogistics.co.za/update/ABCDEF",
-                matchup="John Doe vs Jane Smith"
+                matchup="John Doe vs Jane Smith",
+                config=config
             )
             success = res is not None
             details = f"Partner details pending email send result: {res}"
@@ -370,7 +380,8 @@ def test_send_template(
                 body="This is a test broadcast email message. Custom variables like {first_name} parse automatically.",
                 event_title="Padels Tournament 2026",
                 signature="Event Logistics Admin Team",
-                event_details={"start_date": "2026-06-25T10:00:00Z", "location": "Arena Center"}
+                event_details={"start_date": "2026-06-25T10:00:00Z", "location": "Arena Center"},
+                config=config
             )
             success = res is True
             details = f"Broadcast dispatch status: {res}"

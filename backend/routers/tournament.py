@@ -12,7 +12,7 @@ from sqlmodel import SQLModel, Field, Session, select
 import resend
 
 from backend.database import get_session
-from backend.email_service import get_template_from_db, parse_template
+from backend.email_service import get_template_from_db, parse_template, parse_template_meta
 
 # Create FastAPI Router
 router = APIRouter(prefix="/api/py/tournament", tags=["tournament"])
@@ -186,8 +186,29 @@ def send_resend_email(to_email: str, name: str, role: str, opponent_name: str, p
         return "mock-email-id"
 
     try:
+        sender_name = "Tournament Hub"
+        sender_email = "events@eelogistics.co.za"
+        try:
+            from backend.database import engine
+            from backend.models import SystemSetting
+            with Session(engine) as db_session:
+                email_setting = db_session.exec(select(SystemSetting).where(SystemSetting.key == "email_config")).first()
+                if email_setting and email_setting.value:
+                    if email_setting.value.get("sender_name"):
+                        sender_name = email_setting.value["sender_name"]
+                    if email_setting.value.get("sender_email"):
+                        sender_email = email_setting.value["sender_email"]
+        except Exception as db_err:
+            print(f"Error fetching global email config for tournament email: {db_err}")
+
+        db_template = get_template_from_db("tournament_matchup")
+        if db_template:
+            meta = parse_template_meta(db_template.body_html)
+            if meta and meta.get("sender_name"):
+                sender_name = meta["sender_name"]
+                
         email_params = {
-            "from": "Tournament Hub <events@eelogistics.co.za>",
+            "from": f"{sender_name} <{sender_email}>",
             "to": to_email,
             "subject": db_subject if (db_subject and db_html) else subject,
             "html": db_html if (db_subject and db_html) else html_content

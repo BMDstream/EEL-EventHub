@@ -261,6 +261,7 @@ const DEFAULT_FORM_FIELDS: Record<string, Record<string, string>> = {
     warning_text: "Please present this QR code or code at the check-in desk.",
     details_title: "Matchup Details",
     engagement_title: "Engagement Details",
+    sender_name: "",
     footer_text: "Excellence Logistics & Entertainment\nAutomated Event Hub System",
   },
   registration_declined: {
@@ -272,6 +273,7 @@ const DEFAULT_FORM_FIELDS: Record<string, Record<string, string>> = {
     heading_title: "Response",
     heading_subtitle: "Recorded",
     body_text: "We have recorded your response that you are unable to attend the event. Thank you for letting us know, and we hope to connect with you at future events.",
+    sender_name: "",
     footer_text: "Excellence Logistics & Entertainment\nAutomated Event Hub System",
   },
   partner_pending: {
@@ -288,6 +290,7 @@ const DEFAULT_FORM_FIELDS: Record<string, Record<string, string>> = {
     button_text: "Update Your Ticket Details",
     details_title: "Matchup Details",
     engagement_title: "Engagement Details",
+    sender_name: "",
     footer_text: "Excellence Logistics & Entertainment\nAutomated Event Hub System",
   },
   broadcast: {
@@ -298,6 +301,7 @@ const DEFAULT_FORM_FIELDS: Record<string, Record<string, string>> = {
     show_logo: "true",
     body_text: "This is a customized broadcast update message for you. Please make sure to arrive 30 minutes before the start time.",
     signature: "The Championship Tournament Team",
+    sender_name: "",
     footer_text: "Automated Event Management System • Security Tier 4",
   },
   tournament_matchup: {
@@ -312,6 +316,7 @@ const DEFAULT_FORM_FIELDS: Record<string, Record<string, string>> = {
     details_title: "Partnered With",
     pin_label: "Backup Clearance PIN",
     button_text: "Update Your Ticket Details",
+    sender_name: "",
     footer_text: "EXCELLENCE ENTERTAINMENT LOGISTICS\nClearance Level: Tier 1 Authorized Tournament Series",
   }
 };
@@ -1366,6 +1371,22 @@ export default function EmailTemplatesPage() {
                             )}
                           </>
                         )}
+
+                        <hr className="border-slate-100 dark:border-slate-800/85 my-3" />
+
+                        <div className="space-y-1.5">
+                          <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
+                            Email Sender Name (Override)
+                          </label>
+                          <input
+                            type="text"
+                            value={formValues.sender_name || ""}
+                            onChange={(e) => handleFormChange("sender_name", e.target.value)}
+                            placeholder="Leave blank to use system settings default"
+                            className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 focus:border-yellow-400 outline-none font-bold text-sm text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                          />
+                          <p className="text-[9px] text-slate-400 italic">Overrides the global system settings sender name (e.g. "EEL-Events").</p>
+                        </div>
                       </div>
                     </div>
 

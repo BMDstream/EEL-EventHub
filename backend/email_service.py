@@ -395,7 +395,7 @@ def send_confirmation_email(
         print(f"Error applying database template override: {ex}")
 
     try:
-        sender_name = config.get("sender_name") if config else None
+        sender_name = meta.get("sender_name") or (config.get("sender_name") if config else None)
         if not sender_name:
             sender_name = "BMD-EventHub"
             
@@ -465,7 +465,7 @@ def send_broadcast_email(
     meta = parse_template_meta(db_template.body_html) if db_template else {}
     logo_td_html = get_logo_html(config, meta, primary_color)
 
-    sender_name = config.get("sender_name") if config else None
+    sender_name = meta.get("sender_name") or (config.get("sender_name") if config else None)
     if not sender_name:
         sender_name = "BMD-EventHub"
         

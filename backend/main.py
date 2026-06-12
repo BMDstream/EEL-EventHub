@@ -102,7 +102,8 @@ def on_startup():
                     ("disclaimer_enabled", f"BOOLEAN DEFAULT {bool_false}"),
                     ("disclaimer_text", "TEXT"),
                     ("logo_url", "TEXT"),
-                    ("sender_email", "TEXT")
+                    ("sender_email", "TEXT"),
+                    ("sender_name", "TEXT")
                 ]:
                     if col_name not in event_columns:
                         try:

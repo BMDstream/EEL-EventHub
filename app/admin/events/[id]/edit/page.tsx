@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Save, Loader2, Trash2, Building2, Lock, Mail } from "lucide-react";
+import { ArrowLeft, Save, Loader2, Trash2, Building2, Lock, Mail, Type } from "lucide-react";
 import { useSession } from "next-auth/react";
 import AdminLayout from "@/components/AdminLayout";
 
@@ -91,6 +91,7 @@ export default function EditEventPage() {
     banner_url: "",
     logo_url: "",
     sender_email: "",
+    sender_name: "",
     client_id: "",
     collect_company: true,
     allowed_domains: "",
@@ -118,7 +119,7 @@ export default function EditEventPage() {
   }, [session]);
 
   useEffect(() => {
-    if (userRole !== "admin" || !session?.user?.email) return;
+    if ((userRole !== "admin" && userRole !== "manager") || !session?.user?.email) return;
     fetch("/api/py/settings/sender-domains", {
       headers: { "x-user-email": session.user.email }
     })
@@ -172,6 +173,7 @@ export default function EditEventPage() {
           banner_url: data.banner_url || "",
           logo_url: data.logo_url || "",
           sender_email: data.sender_email || "",
+          sender_name: data.sender_name || "",
           client_id: data.client_id ? data.client_id.toString() : "",
           collect_company: data.collect_company !== false,
           allowed_domains: data.allowed_domains ? data.allowed_domains.join(", ") : "",
@@ -209,6 +211,7 @@ export default function EditEventPage() {
         ...submitData,
         client_id: formData.client_id ? parseInt(formData.client_id) : null,
         sender_email: formData.sender_email || null,
+        sender_name: formData.sender_name || null,
         start_date: formData.start_date,
         allowed_domains: formData.allowed_domains
           ? formData.allowed_domains.split(",").map(d => d.trim().toLowerCase()).filter(d => d)
@@ -382,22 +385,38 @@ export default function EditEventPage() {
                   ))}
                 </select>
               </div>
-              {userRole === "admin" && (
-                <div className="space-y-3">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
-                    <Mail size={14} /> Email Sender Domain
-                  </label>
-                  <select
-                    name="sender_email"
-                    value={formData.sender_email}
-                    onChange={handleChange}
-                    className="w-full px-5 py-4 rounded-2xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-slate-700 bg-slate-50/50 appearance-none cursor-pointer dark:bg-slate-800 dark:text-white dark:border-slate-700"
-                  >
-                    <option value="">Default (events@eelogistics.co.za)</option>
-                    {(senderEmails.length > 0 ? senderEmails : ["events@eelogistics.co.za", "events@bmdcomputing.com"]).map((email) => (
-                      <option key={email} value={email}>{email}</option>
-                    ))}
-                  </select>
+              {(effectiveRole === "admin" || effectiveRole === "manager") && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                      <Mail size={14} /> Email Sender Domain
+                    </label>
+                    <select
+                      name="sender_email"
+                      value={formData.sender_email}
+                      onChange={handleChange}
+                      className="w-full px-5 py-4 rounded-2xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-slate-700 bg-slate-50/50 appearance-none cursor-pointer dark:bg-slate-800 dark:text-white dark:border-slate-700"
+                    >
+                      <option value="">Default (events@eelogistics.co.za)</option>
+                      {(senderEmails.length > 0 ? senderEmails : ["events@eelogistics.co.za", "events@bmdcomputing.com"]).map((email) => (
+                        <option key={email} value={email}>{email}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                      <Type size={14} /> Email Sender Name
+                    </label>
+                    <input
+                      type="text"
+                      name="sender_name"
+                      value={formData.sender_name}
+                      onChange={handleChange}
+                      placeholder="e.g. EEL-Events"
+                      className="w-full px-5 py-4 rounded-2xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-slate-700 bg-slate-50/50 dark:bg-slate-800 dark:text-white dark:border-slate-700"
+                    />
+                  </div>
                 </div>
               )}
               <div className="space-y-3">

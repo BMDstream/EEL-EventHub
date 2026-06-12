@@ -125,12 +125,17 @@ def get_event_email_config(event: Event, session: Session):
         if not config.get("sender_name"):
             config["sender_name"] = "BMD-EventHub"
             
-    # Set default sender_email
-    config["sender_email"] = "events@eelogistics.co.za"
+    # Set default sender_email if not configured
+    if not config.get("sender_email"):
+        config["sender_email"] = "events@eelogistics.co.za"
 
     # Override with event-specific sender_email if provided
     if getattr(event, "sender_email", None):
         config["sender_email"] = event.sender_email
+            
+    # Override with event-specific sender_name if provided
+    if getattr(event, "sender_name", None):
+        config["sender_name"] = event.sender_name
             
     # Override with event-specific logo if provided
     if getattr(event, "logo_url", None):

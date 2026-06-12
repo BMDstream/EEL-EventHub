@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { ArrowLeft, Save, Loader2, Sparkles, Globe, Calendar, MapPin, Users, FileText, Lock, Building2 } from "lucide-react";
+import { ArrowLeft, Save, Loader2, Sparkles, Globe, Calendar, MapPin, Users, FileText, Lock, Building2, Mail, Type } from "lucide-react";
 import Link from "next/link";
 import AdminLayout from "@/components/AdminLayout";
 
@@ -44,7 +44,10 @@ export default function CreateEventPage() {
     registration_end: "",
     disclaimer_enabled: false,
     disclaimer_text: "",
+    sender_email: "",
+    sender_name: "",
   });
+  const [senderEmails, setSenderEmails] = useState<string[]>([]);
 
   useEffect(() => {
     if (!session?.user?.email) return;
@@ -65,6 +68,20 @@ export default function CreateEventPage() {
       })
       .catch((err) => console.error("Failed to fetch clients", err));
   }, [session]);
+
+  useEffect(() => {
+    if ((userRole !== "admin" && userRole !== "manager") || !session?.user?.email) return;
+    fetch("/api/py/settings/sender-domains", {
+      headers: { "x-user-email": session.user.email }
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setSenderEmails(data);
+        }
+      })
+      .catch((err) => console.error("Failed to fetch sender domains", err));
+  }, [userRole, session]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,6 +104,8 @@ export default function CreateEventPage() {
         body: JSON.stringify({
           ...formData,
           client_id: formData.client_id ? parseInt(formData.client_id) : null,
+          sender_email: formData.sender_email || null,
+          sender_name: formData.sender_name || null,
           start_date: formData.start_date,
           allowed_domains: formData.allowed_domains
             ? formData.allowed_domains.split(",").map(d => d.trim().toLowerCase()).filter(d => d)
@@ -197,6 +216,41 @@ export default function CreateEventPage() {
                      </select>
                   </div>
                </div>
+
+                {(userRole === "admin" || userRole === "manager") && (
+                  <div className="mt-10 grid grid-cols-1 md:grid-cols-2 gap-10">
+                    <div className="space-y-3">
+                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                          <Mail size={14} /> Email Sender Domain
+                       </label>
+                       <select
+                         name="sender_email"
+                         value={formData.sender_email}
+                         onChange={handleChange}
+                         className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a] transition-all appearance-none cursor-pointer"
+                       >
+                         <option value="">Default (events@eelogistics.co.za)</option>
+                         {(senderEmails.length > 0 ? senderEmails : ["events@eelogistics.co.za", "events@bmdcomputing.com"]).map((email) => (
+                           <option key={email} value={email}>{email}</option>
+                         ))}
+                       </select>
+                    </div>
+
+                    <div className="space-y-3">
+                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                          <Type size={14} /> Email Sender Name
+                       </label>
+                       <input
+                         type="text"
+                         name="sender_name"
+                         value={formData.sender_name}
+                         onChange={handleChange}
+                         placeholder="e.g. EEL-Events"
+                         className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a] transition-all"
+                       />
+                    </div>
+                  </div>
+                )}
 
               <div className="mt-10 space-y-3">
                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Approved Email Domains (Optional - comma separated)</label>
