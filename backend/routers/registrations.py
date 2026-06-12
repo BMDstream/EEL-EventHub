@@ -380,7 +380,8 @@ def register_attendee(
                 },
                 config=config,
                 is_attending=is_attending,
-                matchup=f"{first_name} {last_name} vs {partner_first} {partner_last}"
+                matchup=f"{first_name} {last_name} vs {partner_first} {partner_last}",
+                registration_id=str(registration.id)
             )
 
             # 2. Send Partner confirmation email (with matchup details AND profile update link)
@@ -398,7 +399,8 @@ def register_attendee(
                 config=config,
                 is_attending=is_attending,
                 matchup=f"{partner_first} {partner_last} vs {first_name} {last_name}",
-                profile_update_link=partner_update_link
+                profile_update_link=partner_update_link,
+                registration_id=str(partner_reg.id)
             )
             
             print(f"Tournament co-registration and match creation complete for Challenger: {email} & Partner: {partner_email}")
@@ -424,7 +426,8 @@ def register_attendee(
                         "address": event.address
                     },
                     config=config,
-                    is_attending=is_attending
+                    is_attending=is_attending,
+                    registration_id=str(registration.id)
                 )
         except Exception as e:
             print(f"Error dispatching confirmation email: {e}")
@@ -634,7 +637,8 @@ def create_registrations_bulk(
                     "location": event.location,
                     "address": event.address
                 },
-                config=config
+                config=config,
+                registration_id=str(registration.id)
             )
             created.append(email)
             
@@ -835,7 +839,8 @@ def test_email(
                 "location": event.location,
                 "address": event.address
             },
-            config=config
+            config=config,
+            registration_id="test-uuid"
         )
         return {"ok": True, "resend_id": res}
     except Exception as e:
@@ -887,7 +892,8 @@ def resend_registration_email(
                 "address": event.address
             },
             config=config,
-            is_attending=(registration.status == "confirmed")
+            is_attending=(registration.status == "confirmed"),
+            registration_id=str(registration.id)
         )
         return {"ok": True, "message": "Email resent successfully."}
     except Exception as e:
@@ -922,7 +928,8 @@ def bulk_send_tickets_task(event_id: int, session_factory):
                         "location": event.location,
                         "address": event.address
                     },
-                    config=config
+                    config=config,
+                    registration_id=str(reg.id)
                 )
                 print(f"Successfully resent ticket to {att.email}")
             except Exception as e:

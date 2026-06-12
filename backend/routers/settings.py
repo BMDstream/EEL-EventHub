@@ -344,7 +344,8 @@ def test_send_template(
                 event_details={"start_date": "2026-06-25T10:00:00Z", "location": "Arena Center", "address": "123 Padel Court Way"},
                 is_attending=True,
                 matchup="John Doe vs Jane Smith",
-                config=config
+                config=config,
+                registration_id="test-uuid"
             )
             success = res is not None
             details = f"Confirmation email send result: {res}"
@@ -355,7 +356,8 @@ def test_send_template(
                 event_title="Padels Tournament 2026",
                 clearance_id="ABCDEF",
                 is_attending=False,
-                config=config
+                config=config,
+                registration_id="test-uuid"
             )
             success = res is not None
             details = f"Decline email send result: {res}"
@@ -369,7 +371,8 @@ def test_send_template(
                 is_attending=True,
                 profile_update_link="https://events.eelogistics.co.za/update/ABCDEF",
                 matchup="John Doe vs Jane Smith",
-                config=config
+                config=config,
+                registration_id="test-uuid"
             )
             success = res is not None
             details = f"Partner details pending email send result: {res}"

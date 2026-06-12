@@ -29,7 +29,8 @@ def dispatch_send_confirmation_email(
     config: dict = None,
     is_attending: bool = True,
     matchup: str = None,
-    profile_update_link: str = None
+    profile_update_link: str = None,
+    registration_id: str = None
 ):
     """Abstraction layer to dispatch confirmation email tasks asynchronously."""
     args = {
@@ -41,7 +42,8 @@ def dispatch_send_confirmation_email(
         "config": config,
         "is_attending": is_attending,
         "matchup": matchup,
-        "profile_update_link": profile_update_link
+        "profile_update_link": profile_update_link,
+        "registration_id": registration_id
     }
     
     if QSTASH_TOKEN:

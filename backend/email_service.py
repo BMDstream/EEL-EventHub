@@ -115,7 +115,8 @@ def send_confirmation_email(
     config: Dict[str, Any] = None, 
     is_attending: bool = True,
     matchup: Optional[str] = None,
-    profile_update_link: Optional[str] = None
+    profile_update_link: Optional[str] = None,
+    registration_id: Optional[str] = None
 ):
     """Sends a registration confirmation email with an embedded QR code and event details."""
     if not resend.api_key or MOCK_EMAIL_SERVICE:
@@ -244,7 +245,8 @@ def send_confirmation_email(
     button_block_html = ""
     urgent_banner_html = ""
     if is_attending:
-        qr_url = f"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={quote(clearance_id)}"
+        qr_data = registration_id or clearance_id
+        qr_url = f"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={quote(qr_data)}"
         qr_block_html = f"""
         <div style="background: #f8fafc; padding: 48px; border-radius: 32px; text-align: center; border: 1px solid #f1f5f9; margin-bottom: 40px; position: relative; overflow: hidden;">
             <img src="{qr_url}" width="200" height="200" alt="Registration QR Code" style="margin-bottom: 32px; border-radius: 20px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.15);" />
