@@ -1033,12 +1033,14 @@ export default function EmailTemplatesPage() {
         </AnimatePresence>
 
         {/* Workspace Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          {/* 1. Left Sidebar: Template Selection */}
-          <div className="lg:col-span-3 space-y-4">
-            <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-1">
-              Select Template
-            </h3>
+        <div className="space-y-8">
+          {/* Top Row: Template Selection & Cheat Sheet */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            {/* 1. Template Selection */}
+            <div className="lg:col-span-6 space-y-4">
+              <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-1">
+                Select Template
+              </h3>
             <div className="bg-white rounded-[2rem] p-4 shadow-sm border border-slate-100 dark:bg-[#0f172a] dark:border-slate-800 space-y-2">
               {templates.map((t) => {
                 const Icon = TEMPLATE_ICONS[t.key] || Mail;
@@ -1069,13 +1071,18 @@ export default function EmailTemplatesPage() {
                 );
               })}
             </div>
+          </div>
 
-            {/* Template Variables Cheat Sheet */}
+          {/* Template Variables Cheat Sheet */}
+          <div className="lg:col-span-6 space-y-4">
+            <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-1">
+              Placeholders
+            </h3>
             <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-slate-100 dark:bg-[#0f172a] dark:border-slate-800">
-              <h3 className="text-xs font-black uppercase tracking-[0.1em] text-[#0f172a] mb-4 flex items-center gap-2 dark:text-white">
+              <h4 className="text-xs font-black uppercase tracking-[0.1em] text-[#0f172a] mb-4 flex items-center gap-2 dark:text-white">
                 <Info size={14} className="text-blue-500" />
-                Placeholders
-              </h3>
+                Variables Guide
+              </h4>
               <p className="text-xs text-slate-400 font-medium mb-4 leading-relaxed">
                 Click any variable key to copy it into your clipboard, then paste it in the subject or body editor.
               </p>
@@ -1105,9 +1112,12 @@ export default function EmailTemplatesPage() {
               </div>
             </div>
           </div>
+        </div>
 
-          {/* 2. Middle Workspace: Visual / Monospaced HTML Editor */}
-          <div className="lg:col-span-5 space-y-6">
+        {/* Bottom Row: Customize Layout & Real-time Preview */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          {/* 2. Left Column: Subject Line & Editor */}
+          <div className="lg:col-span-6 space-y-6">
             {/* Subject Line Card */}
             <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-slate-100 dark:bg-[#0f172a] dark:border-slate-800 space-y-3">
               <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-1">
@@ -1126,7 +1136,7 @@ export default function EmailTemplatesPage() {
             </div>
 
             {/* Main Editor Card */}
-            <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-slate-100 dark:bg-[#0f172a] dark:border-slate-800 flex flex-col min-h-[680px]">
+            <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-slate-100 dark:bg-[#0f172a] dark:border-slate-800 flex flex-col h-[720px]">
               {/* Header Toggle Mode */}
               <div className="flex items-center justify-between mb-6 border-b border-slate-100 dark:border-slate-800 pb-4">
                 <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 flex items-center gap-2">
@@ -1166,12 +1176,12 @@ export default function EmailTemplatesPage() {
                       setBodyHtml(e.target.value);
                       setHasUnsavedChanges(true);
                     }}
-                    className="w-full flex-1 p-6 rounded-xl bg-slate-900 border border-slate-800 text-slate-100 focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400 outline-none font-mono text-xs leading-relaxed resize-none overflow-y-auto h-[530px]"
+                    className="w-full flex-1 p-6 rounded-xl bg-slate-900 border border-slate-800 text-slate-100 focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400 outline-none font-mono text-xs leading-relaxed resize-none overflow-y-auto h-[570px]"
                     style={{ tabSize: 2 }}
                     spellCheck={false}
                   />
                 ) : (
-                  <div className="space-y-6 overflow-y-auto max-h-[530px] pr-2 custom-scrollbar">
+                  <div className="space-y-6 overflow-y-auto max-h-[570px] pr-2 custom-scrollbar">
                     {/* Theme Colors Section */}
                     <div className="space-y-4 bg-slate-50/50 dark:bg-slate-800/20 p-5 rounded-2xl border border-slate-100/50 dark:border-slate-800/50">
                       <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#0f172a] dark:text-white flex items-center gap-2">
@@ -1702,13 +1712,13 @@ export default function EmailTemplatesPage() {
             </div>
           </div>
 
-          {/* 3. Right Sidebar: Live Preview Iframe */}
-          <div className="lg:col-span-4 space-y-4">
+          {/* 3. Right Column: Live Preview Iframe */}
+          <div className="lg:col-span-6 space-y-4">
             <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-1 flex items-center gap-2">
               <Eye size={12} /> Real-time Preview
             </h3>
             
-            <div className="bg-white rounded-[2rem] p-4 shadow-sm border border-slate-100 dark:bg-[#0f172a] dark:border-slate-800 flex flex-col h-[750px]">
+            <div className="bg-white rounded-[2rem] p-4 shadow-sm border border-slate-100 dark:bg-[#0f172a] dark:border-slate-800 flex flex-col h-[870px]">
               {/* Preview Subject Header */}
               <div className="px-4 py-3 bg-slate-50 rounded-2xl border border-slate-100 dark:bg-slate-800 dark:border-slate-700 mb-4 flex items-center gap-3">
                 <div className="w-2.5 h-2.5 rounded-full bg-red-400" />
@@ -1731,6 +1741,7 @@ export default function EmailTemplatesPage() {
             </div>
           </div>
         </div>
+      </div>
 
         {/* 4. Test Email Sending Modal */}
         <AnimatePresence>
