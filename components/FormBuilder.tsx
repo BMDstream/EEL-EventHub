@@ -16,6 +16,7 @@ interface FormField {
     value: string;
   };
   description?: string;
+  inactive?: boolean;
 }
 
 export default function FormBuilder({ eventId, initialSchema, onSave }: { eventId: string, initialSchema: FormField[], onSave: (schema: FormField[]) => void }) {
@@ -400,15 +401,26 @@ export default function FormBuilder({ eventId, initialSchema, onSave }: { eventI
                               })()}
 
                              <div className="flex items-center justify-between pt-4 border-t border-slate-50">
-                                <label className="flex items-center gap-3 cursor-pointer group">
-                                   <input 
-                                     type="checkbox" 
-                                     checked={field.required}
-                                     onChange={(e) => updateField(field.id, { required: e.target.checked })}
-                                     className="w-5 h-5 rounded-lg border-2 border-slate-200 checked:bg-yellow-400 checked:border-yellow-400 transition-all outline-none" 
-                                   />
-                                   <span className="text-xs font-black text-slate-400 uppercase tracking-widest group-hover:text-[#0f172a] transition-colors">Required Field</span>
-                                </label>
+                                <div className="flex items-center gap-8">
+                                   <label className="flex items-center gap-3 cursor-pointer group">
+                                      <input 
+                                        type="checkbox" 
+                                        checked={field.required}
+                                        onChange={(e) => updateField(field.id, { required: e.target.checked })}
+                                        className="w-5 h-5 rounded-lg border-2 border-slate-200 checked:bg-yellow-400 checked:border-yellow-400 transition-all outline-none" 
+                                      />
+                                      <span className="text-xs font-black text-slate-400 uppercase tracking-widest group-hover:text-[#0f172a] transition-colors">Required Field</span>
+                                   </label>
+                                   <label className="flex items-center gap-3 cursor-pointer group">
+                                      <input 
+                                        type="checkbox" 
+                                        checked={!!field.inactive}
+                                        onChange={(e) => updateField(field.id, { inactive: e.target.checked })}
+                                        className="w-5 h-5 rounded-lg border-2 border-slate-200 checked:bg-yellow-400 checked:border-yellow-400 transition-all outline-none" 
+                                      />
+                                      <span className="text-xs font-black text-slate-400 uppercase tracking-widest group-hover:text-[#0f172a] transition-colors">Hide from Form (Keep Answers)</span>
+                                   </label>
+                                </div>
                                 <button 
                                   onClick={() => removeField(field.id)}
                                   className="text-slate-300 hover:text-red-500 transition-all p-2"
