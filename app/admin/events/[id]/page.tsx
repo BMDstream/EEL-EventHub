@@ -851,15 +851,15 @@ export default function EventDetailsPage() {
                   </button>
                 )}
               </div>
-              <div className="overflow-x-auto pb-4">
-                <table className="w-full text-left min-w-[1100px]">
-                <thead>
-                  <tr className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em]">
-                    <th className="px-10 py-6">Attendee Details</th>
-                    <th className="px-10 py-6">Organization</th>
-                    <th className="px-10 py-6">Status</th>
-                    <th className="px-10 py-6">Verified On</th>
-                    <th className="px-10 py-6 text-right">Actions</th>
+              <div className="overflow-auto max-h-[650px] pb-4 relative">
+                <table className="w-full text-left min-w-[1100px] border-collapse">
+                <thead className="sticky top-0 bg-white z-10">
+                  <tr className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] bg-white">
+                    <th className="px-10 py-6 bg-white border-b border-slate-100">Attendee Details</th>
+                    <th className="px-10 py-6 bg-white border-b border-slate-100">Organization</th>
+                    <th className="px-10 py-6 bg-white border-b border-slate-100">Status</th>
+                    <th className="px-10 py-6 bg-white border-b border-slate-100">Verified On</th>
+                    <th className="px-10 py-6 text-right bg-white border-b border-slate-100">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
