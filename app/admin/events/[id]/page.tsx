@@ -23,13 +23,16 @@ import {
   ArrowUpRight,
   Eye,
   Upload,
-  X,
-  RefreshCw
+  RefreshCw,
+  Wifi,
+  WifiOff,
+  X
 } from "lucide-react";
 import AdminLayout from "@/components/AdminLayout";
 import FormBuilder from "@/components/FormBuilder";
 import QRScanner from "@/components/QRScanner";
 import StaffAssignment from "@/components/StaffAssignment";
+import * as dbOffline from "@/lib/indexedDb";
 
 const getAnswerString = (ans: any): string => {
   if (ans === null || ans === undefined) return "—";
@@ -108,6 +111,13 @@ export default function EventDetailsPage() {
   const [parsedRegistrants, setParsedRegistrants] = useState<any[]>([]);
   const [importing, setImporting] = useState(false);
   const [selectedMetric, setSelectedMetric] = useState<"date" | "venue" | "enrollment" | "declined" | "checked_in" | null>(null);
+
+  const [isOnline, setIsOnline] = useState(true);
+  const [offlineStats, setOfflineStats] = useState<{ cachedCount: number; checkedInCount: number } | null>(null);
+  const [pendingSyncCount, setPendingSyncCount] = useState(0);
+  const [isCaching, setIsCaching] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [lastCachedAt, setLastCachedAt] = useState<string | null>(null);
 
   const downloadRegistrantTemplate = () => {
     import("xlsx").then((XLSX) => {
@@ -329,6 +339,145 @@ export default function EventDetailsPage() {
       console.error("Failed to refresh registrations", err);
     } finally {
       setRefreshing(false);
+    }
+  };
+
+  // Read network connection and update offline status
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    setIsOnline(navigator.onLine);
+
+    const handleOnline = () => {
+      setIsOnline(true);
+      autoSyncOfflineScans();
+    };
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
+    // Initial IndexedDB stats load
+    updateOfflineStats();
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, [id]);
+
+  const updateOfflineStats = async () => {
+    try {
+      const stats = await dbOffline.getOfflineStats();
+      setOfflineStats(stats);
+      const pending = await dbOffline.getPendingScans();
+      setPendingSyncCount(pending.length);
+      
+      const cachedTime = localStorage.getItem(`eel_cached_time_${id}`);
+      setLastCachedAt(cachedTime);
+    } catch (e) {
+      console.error("Failed to load local DB stats", e);
+    }
+  };
+
+  const downloadManifestForOffline = async () => {
+    if (!event) return;
+    setIsCaching(true);
+    try {
+      const res = await fetch(`/api/py/events/${id}/registrations`, {
+        headers: { "x-user-email": session?.user?.email || "" }
+      });
+      if (!res.ok) throw new Error("Failed to fetch fresh registrations");
+      const regData = await res.json();
+      
+      await dbOffline.saveOfflineEvent(event, regData);
+      
+      const nowStr = new Date().toLocaleTimeString();
+      localStorage.setItem(`eel_cached_time_${id}`, nowStr);
+      setLastCachedAt(nowStr);
+      
+      await updateOfflineStats();
+      alert("Attendee manifest successfully cached for offline use!");
+    } catch (e) {
+      console.error(e);
+      alert("Error caching attendee manifest");
+    } finally {
+      setIsCaching(false);
+    }
+  };
+
+  const autoSyncOfflineScans = async () => {
+    // Prevent overlapping syncs
+    if (isSyncing) return;
+    
+    try {
+      const pending = await dbOffline.getPendingScans();
+      if (pending.length === 0) return;
+      
+      setIsSyncing(true);
+      
+      const res = await fetch(`/api/py/events/${id}/bulk-checkin`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-email": session?.user?.email || ""
+        },
+        body: JSON.stringify(pending)
+      });
+      
+      if (res.ok) {
+        const result = await res.json();
+        const syncedIds = pending.map(p => p.id).filter((id): id is number => id !== undefined);
+        await dbOffline.markScansSynced(syncedIds);
+        
+        fetchRegistrations();
+        await updateOfflineStats();
+      }
+    } catch (e) {
+      console.error("Auto sync failed", e);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const forceSyncOfflineScans = async () => {
+    if (!isOnline) {
+      alert("Cannot sync: device is currently offline.");
+      return;
+    }
+    setIsSyncing(true);
+    try {
+      const pending = await dbOffline.getPendingScans();
+      if (pending.length === 0) {
+        alert("No pending offline scans to sync.");
+        return;
+      }
+      
+      const res = await fetch(`/api/py/events/${id}/bulk-checkin`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-email": session?.user?.email || ""
+        },
+        body: JSON.stringify(pending)
+      });
+      
+      if (res.ok) {
+        const result = await res.json();
+        const syncedIds = pending.map(p => p.id).filter((id): id is number => id !== undefined);
+        await dbOffline.markScansSynced(syncedIds);
+        
+        fetchRegistrations();
+        await updateOfflineStats();
+        
+        alert(`Sync complete!\nSuccessfully Synced: ${result.synced.length}\nConflicts (Already checked in): ${result.conflicts.length}\nErrors: ${result.errors.length}`);
+      } else {
+        alert("Failed to sync scans with the server.");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("An error occurred during sync.");
+    } finally {
+      setIsSyncing(false);
     }
   };
 
@@ -1025,20 +1174,114 @@ export default function EventDetailsPage() {
                </div>
              )}
              
+             {/* Offline Setup & Control Panel */}
+             <div className="max-w-4xl mx-auto mb-12 bg-slate-50 border border-slate-100 rounded-[2rem] p-8 flex flex-col md:flex-row items-center justify-between gap-6">
+               <div className="space-y-2 text-center md:text-left">
+                 <div className="flex items-center justify-center md:justify-start gap-2.5">
+                   <h3 className="text-xs font-black uppercase tracking-[0.2em] text-[#0f172a]">Offline Scanner Configuration</h3>
+                   <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${
+                     isOnline ? "bg-green-50 text-green-600 border border-green-100" : "bg-red-50 text-red-600 border border-red-100"
+                   }`}>
+                     {isOnline ? <Wifi size={10} /> : <WifiOff size={10} />}
+                     {isOnline ? "Online" : "Offline Mode"}
+                   </span>
+                 </div>
+                 <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">
+                   {lastCachedAt ? `Manifest cached at ${lastCachedAt}` : "Manifest not cached for offline scanning"}
+                 </p>
+                 {offlineStats && (
+                   <div className="flex gap-4 pt-1.5 justify-center md:justify-start text-[10px] font-black uppercase tracking-wider text-slate-500">
+                     <span>Cached Attendees: <strong className="text-[#0f172a]">{offlineStats.cachedCount}</strong></span>
+                     <span>•</span>
+                     <span>Total Checked-in: <strong className="text-[#0f172a]">{offlineStats.checkedInCount}</strong></span>
+                     {pendingSyncCount > 0 && (
+                       <>
+                         <span>•</span>
+                         <span className="text-yellow-600 font-black">Unsynced Scans: <strong>{pendingSyncCount}</strong></span>
+                       </>
+                     )}
+                   </div>
+                 )}
+               </div>
+               
+               <div className="flex flex-wrap justify-center gap-3">
+                 <button
+                   onClick={downloadManifestForOffline}
+                   disabled={isCaching}
+                   className="px-5 py-3.5 bg-white border border-slate-200/80 hover:border-yellow-400 rounded-xl text-[10px] font-black uppercase tracking-widest text-[#0f172a] disabled:text-slate-300 transition-all flex items-center gap-2"
+                 >
+                   {isCaching ? <Loader2 size={12} className="animate-spin" /> : <Download size={12} />}
+                   {isCaching ? "Downloading..." : "Cache offline manifest"}
+                 </button>
+                 {pendingSyncCount > 0 && (
+                   <button
+                     onClick={forceSyncOfflineScans}
+                     disabled={isSyncing}
+                     className="px-5 py-3.5 bg-yellow-400 hover:bg-yellow-500 rounded-xl text-[10px] font-black uppercase tracking-widest text-[#0f172a] disabled:bg-slate-200 transition-all flex items-center gap-2 shadow-lg shadow-yellow-400/20 animate-pulse"
+                   >
+                     {isSyncing ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
+                     Sync Scans ({pendingSyncCount})
+                   </button>
+                 )}
+               </div>
+             </div>
+             
              <div className="max-w-4xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
                <div className="space-y-8">
                  <div className="bg-slate-50 p-8 rounded-[2rem] border border-slate-100">
                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 ml-1">QR Verification</h3>
                    <QRScanner 
                      onScan={async (regId) => {
+                       const targetDay = selectedScanDay === "auto" ? 1 : selectedScanDay;
+                       
+                       if (!isOnline) {
+                         const localReg = await dbOffline.getLocalRegistration(regId);
+                         if (!localReg) {
+                           throw new Error("Clearance credential not found in local offline cache.");
+                         }
+                         if (localReg.status === "declined") {
+                           throw new Error("Declined registrations cannot be checked in.");
+                         }
+                         const checkedInDays = localReg.checked_in_days || [];
+                         if (checkedInDays.includes(targetDay)) {
+                           throw new Error(`Attendee already checked in for Day ${targetDay}`);
+                         }
+                         
+                         const scanObj: dbOffline.OfflineScan = {
+                           registration_id: localReg.id,
+                           day: targetDay,
+                           timestamp: new Date().toISOString(),
+                           mode: "checkin",
+                           synced: false
+                         };
+                         await dbOffline.addOfflineScan(scanObj);
+                         await updateOfflineStats();
+                         
+                         return {
+                           id: localReg.id,
+                           attendee: localReg.attendee,
+                           checked_in: true,
+                           checked_in_days: [...checkedInDays, targetDay]
+                         };
+                       }
+                       
                        const query = selectedScanDay === "auto" ? "mode=checkin" : `mode=checkin&day=${selectedScanDay}`;
-                       const res = await fetch(`/api/py/registrations/${regId}/checkin?${query}`, { method: "PUT" });
+                       const res = await fetch(`/api/py/registrations/${regId}/checkin?${query}`, { 
+                         method: "PUT",
+                         headers: { "x-user-email": session?.user?.email || "" }
+                       });
                        if (!res.ok) {
                          const error = await res.json();
                          throw new Error(error.detail || "Authentication Failed");
                        }
                        const updated = await res.json();
                        setRegistrations(prev => prev.map(r => r.id === updated.id ? { ...r, checked_in: updated.checked_in, checked_in_days: updated.checked_in_days ?? [] } : r));
+                       
+                       dbOffline.initDb().then(async (db) => {
+                         const tx = db.transaction(["registrations"], "readwrite");
+                         tx.objectStore("registrations").put(updated);
+                       }).catch(() => {});
+                       
                        return updated;
                      }} 
                    />
@@ -1063,6 +1306,54 @@ export default function EventDetailsPage() {
                            if (pin.length !== 4 && pin.length !== 6) return;
                            setPinStatus("processing");
                            setPinMessage("Verifying PIN...");
+                           
+                           const targetDay = selectedScanDay === "auto" ? 1 : selectedScanDay;
+                           
+                           if (!isOnline) {
+                             try {
+                               const localReg = await dbOffline.getLocalRegistration(pin);
+                               if (!localReg) {
+                                 setPinStatus("error");
+                                 setPinMessage("Clearance PIN not found in offline cache.");
+                                 setTimeout(() => setPinStatus("idle"), 4000);
+                                 return;
+                               }
+                               if (localReg.status === "declined") {
+                                 setPinStatus("error");
+                                 setPinMessage("Declined registration cannot be checked in.");
+                                 setTimeout(() => setPinStatus("idle"), 4000);
+                                 return;
+                               }
+                               const checkedInDays = localReg.checked_in_days || [];
+                               if (checkedInDays.includes(targetDay)) {
+                                 setPinStatus("warning");
+                                 setPinMessage(`Already Checked In for Day ${targetDay}`);
+                                 setTimeout(() => setPinStatus("idle"), 4000);
+                                 return;
+                               }
+                               
+                               const scanObj: dbOffline.OfflineScan = {
+                                 registration_id: localReg.id,
+                                 day: targetDay,
+                                 timestamp: new Date().toISOString(),
+                                 mode: "checkin",
+                                 synced: false
+                               };
+                               await dbOffline.addOfflineScan(scanObj);
+                               await updateOfflineStats();
+                               
+                               setPinStatus("success");
+                               setPinMessage(`Check-in Successful: ${localReg.attendee?.first_name || 'Guest'}`);
+                               setPin("");
+                               setTimeout(() => setPinStatus("idle"), 3000);
+                             } catch (err) {
+                               setPinStatus("error");
+                               setPinMessage("Local verification error");
+                               setTimeout(() => setPinStatus("idle"), 4000);
+                             }
+                             return;
+                           }
+                           
                            try {
                              const payload: Record<string, any> = { pin };
                              if (selectedScanDay !== "auto") {
@@ -1070,7 +1361,10 @@ export default function EventDetailsPage() {
                              }
                              const res = await fetch(`/api/py/events/${id}/checkin-by-pin`, {
                                method: "POST",
-                               headers: { "Content-Type": "application/json" },
+                               headers: { 
+                                 "Content-Type": "application/json",
+                                 "x-user-email": session?.user?.email || ""
+                               },
                                body: JSON.stringify(payload)
                              });
                              if (res.ok) {
@@ -1080,6 +1374,11 @@ export default function EventDetailsPage() {
                                setPinMessage(`Check-in Successful: ${updated.attendee?.first_name || 'Guest'}`);
                                setPin("");
                                setTimeout(() => setPinStatus("idle"), 3000);
+                               
+                               dbOffline.initDb().then(async (db) => {
+                                 const tx = db.transaction(["registrations"], "readwrite");
+                                 tx.objectStore("registrations").put(updated);
+                               }).catch(() => {});
                              } else {
                                const err = await res.json();
                                const errMsg = err.detail || "Invalid PIN";
@@ -1267,6 +1566,69 @@ export default function EventDetailsPage() {
                        Resend Tickets to All Confirmed Guests
                     </button>
                  </div>
+
+                 <div className="pt-12 border-t border-slate-100 space-y-8">
+                     <h3 className="text-xl font-black text-[#0f172a] font-bricolage italic uppercase tracking-tight">Follow-Up Feedback Surveys</h3>
+                     <p className="text-slate-500 font-medium text-sm">
+                        Send a follow-up survey link to all attendees who checked in for this event. 
+                        This targets only the <strong>{registrations.filter(r => r.checked_in).length}</strong> checked-in guests.
+                     </p>
+                     <form 
+                       onSubmit={async (e) => {
+                         e.preventDefault();
+                         const target = e.target as any;
+                         const subject = target.surveySubject.value;
+                         const surveyUrl = target.surveyUrl.value;
+                         const body = target.surveyBody.value;
+                         
+                         const fullBody = `${body}\n\nPlease complete our feedback survey here: ${surveyUrl}`;
+                         const targetCount = registrations.filter(r => r.checked_in).length;
+                         
+                         if (!confirm(`Are you sure you want to send this survey to the ${targetCount} checked-in attendees?`)) return;
+                         
+                         try {
+                           const res = await fetch(`/api/py/events/${id}/broadcast`, {
+                             method: "POST",
+                             headers: { 
+                               "Content-Type": "application/json",
+                               "x-user-email": session?.user?.email || ""
+                             },
+                             body: JSON.stringify({
+                               subject,
+                               body: fullBody,
+                               target: "checked_in"
+                             })
+                           });
+                           if (res.ok) {
+                             alert("Feedback survey broadcast successfully queued!");
+                             target.reset();
+                           } else {
+                             alert("Failed to dispatch survey. Ensure RESEND_API_KEY is configured.");
+                           }
+                         } catch (err) {
+                           console.error(err);
+                           alert("An error occurred during dispatch.");
+                         }
+                       }}
+                       className="space-y-6"
+                     >
+                       <div className="space-y-3">
+                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Survey Email Subject</label>
+                         <input required name="surveySubject" defaultValue={`Thank you for attending ${event?.title || ''} - Feedback Survey`} className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a]" />
+                       </div>
+                       <div className="space-y-3">
+                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Survey Link (Google Forms / Typeform)</label>
+                         <input required name="surveyUrl" type="url" placeholder="https://forms.google.com/your-survey-link" className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a]" />
+                       </div>
+                       <div className="space-y-3">
+                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Message Body</label>
+                         <textarea required name="surveyBody" rows={4} defaultValue={`Hi {first_name},\n\nThank you for attending our event! We hope you had a great experience. We'd love to hear your feedback so we can make future events even better.`} className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a] resize-none" />
+                       </div>
+                       <button type="submit" disabled={registrations.filter(r => r.checked_in).length === 0} className="w-full bg-[#0f172a] hover:bg-black disabled:bg-slate-200 disabled:text-slate-400 text-white font-black py-6 rounded-[2rem] shadow-xl transition-all uppercase tracking-[0.2em] text-xs">
+                         Dispatch Survey to Checked-in Attendees
+                       </button>
+                     </form>
+                  </div>
              </div>
           </div>
         )}

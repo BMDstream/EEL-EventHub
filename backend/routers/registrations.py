@@ -970,13 +970,18 @@ def broadcast_to_attendees(
     body = data.get("body", "")
     signature = data.get("signature", "")
     attachments = data.get("attachments", [])
+    target = data.get("target", "confirmed") # confirmed, checked_in
     
-    registrations = session.exec(
+    query = (
         select(Registration, Attendee)
         .join(Attendee)
         .where(Registration.event_id == event_id)
         .where(Registration.status == "confirmed")
-    ).all()
+    )
+    if target == "checked_in":
+        query = query.where(Registration.checked_in == True)
+        
+    registrations = session.exec(query).all()
     
     registrations_data = []
     for reg, att in registrations:
@@ -1008,3 +1013,97 @@ def broadcast_to_attendees(
     )
     
     return {"ok": True, "sent": len(registrations_data), "message": "Broadcast queued in background"}
+
+@router.post("/events/{event_id}/bulk-checkin")
+def bulk_checkin(
+    event_id: int,
+    data: List[Dict[str, Any]],
+    background_tasks: BackgroundTasks,
+    session: Session = Depends(get_session),
+    current_user: Optional[User] = Depends(get_current_user_from_request)
+):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    event = session.get(Event, event_id)
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+    verify_event_manager_access(current_user, event, session)
+    
+    synced = []
+    conflicts = []
+    errors = []
+    
+    for item in data:
+        reg_id = item.get("registration_id")
+        day = item.get("day")
+        timestamp_str = item.get("timestamp")
+        mode = item.get("mode", "checkin")
+        
+        try:
+            reg_uuid = UUID(reg_id)
+            registration = session.get(Registration, reg_uuid)
+        except Exception as e:
+            errors.append({"registration_id": reg_id, "detail": f"Invalid UUID: {str(e)}"})
+            continue
+            
+        if not registration or registration.event_id != event_id:
+            errors.append({"registration_id": reg_id, "detail": "Registration not found"})
+            continue
+            
+        if registration.status == "declined":
+            errors.append({"registration_id": reg_id, "detail": "Declined registration cannot be checked in"})
+            continue
+            
+        # Conflict check
+        target_day = day if day is not None else 1
+        days = list(registration.checked_in_days) if isinstance(registration.checked_in_days, list) else []
+        was_checked_in = target_day in days
+        
+        if was_checked_in:
+            conflicts.append({
+                "registration_id": reg_id,
+                "first_name": registration.attendee.first_name,
+                "last_name": registration.attendee.last_name,
+                "detail": f"Already checked in for Day {target_day} on server"
+            })
+            continue
+            
+        try:
+            registration = perform_checkin_logic(registration, day, mode, session)
+            session.add(registration)
+            session.commit()
+            session.refresh(registration)
+            
+            # Fire webhook
+            webhook_payload = {
+                "registration_id": str(registration.id),
+                "pin": registration.pin,
+                "event_id": registration.event_id,
+                "attendee": {
+                    "first_name": registration.attendee.first_name,
+                    "last_name": registration.attendee.last_name,
+                    "email": registration.attendee.email
+                },
+                "checked_in": registration.checked_in,
+                "checked_in_days": registration.checked_in_days if isinstance(registration.checked_in_days, list) else [],
+                "offline_timestamp": timestamp_str
+            }
+            trigger_webhooks("checkin.created", webhook_payload, session, background_tasks, client_id=event.client_id)
+            
+            synced.append({
+                "id": str(registration.id),
+                "first_name": registration.attendee.first_name,
+                "last_name": registration.attendee.last_name,
+                "checked_in": registration.checked_in,
+                "checked_in_days": registration.checked_in_days
+            })
+        except Exception as e:
+            session.rollback()
+            errors.append({"registration_id": reg_id, "detail": f"Database error: {str(e)}"})
+            
+    return {
+        "ok": True,
+        "synced": synced,
+        "conflicts": conflicts,
+        "errors": errors
+    }
