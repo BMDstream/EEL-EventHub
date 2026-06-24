@@ -124,7 +124,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { name: "Team", href: "/admin/users", icon: Users },
     { name: "Analytics", href: "/admin/analytics", icon: TrendingUp },
     { name: "Security", href: "/admin/security", icon: ShieldCheck },
-    { name: "Templates", href: "/admin/email-templates", icon: Mail },
     { name: "Settings", href: "/admin/settings", icon: Settings },
   ];
 
@@ -137,7 +136,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       return true;
     }
     if (isManagerLike) {
-      return item.name !== "Team" && item.name !== "Security" && item.name !== "Clients" && item.name !== "Templates";
+      return item.name !== "Team" && item.name !== "Security" && item.name !== "Clients";
     }
     return item.name === "Dashboard" || item.name === "Events";
   });
