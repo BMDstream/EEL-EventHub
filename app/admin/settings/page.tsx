@@ -1684,12 +1684,16 @@ export default function SettingsPage() {
                                   defaultValue=""
                                 >
                                   <option value="" disabled hidden>Font</option>
-                                  <option value="sans-serif">Sans-serif</option>
+                                  <option value="Calibri, sans-serif">Calibri</option>
+                                  <option value="'Helvetica Neue', Helvetica, Arial, sans-serif">Helvetica Neue</option>
+                                  <option value="'Inter', sans-serif">Inter</option>
+                                  <option value="'Outfit', sans-serif">Outfit</option>
+                                  <option value="'Bricolage Grotesque', sans-serif">Bricolage</option>
                                   <option value="Georgia, serif">Georgia</option>
-                                  <option value="Courier New, monospace">Courier</option>
-                                  <option value="Arial, Helvetica, sans-serif">Arial</option>
-                                  <option value="Times New Roman, Times, serif">Times</option>
-                                  <option value="Trebuchet MS, sans-serif">Trebuchet</option>
+                                  <option value="'Courier New', Courier, monospace">Courier</option>
+                                  <option value="'Times New Roman', Times, serif">Times New Roman</option>
+                                  <option value="Arial, sans-serif">Arial</option>
+                                  <option value="sans-serif">System Sans-Serif</option>
                                 </select>
 
                                 <select
@@ -2001,6 +2005,9 @@ export default function SettingsPage() {
                       <option value="'Inter', sans-serif">Inter</option>
                       <option value="'Outfit', sans-serif">Outfit</option>
                       <option value="'Bricolage Grotesque', sans-serif">Bricolage</option>
+                      <option value="Georgia, serif">Georgia</option>
+                      <option value="'Courier New', Courier, monospace">Courier</option>
+                      <option value="'Times New Roman', Times, serif">Times New Roman</option>
                       <option value="Arial, sans-serif">Arial</option>
                       <option value="sans-serif">System Sans-Serif</option>
                     </select>
