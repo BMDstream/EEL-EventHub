@@ -4,45 +4,43 @@ This document tracks planned monthly milestones, feature requests, and pipeline 
 
 ---
 
-## 📅 Monthly Release Schedule (2026)
+## 📅 6-Month Release Schedule (2026)
 
-### 📌 July 2026 (Release 1.6)
+### 📌 July 2026 (Release 1.6) - Automated Communications & Reminders
 *Target Release Date: July 15, 2026*
-* **[ ] Feature Proposal 1**: *[User input requested - e.g., Automated email reminders for registered guests]*
-* **[ ] Feature Proposal 2**: *[User input requested]*
-* **[ ] Maintenance**: Sync preview and main branches.
+* **[ ] Automated Pre-Event Reminders**: Built-in scheduled email queues (via Resend) to send reminders (e.g., 24 hours and 1 hour before start time) containing the attendee's personalized QR Code and Unique Clearance ID.
+* **[ ] SMS & WhatsApp Ticket Dispatch**: Support for optional text message confirmations with a direct link to the attendee's check-in QR code.
+* **[ ] Branch Sync & CI/CD**: Sync preview/staging branch changes back to main and automate verification tests.
 
-### 📌 August 2026 (Release 1.7)
+### 📌 August 2026 (Release 1.7) - Badging & Physical Ticket Upgrades
 *Target Release Date: August 15, 2026*
-* **[ ] Feature Proposal 1**: *[User input requested - e.g., PDF badge generation & ticket attachment]*
-* **[ ] Feature Proposal 2**: *[User input requested]*
+* **[ ] PDF Ticket & Badge Generation**: Auto-generate print-ready PDF badges with the attendee's name, organization, and QR code, formatted for standard thermal label printers (Brother/Zebra) or standard letter sheets.
+* **[ ] Mobile Wallet Integration**: Add support for generating Apple Wallet (`.pkpass`) and Google Wallet files so attendees can add tickets to their native device wallets.
 
-### 📌 September 2026 (Release 1.8)
+### 📌 September 2026 (Release 1.8) - Breakout Sessions & Multi-Track Events
 *Target Release Date: September 15, 2026*
-* **[ ] Feature Proposal 1**: *[User input requested - e.g., Session-level check-ins for multi-track events]*
-* **[ ] Feature Proposal 2**: *[User-facing reporting dashboard]*
+* **[ ] Session & Room Track Management**: Support defining sub-sessions (breakouts, workshops, keynotes) under a single event with specific room assignments.
+* **[ ] Capacity Limits & Session Signup**: Let registrants sign up for specific sessions during registration with automated seating cap checks.
+* **[ ] Sub-session Scanner Mode**: Update the Scanner app to filter by sub-session, allowing staff to track room capacity and verify attendance per session.
+
+### 📌 October 2026 (Release 1.9) - Self-Service Kiosk Mode & Offline Operations
+*Target Release Date: October 15, 2026*
+* **[ ] Tablet Kiosk Interface**: A PIN-secured kiosk interface designed for tablets at the registration desk, allowing self-service name lookups, profile corrections, and manual check-ins.
+* **[ ] Offline Scanner Mode**: Implement local storage (IndexedDB/LocalForage) caching in the scanner view so scanning continues uninterrupted during network drops, syncing scan logs once back online.
+
+### 📌 November 2026 (Release 1.10) - Real-Time Analytics & Report Builder
+*Target Release Date: November 15, 2026*
+* **[ ] Live Wall-board Dashboard**: A real-time command center dashboard displaying live check-in counters, peak arrival time charts, and demographics for display on big screens.
+* **[ ] Advanced Report Builder**: A custom exporter allowing admins to select specific custom Form Studio questions, check-in timestamps, and registration statuses to generate custom CSV/Excel files.
+
+### 📌 December 2026 (Release 1.11) - Post-Event Loop & Integrations
+*Target Release Date: December 15, 2026*
+* **[ ] Automated Feedback Surveys**: Automatically email feedback survey links to checked-in attendees after the event closes.
+* **[ ] Certificate of Attendance**: Generate and email customized PDF certificates of participation or professional development credits for checked-in attendees.
+* **[ ] CRM Syncing (HubSpot/Salesforce)**: Sync registrant data and custom field answers directly to external CRMs or external Google Sheets/Excel spreadsheets.
 
 ---
 
-## 💡 Suggested Pipeline Backlog
-
-Here is a list of potential enhancements tailored for BMD-EventHub that we can assign to monthly milestones:
-
-### 1. Attendance & Scanner Optimization
-* **Offline Scanner Mode**: PWA support or service worker implementation to cache attendee lists and allow check-ins without active internet, syncing when online.
-* **Session Tracking**: Allow check-in scans for individual breakout rooms, lunches, or day-by-day sub-sessions.
-* **SMS Check-in Confirmation**: Option to send SMS tickets/clearance PINs in addition to email.
-
-### 2. Marketing & Communications
-* **Scheduled Campaigns**: Build email queues to send automated reminders (e.g., 24 hours before the event, 1 hour before).
-* **Feedback Surveys**: Automatically dispatch follow-up feedback forms to attendees who were marked as "Checked In" after the event closes.
-
-### 3. Analytics & Export
-* **Advanced CSV/Excel Builder**: Select specific custom form fields to include/exclude in exports.
-* **On-Site Dashboard**: A live wall-board view showing real-time check-in counts, peak arrival hours, and registrants by company.
-
----
-
-## 🛠️ How to Add/Modify Features
-1. Edit this [ROADMAP.md](file:///Users/bartondelaney/Library/CloudStorage/OneDrive-ExcellenceLogisticsEntertainment/Documents/AntiGravity%20Projects/EEL_Cvent/ROADMAP.md) file directly to write in your goals.
-2. We will align on the details and implement the prioritized features for each month.
+## 💡 Pipeline Backlog & Future Ideas
+* **Sponsor Lead Retrieval**: Allow sponsors to scan attendee QR codes (with consent) to gather leads.
+* **Multi-Event Portals**: A unified dashboard for frequent attendees to view all their upcoming registrations and past history.

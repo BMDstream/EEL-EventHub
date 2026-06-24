@@ -135,6 +135,8 @@ def send_confirmation_email(
     # Process branding colors and headers
     primary_color = config.get("primary_color", "#0f172a")
     accent_color = config.get("accent_color", "#94a3b8")
+    font_family = config.get("font_family", "Calibri, sans-serif")
+    font_size = config.get("font_size", "16px")
     
     footer_text_raw = config.get("footer_text", "")
     if "Security Tier" in footer_text_raw or "Level 4 Authorized" in footer_text_raw:
@@ -306,7 +308,7 @@ def send_confirmation_email(
           <![endif]-->
           <table width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; max-width: 600px; border: 1px solid #f1f5f9; border-radius: 40px; background-color: #ffffff; color: {primary_color}; box-shadow: 0 20px 50px rgba(0,0,0,0.05); overflow: hidden; border-collapse: separate;">
             <tr>
-              <td style="padding: 40px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
+              <td style="padding: 40px; font-family: {font_family}; font-size: {font_size};">
                 <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 48px;">
                   <tr>
                     <td align="left" valign="middle">
@@ -328,7 +330,7 @@ def send_confirmation_email(
                 
                 {urgent_banner_html}
                 
-                <p style="font-size: 17px; line-height: 1.7; margin-bottom: 40px; color: #475569;">
+                <p style="font-size: {font_size}; line-height: 1.7; margin-bottom: 40px; color: #475569;">
                     Hello <strong>{first_name}</strong>,<br><br>
                     {body_html}
                 </p>
@@ -462,6 +464,8 @@ def send_broadcast_email(
 
     primary_color = config.get("primary_color", "#0f172a")
     accent_color = config.get("accent_color", "#94a3b8")
+    font_family = config.get("font_family", "Calibri, sans-serif")
+    font_size = config.get("font_size", "16px")
     
     db_template = get_template_from_db("broadcast")
     meta = parse_template_meta(db_template.body_html) if db_template else {}
@@ -586,7 +590,7 @@ def send_broadcast_email(
                 <td align="center" style="padding: 40px 0;">
                   <table width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; max-width: 600px; border: 1px solid #f1f5f9; border-radius: 40px; background-color: #ffffff; color: {primary_color}; box-shadow: 0 20px 50px rgba(0,0,0,0.05); overflow: hidden; border-collapse: separate;">
                     <tr>
-                      <td style="padding: 40px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
+                      <td style="padding: 40px; font-family: {font_family}; font-size: {font_size};">
                         <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 48px;">
                           <tr>
                             <td align="left" valign="middle">
@@ -604,7 +608,7 @@ def send_broadcast_email(
                         <h2 style="font-size: 32px; font-weight: 900; color: {primary_color}; margin-bottom: 28px; text-transform: uppercase; font-style: italic; letter-spacing: -0.04em; line-height: 1.1; margin-top: 0;">
                             Update: <span style="color: {accent_color};">{event_title}</span>
                         </h2>
-                        <div style="font-size: 16px; line-height: 1.8; color: #334155; margin-bottom: 40px;">
+                        <div style="font-size: {font_size}; line-height: 1.8; color: #334155; margin-bottom: 40px;">
                             {p_body.replace("\n", "<br>")}
                         </div>
                         {signature_html}

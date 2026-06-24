@@ -116,7 +116,9 @@ def get_event_email_config(event: Event, session: Session):
             "footer_text": client.footer_text,
             "sender_name": client.sender_name or client.name,
             "reply_to": client.reply_to,
-            "logo_url": client.logo_url
+            "logo_url": client.logo_url,
+            "font_family": getattr(client, "font_family", "Calibri, sans-serif") or "Calibri, sans-serif",
+            "font_size": getattr(client, "font_size", "16px") or "16px"
         }
     else:
         from backend.models import SystemSetting
@@ -124,6 +126,12 @@ def get_event_email_config(event: Event, session: Session):
         config = email_setting.value if email_setting else {}
         if not config.get("sender_name"):
             config["sender_name"] = "BMD-EventHub"
+            
+    # Set default font settings if not configured
+    if not config.get("font_family"):
+        config["font_family"] = "Calibri, sans-serif"
+    if not config.get("font_size"):
+        config["font_size"] = "16px"
             
     # Set default sender_email if not configured
     if not config.get("sender_email"):

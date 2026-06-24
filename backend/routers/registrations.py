@@ -86,6 +86,15 @@ def register_attendee(
                             status_code=400,
                             detail=f"This event is restricted. Please register using your corporate email address (e.g. ending in @{', @'.join(allowed)})."
                         )
+            
+            # Enforce required company check if enabled
+            if getattr(event, "collect_company", True) and getattr(event, "company_required", False):
+                company_val = data.get("company", "").strip()
+                if not company_val:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Organization / Company name is required for this event."
+                    )
     else:
         raise HTTPException(status_code=400, detail="Event ID is required")
         

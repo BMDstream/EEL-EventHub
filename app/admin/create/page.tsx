@@ -38,6 +38,7 @@ export default function CreateEventPage() {
     duration_days: 1,
     client_id: "",
     collect_company: true,
+    company_required: false,
     allowed_domains: "",
     registration_active: true,
     registration_start: "",
@@ -278,8 +279,8 @@ export default function CreateEventPage() {
                  />
               </div>
 
-              <div className="mt-8">
-                 <label className="flex items-center gap-4 p-5 bg-slate-50 rounded-2xl border-none cursor-pointer">
+              <div className="mt-8 space-y-3 bg-slate-50 rounded-2xl p-5">
+                 <label className="flex items-center gap-4 cursor-pointer">
                     <input 
                       type="checkbox" 
                       name="collect_company" 
@@ -289,6 +290,18 @@ export default function CreateEventPage() {
                     />
                     <span className="text-xs font-bold text-[#0f172a]">Collect Organization / Company name from guests</span>
                  </label>
+                 {formData.collect_company && (
+                   <label className="flex items-center gap-4 pl-9 mt-2 cursor-pointer border-t border-slate-200/50 pt-2">
+                      <input 
+                        type="checkbox" 
+                        name="company_required" 
+                        checked={formData.company_required} 
+                        onChange={handleChange}
+                        className="w-5 h-5 rounded border-slate-300 text-[#0f172a] focus:ring-yellow-400/20" 
+                      />
+                      <span className="text-xs font-bold text-[#0f172a]">Organization / Company is required</span>
+                   </label>
+                 )}
               </div>
            </div>
 

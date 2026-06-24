@@ -55,7 +55,9 @@ export default function ClientsPage() {
     accent_color: "#94a3b8",
     heading_text: "Access Granted.",
     body_text: "Your registration for **{event_title}** has been confirmed. Below are your secure credentials for terminal verification.",
-    footer_text: "Automated Event Management System\nSecurity Tier: Level 4 Authorized"
+    footer_text: "Automated Event Management System\nSecurity Tier: Level 4 Authorized",
+    font_family: "Calibri, sans-serif",
+    font_size: "16px"
   });
 
   // Fetch on mount and whenever session becomes available
@@ -106,7 +108,9 @@ export default function ClientsPage() {
       accent_color: "#94a3b8",
       heading_text: "Access Granted.",
       body_text: "Your registration for **{event_title}** has been confirmed. Below are your secure credentials for terminal verification.",
-      footer_text: "Automated Event Management System\nSecurity Tier: Level 4 Authorized"
+      footer_text: "Automated Event Management System\nSecurity Tier: Level 4 Authorized",
+      font_family: "Calibri, sans-serif",
+      font_size: "16px"
     });
     setModalOpen(true);
   };
@@ -123,7 +127,9 @@ export default function ClientsPage() {
       accent_color: client.accent_color,
       heading_text: client.heading_text,
       body_text: client.body_text,
-      footer_text: client.footer_text
+      footer_text: client.footer_text,
+      font_family: (client as any).font_family || "Calibri, sans-serif",
+      font_size: (client as any).font_size || "16px"
     });
     setModalOpen(true);
   };
@@ -490,6 +496,46 @@ export default function ClientsPage() {
                           className="w-full px-6 py-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none font-bold text-[#0f172a] focus:ring-2 focus:ring-yellow-400 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
                         />
                         <p className="text-[9px] text-slate-400 italic">Use a period (.) to separate the two colors (e.g. Access.Granted).</p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                          <Type size={12} /> Email Font Family
+                        </label>
+                        <select
+                          value={formData.font_family || "Calibri, sans-serif"}
+                          onChange={(e) => setFormData({ ...formData, font_family: e.target.value })}
+                          className="w-full px-6 py-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none font-bold text-[#0f172a] focus:ring-2 focus:ring-yellow-400 dark:bg-slate-800 dark:border-slate-700 dark:text-white cursor-pointer"
+                        >
+                          <option value="Calibri, sans-serif">Calibri (Recommended)</option>
+                          <option value="'Helvetica Neue', Helvetica, Arial, sans-serif">Helvetica Neue</option>
+                          <option value="'Inter', sans-serif">Inter</option>
+                          <option value="'Outfit', sans-serif">Outfit</option>
+                          <option value="'Bricolage Grotesque', sans-serif">Bricolage</option>
+                          <option value="Arial, sans-serif">Arial</option>
+                          <option value="sans-serif">System Sans-Serif</option>
+                        </select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                          <Type size={12} /> Email Font Size
+                        </label>
+                        <select
+                          value={formData.font_size || "16px"}
+                          onChange={(e) => setFormData({ ...formData, font_size: e.target.value })}
+                          className="w-full px-6 py-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none font-bold text-[#0f172a] focus:ring-2 focus:ring-yellow-400 dark:bg-slate-800 dark:border-slate-700 dark:text-white cursor-pointer"
+                        >
+                          <option value="12px">12px</option>
+                          <option value="14px">14px</option>
+                          <option value="15px">15px</option>
+                          <option value="16px">16px (Default)</option>
+                          <option value="17px">17px</option>
+                          <option value="18px">18px</option>
+                          <option value="20px">20px</option>
+                        </select>
                       </div>
                     </div>
 

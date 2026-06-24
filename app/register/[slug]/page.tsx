@@ -160,9 +160,11 @@ interface Event {
   address?: string;
   capacity: number;
   banner_url?: string;
+  background_url?: string;
+  collect_company?: boolean;
+  company_required?: boolean;
   custom_fields_schema?: FormField[];
   client?: Client;
-  collect_company?: boolean;
   banner_settings?: {
     size?: string;
     position?: string;
@@ -401,7 +403,8 @@ function PublicRegistrationPageContent() {
                        theme === "nordic_alabaster" || 
                        theme === "champagne_lounge";
 
-  const bannerUrl = event?.banner_url;
+  const bannerUrl = event?.background_url || event?.banner_url;
+  const formBannerUrl = event?.background_url ? event?.banner_url : undefined;
   const bannerSize = event?.banner_settings?.size;
   const bannerPosition = event?.banner_settings?.position;
 
@@ -1348,6 +1351,11 @@ function PublicRegistrationPageContent() {
 
   const registrationForm = event ? (
     <div className={style.bodyBlock || "max-w-md w-full mx-auto relative z-10 py-12"}>
+      {formBannerUrl && (
+        <div className="mb-8 rounded-2xl overflow-hidden border border-slate-200/10 dark:border-white/5 shadow-lg">
+          <img src={formBannerUrl} alt="Event Banner" className="w-full h-auto object-cover max-h-48" />
+        </div>
+      )}
       <div className="mb-12">
         <h2 className={style.heading}>Register.</h2>
         <p className={style.subHeading}>Secure your credentials for this exclusive engagement.</p>
@@ -1402,8 +1410,11 @@ function PublicRegistrationPageContent() {
 
           {event.collect_company !== false && (
             <div className="space-y-2">
-              <label className={style.label}>Organization / Company</label>
+              <label className={style.label}>
+                Organization / Company {event.company_required && <span className={`${isLightTheme ? "client-text-primary" : "client-text-accent"} ml-0.5 font-bold`}>*</span>}
+              </label>
               <input
+                required={event.company_required}
                 type="text"
                 name="company"
                 value={formData.company}

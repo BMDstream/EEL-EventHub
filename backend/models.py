@@ -25,6 +25,8 @@ class Client(SQLModel, table=True):
     heading_text: str = "Access Granted."
     body_text: str = "Your registration for **{event_title}** has been confirmed. Below are your secure credentials for terminal verification."
     footer_text: str = "Automated Event Management System\nSecurity Tier: Level 4 Authorized"
+    font_family: Optional[str] = Field(default="Calibri, sans-serif")
+    font_size: Optional[str] = Field(default="16px")
     created_at: datetime = Field(default_factory=datetime.utcnow)
     
     users: List["User"] = Relationship(back_populates="clients", link_model=UserClientLink)
@@ -44,6 +46,8 @@ class Event(SQLModel, table=True):
     sender_name: Optional[str] = Field(default=None)
     client_id: Optional[int] = Field(default=None, foreign_key="client.id")
     collect_company: bool = Field(default=True)
+    company_required: bool = Field(default=False)
+    background_url: Optional[str] = Field(default=None)
     duration_days: int = Field(default=1)
     
     registration_active: bool = Field(default=True)

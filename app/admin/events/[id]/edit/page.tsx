@@ -78,6 +78,7 @@ export default function EditEventPage() {
   const [senderEmails, setSenderEmails] = useState<string[]>([]);
   const [originalBanner, setOriginalBanner] = useState("");
   const [originalLogo, setOriginalLogo] = useState("");
+  const [originalBg, setOriginalBg] = useState("");
   const [eventUserRole, setEventUserRole] = useState<string>("staff");
   const [formData, setFormData] = useState({
     title: "",
@@ -94,6 +95,8 @@ export default function EditEventPage() {
     sender_name: "",
     client_id: "",
     collect_company: true,
+    company_required: false,
+    background_url: "",
     allowed_domains: "",
     banner_size: "cover",
     banner_position: "center",
@@ -176,6 +179,8 @@ export default function EditEventPage() {
           sender_name: data.sender_name || "",
           client_id: data.client_id ? data.client_id.toString() : "",
           collect_company: data.collect_company !== false,
+          company_required: !!data.company_required,
+          background_url: data.background_url || "",
           allowed_domains: data.allowed_domains ? data.allowed_domains.join(", ") : "",
           banner_size: data.banner_settings?.size || "cover",
           banner_position: data.banner_settings?.position || "center",
@@ -191,6 +196,7 @@ export default function EditEventPage() {
         });
         setOriginalBanner(data.banner_url || "");
         setOriginalLogo(data.logo_url || "");
+        setOriginalBg(data.background_url || "");
         setEventUserRole(data.user_role_for_client || "staff");
         setLoading(false);
       })
@@ -205,7 +211,7 @@ export default function EditEventPage() {
     setSaving(true);
 
     try {
-      const { banner_size, banner_position, banner_theme, banner_primary_color, banner_accent_color, banner_layout, banner_url, logo_url, ...submitData } = formData;
+      const { banner_size, banner_position, banner_theme, banner_primary_color, banner_accent_color, banner_layout, banner_url, logo_url, background_url, ...submitData } = formData;
       
       const payload: any = {
         ...submitData,
@@ -236,6 +242,11 @@ export default function EditEventPage() {
       // Only send logo_url if it has changed to avoid payload limit issues (413)
       if (formData.logo_url !== originalLogo) {
         payload.logo_url = formData.logo_url;
+      }
+
+      // Only send background_url if it has changed to avoid payload limit issues (413)
+      if (formData.background_url !== originalBg) {
+        payload.background_url = formData.background_url;
       }
 
       const response = await fetch(`/api/py/events/${id}`, {
@@ -575,6 +586,56 @@ export default function EditEventPage() {
               )}
 
               <div className="space-y-3">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-between justify-between">
+                  Registration Page Background Image (Optional)
+                  {formData.background_url && <button type="button" onClick={() => setFormData({...formData, background_url: ""})} className="text-red-500 hover:underline">Remove</button>}
+                </label>
+                <div className="relative group">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        try {
+                          const compressed = await compressImage(file, 1600, 1600, 0.85);
+                          setFormData(prev => ({ ...prev, background_url: compressed }));
+                        } catch (err) {
+                          console.error("Compression failed, using original", err);
+                          const reader = new FileReader();
+                          reader.onloadend = () => {
+                            setFormData(prev => ({ ...prev, background_url: reader.result as string }));
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }
+                    }}
+                    className="absolute inset-0 opacity-0 cursor-pointer z-10"
+                  />
+                  <div className={`w-full h-24 rounded-2xl border-2 border-dashed ${formData.background_url ? 'border-green-500/30 bg-green-50/50' : 'border-slate-200 bg-slate-50/50'} relative transition-all overflow-hidden`}>
+                    {formData.background_url ? (
+                      <div className="absolute inset-0">
+                        <div 
+                          className="absolute inset-0"
+                          style={{
+                            backgroundImage: `url(${formData.background_url})`,
+                            backgroundSize: "cover",
+                            backgroundPosition: "center",
+                            backgroundRepeat: "no-repeat"
+                          }}
+                        />
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center h-full">
+                        <p className="text-[10px] font-black text-slate-400 uppercase">Upload Background Image</p>
+                        <p className="text-[8px] text-slate-300 uppercase mt-1">Recommended: 1920x1080</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-3">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center justify-between">
                   Event Email Logo Override
                   {formData.logo_url && <button type="button" onClick={() => setFormData({...formData, logo_url: ""})} className="text-red-500 hover:underline">Remove</button>}
@@ -784,16 +845,31 @@ export default function EditEventPage() {
 
             <div className="space-y-3">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Registration Options</label>
-              <label className="flex items-center gap-4 p-5 bg-slate-50/50 rounded-2xl border border-slate-100 cursor-pointer">
-                <input 
-                  type="checkbox" 
-                  name="collect_company" 
-                  checked={formData.collect_company} 
-                  onChange={handleChange}
-                  className="w-5 h-5 rounded border-slate-300 text-[#1e293b] focus:ring-[#1e293b]/5" 
-                />
-                <span className="text-xs font-bold text-slate-600">Collect Organization / Company name from guests</span>
-              </label>
+              <div className="space-y-3 bg-slate-50/50 rounded-2xl border border-slate-100 p-5">
+                <label className="flex items-center gap-4 cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    name="collect_company" 
+                    checked={formData.collect_company} 
+                    onChange={handleChange}
+                    className="w-5 h-5 rounded border-slate-300 text-[#1e293b] focus:ring-[#1e293b]/5" 
+                  />
+                  <span className="text-xs font-bold text-slate-600">Collect Organization / Company name from guests</span>
+                </label>
+                
+                {formData.collect_company && (
+                  <label className="flex items-center gap-4 pl-9 mt-2 cursor-pointer border-t border-slate-100/50 pt-2">
+                    <input 
+                      type="checkbox" 
+                      name="company_required" 
+                      checked={formData.company_required} 
+                      onChange={handleChange}
+                      className="w-5 h-5 rounded border-slate-300 text-[#1e293b] focus:ring-[#1e293b]/5" 
+                    />
+                    <span className="text-xs font-bold text-slate-600">Organization / Company is required</span>
+                  </label>
+                )}
+              </div>
             </div>
 
             {/* Registration Active & Disclaimer Section */}

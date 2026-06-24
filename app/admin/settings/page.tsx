@@ -29,7 +29,9 @@ export default function SettingsPage() {
     footer_text: "Automated Event Management System\nSecurity Tier: Level 4 Authorized",
     logo_url: "",
     sender_name: "BMD-EventHub",
-    sender_email: ""
+    sender_email: "",
+    font_family: "Calibri, sans-serif",
+    font_size: "16px"
   });
   const [senderEmails, setSenderEmails] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -212,6 +214,44 @@ export default function SettingsPage() {
                       className="flex-1 px-6 py-4 rounded-2xl bg-slate-50 border border-slate-200 focus:border-yellow-400 outline-none font-bold text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white"
                     />
                   </div>
+                </div>
+
+                <div className="space-y-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+                  <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-1 flex items-center gap-2">
+                    <Type size={12} /> Email Font Family
+                  </label>
+                  <select
+                    value={config.font_family || "Calibri, sans-serif"}
+                    onChange={(e) => setConfig({ ...config, font_family: e.target.value })}
+                    className="w-full px-6 py-4 rounded-2xl bg-slate-50 border border-slate-200 focus:border-yellow-400 outline-none font-bold text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white cursor-pointer"
+                  >
+                    <option value="Calibri, sans-serif">Calibri (Recommended)</option>
+                    <option value="'Helvetica Neue', Helvetica, Arial, sans-serif">Helvetica Neue</option>
+                    <option value="'Inter', sans-serif">Inter</option>
+                    <option value="'Outfit', sans-serif">Outfit</option>
+                    <option value="'Bricolage Grotesque', sans-serif">Bricolage</option>
+                    <option value="Arial, sans-serif">Arial</option>
+                    <option value="sans-serif">System Sans-Serif</option>
+                  </select>
+                </div>
+
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-1 flex items-center gap-2">
+                    <Type size={12} /> Email Font Size
+                  </label>
+                  <select
+                    value={config.font_size || "16px"}
+                    onChange={(e) => setConfig({ ...config, font_size: e.target.value })}
+                    className="w-full px-6 py-4 rounded-2xl bg-slate-50 border border-slate-200 focus:border-yellow-400 outline-none font-bold text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white cursor-pointer"
+                  >
+                    <option value="12px">12px</option>
+                    <option value="14px">14px</option>
+                    <option value="15px">15px</option>
+                    <option value="16px">16px (Default)</option>
+                    <option value="17px">17px</option>
+                    <option value="18px">18px</option>
+                    <option value="20px">20px</option>
+                  </select>
                 </div>
               </div>
 

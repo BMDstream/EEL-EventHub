@@ -103,7 +103,9 @@ def on_startup():
                     ("disclaimer_text", "TEXT"),
                     ("logo_url", "TEXT"),
                     ("sender_email", "TEXT"),
-                    ("sender_name", "TEXT")
+                    ("sender_name", "TEXT"),
+                    ("company_required", f"BOOLEAN DEFAULT {bool_false}"),
+                    ("background_url", "TEXT")
                 ]:
                     if col_name not in event_columns:
                         try:
@@ -113,7 +115,22 @@ def on_startup():
                         except Exception:
                             session.rollback()
 
-            # 4. Initialize default email settings if not present
+            # 5. Safely ensure font_family and font_size columns are added to client table (fallback migration)
+            client_columns = [col['name'] for col in inspector.get_columns('client')] if inspector.has_table('client') else []
+            if client_columns:
+                for col_name, col_type in [
+                    ("font_family", "TEXT DEFAULT 'Calibri, sans-serif'"),
+                    ("font_size", "TEXT DEFAULT '16px'")
+                ]:
+                    if col_name not in client_columns:
+                        try:
+                            session.execute(text(f'ALTER TABLE "client" ADD COLUMN {col_name} {col_type}'))
+                            session.commit()
+                            print(f"Column '{col_name}' added to client table.")
+                        except Exception:
+                            session.rollback()
+
+            # 6. Initialize default email settings if not present
             default_email = session.exec(select(SystemSetting).where(SystemSetting.key == "email_config")).first()
             if not default_email:
                 config = {
@@ -121,11 +138,27 @@ def on_startup():
                     "accent_color": "#94a3b8",
                     "heading_text": "Access Granted.",
                     "body_text": "Your registration for **{event_title}** has been confirmed. Below are your secure credentials for terminal verification.",
-                    "footer_text": "Automated Event Management System\nSecurity Tier: Level 4 Authorized"
+                    "footer_text": "Automated Event Management System\nSecurity Tier: Level 4 Authorized",
+                    "font_family": "Calibri, sans-serif",
+                    "font_size": "16px"
                 }
                 session.add(SystemSetting(key="email_config", value=config))
                 session.commit()
                 print("Default system email settings seeded.")
+            else:
+                config = default_email.value
+                dirty = False
+                if not config.get("font_family"):
+                    config["font_family"] = "Calibri, sans-serif"
+                    dirty = True
+                if not config.get("font_size"):
+                    config["font_size"] = "16px"
+                    dirty = True
+                if dirty:
+                    default_email.value = config
+                    session.add(default_email)
+                    session.commit()
+                    print("Updated existing default system email settings with fonts.")
 
             # 5. Ensure emailtemplate table exists (fallback migration) and seed defaults
             if not inspector.has_table('emailtemplate'):
