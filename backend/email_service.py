@@ -96,9 +96,12 @@ def get_logo_html(config: Optional[dict], meta: dict, primary_color: str) -> str
             """
         logo_text = meta.get("logo_text", "BMD")
         logo_bg = primary_color or meta.get("primary_color", "#0f172a")
+        font_family = "Calibri, sans-serif"
+        if config and isinstance(config, dict):
+            font_family = config.get("font_family", "Calibri, sans-serif")
         return f"""
         <td align="right" valign="middle">
-            <div style="background-color:{logo_bg};padding:8px 16px;border-radius:8px;color:#fff;font-weight:bold;font-size:14px;display:inline-block;font-family:sans-serif;">
+            <div style="background-color:{logo_bg};padding:8px 16px;border-radius:8px;color:#fff;font-weight:bold;font-size:14px;display:inline-block;font-family:{font_family};">
                 {logo_text}
             </div>
         </td>
@@ -198,10 +201,10 @@ def send_confirmation_email(
             query_str = f"{event_details.get('location', '')} {event_details.get('address', '')}".strip()
             maps_url = f"https://www.google.com/maps/search/?api=1&query={quote(query_str)}"
             address_html = f"""
-            <div style="margin-top: 20px;">
-                <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin: 0 0 4px 0;">Address</p>
-                <p style="font-size: 16px; font-weight: 700; color: #0f172a; margin: 0 0 10px 0;">{event_details.get('address')}</p>
-                <a href="{maps_url}" target="_blank" style="display: inline-block; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.05em; color: #ffffff; background-color: {primary_color}; text-decoration: none; padding: 10px 20px; border-radius: 12px; margin-top: 4px;">
+            <div style="margin-top: 20px; font-family: {font_family};">
+                <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin: 0 0 4px 0; font-family: {font_family};">Address</p>
+                <p style="font-size: 16px; font-weight: 700; color: #0f172a; margin: 0 0 10px 0; font-family: {font_family};">{event_details.get('address')}</p>
+                <a href="{maps_url}" target="_blank" style="display: inline-block; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.05em; color: #ffffff; background-color: {primary_color}; text-decoration: none; padding: 10px 20px; border-radius: 12px; margin-top: 4px; font-family: {font_family};">
                     🗺️ Open in Google Maps
                 </a>
             </div>
@@ -211,31 +214,31 @@ def send_confirmation_email(
         if matchup:
             details_title = meta.get("details_title", "Partnered With")
             matchup_html = f"""
-            <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #f1f5f9;">
-                <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.15em; color: #eab308; margin: 0 0 4px 0;">{details_title}</p>
-                <p style="font-size: 18px; font-weight: 800; color: {primary_color}; margin: 0;">{matchup}</p>
-                <p style="font-size: 11px; color: #64748b; margin: 2px 0 0 0;">Sports Tournament Series</p>
+            <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #f1f5f9; font-family: {font_family};">
+                <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.15em; color: #eab308; margin: 0 0 4px 0; font-family: {font_family};">{details_title}</p>
+                <p style="font-size: 18px; font-weight: 800; color: {primary_color}; margin: 0; font-family: {font_family};">{matchup}</p>
+                <p style="font-size: 11px; color: #64748b; margin: 2px 0 0 0; font-family: {font_family};">Sports Tournament Series</p>
             </div>
             """
 
         engagement_title = meta.get("engagement_title", "Engagement Details")
         details_html = f"""
-        <div style="background: #ffffff; padding: 32px; border: 1px solid #f1f5f9; border-radius: 32px; margin-bottom: 40px;">
-            <p style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.3em; color: {accent_color}; margin-bottom: 24px;">{engagement_title}</p>
+        <div style="background: #ffffff; padding: 32px; border: 1px solid #f1f5f9; border-radius: 32px; margin-bottom: 40px; font-family: {font_family};">
+            <p style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.3em; color: {accent_color}; margin-bottom: 24px; font-family: {font_family};">{engagement_title}</p>
             
-            <div style="margin-bottom: 20px;">
-                <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin: 0 0 4px 0;">Event</p>
-                <p style="font-size: 18px; font-weight: 800; color: {primary_color}; margin: 0;">{event_title}</p>
+            <div style="margin-bottom: 20px; font-family: {font_family};">
+                <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin: 0 0 4px 0; font-family: {font_family};">Event</p>
+                <p style="font-size: 18px; font-weight: 800; color: {primary_color}; margin: 0; font-family: {font_family};">{event_title}</p>
             </div>
 
-            <div style="margin-bottom: 20px;">
-                <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin: 0 0 4px 0;">Date & Time</p>
-                <p style="font-size: 16px; font-weight: 700; color: #0f172a; margin: 0;">{date_str} @ {time_str}</p>
+            <div style="margin-bottom: 20px; font-family: {font_family};">
+                <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin: 0 0 4px 0; font-family: {font_family};">Date & Time</p>
+                <p style="font-size: 16px; font-weight: 700; color: #0f172a; margin: 0; font-family: {font_family};">{date_str} @ {time_str}</p>
             </div>
 
-            <div style="margin-bottom: 20px;">
-                <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin: 0 0 4px 0;">Venue</p>
-                <p style="font-size: 16px; font-weight: 700; color: #0f172a; margin: 0;">{event_details.get('location', 'TBA')}</p>
+            <div style="margin-bottom: 20px; font-family: {font_family};">
+                <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin: 0 0 4px 0; font-family: {font_family};">Venue</p>
+                <p style="font-size: 16px; font-weight: 700; color: #0f172a; margin: 0; font-family: {font_family};">{event_details.get('location', 'TBA')}</p>
             </div>
             {address_html}
             {matchup_html}
@@ -250,41 +253,41 @@ def send_confirmation_email(
         qr_data = registration_id or clearance_id
         qr_url = f"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={quote(qr_data)}"
         qr_block_html = f"""
-        <div style="background: #f8fafc; padding: 48px; border-radius: 32px; text-align: center; border: 1px solid #f1f5f9; margin-bottom: 40px; position: relative; overflow: hidden;">
+        <div style="background: #f8fafc; padding: 48px; border-radius: 32px; text-align: center; border: 1px solid #f1f5f9; margin-bottom: 40px; position: relative; overflow: hidden; font-family: {font_family};">
             <img src="{qr_url}" width="200" height="200" alt="Registration QR Code" style="margin-bottom: 32px; border-radius: 20px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.15);" />
-            <p style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.3em; color: #64748b; margin-bottom: 16px;">Ticket Reference ID</p>
-            <div style="display: inline-block; background: #ffffff; padding: 16px 32px; border-radius: 20px; border: 2px solid {primary_color};">
-                <code style="font-size: 32px; font-weight: 900; color: {primary_color}; letter-spacing: 0.25em;">{clearance_id}</code>
+            <p style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.3em; color: #64748b; margin-bottom: 16px; font-family: {font_family};">Ticket Reference ID</p>
+            <div style="display: inline-block; background: #ffffff; padding: 16px 32px; border-radius: 20px; border: 2px solid {primary_color}; font-family: {font_family};">
+                <code style="font-size: 32px; font-weight: 900; color: {primary_color}; letter-spacing: 0.25em; font-family: monospace;">{clearance_id}</code>
             </div>
         </div>
         """
         warning_block_html = f"""
-        <div style="background: #fffbeb; padding: 28px; border-radius: 24px; border: 1px solid #fef3c7; margin-bottom: 40px; text-align: center;">
-            <p style="color: #b45309; font-size: 14px; font-weight: 700; margin: 0; line-height: 1.5; text-transform: uppercase; letter-spacing: 0.05em;">
+        <div style="background: #fffbeb; padding: 28px; border-radius: 24px; border: 1px solid #fef3c7; margin-bottom: 40px; text-align: center; font-family: {font_family};">
+            <p style="color: #b45309; font-size: 14px; font-weight: 700; margin: 0; line-height: 1.5; text-transform: uppercase; letter-spacing: 0.05em; font-family: {font_family};">
                 Please present this QR code or code at the check-in desk.
             </p>
         </div>
         """
         if profile_update_link:
             urgent_banner_html = f"""
-            <div style="background-color: #fff7ed; border: 2px solid #ea580c; padding: 24px; border-radius: 20px; margin-bottom: 32px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
-                <p style="color: #c2410c; font-size: 11px; font-weight: 950; text-transform: uppercase; letter-spacing: 0.15em; margin: 0 0 8px 0;">
+            <div style="background-color: #fff7ed; border: 2px solid #ea580c; padding: 24px; border-radius: 20px; margin-bottom: 32px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); font-family: {font_family};">
+                <p style="color: #c2410c; font-size: 11px; font-weight: 950; text-transform: uppercase; letter-spacing: 0.15em; margin: 0 0 8px 0; font-family: {font_family};">
                     ⚠️ Action Required ASAP
                 </p>
-                <p style="color: #7c2d12; font-size: 15px; font-weight: 800; margin: 0 0 12px 0; line-height: 1.4;">
+                <p style="color: #7c2d12; font-size: 15px; font-weight: 800; margin: 0 0 12px 0; line-height: 1.4; font-family: {font_family};">
                     Complete your registration details to secure your spot.
                 </p>
-                <p style="color: #9a3412; font-size: 13px; line-height: 1.5; margin: 0;">
+                <p style="color: #9a3412; font-size: 13px; line-height: 1.5; margin: 0; font-family: {font_family};">
                     Your partner has registered you, but we still need your specific information (such as T-shirt size and dietary preferences) to complete your booking. Please click the <strong>"Update Your Ticket Details"</strong> button below to submit this information immediately.
                 </p>
             </div>
             """
             button_block_html = f"""
-            <div style="text-align: center; margin-top: 10px; margin-bottom: 40px;">
-                <a href="{profile_update_link}" target="_blank" style="background-color: #eab308; color: #000000; padding: 16px 32px; border-radius: 16px; font-size: 13px; font-weight: 950; text-decoration: none; text-transform: uppercase; letter-spacing: 0.1em; display: inline-block; box-shadow: 0 4px 12px rgba(234,179,8,0.2);">
+            <div style="text-align: center; margin-top: 10px; margin-bottom: 40px; font-family: {font_family};">
+                <a href="{profile_update_link}" target="_blank" style="background-color: #eab308; color: #000000; padding: 16px 32px; border-radius: 16px; font-size: 13px; font-weight: 950; text-decoration: none; text-transform: uppercase; letter-spacing: 0.1em; display: inline-block; box-shadow: 0 4px 12px rgba(234,179,8,0.2); font-family: {font_family};">
                     Update Your Ticket Details
                 </a>
-                <p style="font-size: 11px; color: #b45309; margin-top: 10px; margin-bottom: 0; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;">
+                <p style="font-size: 11px; color: #b45309; margin-top: 10px; margin-bottom: 0; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; font-family: {font_family};">
                     ⚠️ MUST DO ASAP - Required to finalize registration!
                 </p>
             </div>
@@ -348,10 +351,10 @@ def send_confirmation_email(
                 <table width="100%" border="0" cellspacing="0" cellpadding="0">
                   <tr>
                     <td align="center">
-                      <p style="font-size: 11px; color: #94a3b8; margin-bottom: 32px; line-height: 1.6; margin-top: 0;">
+                      <p style="font-size: 11px; color: #94a3b8; margin-bottom: 32px; line-height: 1.6; margin-top: 0; font-family: {font_family};">
                           {footer_html}
                       </p>
-                      <p style="font-size: 9px; color: #cbd5e1; text-transform: uppercase; letter-spacing: 0.1em; margin: 0;">
+                      <p style="font-size: 9px; color: #cbd5e1; text-transform: uppercase; letter-spacing: 0.1em; margin: 0; font-family: {font_family};">
                           This confirmation email was sent to {to_email}.
                       </p>
                     </td>
@@ -620,7 +623,7 @@ def send_broadcast_email(
                         <table width="100%" border="0" cellspacing="0" cellpadding="0">
                           <tr>
                             <td align="center">
-                              <p style="font-size: 10px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.2em; margin: 0;">
+                              <p style="font-size: 10px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.2em; margin: 0; font-family: {font_family};">
                                   Automated Event Management System • Security Tier 4
                               </p>
                             </td>

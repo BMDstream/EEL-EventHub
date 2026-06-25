@@ -37,10 +37,10 @@ DEFAULT_TEMPLATES = {
             <table width="100%" border="0" cellspacing="0" cellpadding="0">
               <tr>
                 <td align="center">
-                  <p style="font-size: 11px; color: #94a3b8; margin-bottom: 32px; line-height: 1.6; margin-top: 0;">
+                  <p style="font-size: 11px; color: #94a3b8; margin-bottom: 32px; line-height: 1.6; margin-top: 0; font-family: {font_family};">
                       {footer_text}
                   </p>
-                  <p style="font-size: 9px; color: #cbd5e1; text-transform: uppercase; letter-spacing: 0.1em; margin: 0;">
+                  <p style="font-size: 9px; color: #cbd5e1; text-transform: uppercase; letter-spacing: 0.1em; margin: 0; font-family: {font_family};">
                       This confirmation email was sent to {to_email}.
                   </p>
                 </td>
@@ -87,10 +87,10 @@ DEFAULT_TEMPLATES = {
             <table width="100%" border="0" cellspacing="0" cellpadding="0">
               <tr>
                 <td align="center">
-                  <p style="font-size: 11px; color: #94a3b8; margin-bottom: 32px; line-height: 1.6; margin-top: 0;">
+                  <p style="font-size: 11px; color: #94a3b8; margin-bottom: 32px; line-height: 1.6; margin-top: 0; font-family: {font_family};">
                       {footer_text}
                   </p>
-                  <p style="font-size: 9px; color: #cbd5e1; text-transform: uppercase; letter-spacing: 0.1em; margin: 0;">
+                  <p style="font-size: 9px; color: #cbd5e1; text-transform: uppercase; letter-spacing: 0.1em; margin: 0; font-family: {font_family};">
                       This email was sent to {to_email}.
                   </p>
                 </td>
@@ -131,13 +131,13 @@ DEFAULT_TEMPLATES = {
             </h2>
             
             <div style="background-color: #fff7ed; border: 2px solid #ea580c; padding: 24px; border-radius: 20px; margin-bottom: 32px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
-                <p style="color: #c2410c; font-size: 11px; font-weight: 950; text-transform: uppercase; letter-spacing: 0.15em; margin: 0 0 8px 0;">
+                <p style="color: #c2410c; font-size: 11px; font-weight: 950; text-transform: uppercase; letter-spacing: 0.15em; margin: 0 0 8px 0; font-family: {font_family};">
                     ⚠️ Action Required ASAP
                 </p>
-                <p style="color: #7c2d12; font-size: 15px; font-weight: 800; margin: 0 0 12px 0; line-height: 1.4;">
+                <p style="color: #7c2d12; font-size: 15px; font-weight: 800; margin: 0 0 12px 0; line-height: 1.4; font-family: {font_family};">
                     Complete your registration details to secure your spot.
                 </p>
-                <p style="color: #9a3412; font-size: 13px; line-height: 1.5; margin: 0;">
+                <p style="color: #9a3412; font-size: 13px; line-height: 1.5; margin: 0; font-family: {font_family};">
                     Your partner has registered you, but we still need your specific information (such as T-shirt size and dietary preferences) to complete your booking. Please click the <strong>"Update Your Ticket Details"</strong> button below to submit this information immediately.
                 </p>
             </div>
@@ -148,10 +148,10 @@ DEFAULT_TEMPLATES = {
             </p>
             
             <div style="text-align: center; margin-top: 10px; margin-bottom: 40px;">
-                <a href="{profile_update_link}" target="_blank" style="background-color: #eab308; color: #000000; padding: 16px 32px; border-radius: 16px; font-size: 13px; font-weight: 950; text-decoration: none; text-transform: uppercase; letter-spacing: 0.1em; display: inline-block; box-shadow: 0 4px 12px rgba(234,179,8,0.2);">
+                <a href="{profile_update_link}" target="_blank" style="background-color: #eab308; color: #000000; padding: 16px 32px; border-radius: 16px; font-size: 13px; font-weight: 950; text-decoration: none; text-transform: uppercase; letter-spacing: 0.1em; display: inline-block; box-shadow: 0 4px 12px rgba(234,179,8,0.2); font-family: {font_family};">
                     Update Your Ticket Details
                 </a>
-                <p style="font-size: 11px; color: #b45309; margin-top: 10px; margin-bottom: 0; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;">
+                <p style="font-size: 11px; color: #b45309; margin-top: 10px; margin-bottom: 0; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; font-family: {font_family};">
                     ⚠️ MUST DO ASAP - Required to finalize registration!
                 </p>
             </div>
@@ -160,10 +160,10 @@ DEFAULT_TEMPLATES = {
             <table width="100%" border="0" cellspacing="0" cellpadding="0">
               <tr>
                 <td align="center">
-                  <p style="font-size: 11px; color: #94a3b8; margin-bottom: 32px; line-height: 1.6; margin-top: 0;">
+                  <p style="font-size: 11px; color: #94a3b8; margin-bottom: 32px; line-height: 1.6; margin-top: 0; font-family: {font_family};">
                       {footer_text}
                   </p>
-                  <p style="font-size: 9px; color: #cbd5e1; text-transform: uppercase; letter-spacing: 0.1em; margin: 0;">
+                  <p style="font-size: 9px; color: #cbd5e1; text-transform: uppercase; letter-spacing: 0.1em; margin: 0; font-family: {font_family};">
                       This email was sent to {to_email}.
                   </p>
                 </td>
@@ -211,10 +211,10 @@ DEFAULT_TEMPLATES = {
             <table width="100%" border="0" cellspacing="0" cellpadding="0">
               <tr>
                 <td align="center">
-                  <p style="font-size: 11px; color: #94a3b8; margin-bottom: 32px; line-height: 1.6; margin-top: 0;">
+                  <p style="font-size: 11px; color: #94a3b8; margin-bottom: 32px; line-height: 1.6; margin-top: 0; font-family: {font_family};">
                       {footer_text}
                   </p>
-                  <p style="font-size: 9px; color: #cbd5e1; text-transform: uppercase; letter-spacing: 0.1em; margin: 0;">
+                  <p style="font-size: 9px; color: #cbd5e1; text-transform: uppercase; letter-spacing: 0.1em; margin: 0; font-family: {font_family};">
                       This email was sent to {to_email}.
                   </p>
                 </td>
@@ -260,9 +260,9 @@ DEFAULT_TEMPLATES = {
     {button_html}
  
     <div style="background-color: #1c1917; padding: 20px; border-radius: 16px; border: 1px solid #292524; text-align: center; margin-bottom: 30px;">
-        <p style="color: #e7e5e4; font-size: 12px; font-weight: 600; margin: 0; line-height: 1.5;">
+        <p style="color: #e7e5e4; font-size: 12px; font-weight: 600; margin: 0; line-height: 1.5; font-family: {font_family};">
             EXCELLENCE ENTERTAINMENT LOGISTICS<br>
-            <span style="color: #a8a29e; font-size: 10px; font-weight: 500;">Clearance Level: Tier 1 Authorized Tournament Series</span>
+            <span style="color: #a8a29e; font-size: 10px; font-weight: 500; font-family: {font_family};">Clearance Level: Tier 1 Authorized Tournament Series</span>
         </p>
     </div>
 </div>"""

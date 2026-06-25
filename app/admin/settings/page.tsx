@@ -340,7 +340,7 @@ const compileTemplateHtml = (key: string, values: Record<string, string> = {}, f
   if (key === "registration_confirmed") {
     const warningHtml = values.warning_text ? `
             <div style="background: #fffbeb; padding: 28px; border-radius: 24px; border: 1px solid #fef3c7; margin-bottom: 40px; text-align: center;">
-                <p style="color: #b45309; font-size: 14px; font-weight: 700; margin: 0; line-height: 1.5; text-transform: uppercase; letter-spacing: 0.05em; font-family: sans-serif;">
+                <p style="color: #b45309; font-size: 14px; font-weight: 700; margin: 0; line-height: 1.5; text-transform: uppercase; letter-spacing: 0.05em; font-family: ${fontFamily};">
                     ${values.warning_text}
                 </p>
             </div>
@@ -382,10 +382,10 @@ const compileTemplateHtml = (key: string, values: Record<string, string> = {}, f
             <table width="100%" border="0" cellspacing="0" cellpadding="0">
               <tr>
                 <td align="center">
-                  <p style="font-size: 11px; color: #94a3b8; margin-bottom: 32px; line-height: 1.6; margin-top: 0;">
+                  <p style="font-size: 11px; color: #94a3b8; margin-bottom: 32px; line-height: 1.6; margin-top: 0; font-family: ${fontFamily};">
                       ${(values.footer_text || "").replace(/\n/g, "<br>")}
                   </p>
-                  <p style="font-size: 9px; color: #cbd5e1; text-transform: uppercase; letter-spacing: 0.1em; margin: 0;">
+                  <p style="font-size: 9px; color: #cbd5e1; text-transform: uppercase; letter-spacing: 0.1em; margin: 0; font-family: ${fontFamily};">
                       This confirmation email was sent to {to_email}.
                   </p>
                 </td>
@@ -430,10 +430,10 @@ const compileTemplateHtml = (key: string, values: Record<string, string> = {}, f
             <table width="100%" border="0" cellspacing="0" cellpadding="0">
               <tr>
                 <td align="center">
-                  <p style="font-size: 11px; color: #94a3b8; margin-bottom: 32px; line-height: 1.6; margin-top: 0;">
+                  <p style="font-size: 11px; color: #94a3b8; margin-bottom: 32px; line-height: 1.6; margin-top: 0; font-family: ${fontFamily};">
                       ${(values.footer_text || "").replace(/\n/g, "<br>")}
                   </p>
-                  <p style="font-size: 9px; color: #cbd5e1; text-transform: uppercase; letter-spacing: 0.1em; margin: 0;">
+                  <p style="font-size: 9px; color: #cbd5e1; text-transform: uppercase; letter-spacing: 0.1em; margin: 0; font-family: ${fontFamily};">
                       This email was sent to {to_email}.
                   </p>
                 </td>
@@ -472,13 +472,13 @@ const compileTemplateHtml = (key: string, values: Record<string, string> = {}, f
             </h2>
             
             <div style="background-color: #fff7ed; border: 2px solid #ea580c; padding: 24px; border-radius: 20px; margin-bottom: 32px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
-                <p style="color: #c2410c; font-size: 11px; font-weight: 950; text-transform: uppercase; letter-spacing: 0.15em; margin: 0 0 8px 0; font-family: sans-serif;">
+                <p style="color: #c2410c; font-size: 11px; font-weight: 950; text-transform: uppercase; letter-spacing: 0.15em; margin: 0 0 8px 0; font-family: ${fontFamily};">
                     ${values.urgent_title || ""}
                 </p>
-                <p style="color: #7c2d12; font-size: 15px; font-weight: 800; margin: 0 0 12px 0; line-height: 1.4; font-family: sans-serif;">
+                <p style="color: #7c2d12; font-size: 15px; font-weight: 800; margin: 0 0 12px 0; line-height: 1.4; font-family: ${fontFamily};">
                     Complete your registration details to secure your spot.
                 </p>
-                <p style="color: #9a3412; font-size: 13px; line-height: 1.5; margin: 0; font-family: sans-serif;">
+                <p style="color: #9a3412; font-size: 13px; line-height: 1.5; margin: 0; font-family: ${fontFamily};">
                     ${(values.urgent_body || "").replace(/\n/g, "<br>")}
                 </p>
             </div>
@@ -489,10 +489,10 @@ const compileTemplateHtml = (key: string, values: Record<string, string> = {}, f
             </p>
             
             <div style="text-align: center; margin-top: 10px; margin-bottom: 40px;">
-                <a href="{profile_update_link}" target="_blank" style="background-color: #eab308; color: #000000; padding: 16px 32px; border-radius: 16px; font-size: 13px; font-weight: 950; text-decoration: none; text-transform: uppercase; letter-spacing: 0.1em; display: inline-block; box-shadow: 0 4px 12px rgba(234,179,8,0.2); font-family: sans-serif;">
+                <a href="{profile_update_link}" target="_blank" style="background-color: #eab308; color: #000000; padding: 16px 32px; border-radius: 16px; font-size: 13px; font-weight: 950; text-decoration: none; text-transform: uppercase; letter-spacing: 0.1em; display: inline-block; box-shadow: 0 4px 12px rgba(234,179,8,0.2); font-family: ${fontFamily};">
                     ${values.button_text || ""}
                 </a>
-                <p style="font-size: 11px; color: #b45309; margin-top: 10px; margin-bottom: 0; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; font-family: sans-serif;">
+                <p style="font-size: 11px; color: #b45309; margin-top: 10px; margin-bottom: 0; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; font-family: ${fontFamily};">
                     ⚠️ MUST DO ASAP - Required to finalize registration!
                 </p>
             </div>
@@ -501,10 +501,10 @@ const compileTemplateHtml = (key: string, values: Record<string, string> = {}, f
             <table width="100%" border="0" cellspacing="0" cellpadding="0">
               <tr>
                 <td align="center">
-                  <p style="font-size: 11px; color: #94a3b8; margin-bottom: 32px; line-height: 1.6; margin-top: 0;">
+                  <p style="font-size: 11px; color: #94a3b8; margin-bottom: 32px; line-height: 1.6; margin-top: 0; font-family: ${fontFamily};">
                       ${(values.footer_text || "").replace(/\n/g, "<br>")}
                   </p>
-                  <p style="font-size: 9px; color: #cbd5e1; text-transform: uppercase; letter-spacing: 0.15em; margin: 0;">
+                  <p style="font-size: 9px; color: #cbd5e1; text-transform: uppercase; letter-spacing: 0.15em; margin: 0; font-family: ${fontFamily};">
                       This email was sent to {to_email}.
                   </p>
                 </td>
@@ -550,10 +550,10 @@ const compileTemplateHtml = (key: string, values: Record<string, string> = {}, f
             <table width="100%" border="0" cellspacing="0" cellpadding="0">
               <tr>
                 <td align="center">
-                  <p style="font-size: 11px; color: #94a3b8; margin-bottom: 32px; line-height: 1.6; margin-top: 0;">
+                  <p style="font-size: 11px; color: #94a3b8; margin-bottom: 32px; line-height: 1.6; margin-top: 0; font-family: ${fontFamily};">
                       ${(values.footer_text || "").replace(/\n/g, "<br>")}
                   </p>
-                  <p style="font-size: 9px; color: #cbd5e1; text-transform: uppercase; letter-spacing: 0.1em; margin: 0;">
+                  <p style="font-size: 9px; color: #cbd5e1; text-transform: uppercase; letter-spacing: 0.1em; margin: 0; font-family: ${fontFamily};">
                       This email was sent to {to_email}.
                   </p>
                 </td>
@@ -569,39 +569,39 @@ const compileTemplateHtml = (key: string, values: Record<string, string> = {}, f
     html = `
 <div style="font-family: ${fontFamily}; font-size: ${fontSize}; background-color: ${values.primary_color || ""}; color: #ffffff; padding: 40px; border-radius: 24px; max-width: 600px; margin: 0 auto; border: 1px solid #1f2937;">
     <div style="text-align: center; margin-bottom: 30px;">
-        <span style="background-color: ${values.accent_color || ""}; color: #000000; padding: 8px 16px; border-radius: 12px; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.25em; font-family: sans-serif;">Tournament Dispatch</span>
+        <span style="background-color: ${values.accent_color || ""}; color: #000000; padding: 8px 16px; border-radius: 12px; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.25em; font-family: ${fontFamily};">Tournament Dispatch</span>
     </div>
     
-    <h2 style="font-size: 28px; font-weight: 900; color: #ffffff; margin-bottom: 10px; font-style: italic; text-transform: uppercase; letter-spacing: -0.02em; text-align: center; font-family: sans-serif;">
+    <h2 style="font-size: 28px; font-weight: 900; color: #ffffff; margin-bottom: 10px; font-style: italic; text-transform: uppercase; letter-spacing: -0.02em; text-align: center; font-family: ${fontFamily};">
         ${values.heading_title || ""} <span style="color: ${values.accent_color || ""};">${values.heading_subtitle || ""}</span>
     </h2>
     
-    <p style="font-size: ${fontSize}; color: #9ca3af; text-align: center; margin-bottom: 30px; font-weight: 500; font-family: sans-serif;">
+    <p style="font-size: ${fontSize}; color: #9ca3af; text-align: center; margin-bottom: 30px; font-weight: 500; font-family: ${fontFamily};">
         ${(values.body_text || "").replace(/\n/g, "<br>")}
     </p>
-
+ 
     <div style="background-color: #090d16; border: 1px solid #1e293b; border-radius: 20px; padding: 24px; margin-bottom: 30px; text-align: center;">
-        <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.15em; color: ${values.accent_color || ""}; margin: 0 0 10px 0; font-family: sans-serif;">${values.details_title || ""}</p>
-        <p style="font-size: 18px; font-weight: 800; color: #ffffff; margin: 0; font-family: sans-serif;">{name} vs {opponent_name}</p>
-        <p style="font-size: 13px; color: #64748b; margin: 5px 0 0 0; font-family: sans-serif;">Sports Tournament Series</p>
+        <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.15em; color: ${values.accent_color || ""}; margin: 0 0 10px 0; font-family: ${fontFamily};">${values.details_title || ""}</p>
+        <p style="font-size: 18px; font-weight: 800; color: #ffffff; margin: 0; font-family: ${fontFamily};">{name} vs {opponent_name}</p>
+        <p style="font-size: 13px; color: #64748b; margin: 5px 0 0 0; font-family: ${fontFamily};">Sports Tournament Series</p>
     </div>
-
+ 
     <div style="background-color: #ffffff; padding: 32px; border-radius: 20px; text-align: center; margin-bottom: 30px; box-shadow: 0 10px 25px rgba(0,0,0,0.3);">
         <img src="{qr_code_url}" width="200" height="200" alt="Check-in QR Code" style="display: block; margin: 0 auto 20px auto; border-radius: 12px;" />
-        <p style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.25em; color: #64748b; margin: 0 0 8px 0; font-family: sans-serif;">${values.pin_label || ""}</p>
+        <p style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.25em; color: #64748b; margin: 0 0 8px 0; font-family: ${fontFamily};">${values.pin_label || ""}</p>
         <div style="display: inline-block; background-color: #f1f5f9; padding: 8px 20px; border-radius: 10px; border: 1.5px solid #0f172a;">
             <code style="font-size: 24px; font-weight: 900; color: #0f172a; letter-spacing: 0.15em; font-family: monospace;">{pin}</code>
         </div>
     </div>
-
+ 
     <div style="text-align: center; margin-top: 10px; margin-bottom: 20px;">
-      <a href="#" style="background-color: ${values.accent_color || ""}; color: #000000; padding: 12px 24px; border-radius: 8px; font-size: 12px; font-weight: 900; text-decoration: none; text-transform: uppercase; display: inline-block; font-family: sans-serif;">
+      <a href="#" style="background-color: ${values.accent_color || ""}; color: #000000; padding: 12px 24px; border-radius: 8px; font-size: 12px; font-weight: 900; text-decoration: none; text-transform: uppercase; display: inline-block; font-family: ${fontFamily};">
         ${values.button_text || ""}
       </a>
     </div>
-
+ 
     <div style="background-color: #1c1917; padding: 20px; border-radius: 16px; border: 1px solid #292524; text-align: center; margin-bottom: 30px;">
-        <p style="color: #e7e5e4; font-size: 12px; font-weight: 600; margin: 0; line-height: 1.5; font-family: sans-serif;">
+        <p style="color: #e7e5e4; font-size: 12px; font-weight: 600; margin: 0; line-height: 1.5; font-family: ${fontFamily};">
             ${(values.footer_text || "").replace(/\n/g, "<br>")}
         </p>
     </div>
@@ -904,6 +904,7 @@ export default function SettingsPage() {
 
   // Compile preview HTML locally
   const getPreviewHtml = () => {
+    const activeFont = config.font_family || "Calibri, sans-serif";
     let html = bodyHtml;
     const mockVars = { ...(MOCK_PREVIEW_DATA[selectedKey] || {}) };
     
@@ -919,34 +920,39 @@ export default function SettingsPage() {
       if (logoImgUrl) {
         logoHtmlStr = `<td align="right" valign="middle"><img src="${logoImgUrl}" style="max-height: 48px; max-width: 140px; object-fit: contain; display: block;" alt="Logo" /></td>`;
       } else {
-        logoHtmlStr = `<td align="right" valign="middle"><div style="background-color:${primaryCol};padding:8px 16px;border-radius:8px;color:#fff;font-weight:bold;font-size:14px;display:inline-block;font-family:sans-serif;">${logoText}</div></td>`;
+        logoHtmlStr = `<td align="right" valign="middle"><div style="background-color:${primaryCol};padding:8px 16px;border-radius:8px;color:#fff;font-weight:bold;font-size:14px;display:inline-block;font-family:${activeFont};">${logoText}</div></td>`;
       }
     }
     
     mockVars.logo_html = logoHtmlStr;
 
-    // Dynamically replace theme colors and details title in mock blocks
+    // Dynamically replace theme colors, details title, and font-family in mock blocks
     if (mockVars.details_html) {
       const detailsTitle = formValues.details_title || "Matchup Details";
       const engagementTitle = formValues.engagement_title || "Engagement Details";
       mockVars.details_html = mockVars.details_html
         .replaceAll("#0f172a", primaryCol)
         .replaceAll("#eab308", accentCol)
+        .replaceAll("font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;", `font-family: ${activeFont};`)
+        .replaceAll("font-family: sans-serif;", `font-family: ${activeFont};`)
         .replace("Matchup Details", detailsTitle)
         .replace("Engagement Details", engagementTitle);
     }
     if (mockVars.qr_block_html) {
       mockVars.qr_block_html = mockVars.qr_block_html
-        .replaceAll("#0f172a", primaryCol);
+        .replaceAll("#0f172a", primaryCol)
+        .replaceAll("font-family: sans-serif;", `font-family: ${activeFont};`);
     }
     if (mockVars.warning_block_html) {
       mockVars.warning_block_html = mockVars.warning_block_html
-        .replaceAll("#b45309", accentCol === "#eab308" ? "#b45309" : accentCol);
+        .replaceAll("#b45309", accentCol === "#eab308" ? "#b45309" : accentCol)
+        .replaceAll("font-family: sans-serif;", `font-family: ${activeFont};`);
     }
     if (mockVars.button_block_html) {
       mockVars.button_block_html = mockVars.button_block_html
         .replaceAll("#0f172a", primaryCol)
-        .replaceAll("#eab308", accentCol);
+        .replaceAll("#eab308", accentCol)
+        .replaceAll("font-family: sans-serif;", `font-family: ${activeFont};`);
     }
     
     // Perform simple string replacements

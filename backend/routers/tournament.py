@@ -109,41 +109,6 @@ def send_resend_email(to_email: str, name: str, role: str, opponent_name: str, p
         </div>
         """
 
-    html_content = f"""
-    <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #030712; color: #ffffff; padding: 40px; border-radius: 24px; max-width: 600px; margin: 0 auto; border: 1px solid #1f2937;">
-        <div style="text-align: center; margin-bottom: 30px;">
-            <span style="background-color: #eab308; color: #000000; padding: 8px 16px; border-radius: 12px; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.25em;">Tournament Dispatch</span>
-        </div>
-        
-        <h2 style="font-size: 28px; font-weight: 900; color: #ffffff; margin-bottom: 10px; font-style: italic; text-transform: uppercase; letter-spacing: -0.02em; text-align: center;">
-            Championship <span style="color: #eab308;">Access Granted</span>
-        </h2>
-        
-        <p style="font-size: 16px; color: #9ca3af; text-align: center; margin-bottom: 30px; font-weight: 500;">
-            Hello <strong>{name}</strong>, you have been registered as the <strong>{role}</strong>.
-        </p>
- 
-        <div style="background-color: #090d16; border: 1px solid #1e293b; border-radius: 20px; padding: 24px; margin-bottom: 30px; text-align: center;">
-            <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.15em; color: #eab308; margin: 0 0 10px 0;">Partnered With</p>
-            <p style="font-size: 18px; font-weight: 800; color: #ffffff; margin: 0;">{name} vs {opponent_name}</p>
-            <p style="font-size: 13px; color: #64748b; margin: 5px 0 0 0;">Sports Tournament Series</p>
-        </div>
- 
-        <div style="background-color: #ffffff; padding: 32px; border-radius: 20px; text-align: center; margin-bottom: 30px; box-shadow: 0 10px 25px rgba(0,0,0,0.3);">
-            <img src="{qr_img_url}" width="200" height="200" alt="Check-in QR Code" style="display: block; margin: 0 auto 20px auto; border-radius: 12px;" />
-            <p style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.25em; color: #64748b; margin: 0 0 8px 0;">Backup Clearance PIN</p>
-            <div style="display: inline-block; background-color: #f1f5f9; padding: 8px 20px; border-radius: 10px; border: 1.5px solid #0f172a;">
-                <code style="font-size: 24px; font-weight: 900; color: #0f172a; letter-spacing: 0.15em;">{pin}</code>
-            </div>
-        </div>
-
-        {button_html}
- 
-        <div style="background-color: #1c1917; padding: 20px; border-radius: 16px; border: 1px solid #292524; text-align: center; margin-bottom: 30px;">
-            <p style="color: #e7e5e4; font-size: 12px; font-weight: 600; margin: 0; line-height: 1.5;">
-                Present this QR code or backup PIN at the venue gates for terminal clearance.
-            </p>
-        </div>
  
         <hr style="border: 0; border-top: 1px solid #1f2937; margin: 30px 0;" />
         
@@ -180,6 +145,38 @@ def send_resend_email(to_email: str, name: str, role: str, opponent_name: str, p
                     sender_email = email_setting.value["sender_email"]
     except Exception as db_err:
         print(f"Error fetching global email config for tournament email: {db_err}")
+
+    html_content = f"""
+    <div style="font-family: {font_family}; background-color: #030712; color: #ffffff; padding: 40px; border-radius: 24px; max-width: 600px; margin: 0 auto; border: 1px solid #1f2937;">
+        <div style="text-align: center; margin-bottom: 30px;">
+            <span style="background-color: #eab308; color: #000000; padding: 8px 16px; border-radius: 12px; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.25em;">Tournament Dispatch</span>
+        </div>
+        
+        <h2 style="font-size: 28px; font-weight: 900; color: #ffffff; margin-bottom: 10px; font-style: italic; text-transform: uppercase; letter-spacing: -0.02em; text-align: center;">
+            Championship <span style="color: #eab308;">Access Granted</span>
+        </h2>
+        
+        <p style="font-size: 16px; color: #9ca3af; text-align: center; margin-bottom: 30px; font-weight: 500;">
+            Hello <strong>{name}</strong>, you have been registered as the <strong>{role}</strong>.
+        </p>
+ 
+        <div style="background-color: #090d16; border: 1px solid #1e293b; border-radius: 20px; padding: 24px; margin-bottom: 30px; text-align: center;">
+            <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.15em; color: #eab308; margin: 0 0 10px 0;">Partnered With</p>
+            <p style="font-size: 18px; font-weight: 800; color: #ffffff; margin: 0;">{name} vs {opponent_name}</p>
+            <p style="font-size: 13px; color: #64748b; margin: 5px 0 0 0;">Sports Tournament Series</p>
+        </div>
+ 
+        <div style="background-color: #ffffff; padding: 32px; border-radius: 20px; text-align: center; margin-bottom: 30px; box-shadow: 0 10px 25px rgba(0,0,0,0.3);">
+            <img src="{qr_img_url}" width="200" height="200" alt="Check-in QR Code" style="display: block; margin: 0 auto 20px auto; border-radius: 12px;" />
+            <p style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.25em; color: #64748b; margin: 0 0 8px 0;">Backup Clearance PIN</p>
+            <div style="display: inline-block; background-color: #f1f5f9; padding: 8px 20px; border-radius: 10px; border: 1.5px solid #0f172a;">
+                <code style="font-size: 24px; font-weight: 900; color: #0f172a; letter-spacing: 0.15em;">{pin}</code>
+            </div>
+        </div>
+
+        {button_html}
+    </div>
+    """
 
     try:
         db_template = get_template_from_db("tournament_matchup")
