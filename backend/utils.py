@@ -149,6 +149,9 @@ def get_event_email_config(event: Event, session: Session):
     if getattr(event, "logo_url", None):
         config["logo_url"] = event.logo_url
         
+    # Expose event banner_url if present
+    config["banner_url"] = getattr(event, "banner_url", None)
+        
     return config
 
 def perform_checkin_logic(registration: Registration, day: Optional[int], mode: str, session: Session):

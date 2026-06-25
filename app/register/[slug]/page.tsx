@@ -1353,7 +1353,7 @@ function PublicRegistrationPageContent() {
     <div className={style.bodyBlock || "max-w-md w-full mx-auto relative z-10 py-12"}>
       {formBannerUrl && (
         <div className="mb-8 rounded-2xl overflow-hidden border border-slate-200/10 dark:border-white/5 shadow-lg">
-          <img src={formBannerUrl} alt="Event Banner" className="w-full h-auto object-cover max-h-48" />
+          <img src={formBannerUrl} alt="Event Banner" className="w-full h-auto object-cover max-h-80 md:max-h-96" />
         </div>
       )}
       <div className="mb-12">

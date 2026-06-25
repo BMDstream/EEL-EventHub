@@ -1,4 +1,5 @@
 import os
+import re
 import resend
 import qrcode
 import base64
@@ -57,6 +58,18 @@ def get_template_from_db(key: str) -> Optional[EmailTemplate]:
     except Exception as e:
         print(f"Error fetching/seeding email template '{key}': {e}")
         return None
+
+def inject_banner_placeholder_if_missing(html_str: str) -> str:
+    if not html_str:
+        return html_str
+    if "{banner_html}" in html_str:
+        return html_str
+    
+    match = re.search(r'(<table[^>]*?border-collapse:\s*separate[^>]*?>)', html_str, re.IGNORECASE)
+    if match:
+        tag = match.group(0)
+        return html_str.replace(tag, tag + "\n        {banner_html}")
+    return html_str
 
 def parse_template(text: str, variables: Dict[str, Any]) -> str:
     if not text:
@@ -149,6 +162,18 @@ def send_confirmation_email(
     else:
         footer_html = footer_text_raw.replace("\n", "<br>")
         
+    show_banner = config.get("show_banner_in_email", False)
+    banner_url = config.get("banner_url") or "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800"
+    banner_html = ""
+    if show_banner:
+        banner_html = f"""
+        <tr>
+          <td align="center" style="padding: 0; margin: 0; line-height: 0;">
+            <img src="{banner_url}" width="600" style="width: 100%; max-width: 600px; height: auto; display: block; border-top-left-radius: 38px; border-top-right-radius: 38px; margin: 0; padding: 0;" alt="Event Banner" />
+          </td>
+        </tr>
+        """
+
     t_key = "registration_confirmed"
     if profile_update_link:
         t_key = "partner_pending"
@@ -312,6 +337,7 @@ def send_confirmation_email(
               <td>
           <![endif]-->
           <table width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; max-width: 600px; border: 1px solid #f1f5f9; border-radius: 40px; background-color: #ffffff; color: {primary_color}; box-shadow: 0 20px 50px rgba(0,0,0,0.05); overflow: hidden; border-collapse: separate;">
+            {banner_html}
             <tr>
               <td style="padding: 40px; font-family: {font_family}; font-size: {font_size};">
                 <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 48px;">
@@ -398,10 +424,12 @@ def send_confirmation_email(
                 "footer_text": footer_html,
                 "profile_update_link": profile_update_link or "",
                 "font_family": font_family,
-                "font_size": font_size
+                "font_size": font_size,
+                "banner_html": banner_html
             }
             db_subject = parse_template(db_template.subject, variables)
-            db_html = parse_template(db_template.body_html, variables)
+            db_body = inject_banner_placeholder_if_missing(db_template.body_html)
+            db_html = parse_template(db_body, variables)
     except Exception as ex:
         print(f"Error applying database template override: {ex}")
 
@@ -478,6 +506,18 @@ def send_broadcast_email(
     meta = parse_template_meta(db_template.body_html) if db_template else {}
     logo_td_html = get_logo_html(config, meta, primary_color)
 
+    show_banner = config.get("show_banner_in_email", False)
+    banner_url = config.get("banner_url") or "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800"
+    banner_html = ""
+    if show_banner:
+        banner_html = f"""
+        <tr>
+          <td align="center" style="padding: 0; margin: 0; line-height: 0;">
+            <img src="{banner_url}" width="600" style="width: 100%; max-width: 600px; height: auto; display: block; border-top-left-radius: 38px; border-top-right-radius: 38px; margin: 0; padding: 0;" alt="Event Banner" />
+          </td>
+        </tr>
+        """
+
     sender_name = meta.get("sender_name") or (config.get("sender_name") if config else None)
     if not sender_name:
         sender_name = "BMD-EventHub"
@@ -530,7 +570,8 @@ def send_broadcast_email(
             "broadcast_signature": signature.replace("\n", "<br>") if signature else "",
             "footer_text": "Automated Event Management System • Security Tier 4",
             "font_family": font_family,
-            "font_size": font_size
+            "font_size": font_size,
+            "banner_html": banner_html
         }
 
         # Inject QR Code if requested in custom template or default body
@@ -568,7 +609,8 @@ def send_broadcast_email(
 
         if db_template:
             p_subject = parse_template(db_template.subject, variables)
-            html_content = parse_template(db_template.body_html, variables)
+            db_body = inject_banner_placeholder_if_missing(db_template.body_html)
+            html_content = parse_template(db_body, variables)
         else:
             # Fallback to hardcoded layout
             p_subject = (
@@ -598,6 +640,7 @@ def send_broadcast_email(
               <tr>
                 <td align="center" style="padding: 40px 0;">
                   <table width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; max-width: 600px; border: 1px solid #f1f5f9; border-radius: 40px; background-color: #ffffff; color: {primary_color}; box-shadow: 0 20px 50px rgba(0,0,0,0.05); overflow: hidden; border-collapse: separate;">
+                    {banner_html}
                     <tr>
                       <td style="padding: 40px; font-family: {font_family}; font-size: {font_size};">
                         <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 48px;">

@@ -334,9 +334,20 @@ const parseTemplateMeta = (html: string): Record<string, string> | null => {
   return null;
 };
 
-const compileTemplateHtml = (key: string, values: Record<string, string> = {}, fontFamily = "Calibri, sans-serif", fontSize = "16px") => {
+const compileTemplateHtml = (key: string, values: Record<string, string> = {}, fontFamily = "Calibri, sans-serif", fontSize = "16px", config?: Record<string, any>) => {
   const metaComment = `<!-- TEMPLATE_META: ${JSON.stringify(values)} -->`;
   let html = "";
+  
+  const showBanner = config?.show_banner_in_email;
+  const bannerUrl = config?.banner_url || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800";
+  const bannerHtml = showBanner ? `
+        <tr>
+          <td align="center" style="padding: 0; margin: 0; line-height: 0;">
+            <img src="${bannerUrl}" width="600" style="width: 100%; max-width: 600px; height: auto; display: block; border-top-left-radius: 38px; border-top-right-radius: 38px; margin: 0; padding: 0;" alt="Event Banner" />
+          </td>
+        </tr>
+  ` : "";
+
   if (key === "registration_confirmed") {
     const warningHtml = values.warning_text ? `
             <div style="background: #fffbeb; padding: 28px; border-radius: 24px; border: 1px solid #fef3c7; margin-bottom: 40px; text-align: center;">
@@ -351,6 +362,7 @@ const compileTemplateHtml = (key: string, values: Record<string, string> = {}, f
   <tr>
     <td align="center" style="padding: 40px 0;">
       <table width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; max-width: 600px; border: 1px solid #f1f5f9; border-radius: 40px; background-color: #ffffff; color: ${values.primary_color || ""}; box-shadow: 0 20px 50px rgba(0,0,0,0.05); overflow: hidden; border-collapse: separate;">
+        ${bannerHtml}
         <tr>
           <td style="padding: 40px; font-family: ${fontFamily}; font-size: ${fontSize};">
             <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 48px;">
@@ -403,6 +415,7 @@ const compileTemplateHtml = (key: string, values: Record<string, string> = {}, f
   <tr>
     <td align="center" style="padding: 40px 0;">
       <table width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; max-width: 600px; border: 1px solid #f1f5f9; border-radius: 40px; background-color: #ffffff; color: ${values.primary_color || ""}; box-shadow: 0 20px 50px rgba(0,0,0,0.05); overflow: hidden; border-collapse: separate;">
+        ${bannerHtml}
         <tr>
           <td style="padding: 40px; font-family: ${fontFamily}; font-size: ${fontSize};">
             <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 48px;">
@@ -451,6 +464,7 @@ const compileTemplateHtml = (key: string, values: Record<string, string> = {}, f
   <tr>
     <td align="center" style="padding: 40px 0;">
       <table width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; max-width: 600px; border: 1px solid #f1f5f9; border-radius: 40px; background-color: #ffffff; color: ${values.primary_color || ""}; box-shadow: 0 20px 50px rgba(0,0,0,0.05); overflow: hidden; border-collapse: separate;">
+        ${bannerHtml}
         <tr>
           <td style="padding: 40px; font-family: ${fontFamily}; font-size: ${fontSize};">
             <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 48px;">
@@ -522,6 +536,7 @@ const compileTemplateHtml = (key: string, values: Record<string, string> = {}, f
   <tr>
     <td align="center" style="padding: 40px 0;">
       <table width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; max-width: 600px; border: 1px solid #f1f5f9; border-radius: 40px; background-color: #ffffff; color: ${values.primary_color || ""}; box-shadow: 0 20px 50px rgba(0,0,0,0.05); overflow: hidden; border-collapse: separate;">
+        ${bannerHtml}
         <tr>
           <td style="padding: 40px; font-family: ${fontFamily}; font-size: ${fontSize};">
             <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 48px;">
@@ -690,7 +705,8 @@ export default function SettingsPage() {
     sender_name: "BMD-EventHub",
     sender_email: "",
     font_family: "Calibri, sans-serif",
-    font_size: "16px"
+    font_size: "16px",
+    show_banner_in_email: false
   });
   const [senderEmails, setSenderEmails] = useState<string[]>([]);
   const [loadingSettings, setLoadingSettings] = useState<boolean>(true);
@@ -822,13 +838,13 @@ export default function SettingsPage() {
     };
   }, [hasUnsavedChanges]);
 
-  // Re-compile template preview when font or size config changes
+  // Re-compile template preview when font, size or banner config changes
   useEffect(() => {
     if (activeTab === "templates") {
-      const compiled = compileTemplateHtml(selectedKey, formValues, config.font_family, config.font_size);
+      const compiled = compileTemplateHtml(selectedKey, formValues, config.font_family, config.font_size, config);
       setBodyHtml(compiled);
     }
-  }, [config.font_family, config.font_size, selectedKey, activeTab]);
+  }, [config.font_family, config.font_size, config.show_banner_in_email, selectedKey, activeTab]);
 
 
   // ==========================================
@@ -839,7 +855,7 @@ export default function SettingsPage() {
     if (editorRef.current) {
       const html = editorRef.current.innerHTML;
       setFormValues(prev => ({ ...prev, body_text: html }));
-      const compiled = compileTemplateHtml(selectedKey, { ...formValues, body_text: html }, config.font_family, config.font_size);
+      const compiled = compileTemplateHtml(selectedKey, { ...formValues, body_text: html }, config.font_family, config.font_size, config);
       setBodyHtml(compiled);
       setHasUnsavedChanges(true);
     }
@@ -992,7 +1008,7 @@ export default function SettingsPage() {
   const handleFormChange = (field: string, val: string) => {
     const nextValues = { ...formValues, [field]: val };
     setFormValues(nextValues);
-    const compiled = compileTemplateHtml(selectedKey, nextValues, config.font_family, config.font_size);
+    const compiled = compileTemplateHtml(selectedKey, nextValues, config.font_family, config.font_size, config);
     setBodyHtml(compiled);
     setHasUnsavedChanges(true);
   };
@@ -1868,7 +1884,7 @@ export default function SettingsPage() {
                                 onInput={(e) => {
                                   const html = e.currentTarget.innerHTML;
                                   setFormValues(prev => ({ ...prev, body_text: html }));
-                                  const compiled = compileTemplateHtml(selectedKey, { ...formValues, body_text: html }, config.font_family, config.font_size);
+                                  const compiled = compileTemplateHtml(selectedKey, { ...formValues, body_text: html }, config.font_family, config.font_size, config);
                                   setBodyHtml(compiled);
                                   setHasUnsavedChanges(true);
                                   saveSelection();
@@ -2162,6 +2178,26 @@ export default function SettingsPage() {
                       <option value="24px">24px</option>
                       <option value="32px">32px</option>
                     </select>
+                  </div>
+
+                  <div className="space-y-4 bg-slate-50/50 dark:bg-slate-800/20 p-5 rounded-2xl border border-slate-100/50 dark:border-slate-800/50">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-[#0f172a] dark:text-white flex items-center gap-2">
+                          <Sparkles size={12} className="text-yellow-500" />
+                          Show Event Banner in Email
+                        </label>
+                        <p className="text-[10px] text-slate-400 font-medium">
+                          Display the banner image at the top of RSVP emails.
+                        </p>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={config.show_banner_in_email || false}
+                        onChange={(e) => setConfig({ ...config, show_banner_in_email: e.target.checked })}
+                        className="w-5 h-5 text-yellow-500 bg-slate-100 border-slate-300 rounded focus:ring-yellow-500 focus:ring-2 dark:bg-slate-800 cursor-pointer"
+                      />
+                    </div>
                   </div>
                 </div>
 

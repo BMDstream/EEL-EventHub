@@ -6,6 +6,7 @@ DEFAULT_TEMPLATES = {
   <tr>
     <td align="center" style="padding: 40px 0;">
       <table width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; max-width: 600px; border: 1px solid #f1f5f9; border-radius: 40px; background-color: #ffffff; color: {primary_color}; box-shadow: 0 20px 50px rgba(0,0,0,0.05); overflow: hidden; border-collapse: separate;">
+        {banner_html}
         <tr>
           <td style="padding: 40px; font-family: {font_family}; font-size: {font_size};">
             <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 48px;">
@@ -60,6 +61,7 @@ DEFAULT_TEMPLATES = {
   <tr>
     <td align="center" style="padding: 40px 0;">
       <table width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; max-width: 600px; border: 1px solid #f1f5f9; border-radius: 40px; background-color: #ffffff; color: {primary_color}; box-shadow: 0 20px 50px rgba(0,0,0,0.05); overflow: hidden; border-collapse: separate;">
+        {banner_html}
         <tr>
           <td style="padding: 40px; font-family: {font_family}; font-size: {font_size};">
             <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 48px;">
@@ -110,6 +112,7 @@ DEFAULT_TEMPLATES = {
   <tr>
     <td align="center" style="padding: 40px 0;">
       <table width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; max-width: 600px; border: 1px solid #f1f5f9; border-radius: 40px; background-color: #ffffff; color: {primary_color}; box-shadow: 0 20px 50px rgba(0,0,0,0.05); overflow: hidden; border-collapse: separate;">
+        {banner_html}
         <tr>
           <td style="padding: 40px; font-family: {font_family}; font-size: {font_size};">
             <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 48px;">
@@ -183,6 +186,7 @@ DEFAULT_TEMPLATES = {
   <tr>
     <td align="center" style="padding: 40px 0;">
       <table width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; max-width: 600px; border: 1px solid #f1f5f9; border-radius: 40px; background-color: #ffffff; color: {primary_color}; box-shadow: 0 20px 50px rgba(0,0,0,0.05); overflow: hidden; border-collapse: separate;">
+        {banner_html}
         <tr>
           <td style="padding: 40px; font-family: {font_family}; font-size: {font_size};">
             <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 48px;">
