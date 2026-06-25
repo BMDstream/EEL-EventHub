@@ -31,7 +31,7 @@ class Player(SQLModel, table=True):
 class EventCheckin(SQLModel, table=True):
     __tablename__ = "event_checkins"
     id: Optional[int] = Field(default=None, primary_key=True)
-    player_id: int = Field(foreign_key="players.id", nullable=False)
+    player_id: int = Field(foreign_key="players.id", index=True, nullable=False)
     qr_hash: UUID = Field(default_factory=uuid4, unique=True, index=True, nullable=False)
     pin: str = Field(max_length=6, nullable=False)
     checked_in: bool = Field(default=False, nullable=False)
@@ -108,20 +108,6 @@ def send_resend_email(to_email: str, name: str, role: str, opponent_name: str, p
             </p>
         </div>
         """
-
- 
-        <hr style="border: 0; border-top: 1px solid #1f2937; margin: 30px 0;" />
-        
-        <div style="text-align: center;">
-            <p style="font-size: 10px; color: #4b5563; margin: 0 0 8px 0; text-transform: uppercase; letter-spacing: 0.15em;">
-                Automated Tournament Clearance System • Secure Tier Level 4
-            </p>
-            <p style="font-size: 8px; color: #374151; margin: 0;">
-                This transmission is confidential and intended solely for {to_email}.
-            </p>
-        </div>
-    </div>
-    """
 
     db_subject = None
     db_html = None
