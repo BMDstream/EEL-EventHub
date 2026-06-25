@@ -1042,6 +1042,27 @@ def bulk_checkin(
     conflicts = []
     errors = []
     
+    # Pre-parse UUIDs and bulk-fetch registrations with their attendees eager-loaded
+    uuid_map = {}
+    for item in data:
+        reg_id = item.get("registration_id")
+        if reg_id:
+            try:
+                uuid_map[reg_id] = UUID(reg_id)
+            except ValueError:
+                pass
+
+    reg_lookup = {}
+    if uuid_map:
+        from sqlalchemy.orm import selectinload
+        db_regs = session.exec(
+            select(Registration)
+            .where(Registration.id.in_(list(uuid_map.values())))
+            .options(selectinload(Registration.attendee))
+        ).all()
+        for r in db_regs:
+            reg_lookup[r.id] = r
+            
     for item in data:
         reg_id = item.get("registration_id")
         day = item.get("day")
@@ -1050,10 +1071,11 @@ def bulk_checkin(
         
         try:
             reg_uuid = UUID(reg_id)
-            registration = session.get(Registration, reg_uuid)
         except Exception as e:
             errors.append({"registration_id": reg_id, "detail": f"Invalid UUID: {str(e)}"})
             continue
+            
+        registration = reg_lookup.get(reg_uuid)
             
         if not registration or registration.event_id != event_id:
             errors.append({"registration_id": reg_id, "detail": "Registration not found"})

@@ -277,6 +277,8 @@ def update_template(
     session.add(template)
     session.commit()
     session.refresh(template)
+    from backend.email_service import get_template_from_db
+    get_template_from_db.cache_clear()
     return template
 
 @router.post("/settings/templates/{key}/reset", response_model=EmailTemplate)
@@ -303,6 +305,8 @@ def reset_template(
     session.add(template)
     session.commit()
     session.refresh(template)
+    from backend.email_service import get_template_from_db
+    get_template_from_db.cache_clear()
     return template
 
 @router.post("/settings/templates/{key}/test")

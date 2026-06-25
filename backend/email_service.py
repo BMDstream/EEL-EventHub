@@ -6,6 +6,7 @@ from io import BytesIO
 from typing import List, Dict, Any, Optional
 from dotenv import load_dotenv
 from urllib.parse import quote
+from functools import lru_cache
 from sqlmodel import Session, select
 from backend.database import engine
 from backend.models import EmailTemplate
@@ -32,6 +33,7 @@ def generate_qr_base64(data: str):
     img.save(buffered, format="PNG")
     return base64.b64encode(buffered.getvalue()).decode()
 
+@lru_cache(maxsize=32)
 def get_template_from_db(key: str) -> Optional[EmailTemplate]:
     try:
         with Session(engine) as session:

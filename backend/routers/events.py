@@ -188,29 +188,24 @@ def get_public_stats(slug: str, session: Session = Depends(get_session)):
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
     
-    from sqlalchemy import func
-    rsvp_count = session.exec(
-        select(func.count(Registration.id))
-        .where(Registration.event_id == event.id)
-        .where(Registration.status == "confirmed")
-    ).first() or 0
+    from sqlalchemy import func, case
+    stats = session.exec(
+        select(
+            func.count(Registration.id),
+            func.sum(case((Registration.status == "confirmed", 1), else_=0)),
+            func.sum(case((Registration.status == "declined", 1), else_=0)),
+            func.sum(case((Registration.checked_in == True, 1), else_=0))
+        ).where(Registration.event_id == event.id)
+    ).first()
     
-    declined_count = session.exec(
-        select(func.count(Registration.id))
-        .where(Registration.event_id == event.id)
-        .where(Registration.status == "declined")
-    ).first() or 0
-    
-    checked_in_count = session.exec(
-        select(func.count(Registration.id))
-        .where(Registration.event_id == event.id)
-        .where(Registration.checked_in == True)
-    ).first() or 0
-    
-    total_count = session.exec(
-        select(func.count(Registration.id))
-        .where(Registration.event_id == event.id)
-    ).first() or 0
+    if stats:
+        total_count, rsvp_count, declined_count, checked_in_count = stats
+        total_count = total_count or 0
+        rsvp_count = int(rsvp_count or 0)
+        declined_count = int(declined_count or 0)
+        checked_in_count = int(checked_in_count or 0)
+    else:
+        total_count = rsvp_count = declined_count = checked_in_count = 0
     
     client_data = None
     if event.client_id:
@@ -284,17 +279,20 @@ def get_stats(
             "clients": clients_count
         }
         
-    from sqlalchemy import func
-    registrations_count = session.exec(
-        select(func.count(Registration.id))
-        .where(Registration.event_id.in_(event_ids))
-        .where(Registration.status == "confirmed")
-    ).first() or 0
-    checked_in_count = session.exec(
-        select(func.count(Registration.id))
-        .where(Registration.event_id.in_(event_ids))
-        .where(Registration.checked_in == True)
-    ).first() or 0
+    from sqlalchemy import func, case
+    stats = session.exec(
+        select(
+            func.sum(case((Registration.status == "confirmed", 1), else_=0)),
+            func.sum(case((Registration.checked_in == True, 1), else_=0))
+        ).where(Registration.event_id.in_(event_ids))
+    ).first()
+    
+    if stats:
+        registrations_count, checked_in_count = stats
+        registrations_count = int(registrations_count or 0)
+        checked_in_count = int(checked_in_count or 0)
+    else:
+        registrations_count = checked_in_count = 0
     
     check_in_rate = 0
     if registrations_count > 0:

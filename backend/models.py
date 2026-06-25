@@ -44,7 +44,7 @@ class Event(SQLModel, table=True):
     logo_url: Optional[str] = Field(default=None)
     sender_email: Optional[str] = Field(default=None)
     sender_name: Optional[str] = Field(default=None)
-    client_id: Optional[int] = Field(default=None, foreign_key="client.id")
+    client_id: Optional[int] = Field(default=None, foreign_key="client.id", index=True)
     collect_company: bool = Field(default=True)
     company_required: bool = Field(default=False)
     background_url: Optional[str] = Field(default=None)
@@ -77,8 +77,8 @@ class Attendee(SQLModel, table=True):
 class Registration(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     pin: Optional[str] = None # 4-digit numeric PIN
-    event_id: int = Field(foreign_key="event.id")
-    attendee_id: int = Field(foreign_key="attendee.id")
+    event_id: int = Field(foreign_key="event.id", index=True)
+    attendee_id: int = Field(foreign_key="attendee.id", index=True)
     status: str = "confirmed" # confirmed, waitlisted, cancelled
     checked_in: bool = False
     created_at: datetime = Field(default_factory=datetime.utcnow)
@@ -105,7 +105,7 @@ class WebhookSubscription(SQLModel, table=True):
     secret: str
     event_types: List[str] = Field(default=[], sa_column=Column(JSON))
     is_active: bool = Field(default=True)
-    client_id: Optional[int] = Field(default=None, foreign_key="client.id")
+    client_id: Optional[int] = Field(default=None, foreign_key="client.id", index=True)
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 class SystemSetting(SQLModel, table=True):

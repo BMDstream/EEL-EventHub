@@ -8,13 +8,15 @@ load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL")
 IS_SERVERLESS = DATABASE_URL and "localhost" not in DATABASE_URL and "sqlite" not in DATABASE_URL
 
-# NullPool is correct here: Neon's PgBouncer (pooler URL) already manages
-# connection pooling externally. SQLAlchemy's own pool would create redundant
-# connections and exhaust Neon's limit under load.
+# A small pool size of 1 with 0 max_overflow allows warm serverless lambda instances 
+# to keep and reuse a single active connection, eliminating SSL handshake overhead
+# without risk of connection limit exhaustion under high concurrency.
 engine = create_engine(
     DATABASE_URL,
     echo=False,
-    poolclass=NullPool if IS_SERVERLESS else None,
+    pool_size=1 if IS_SERVERLESS else 5,
+    max_overflow=0 if IS_SERVERLESS else 10,
+    pool_recycle=120,
     connect_args={"sslmode": "require"} if IS_SERVERLESS else {}
 )
 
