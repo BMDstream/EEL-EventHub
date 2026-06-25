@@ -28,23 +28,31 @@ SECRET_KEY = os.getenv("NEXTAUTH_SECRET", "your-secret-key")
 ALGORITHM = "HS256"
 
 @router.get("/azure/login")
-async def azure_login():
+async def azure_login(request: Request):
     """
     Constructs the Microsoft Login URL and redirects the user.
     """
+    x_forwarded_proto = request.headers.get("x-forwarded-proto", "https")
+    x_forwarded_host = request.headers.get("x-forwarded-host")
+    if x_forwarded_host:
+        base_url = f"{x_forwarded_proto}://{x_forwarded_host}"
+    else:
+        base_url = str(request.base_url).rstrip("/")
+    redirect_uri = f"{base_url}/api/py/auth/azure/callback"
+
     scope = "User.Read openid profile email"
     auth_url = (
         f"https://login.microsoftonline.com/{TENANT_ID}/oauth2/v2.0/authorize"
         f"?client_id={CLIENT_ID}"
         f"&response_type=code"
-        f"&redirect_uri={REDIRECT_URI}"
+        f"&redirect_uri={redirect_uri}"
         f"&response_mode=query"
         f"&scope={scope}"
     )
     return RedirectResponse(url=auth_url)
 
 @router.get("/azure/callback")
-async def azure_callback(code: str, session: Session = Depends(get_session)):
+async def azure_callback(request: Request, code: str, session: Session = Depends(get_session)):
     """
     Handles the callback from Microsoft, exchanges code for token,
     fetches user info, and redirects back to frontend with local JWT.
@@ -52,13 +60,21 @@ async def azure_callback(code: str, session: Session = Depends(get_session)):
     if not code:
         raise HTTPException(status_code=400, detail="Authorization code missing")
 
+    x_forwarded_proto = request.headers.get("x-forwarded-proto", "https")
+    x_forwarded_host = request.headers.get("x-forwarded-host")
+    if x_forwarded_host:
+        base_url = f"{x_forwarded_proto}://{x_forwarded_host}"
+    else:
+        base_url = str(request.base_url).rstrip("/")
+    redirect_uri = f"{base_url}/api/py/auth/azure/callback"
+
     # 1. Exchange Code for Access Token
     token_url = f"https://login.microsoftonline.com/{TENANT_ID}/oauth2/v2.0/token"
     data = {
         "client_id": CLIENT_ID,
         "client_secret": CLIENT_SECRET,
         "code": code,
-        "redirect_uri": REDIRECT_URI,
+        "redirect_uri": redirect_uri,
         "grant_type": "authorization_code",
     }
     
@@ -114,7 +130,7 @@ async def azure_callback(code: str, session: Session = Depends(get_session)):
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
     # 5. Return to Frontend
-    frontend_url = f"{BASE_URL}/?token={encoded_jwt}"
+    frontend_url = f"{base_url}/?token={encoded_jwt}"
     return RedirectResponse(url=frontend_url)
 
 @router.get("/verify")
