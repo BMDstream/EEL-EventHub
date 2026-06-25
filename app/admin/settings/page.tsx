@@ -333,7 +333,7 @@ const parseTemplateMeta = (html: string): Record<string, string> | null => {
   return null;
 };
 
-const compileTemplateHtml = (key: string, values: Record<string, string>) => {
+const compileTemplateHtml = (key: string, values: Record<string, string>, fontFamily = "Calibri, sans-serif", fontSize = "16px") => {
   const metaComment = `<!-- TEMPLATE_META: ${JSON.stringify(values)} -->`;
   let html = "";
   if (key === "registration_confirmed") {
@@ -351,7 +351,7 @@ const compileTemplateHtml = (key: string, values: Record<string, string>) => {
     <td align="center" style="padding: 40px 0;">
       <table width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; max-width: 600px; border: 1px solid #f1f5f9; border-radius: 40px; background-color: #ffffff; color: ${values.primary_color}; box-shadow: 0 20px 50px rgba(0,0,0,0.05); overflow: hidden; border-collapse: separate;">
         <tr>
-          <td style="padding: 40px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
+          <td style="padding: 40px; font-family: ${fontFamily}; font-size: ${fontSize};">
             <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 48px;">
               <tr>
                 <td align="left" valign="middle">
@@ -369,7 +369,7 @@ const compileTemplateHtml = (key: string, values: Record<string, string>) => {
             <h2 style="font-size: 38px; font-weight: 900; color: ${values.primary_color}; margin-bottom: 28px; text-transform: uppercase; font-style: italic; letter-spacing: -0.04em; line-height: 1; margin-top: 0;">
                 ${values.heading_title} <span style="color: ${values.accent_color};">${values.heading_subtitle}</span>
             </h2>
-            <p style="font-size: 17px; line-height: 1.7; margin-bottom: 40px; color: #475569;">
+            <p style="font-size: ${fontSize}; line-height: 1.7; margin-bottom: 40px; color: #475569;">
                 Hello <strong>{first_name}</strong>,<br><br>
                 ${values.body_text.replace(/\n/g, "<br>")}
             </p>
@@ -403,7 +403,7 @@ const compileTemplateHtml = (key: string, values: Record<string, string>) => {
     <td align="center" style="padding: 40px 0;">
       <table width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; max-width: 600px; border: 1px solid #f1f5f9; border-radius: 40px; background-color: #ffffff; color: ${values.primary_color}; box-shadow: 0 20px 50px rgba(0,0,0,0.05); overflow: hidden; border-collapse: separate;">
         <tr>
-          <td style="padding: 40px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
+          <td style="padding: 40px; font-family: ${fontFamily}; font-size: ${fontSize};">
             <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 48px;">
               <tr>
                 <td align="left" valign="middle">
@@ -421,7 +421,7 @@ const compileTemplateHtml = (key: string, values: Record<string, string>) => {
             <h2 style="font-size: 38px; font-weight: 900; color: ${values.primary_color}; margin-bottom: 28px; text-transform: uppercase; font-style: italic; letter-spacing: -0.04em; line-height: 1; margin-top: 0;">
                 ${values.heading_title} <span style="color: ${values.accent_color};">${values.heading_subtitle}</span>
             </h2>
-            <p style="font-size: 17px; line-height: 1.7; margin-bottom: 40px; color: #475569;">
+            <p style="font-size: ${fontSize}; line-height: 1.7; margin-bottom: 40px; color: #475569;">
                 Hello <strong>{first_name}</strong>,<br><br>
                 ${values.body_text.replace(/\n/g, "<br>")}
             </p>
@@ -451,7 +451,7 @@ const compileTemplateHtml = (key: string, values: Record<string, string>) => {
     <td align="center" style="padding: 40px 0;">
       <table width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; max-width: 600px; border: 1px solid #f1f5f9; border-radius: 40px; background-color: #ffffff; color: ${values.primary_color}; box-shadow: 0 20px 50px rgba(0,0,0,0.05); overflow: hidden; border-collapse: separate;">
         <tr>
-          <td style="padding: 40px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
+          <td style="padding: 40px; font-family: ${fontFamily}; font-size: ${fontSize};">
             <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 48px;">
               <tr>
                 <td align="left" valign="middle">
@@ -482,7 +482,7 @@ const compileTemplateHtml = (key: string, values: Record<string, string>) => {
                 </p>
             </div>
             
-            <p style="font-size: 17px; line-height: 1.7; margin-bottom: 40px; color: #475569;">
+            <p style="font-size: ${fontSize}; line-height: 1.7; margin-bottom: 40px; color: #475569;">
                 Hello <strong>{first_name}</strong>,<br><br>
                 ${values.body_text.replace(/\n/g, "<br>")}
             </p>
@@ -522,7 +522,7 @@ const compileTemplateHtml = (key: string, values: Record<string, string>) => {
     <td align="center" style="padding: 40px 0;">
       <table width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; max-width: 600px; border: 1px solid #f1f5f9; border-radius: 40px; background-color: #ffffff; color: ${values.primary_color}; box-shadow: 0 20px 50px rgba(0,0,0,0.05); overflow: hidden; border-collapse: separate;">
         <tr>
-          <td style="padding: 40px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
+          <td style="padding: 40px; font-family: ${fontFamily}; font-size: ${fontSize};">
             <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 48px;">
               <tr>
                 <td align="left" valign="middle">
@@ -537,7 +537,7 @@ const compileTemplateHtml = (key: string, values: Record<string, string>) => {
                 {logo_html}
               </tr>
             </table>
-            <p style="font-size: 17px; line-height: 1.7; margin-bottom: 40px; color: #475569;">
+            <p style="font-size: ${fontSize}; line-height: 1.7; margin-bottom: 40px; color: #475569;">
                 Hello <strong>{first_name}</strong>,<br><br>
                 ${values.body_text.replace(/\n/g, "<br>")}
             </p>
@@ -566,7 +566,7 @@ const compileTemplateHtml = (key: string, values: Record<string, string>) => {
 </table>`;
   } else if (key === "tournament_matchup") {
     html = `
-<div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: ${values.primary_color}; color: #ffffff; padding: 40px; border-radius: 24px; max-width: 600px; margin: 0 auto; border: 1px solid #1f2937;">
+<div style="font-family: ${fontFamily}; font-size: ${fontSize}; background-color: ${values.primary_color}; color: #ffffff; padding: 40px; border-radius: 24px; max-width: 600px; margin: 0 auto; border: 1px solid #1f2937;">
     <div style="text-align: center; margin-bottom: 30px;">
         <span style="background-color: ${values.accent_color}; color: #000000; padding: 8px 16px; border-radius: 12px; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.25em; font-family: sans-serif;">Tournament Dispatch</span>
     </div>
@@ -575,7 +575,7 @@ const compileTemplateHtml = (key: string, values: Record<string, string>) => {
         ${values.heading_title} <span style="color: ${values.accent_color};">${values.heading_subtitle}</span>
     </h2>
     
-    <p style="font-size: 16px; color: #9ca3af; text-align: center; margin-bottom: 30px; font-weight: 500; font-family: sans-serif;">
+    <p style="font-size: ${fontSize}; color: #9ca3af; text-align: center; margin-bottom: 30px; font-weight: 500; font-family: sans-serif;">
         ${values.body_text.replace(/\n/g, "<br>")}
     </p>
 
@@ -638,6 +638,22 @@ export default function SettingsPage() {
 
   const previewFrameRef = useRef<HTMLIFrameElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const editorRef = useRef<HTMLDivElement>(null);
+
+  // Synchronize contentEditable editor when template or tab changes
+  useEffect(() => {
+    if (activeTab === "templates" && editorRef.current) {
+      const current = templates.find((t) => t.key === selectedKey);
+      if (current) {
+        const meta = parseTemplateMeta(current.body_html);
+        const defaults = DEFAULT_FORM_FIELDS[selectedKey] || {};
+        const bodyVal = meta?.body_text || defaults.body_text || "";
+        if (editorRef.current.innerHTML !== bodyVal) {
+          editorRef.current.innerHTML = bodyVal;
+        }
+      }
+    }
+  }, [selectedKey, activeTab, templates]);
 
   // ==========================================
   // GLOBAL SETTINGS STATES
@@ -797,29 +813,82 @@ export default function SettingsPage() {
     };
   }, [hasUnsavedChanges]);
 
+  // Re-compile template preview when font or size config changes
+  useEffect(() => {
+    if (activeTab === "templates") {
+      const compiled = compileTemplateHtml(selectedKey, formValues, config.font_family, config.font_size);
+      setBodyHtml(compiled);
+    }
+  }, [config.font_family, config.font_size, selectedKey, activeTab]);
+
 
   // ==========================================
   // EMAIL TEMPLATES HANDLERS
   // ==========================================
 
-  const applyFormat = (tagOpen: string, tagClose: string) => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
+  const triggerEditorChange = () => {
+    if (editorRef.current) {
+      const html = editorRef.current.innerHTML;
+      setFormValues(prev => ({ ...prev, body_text: html }));
+      const compiled = compileTemplateHtml(selectedKey, { ...formValues, body_text: html }, config.font_family, config.font_size);
+      setBodyHtml(compiled);
+      setHasUnsavedChanges(true);
+    }
+  };
 
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const text = textarea.value;
-    const selected = text.substring(start, end);
-    const replacement = tagOpen + selected + tagClose;
+  const applyBold = () => {
+    document.execCommand("bold");
+    triggerEditorChange();
+  };
+
+  const applyItalic = () => {
+    document.execCommand("italic");
+    triggerEditorChange();
+  };
+
+  const applyUnderline = () => {
+    document.execCommand("underline");
+    triggerEditorChange();
+  };
+
+  const applyFontFamily = (fontFamily: string) => {
+    const selection = window.getSelection();
+    const hasSelection = selection && !selection.isCollapsed && selection.toString().length > 0;
     
-    const newValue = text.substring(0, start) + replacement + text.substring(end);
-    handleFormChange("body_text", newValue);
+    if (hasSelection && editorRef.current?.contains(selection.anchorNode)) {
+      document.execCommand("fontName", false, "temp-font");
+      const fontElems = editorRef.current?.querySelectorAll("font[face='temp-font']");
+      if (fontElems) {
+        fontElems.forEach((elem) => {
+          elem.removeAttribute("face");
+          (elem as HTMLElement).style.fontFamily = fontFamily;
+        });
+      }
+      triggerEditorChange();
+    } else {
+      setConfig(prev => ({ ...prev, font_family: fontFamily }));
+      setHasUnsavedChanges(true);
+    }
+  };
+
+  const applyFontSize = (size: string) => {
+    const selection = window.getSelection();
+    const hasSelection = selection && !selection.isCollapsed && selection.toString().length > 0;
     
-    // Set selection back
-    setTimeout(() => {
-      textarea.focus();
-      textarea.setSelectionRange(start + tagOpen.length, start + tagOpen.length + selected.length);
-    }, 0);
+    if (hasSelection && editorRef.current?.contains(selection.anchorNode)) {
+      document.execCommand("fontSize", false, "7");
+      const fontElems = editorRef.current?.querySelectorAll("font[size='7']");
+      if (fontElems) {
+        fontElems.forEach((elem) => {
+          elem.removeAttribute("size");
+          (elem as HTMLElement).style.fontSize = size;
+        });
+      }
+      triggerEditorChange();
+    } else {
+      setConfig(prev => ({ ...prev, font_size: size }));
+      setHasUnsavedChanges(true);
+    }
   };
 
   // Compile preview HTML locally
@@ -870,7 +939,13 @@ export default function SettingsPage() {
     }
     
     // Perform simple string replacements
-    Object.entries(mockVars).forEach(([key, value]) => {
+    const finalVars = {
+      ...mockVars,
+      font_family: config.font_family || "Calibri, sans-serif",
+      font_size: config.font_size || "16px"
+    };
+
+    Object.entries(finalVars).forEach(([key, value]) => {
       const placeholder = `{${key}}`;
       html = html.replaceAll(placeholder, value);
     });
@@ -900,7 +975,7 @@ export default function SettingsPage() {
   const handleFormChange = (field: string, val: string) => {
     const nextValues = { ...formValues, [field]: val };
     setFormValues(nextValues);
-    const compiled = compileTemplateHtml(selectedKey, nextValues);
+    const compiled = compileTemplateHtml(selectedKey, nextValues, config.font_family, config.font_size);
     setBodyHtml(compiled);
     setHasUnsavedChanges(true);
   };
@@ -1674,16 +1749,15 @@ export default function SettingsPage() {
                               {/* Rich Text Toolbar */}
                               <div className="flex flex-wrap items-center gap-1 p-1.5 bg-slate-50 dark:bg-slate-800 rounded-t-2xl border-t border-x border-slate-200 dark:border-slate-700">
                                 <select
+                                  value={config.font_family || "Calibri, sans-serif"}
                                   onChange={(e) => {
                                     if (e.target.value) {
-                                      applyFormat(`<span style="font-family: ${e.target.value};">`, "</span>");
-                                      e.target.value = "";
+                                      applyFontFamily(e.target.value);
                                     }
                                   }}
-                                  className="px-2 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-205 outline-none cursor-pointer"
-                                  defaultValue=""
+                                  onMouseDown={(e) => e.preventDefault()}
+                                  className="px-2 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 outline-none cursor-pointer"
                                 >
-                                  <option value="" disabled hidden>Font</option>
                                   <option value="Calibri, sans-serif">Calibri</option>
                                   <option value="'Helvetica Neue', Helvetica, Arial, sans-serif">Helvetica Neue</option>
                                   <option value="'Inter', sans-serif">Inter</option>
@@ -1697,28 +1771,32 @@ export default function SettingsPage() {
                                 </select>
 
                                 <select
+                                  value={config.font_size || "16px"}
                                   onChange={(e) => {
                                     if (e.target.value) {
-                                      applyFormat(`<span style="font-size: ${e.target.value};">`, "</span>");
-                                      e.target.value = "";
+                                      applyFontSize(e.target.value);
                                     }
                                   }}
-                                  className="px-2 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-205 outline-none cursor-pointer"
-                                  defaultValue=""
+                                  onMouseDown={(e) => e.preventDefault()}
+                                  className="px-2 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 outline-none cursor-pointer"
                                 >
-                                  <option value="" disabled hidden>Size</option>
-                                  <option value="12px">Small (12px)</option>
-                                  <option value="15px">Normal (15px)</option>
-                                  <option value="18px">Large (18px)</option>
-                                  <option value="24px">X-Large (24px)</option>
-                                  <option value="32px">Huge (32px)</option>
+                                  <option value="12px">12px</option>
+                                  <option value="14px">14px</option>
+                                  <option value="15px">15px</option>
+                                  <option value="16px">16px</option>
+                                  <option value="17px">17px</option>
+                                  <option value="18px">18px</option>
+                                  <option value="20px">20px</option>
+                                  <option value="24px">24px</option>
+                                  <option value="32px">32px</option>
                                 </select>
 
                                 <div className="w-px h-5 bg-slate-300 dark:bg-slate-600 mx-1.5" />
 
                                 <button
                                   type="button"
-                                  onClick={() => applyFormat("<strong>", "</strong>")}
+                                  onClick={applyBold}
+                                  onMouseDown={(e) => e.preventDefault()}
                                   className="p-2 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors"
                                   title="Bold"
                                 >
@@ -1727,7 +1805,8 @@ export default function SettingsPage() {
 
                                 <button
                                   type="button"
-                                  onClick={() => applyFormat("<em>", "</em>")}
+                                  onClick={applyItalic}
+                                  onMouseDown={(e) => e.preventDefault()}
                                   className="p-2 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors"
                                   title="Italic"
                                 >
@@ -1736,7 +1815,8 @@ export default function SettingsPage() {
 
                                 <button
                                   type="button"
-                                  onClick={() => applyFormat("<u>", "</u>")}
+                                  onClick={applyUnderline}
+                                  onMouseDown={(e) => e.preventDefault()}
                                   className="p-2 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors"
                                   title="Underline"
                                 >
@@ -1744,13 +1824,26 @@ export default function SettingsPage() {
                                 </button>
                               </div>
 
-                              <textarea 
-                                ref={textareaRef}
-                                rows={6}
-                                value={formValues.body_text || ""}
-                                onChange={(e) => handleFormChange("body_text", e.target.value)}
-                                placeholder="Write your email body copy here..."
-                                className="w-full px-4 py-3 rounded-b-2xl bg-white border border-t-0 border-slate-200 focus:border-yellow-400 focus:ring-0 outline-none font-medium text-sm text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                              <div
+                                id="body-text-editor"
+                                ref={editorRef}
+                                contentEditable
+                                suppressContentEditableWarning
+                                onInput={(e) => {
+                                  const html = e.currentTarget.innerHTML;
+                                  setFormValues(prev => ({ ...prev, body_text: html }));
+                                  const compiled = compileTemplateHtml(selectedKey, { ...formValues, body_text: html }, config.font_family, config.font_size);
+                                  setBodyHtml(compiled);
+                                  setHasUnsavedChanges(true);
+                                }}
+                                onBlur={(e) => {
+                                  handleFormChange("body_text", e.currentTarget.innerHTML);
+                                }}
+                                style={{
+                                  fontFamily: config.font_family || "Calibri, sans-serif",
+                                  fontSize: config.font_size || "16px"
+                                }}
+                                className="w-full min-h-[220px] max-h-[400px] overflow-y-auto p-4 rounded-b-2xl bg-white border border-t-0 border-slate-200 focus:border-yellow-400 outline-none text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white"
                               />
                               <p className="text-[10px] text-slate-400 leading-normal pt-0.5">
                                 Supports dynamic variables like <code>{`{first_name}`}</code> and <code>{`{event_title}`}</code>.
@@ -2029,6 +2122,8 @@ export default function SettingsPage() {
                       <option value="17px">17px</option>
                       <option value="18px">18px</option>
                       <option value="20px">20px</option>
+                      <option value="24px">24px</option>
+                      <option value="32px">32px</option>
                     </select>
                   </div>
                 </div>

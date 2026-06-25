@@ -160,6 +160,27 @@ def send_resend_email(to_email: str, name: str, role: str, opponent_name: str, p
 
     db_subject = None
     db_html = None
+    
+    # Load global email settings config for dynamic font styling and sender options
+    font_family = "Calibri, sans-serif"
+    font_size = "16px"
+    sender_name = "Tournament Hub"
+    sender_email = "events@eelogistics.co.za"
+    try:
+        from backend.database import engine
+        from backend.models import SystemSetting
+        with Session(engine) as db_session:
+            email_setting = db_session.exec(select(SystemSetting).where(SystemSetting.key == "email_config")).first()
+            if email_setting and email_setting.value:
+                font_family = email_setting.value.get("font_family", "Calibri, sans-serif")
+                font_size = email_setting.value.get("font_size", "16px")
+                if email_setting.value.get("sender_name"):
+                    sender_name = email_setting.value["sender_name"]
+                if email_setting.value.get("sender_email"):
+                    sender_email = email_setting.value["sender_email"]
+    except Exception as db_err:
+        print(f"Error fetching global email config for tournament email: {db_err}")
+
     try:
         db_template = get_template_from_db("tournament_matchup")
         if db_template:
@@ -171,7 +192,9 @@ def send_resend_email(to_email: str, name: str, role: str, opponent_name: str, p
                 "qr_code_url": qr_img_url,
                 "button_html": button_html,
                 "event_title": "Sports Tournament Series",
-                "to_email": to_email
+                "to_email": to_email,
+                "font_family": font_family,
+                "font_size": font_size
             }
             db_subject = parse_template(db_template.subject, variables)
             db_html = parse_template(db_template.body_html, variables)
@@ -186,21 +209,6 @@ def send_resend_email(to_email: str, name: str, role: str, opponent_name: str, p
         return "mock-email-id"
 
     try:
-        sender_name = "Tournament Hub"
-        sender_email = "events@eelogistics.co.za"
-        try:
-            from backend.database import engine
-            from backend.models import SystemSetting
-            with Session(engine) as db_session:
-                email_setting = db_session.exec(select(SystemSetting).where(SystemSetting.key == "email_config")).first()
-                if email_setting and email_setting.value:
-                    if email_setting.value.get("sender_name"):
-                        sender_name = email_setting.value["sender_name"]
-                    if email_setting.value.get("sender_email"):
-                        sender_email = email_setting.value["sender_email"]
-        except Exception as db_err:
-            print(f"Error fetching global email config for tournament email: {db_err}")
-
         db_template = get_template_from_db("tournament_matchup")
         if db_template:
             meta = parse_template_meta(db_template.body_html)

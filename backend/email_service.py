@@ -391,7 +391,9 @@ def send_confirmation_email(
                 "warning_block_html": warning_block_html,
                 "button_block_html": button_block_html,
                 "footer_text": footer_html,
-                "profile_update_link": profile_update_link or ""
+                "profile_update_link": profile_update_link or "",
+                "font_family": font_family,
+                "font_size": font_size
             }
             db_subject = parse_template(db_template.subject, variables)
             db_html = parse_template(db_template.body_html, variables)
@@ -521,7 +523,9 @@ def send_broadcast_email(
             "logo_html": logo_td_html,
             "broadcast_body": body.replace("{first_name}", first_name).replace("{last_name}", last_name).replace("{pin}", pin).replace("{event_title}", event_title).replace("\n", "<br>"),
             "broadcast_signature": signature.replace("\n", "<br>") if signature else "",
-            "footer_text": "Automated Event Management System • Security Tier 4"
+            "footer_text": "Automated Event Management System • Security Tier 4",
+            "font_family": font_family,
+            "font_size": font_size
         }
 
         # Inject QR Code if requested in custom template or default body
