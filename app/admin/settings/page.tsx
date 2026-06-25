@@ -640,6 +640,27 @@ export default function SettingsPage() {
   const previewFrameRef = useRef<HTMLIFrameElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const editorRef = useRef<HTMLDivElement>(null);
+  const savedSelectionRef = useRef<Range | null>(null);
+
+  const saveSelection = () => {
+    if (typeof window === "undefined") return;
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0) {
+      const range = sel.getRangeAt(0);
+      if (editorRef.current?.contains(range.commonAncestorContainer)) {
+        savedSelectionRef.current = range;
+      }
+    }
+  };
+
+  const restoreSelection = () => {
+    if (typeof window === "undefined" || !savedSelectionRef.current) return;
+    const sel = window.getSelection();
+    if (sel) {
+      sel.removeAllRanges();
+      sel.addRange(savedSelectionRef.current);
+    }
+  };
 
   // Synchronize contentEditable editor when template or tab changes
   useEffect(() => {
@@ -840,6 +861,7 @@ export default function SettingsPage() {
   };
 
   const applyFontFamily = (fontFamily: string) => {
+    restoreSelection();
     const selection = window.getSelection();
     const hasSelection = selection && !selection.isCollapsed && selection.toString().length > 0;
     
@@ -860,6 +882,7 @@ export default function SettingsPage() {
   };
 
   const applyFontSize = (size: string) => {
+    restoreSelection();
     const selection = window.getSelection();
     const hasSelection = selection && !selection.isCollapsed && selection.toString().length > 0;
     
@@ -1762,7 +1785,6 @@ export default function SettingsPage() {
                                       applyFontFamily(e.target.value);
                                     }
                                   }}
-                                  onMouseDown={(e) => e.preventDefault()}
                                   className="px-2 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 outline-none cursor-pointer"
                                 >
                                   <option value="Calibri, sans-serif">Calibri</option>
@@ -1784,7 +1806,6 @@ export default function SettingsPage() {
                                       applyFontSize(e.target.value);
                                     }
                                   }}
-                                  onMouseDown={(e) => e.preventDefault()}
                                   className="px-2 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 outline-none cursor-pointer"
                                 >
                                   <option value="12px">12px</option>
@@ -1836,12 +1857,15 @@ export default function SettingsPage() {
                                 ref={editorRef}
                                 contentEditable
                                 suppressContentEditableWarning
+                                onMouseUp={saveSelection}
+                                onKeyUp={saveSelection}
                                 onInput={(e) => {
                                   const html = e.currentTarget.innerHTML;
                                   setFormValues(prev => ({ ...prev, body_text: html }));
                                   const compiled = compileTemplateHtml(selectedKey, { ...formValues, body_text: html }, config.font_family, config.font_size);
                                   setBodyHtml(compiled);
                                   setHasUnsavedChanges(true);
+                                  saveSelection();
                                 }}
                                 onBlur={(e) => {
                                   handleFormChange("body_text", e.currentTarget.innerHTML);
