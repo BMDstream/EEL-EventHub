@@ -322,6 +322,7 @@ const DEFAULT_FORM_FIELDS: Record<string, Record<string, string>> = {
 };
 
 const parseTemplateMeta = (html: string): Record<string, string> | null => {
+  if (!html || typeof html !== "string") return null;
   const match = html.match(/<!-- TEMPLATE_META: ({.*?}) -->/);
   if (match) {
     try {
@@ -333,7 +334,7 @@ const parseTemplateMeta = (html: string): Record<string, string> | null => {
   return null;
 };
 
-const compileTemplateHtml = (key: string, values: Record<string, string>, fontFamily = "Calibri, sans-serif", fontSize = "16px") => {
+const compileTemplateHtml = (key: string, values: Record<string, string> = {}, fontFamily = "Calibri, sans-serif", fontSize = "16px") => {
   const metaComment = `<!-- TEMPLATE_META: ${JSON.stringify(values)} -->`;
   let html = "";
   if (key === "registration_confirmed") {
@@ -675,20 +676,7 @@ export default function SettingsPage() {
   const [savingSettings, setSavingSettings] = useState<boolean>(false);
   const [settingsMessage, setSettingsMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
-  // Access check
-  if (userRole === "staff") {
-    return (
-      <AdminLayout>
-        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-6">
-          <div className="w-24 h-24 bg-red-50 rounded-full flex items-center justify-center mb-8">
-            <Lock className="text-red-500" size={48} />
-          </div>
-          <h1 className="text-4xl font-black text-[#0f172a] mb-4 uppercase italic font-bricolage tracking-tight dark:text-white">Access <span className="text-red-500">Restricted</span></h1>
-          <p className="text-slate-500 font-medium max-w-md">You do not have the clearance level required to view settings.</p>
-        </div>
-      </AdminLayout>
-    );
-  }
+
 
   // ==========================================
   // FETCH EFFECTS
@@ -1142,6 +1130,25 @@ export default function SettingsPage() {
       <AdminLayout>
         <div className="flex justify-center items-center min-h-[50vh]">
           <Loader2 className="animate-spin text-[#0f172a]" size={48} />
+        </div>
+      </AdminLayout>
+    );
+  }
+
+  // Access check for staff clearance
+  if (userRole === "staff") {
+    return (
+      <AdminLayout>
+        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-6">
+          <div className="w-24 h-24 bg-red-50 rounded-full flex items-center justify-center mb-8">
+            <Lock className="text-red-500" size={48} />
+          </div>
+          <h1 className="text-4xl font-black text-[#0f172a] mb-4 uppercase italic font-bricolage tracking-tight dark:text-white">
+            Access <span className="text-red-500">Restricted</span>
+          </h1>
+          <p className="text-slate-500 font-medium max-w-md">
+            You do not have the clearance level required to view settings.
+          </p>
         </div>
       </AdminLayout>
     );
