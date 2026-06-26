@@ -162,7 +162,15 @@ def send_confirmation_email(
     else:
         footer_html = footer_text_raw.replace("\n", "<br>")
         
-    show_banner = config.get("show_banner_in_email", False)
+    t_key = "registration_confirmed"
+    if profile_update_link:
+        t_key = "partner_pending"
+    elif not is_attending:
+        t_key = "registration_declined"
+    elif config:
+        t_key = config.get("confirmation_template_key", "registration_confirmed")
+
+    show_banner = config.get("show_banner_in_email", False) or t_key == "banner_email"
     banner_url = config.get("banner_url") or "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800"
     banner_html = ""
     if show_banner:
@@ -174,36 +182,93 @@ def send_confirmation_email(
         </tr>
         """
 
-    t_key = "registration_confirmed"
-    if profile_update_link:
-        t_key = "partner_pending"
-    elif not is_attending:
-        t_key = "registration_declined"
     db_template = get_template_from_db(t_key)
     meta = parse_template_meta(db_template.body_html) if db_template else {}
 
-    # Set badge, heading, and body texts depending on RSVP status
-    badge_text = "Attendee Pass" if is_attending else "Response Recorded"
-    
-    if is_attending:
-        if profile_update_link:
-            heading_text = "Action Required."
-            body_text_raw = "Your partner has registered you for **{event_title}**. Please complete your ticket details to finalize your registration."
-        else:
-            heading_text = config.get("heading_text", "Registration Confirmed.")
-            if "Access Granted" in heading_text:
-                heading_text = "Registration Confirmed."
-            body_text_raw = config.get("body_text", "")
-            if not body_text_raw or "credentials" in body_text_raw or "terminal verification" in body_text_raw:
-                body_text_raw = "Your registration for **{event_title}** has been successfully confirmed. We look forward to seeing you at the event!"
-    else:
-        heading_text = config.get("decline_heading_text", "Response Recorded.")
-        body_text_raw = config.get(
-            "decline_body_text", 
-            "We have recorded your response that you are unable to attend **{event_title}**. Thank you for letting us know, and we hope to connect with you at future events."
-        )
+    # Format list/columns for banner_email template if active
+    itinerary_html = ""
+    bring_along_html = ""
+    included_html = ""
+    if t_key == "banner_email":
+        if meta:
+            primary_color = meta.get("primary_color", primary_color)
+            accent_color = meta.get("accent_color", accent_color)
+            heading_title = meta.get("heading_title", "MAZIV")
+            heading_subtitle = meta.get("heading_subtitle", "GROUP")
+            body_text_raw = meta.get("body_text", "")
+            footer_html = meta.get("footer_text", "events@maziv.com")
+            
+            # Format lists
+            itinerary_body = meta.get("itinerary_body", "")
+            if itinerary_body:
+                itinerary_lines = itinerary_body.split("\n")
+                html_lines = []
+                for line in itinerary_lines:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    parts = line.split(":")
+                    if len(parts) > 1:
+                        html_lines.append(f'<div style="margin-bottom: 6px; font-family: {font_family};"><strong>{parts[0].strip()}:</strong> {":".join(parts[1:]).strip()}</div>')
+                    else:
+                        html_lines.append(f'<div style="margin-bottom: 6px; font-family: {font_family};">{line}</div>')
+                itinerary_html = "".join(html_lines)
 
-    body_html = body_text_raw.replace("**{event_title}**", f"<strong>{event_title}</strong>").replace("{event_title}", event_title).replace("\n", "<br>")
+            bring_along_body = meta.get("bring_along_body", "")
+            if bring_along_body:
+                bring_along_lines = bring_along_body.split("\n")
+                html_lines = []
+                for line in bring_along_lines:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    html_lines.append(f'<div style="margin-bottom: 4px; font-family: {font_family};">{line}</div>')
+                bring_along_html = "".join(html_lines)
+
+            included_body = meta.get("included_body", "")
+            if included_body:
+                included_lines = included_body.split("\n")
+                html_lines = []
+                for line in included_lines:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    html_lines.append(f'<li style="margin-bottom: 4px; font-family: {font_family};">{line}</li>')
+                included_html = "".join(html_lines)
+        else:
+            heading_title = "MAZIV"
+            heading_subtitle = "GROUP"
+            body_text_raw = "Thank you for joining us."
+            footer_html = "events@maziv.com"
+
+        badge_text = "Attendee Pass" if is_attending else "Response Recorded"
+        body_html = body_text_raw.replace("**{event_title}**", f"<strong>{event_title}</strong>").replace("{event_title}", event_title).replace("\n", "<br>")
+        body_html = re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', body_html)
+        heading_text = f"{heading_title}.{heading_subtitle}"
+    else:
+        # Set badge, heading, and body texts depending on RSVP status
+        badge_text = "Attendee Pass" if is_attending else "Response Recorded"
+        
+        if is_attending:
+            if profile_update_link:
+                heading_text = "Action Required."
+                body_text_raw = "Your partner has registered you for **{event_title}**. Please complete your ticket details to finalize your registration."
+            else:
+                heading_text = config.get("heading_text", "Registration Confirmed.")
+                if "Access Granted" in heading_text:
+                    heading_text = "Registration Confirmed."
+                body_text_raw = config.get("body_text", "")
+                if not body_text_raw or "credentials" in body_text_raw or "terminal verification" in body_text_raw:
+                    body_text_raw = "Your registration for **{event_title}** has been successfully confirmed. We look forward to seeing you at the event!"
+        else:
+            heading_text = config.get("decline_heading_text", "Response Recorded.")
+            body_text_raw = config.get(
+                "decline_body_text", 
+                "We have recorded your response that you are unable to attend **{event_title}**. Thank you for letting us know, and we hope to connect with you at future events."
+            )
+
+        body_html = body_text_raw.replace("**{event_title}**", f"<strong>{event_title}</strong>").replace("{event_title}", event_title).replace("\n", "<br>")
+        body_html = re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', body_html)
 
     # Format event details if provided (only if they are attending)
     details_html = ""
@@ -425,7 +490,14 @@ def send_confirmation_email(
                 "profile_update_link": profile_update_link or "",
                 "font_family": font_family,
                 "font_size": font_size,
-                "banner_html": banner_html
+                "banner_html": banner_html,
+                "itinerary_title": meta.get("itinerary_title", "") if meta else "",
+                "itinerary_html": itinerary_html,
+                "bring_along_title": meta.get("bring_along_title", "") if meta else "",
+                "bring_along_html": bring_along_html,
+                "bring_along_note": meta.get("bring_along_note", "") if meta else "",
+                "included_title": meta.get("included_title", "") if meta else "",
+                "included_html": included_html
             }
             db_subject = parse_template(db_template.subject, variables)
             db_body = inject_banner_placeholder_if_missing(db_template.body_html)

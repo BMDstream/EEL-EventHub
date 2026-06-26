@@ -404,6 +404,19 @@ def test_send_template(
             )
             success = res is not None
             details = f"Tournament matchup send result: {res}"
+        elif key == "banner_email":
+            res = send_confirmation_email(
+                to_email=test_email,
+                first_name="Hein",
+                event_title="2025 MAZIV GOLF DAY",
+                clearance_id="ABCDEF",
+                event_details={"start_date": "2025-10-16T08:30:00Z", "location": "Johannesburg Country Club", "address": "1 JCC Club Road"},
+                is_attending=True,
+                config=config,
+                registration_id="test-uuid"
+            )
+            success = res is not None
+            details = f"Banner email send result: {res}"
         else:
             raise HTTPException(status_code=400, detail="Unknown template key")
             

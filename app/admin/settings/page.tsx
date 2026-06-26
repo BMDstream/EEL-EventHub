@@ -29,7 +29,8 @@ import {
   Bold,
   Italic,
   Underline,
-  Upload
+  Upload,
+  Calendar
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSession } from "next-auth/react";
@@ -50,6 +51,7 @@ const TEMPLATE_ICONS: Record<string, any> = {
   partner_pending: Layers,
   broadcast: Mail,
   tournament_matchup: Award,
+  banner_email: Calendar,
 };
 
 const MOCK_PREVIEW_DATA: Record<string, Record<string, string>> = {
@@ -175,6 +177,26 @@ const MOCK_PREVIEW_DATA: Record<string, Record<string, string>> = {
     </div>`,
     event_title: "Sports Tournament Series",
     to_email: "john.doe@example.com"
+  },
+  banner_email: {
+    first_name: "Hein",
+    last_name: "Engelbrecht",
+    event_title: "2025 MAZIV GOLF DAY",
+    to_email: "hein@example.com",
+    primary_color: "#18181b",
+    accent_color: "#ec4899",
+    heading_title: "MAZIV",
+    heading_subtitle: "GROUP",
+    body_text: "Thank you once again for confirming that you will be joining us at the **Johannesburg Country Club** for the **2025 MAZIV GOLF DAY**, below is more information for the day.",
+    itinerary_title: "Date: 16th October 2025",
+    itinerary_body: "Registration & Breakfast: 8:30 til 10:45\nShot Gun Start: 11:00 til 13:00\nLunch @ Halfway House: 13:00 til 14:00\nContinue Shotgun: 14:00 til 18:00\nAwards & Dinner: 18:00 til late",
+    bring_along_title: "BRING ALONG",
+    bring_along_body: "Golf Clubs, Tee & Gloves\nSunscreen\nSunglasses\nBasic Attire",
+    bring_along_note: "*Golf T-shirt & Cap will be provided*",
+    included_title: "PLEASE NOTE THE FOLLOWING WILL BE INCLUDED:",
+    included_body: "All food, beverages and snacks\nBalls\nSpot Prizes",
+    footer_text: "events@maziv.com",
+    logo_html: ""
   }
 };
 
@@ -245,6 +267,19 @@ const CHEATSHEET_VARIABLES: Record<string, Array<{ name: string; description: st
     { name: "button_html", description: "Button link updating details" },
     { name: "event_title", description: "Tournament championship game series title" },
     { name: "to_email", description: "Player's email address" }
+  ],
+  banner_email: [
+    { name: "first_name", description: "First name of the attendee" },
+    { name: "last_name", description: "Last name of the attendee" },
+    { name: "event_title", description: "Title of the event" },
+    { name: "to_email", description: "Recipient's email address" },
+    { name: "primary_color", description: "Card background color hex" },
+    { name: "accent_color", description: "Main accent styling color hex" },
+    { name: "body_html", description: "Editable email body copy block" },
+    { name: "itinerary_html", description: "Formatted HTML schedule of events list" },
+    { name: "bring_along_html", description: "Formatted HTML bring along items list" },
+    { name: "included_html", description: "Formatted HTML inclusions list" },
+    { name: "footer_text", description: "Contact email or details in footer" }
   ]
 };
 
@@ -318,6 +353,25 @@ const DEFAULT_FORM_FIELDS: Record<string, Record<string, string>> = {
     button_text: "Update Your Ticket Details",
     sender_name: "",
     footer_text: "EXCELLENCE ENTERTAINMENT LOGISTICS\nClearance Level: Tier 1 Authorized Tournament Series",
+  },
+  banner_email: {
+    primary_color: "#18181b",
+    accent_color: "#ec4899",
+    logo_text: "MAZIV",
+    logo_image_url: "",
+    show_logo: "false",
+    heading_title: "MAZIV",
+    heading_subtitle: "GROUP",
+    body_text: "Thank you once again for confirming that you will be joining us at the **Johannesburg Country Club** for the **2025 MAZIV GOLF DAY**, below is more information for the day.",
+    itinerary_title: "Date: 16th October 2025",
+    itinerary_body: "Registration & Breakfast: 8:30 til 10:45\nShot Gun Start: 11:00 til 13:00\nLunch @ Halfway House: 13:00 til 14:00\nContinue Shotgun: 14:00 til 18:00\nAwards & Dinner: 18:00 til late",
+    bring_along_title: "BRING ALONG",
+    bring_along_body: "Golf Clubs, Tee & Gloves\nSunscreen\nSunglasses\nBasic Attire",
+    bring_along_note: "*Golf T-shirt & Cap will be provided*",
+    included_title: "PLEASE NOTE THE FOLLOWING WILL BE INCLUDED:",
+    included_body: "All food, beverages and snacks\nBalls\nSpot Prizes",
+    footer_text: "events@maziv.com",
+    sender_name: "",
   }
 };
 
@@ -621,6 +675,90 @@ const compileTemplateHtml = (key: string, values: Record<string, string> = {}, f
         </p>
     </div>
 </div>`;
+  } else if (key === "banner_email") {
+    const itineraryHtml = (values.itinerary_body || "")
+      .split("\n")
+      .map(line => {
+        const parts = line.split(":");
+        if (parts.length > 1) {
+          return `<div style="margin-bottom: 6px; font-family: ${fontFamily};"><strong>${parts[0].trim()}:</strong> ${parts.slice(1).join(":").trim()}</div>`;
+        }
+        return `<div style="margin-bottom: 6px; font-family: ${fontFamily};">${line.trim()}</div>`;
+      })
+      .join("");
+
+    const bringAlongHtml = (values.bring_along_body || "")
+      .split("\n")
+      .map(line => `<div style="margin-bottom: 4px; font-family: ${fontFamily};">${line.trim()}</div>`)
+      .join("");
+
+    const includedHtml = (values.included_body || "")
+      .split("\n")
+      .map(line => `<li style="margin-bottom: 4px; font-family: ${fontFamily};">${line.trim()}</li>`)
+      .join("");
+
+    html = `
+<table width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; table-layout: fixed; margin: 0; padding: 0;">
+  <tr>
+    <td align="center" style="padding: 40px 0;">
+      <table width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; max-width: 600px; border: 1px solid #27272a; border-radius: 40px; background-color: ${values.primary_color || "#18181b"}; color: #f5f5f4; box-shadow: 0 20px 50px rgba(0,0,0,0.3); overflow: hidden; border-collapse: separate;">
+        ${bannerHtml}
+        <tr>
+          <td style="padding: 40px; font-family: ${fontFamily}; font-size: ${fontSize};">
+            <p style="font-size: ${fontSize}; line-height: 1.7; margin-bottom: 24px; color: #e7e5e4; font-family: ${fontFamily};">
+                Dear <strong>{first_name}</strong>,
+            </p>
+            <p style="font-size: ${fontSize}; line-height: 1.7; margin-bottom: 32px; color: #d6d3d1; font-family: ${fontFamily};">
+                ${(values.body_text || "").replace(/\n/g, "<br>")}
+            </p>
+            
+            <table width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; border-top: 1px solid #27272a; padding-top: 32px; margin-top: 32px;">
+              <tr>
+                <td width="45%" valign="bottom" style="padding-right: 20px; font-family: ${fontFamily}; font-size: ${fontSize}; color: #e7e5e4;">
+                  <p style="font-size: 13px; color: #a1a1aa; margin-bottom: 8px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em; font-family: ${fontFamily};">Kind regards,</p>
+                  <p style="font-size: 16px; font-weight: 900; color: ${values.accent_color || "#ec4899"}; margin: 0 0 4px 0; text-transform: uppercase; font-family: ${fontFamily};">${values.heading_title || ""} ${values.heading_subtitle || ""}</p>
+                  <a href="mailto:events@maziv.com" style="font-size: 13px; color: #38bdf8; text-decoration: underline; font-family: ${fontFamily};">${values.footer_text || ""}</a>
+                </td>
+                <td width="5%" style="border-right: 1px solid #27272a;">&nbsp;</td>
+                <td width="50%" valign="top" style="padding-left: 20px; text-align: center; font-family: ${fontFamily}; color: #e7e5e4;">
+                  <div style="margin-bottom: 32px;">
+                    <h4 style="font-size: 13px; font-weight: 900; color: ${values.accent_color || "#ec4899"}; text-transform: uppercase; letter-spacing: 0.1em; border-bottom: 1.5px solid ${values.accent_color || "#ec4899"}; display: inline-block; padding-bottom: 4px; margin: 0 0 16px 0; font-family: ${fontFamily};">
+                      ${values.itinerary_title || ""}
+                    </h4>
+                    <div style="font-size: 13px; line-height: 1.8; color: #e7e5e4; font-family: ${fontFamily}; text-align: center;">
+                      ${itineraryHtml}
+                    </div>
+                  </div>
+
+                  <div style="margin-bottom: 32px;">
+                    <h4 style="font-size: 13px; font-weight: 900; color: ${values.accent_color || "#ec4899"}; text-transform: uppercase; letter-spacing: 0.1em; border-bottom: 1.5px solid ${values.accent_color || "#ec4899"}; display: inline-block; padding-bottom: 4px; margin: 0 0 16px 0; font-family: ${fontFamily};">
+                      ${values.bring_along_title || ""}
+                    </h4>
+                    <div style="font-size: 13px; line-height: 1.8; color: #d6d3d1; margin-bottom: 12px; font-family: ${fontFamily}; text-align: center;">
+                      ${bringAlongHtml}
+                    </div>
+                    <p style="font-size: 11px; font-style: italic; font-weight: bold; color: ${values.accent_color || "#ec4899"}; margin: 0; font-family: ${fontFamily};">
+                      ${values.bring_along_note || ""}
+                    </p>
+                  </div>
+
+                  <div>
+                    <h4 style="font-size: 12px; font-weight: 900; color: ${values.accent_color || "#ec4899"}; text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 16px 0; font-family: ${fontFamily};">
+                      ${values.included_title || ""}
+                    </h4>
+                    <ul style="display: inline-block; text-align: left; font-size: 13px; color: #d6d3d1; margin: 0; padding-left: 20px; line-height: 1.8; font-family: ${fontFamily};">
+                      ${includedHtml}
+                    </ul>
+                  </div>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>`;
   }
   return (metaComment + "\n" + html).trim();
 };
@@ -706,7 +844,8 @@ export default function SettingsPage() {
     sender_email: "",
     font_family: "Calibri, sans-serif",
     font_size: "16px",
-    show_banner_in_email: false
+    show_banner_in_email: false,
+    confirmation_template_key: "registration_confirmed"
   });
   const [senderEmails, setSenderEmails] = useState<string[]>([]);
   const [loadingSettings, setLoadingSettings] = useState<boolean>(true);
@@ -1995,6 +2134,113 @@ export default function SettingsPage() {
                                 )}
                               </div>
                             )}
+
+                            {/* Banner Email Custom Schedule & Inclusions Config */}
+                            {selectedKey === "banner_email" && (
+                              <div className="space-y-6 bg-slate-50/50 dark:bg-slate-800/20 p-5 rounded-2xl border border-slate-100/50 dark:border-slate-800/50">
+                                <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#0f172a] dark:text-white flex items-center gap-2">
+                                  <Calendar size={12} className="text-pink-500" />
+                                  Itinerary & Details Layout
+                                </h4>
+
+                                <div className="space-y-4">
+                                  {/* Heading overrides */}
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-1.5">
+                                      <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">Greeting Company Name (e.g. MAZIV)</label>
+                                      <input 
+                                        type="text"
+                                        value={formValues.heading_title || ""}
+                                        onChange={(e) => handleFormChange("heading_title", e.target.value)}
+                                        className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 focus:border-yellow-400 outline-none font-bold text-sm text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                                      />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                      <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">Greeting Company Suffix (e.g. GROUP)</label>
+                                      <input 
+                                        type="text"
+                                        value={formValues.heading_subtitle || ""}
+                                        onChange={(e) => handleFormChange("heading_subtitle", e.target.value)}
+                                        className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 focus:border-yellow-400 outline-none font-bold text-sm text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                                      />
+                                    </div>
+                                  </div>
+
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-slate-100 dark:border-slate-800/50 pt-4">
+                                    <div className="space-y-1.5">
+                                      <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">Itinerary Column Title</label>
+                                      <input 
+                                        type="text"
+                                        value={formValues.itinerary_title || ""}
+                                        onChange={(e) => handleFormChange("itinerary_title", e.target.value)}
+                                        className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 focus:border-yellow-400 outline-none font-bold text-sm text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                                      />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                      <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">Itinerary Events (One per line - Label: Time)</label>
+                                      <textarea 
+                                        rows={4}
+                                        value={formValues.itinerary_body || ""}
+                                        onChange={(e) => handleFormChange("itinerary_body", e.target.value)}
+                                        className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 focus:border-yellow-400 outline-none font-medium text-sm text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white font-mono"
+                                      />
+                                    </div>
+                                  </div>
+
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-slate-100 dark:border-slate-800/50 pt-4">
+                                    <div className="space-y-1.5">
+                                      <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">Bring Along Column Title</label>
+                                      <input 
+                                        type="text"
+                                        value={formValues.bring_along_title || ""}
+                                        onChange={(e) => handleFormChange("bring_along_title", e.target.value)}
+                                        className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 focus:border-yellow-400 outline-none font-bold text-sm text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                                      />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                      <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">Bring Along Items (One per line)</label>
+                                      <textarea 
+                                        rows={4}
+                                        value={formValues.bring_along_body || ""}
+                                        onChange={(e) => handleFormChange("bring_along_body", e.target.value)}
+                                        className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 focus:border-yellow-400 outline-none font-medium text-sm text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white font-mono"
+                                      />
+                                    </div>
+                                  </div>
+
+                                  <div className="space-y-1.5">
+                                    <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">Bring Along Footer Note (Italicized)</label>
+                                    <input 
+                                      type="text"
+                                      value={formValues.bring_along_note || ""}
+                                      onChange={(e) => handleFormChange("bring_along_note", e.target.value)}
+                                      className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 focus:border-yellow-400 outline-none font-medium text-sm text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                                    />
+                                  </div>
+
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-slate-100 dark:border-slate-800/50 pt-4">
+                                    <div className="space-y-1.5">
+                                      <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">Inclusions Column Title</label>
+                                      <input 
+                                        type="text"
+                                        value={formValues.included_title || ""}
+                                        onChange={(e) => handleFormChange("included_title", e.target.value)}
+                                        className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 focus:border-yellow-400 outline-none font-bold text-sm text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                                      />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                      <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">Inclusions Items (One per line)</label>
+                                      <textarea 
+                                        rows={4}
+                                        value={formValues.included_body || ""}
+                                        onChange={(e) => handleFormChange("included_body", e.target.value)}
+                                        className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 focus:border-yellow-400 outline-none font-medium text-sm text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white font-mono"
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
                           </div>
 
                           {/* Footer Section */}
@@ -2245,8 +2491,23 @@ export default function SettingsPage() {
                           <option key={email} value={email}>{email}</option>
                         ))}
                       </select>
-                      <p className="text-[10px] text-slate-400 italic">The email address used to send emails (must be verified domain).</p>
+                       <p className="text-[10px] text-slate-400 italic">The email address used to send emails (must be verified domain).</p>
                     </div>
+                  </div>
+
+                  <div className="space-y-3 pt-4 border-t border-slate-100 dark:border-slate-800/50">
+                    <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-1 flex items-center gap-2">
+                      <Layout size={12} /> Active Confirmation Template
+                    </label>
+                    <select
+                      value={config.confirmation_template_key || "registration_confirmed"}
+                      onChange={(e) => setConfig({ ...config, confirmation_template_key: e.target.value })}
+                      className="w-full px-6 py-4 rounded-2xl bg-slate-50 border border-slate-200 focus:border-yellow-400 outline-none font-bold text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white cursor-pointer"
+                    >
+                      <option value="registration_confirmed">Attendee Confirmation Email (Standard)</option>
+                      <option value="banner_email">Banner Email (Premium Dark)</option>
+                    </select>
+                    <p className="text-[10px] text-slate-400 italic">Select which template is used when sending registration confirmation emails.</p>
                   </div>
                 </div>
               </div>
