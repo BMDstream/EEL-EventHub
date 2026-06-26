@@ -2563,12 +2563,72 @@ export default function SettingsPage() {
                     </div>
 
                     <div className="space-y-1.5 pt-4 border-t border-slate-100 dark:border-slate-800/50">
-                      <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">Default Email Banner Image URL</label>
+                      <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">Default Email Banner</label>
+                      
+                      <div
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          const file = e.dataTransfer.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onloadend = () => {
+                              setConfig({ ...config, banner_url: reader.result as string });
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                        onClick={() => {
+                          const input = document.createElement("input");
+                          input.type = "file";
+                          input.accept = "image/*";
+                          input.onchange = (e) => {
+                            const file = (e.target as HTMLInputElement).files?.[0];
+                            if (file) {
+                              const reader = new FileReader();
+                              reader.onloadend = () => {
+                                setConfig({ ...config, banner_url: reader.result as string });
+                              };
+                              reader.readAsDataURL(file);
+                            }
+                          };
+                          input.click();
+                        }}
+                        className="w-full h-28 rounded-2xl border-2 border-dashed border-slate-200 hover:border-yellow-400/50 bg-slate-50/50 dark:border-slate-800 dark:bg-slate-900/30 flex flex-col items-center justify-center gap-1 cursor-pointer transition-all hover:bg-slate-100/30 group relative overflow-hidden mb-2"
+                      >
+                        {config.banner_url ? (
+                          <div className="relative w-full h-full p-2 flex items-center justify-center">
+                            <img src={config.banner_url} alt="Default Email Banner" className="max-h-full max-w-full object-contain" />
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setConfig({ ...config, banner_url: "" });
+                              }}
+                              className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 text-[10px] font-black uppercase shadow-md transition-all"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        ) : (
+                          <>
+                            <Upload className="text-slate-400 group-hover:text-yellow-500 transition-colors mb-1" size={24} />
+                            <span className="text-[10px] font-bold text-slate-400 group-hover:text-slate-600 transition-colors">Drag & Drop Default Banner Here</span>
+                            <span className="text-[9px] text-slate-400 font-medium">Or click to browse files</span>
+                          </>
+                        )}
+                      </div>
+
+                      <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">Or enter Default Email Banner URL</label>
                       <input
                         type="text"
-                        value={config.banner_url || ""}
+                        value={config.banner_url && !config.banner_url.startsWith("data:") ? config.banner_url : ""}
                         onChange={(e) => setConfig({ ...config, banner_url: e.target.value })}
-                        placeholder="e.g. https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800"
+                        placeholder="https://example.com/banner.png"
                         className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 focus:border-yellow-400 outline-none font-medium text-sm text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white"
                       />
                       <p className="text-[10px] text-slate-400 italic">Fallback banner image URL if an event doesn't specify one (or customize it per event under Event Edit).</p>
