@@ -14,8 +14,8 @@ IS_SERVERLESS = DATABASE_URL and "localhost" not in DATABASE_URL and "sqlite" no
 engine = create_engine(
     DATABASE_URL,
     echo=False,
-    pool_size=1 if IS_SERVERLESS else 5,
-    max_overflow=0 if IS_SERVERLESS else 10,
+    pool_size=3 if IS_SERVERLESS else 5,
+    max_overflow=10 if IS_SERVERLESS else 10,
     pool_recycle=120,
     connect_args={"sslmode": "require"} if IS_SERVERLESS else {}
 )
