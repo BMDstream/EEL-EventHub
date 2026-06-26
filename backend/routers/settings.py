@@ -455,3 +455,21 @@ def update_setting(
     session.commit()
     session.refresh(setting)
     return setting
+
+@router.post("/settings/migrate")
+def trigger_database_migrations(
+    session: Session = Depends(get_session),
+    current_user: Optional[User] = Depends(get_current_user_from_request)
+):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin authorization required")
+        
+    from backend.migrate import run_migrations
+    try:
+        run_migrations()
+        return {"status": "success", "message": "Database migrations completed successfully."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Migrations failed: {str(e)}")
+

@@ -97,6 +97,25 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     fetchMyClients();
   }, [session, userRole]);
 
+  // Automatically trigger migrations for admins on load to keep database schema synced
+  useEffect(() => {
+    if (userRole === "admin" && session?.user?.email) {
+      fetch("/api/py/settings/migrate", {
+        method: "POST",
+        headers: {
+          "x-user-email": session.user.email
+        }
+      })
+      .then(res => res.json())
+      .then(data => {
+        console.log("Database migrations sync status:", data);
+      })
+      .catch(err => {
+        console.error("Failed to run database migrations:", err);
+      });
+    }
+  }, [session, userRole]);
+
   const toggleTheme = () => {
     const newTheme = theme === "dark" ? "light" : "dark";
     setTheme(newTheme);
