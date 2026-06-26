@@ -30,7 +30,8 @@ import {
   Italic,
   Underline,
   Upload,
-  Calendar
+  Calendar,
+  Image
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSession } from "next-auth/react";
@@ -290,6 +291,8 @@ const DEFAULT_FORM_FIELDS: Record<string, Record<string, string>> = {
     logo_text: "BMD",
     logo_image_url: "",
     show_logo: "true",
+    show_banner: "false",
+    banner_image_url: "",
     heading_title: "Registration",
     heading_subtitle: "Confirmed",
     body_text: "Your registration has been successfully confirmed. Below are your secure credentials for terminal verification.",
@@ -305,6 +308,8 @@ const DEFAULT_FORM_FIELDS: Record<string, Record<string, string>> = {
     logo_text: "BMD",
     logo_image_url: "",
     show_logo: "true",
+    show_banner: "false",
+    banner_image_url: "",
     heading_title: "Response",
     heading_subtitle: "Recorded",
     body_text: "We have recorded your response that you are unable to attend the event. Thank you for letting us know, and we hope to connect with you at future events.",
@@ -317,6 +322,8 @@ const DEFAULT_FORM_FIELDS: Record<string, Record<string, string>> = {
     logo_text: "BMD",
     logo_image_url: "",
     show_logo: "true",
+    show_banner: "false",
+    banner_image_url: "",
     heading_title: "Action",
     heading_subtitle: "Required",
     urgent_title: "⚠️ Action Required ASAP",
@@ -334,6 +341,8 @@ const DEFAULT_FORM_FIELDS: Record<string, Record<string, string>> = {
     logo_text: "BMD",
     logo_image_url: "",
     show_logo: "true",
+    show_banner: "false",
+    banner_image_url: "",
     body_text: "This is a customized broadcast update message for you. Please make sure to arrive 30 minutes before the start time.",
     signature: "The Championship Tournament Team",
     sender_name: "",
@@ -345,6 +354,8 @@ const DEFAULT_FORM_FIELDS: Record<string, Record<string, string>> = {
     logo_text: "BMD",
     logo_image_url: "",
     show_logo: "true",
+    show_banner: "false",
+    banner_image_url: "",
     heading_title: "Championship",
     heading_subtitle: "Access Granted",
     body_text: "Hello, you have been registered as the Challenger.",
@@ -360,6 +371,8 @@ const DEFAULT_FORM_FIELDS: Record<string, Record<string, string>> = {
     logo_text: "MAZIV",
     logo_image_url: "",
     show_logo: "false",
+    show_banner: "true",
+    banner_image_url: "",
     heading_title: "MAZIV",
     heading_subtitle: "GROUP",
     body_text: "Thank you once again for confirming that you will be joining us at the **Johannesburg Country Club** for the **2025 MAZIV GOLF DAY**, below is more information for the day.",
@@ -392,8 +405,8 @@ const compileTemplateHtml = (key: string, values: Record<string, string> = {}, f
   const metaComment = `<!-- TEMPLATE_META: ${JSON.stringify(values)} -->`;
   let html = "";
   
-  const showBanner = config?.show_banner_in_email;
-  const bannerUrl = config?.banner_url || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800";
+  const showBanner = values.show_banner === "true" || (key === "banner_email" && values.show_banner !== "false");
+  const bannerUrl = values.banner_image_url || config?.banner_url || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800";
   const bannerHtml = showBanner ? `
         <tr>
           <td align="center" style="padding: 0; margin: 0; line-height: 0;">
@@ -1850,6 +1863,109 @@ export default function SettingsPage() {
                                 />
                                 <p className="text-[9px] text-slate-400 italic">Overrides the global system settings sender name.</p>
                               </div>
+                            </div>
+                          </div>
+
+                          {/* Email Banner Section */}
+                          <div className="space-y-4 bg-slate-50/50 dark:bg-slate-800/20 p-5 rounded-2xl border border-slate-100/50 dark:border-slate-800/50">
+                            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#0f172a] dark:text-white flex items-center gap-2">
+                              <Image size={12} className="text-blue-500" />
+                              Email Banner Image
+                            </h4>
+                            
+                            <div className="space-y-3">
+                              <div className="flex items-center justify-between">
+                                <label className="text-[9px] font-black uppercase tracking-wider text-slate-400">
+                                  Show Banner in Email
+                                </label>
+                                <input
+                                  type="checkbox"
+                                  checked={formValues.show_banner === "true"}
+                                  onChange={(e) => handleFormChange("show_banner", e.target.checked ? "true" : "false")}
+                                  className="w-4 h-4 text-yellow-500 bg-slate-100 border-slate-300 rounded focus:ring-yellow-500 focus:ring-2 dark:bg-slate-800"
+                                />
+                              </div>
+
+                              {formValues.show_banner === "true" && (
+                                <>
+                                  <div className="space-y-1.5">
+                                    <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
+                                      Upload Email Banner File
+                                    </label>
+                                    
+                                    <div
+                                      onDragOver={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                      }}
+                                      onDrop={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        const file = e.dataTransfer.files?.[0];
+                                        if (file) {
+                                          const reader = new FileReader();
+                                          reader.onloadend = () => {
+                                            handleFormChange("banner_image_url", reader.result as string);
+                                          };
+                                          reader.readAsDataURL(file);
+                                        }
+                                      }}
+                                      onClick={() => {
+                                        const input = document.createElement("input");
+                                        input.type = "file";
+                                        input.accept = "image/*";
+                                        input.onchange = (e) => {
+                                          const file = (e.target as HTMLInputElement).files?.[0];
+                                          if (file) {
+                                            const reader = new FileReader();
+                                            reader.onloadend = () => {
+                                              handleFormChange("banner_image_url", reader.result as string);
+                                            };
+                                            reader.readAsDataURL(file);
+                                          }
+                                        };
+                                        input.click();
+                                      }}
+                                      className="w-full h-28 rounded-2xl border-2 border-dashed border-slate-200 hover:border-yellow-400/50 bg-slate-50/50 dark:border-slate-800 dark:bg-slate-900/30 flex flex-col items-center justify-center gap-1 cursor-pointer transition-all hover:bg-slate-100/30 group relative overflow-hidden"
+                                    >
+                                      {formValues.banner_image_url ? (
+                                        <div className="relative w-full h-full p-2 flex items-center justify-center">
+                                          <img src={formValues.banner_image_url} alt="Email Banner" className="max-h-full max-w-full object-contain" />
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleFormChange("banner_image_url", "");
+                                            }}
+                                            className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 text-[10px] font-black uppercase shadow-md transition-all"
+                                          >
+                                            Remove
+                                          </button>
+                                        </div>
+                                      ) : (
+                                        <>
+                                          <Upload className="text-slate-400 group-hover:text-yellow-500 transition-colors mb-1" size={24} />
+                                          <span className="text-[10px] font-bold text-slate-400 group-hover:text-slate-600 transition-colors">Drag & Drop Banner Here</span>
+                                          <span className="text-[9px] text-slate-400 font-medium">Or click to browse files</span>
+                                        </>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  <div className="space-y-1.5">
+                                    <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
+                                      Or enter Email Banner Image URL
+                                    </label>
+                                    <input
+                                      type="text"
+                                      value={formValues.banner_image_url || ""}
+                                      onChange={(e) => handleFormChange("banner_image_url", e.target.value)}
+                                      placeholder="https://example.com/banner.png"
+                                      className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 focus:border-yellow-400 outline-none font-medium text-sm text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white font-mono"
+                                    />
+                                  </div>
+                                </>
+                              )}
                             </div>
                           </div>
 
