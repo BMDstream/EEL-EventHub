@@ -55,7 +55,7 @@ def dispatch_send_confirmation_email(
         "registration_id": registration_id
     }
     
-    if QSTASH_TOKEN:
+    if QSTASH_TOKEN and vercel_env != "preview":
         url = f"https://qstash.upstash.io/v2/publish/{APP_BASE_URL}/api/py/tasks/worker"
         headers = {
             "Authorization": f"Bearer {QSTASH_TOKEN}",
@@ -104,7 +104,7 @@ def dispatch_send_broadcast_email(
         "event_details": event_details
     }
     
-    if QSTASH_TOKEN:
+    if QSTASH_TOKEN and vercel_env != "preview":
         url = f"https://qstash.upstash.io/v2/publish/{APP_BASE_URL}/api/py/tasks/worker"
         headers = {
             "Authorization": f"Bearer {QSTASH_TOKEN}",
