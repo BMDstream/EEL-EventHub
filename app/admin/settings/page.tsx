@@ -845,7 +845,8 @@ export default function SettingsPage() {
     font_family: "Calibri, sans-serif",
     font_size: "16px",
     show_banner_in_email: false,
-    confirmation_template_key: "registration_confirmed"
+    confirmation_template_key: "registration_confirmed",
+    banner_url: ""
   });
   const [senderEmails, setSenderEmails] = useState<string[]>([]);
   const [loadingSettings, setLoadingSettings] = useState<boolean>(true);
@@ -2443,6 +2444,18 @@ export default function SettingsPage() {
                         onChange={(e) => setConfig({ ...config, show_banner_in_email: e.target.checked })}
                         className="w-5 h-5 text-yellow-500 bg-slate-100 border-slate-300 rounded focus:ring-yellow-500 focus:ring-2 dark:bg-slate-800 cursor-pointer"
                       />
+                    </div>
+
+                    <div className="space-y-1.5 pt-4 border-t border-slate-100 dark:border-slate-800/50">
+                      <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">Default Email Banner Image URL</label>
+                      <input
+                        type="text"
+                        value={config.banner_url || ""}
+                        onChange={(e) => setConfig({ ...config, banner_url: e.target.value })}
+                        placeholder="e.g. https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800"
+                        className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 focus:border-yellow-400 outline-none font-medium text-sm text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                      />
+                      <p className="text-[10px] text-slate-400 italic">Fallback banner image URL if an event doesn't specify one (or customize it per event under Event Edit).</p>
                     </div>
                   </div>
                 </div>
