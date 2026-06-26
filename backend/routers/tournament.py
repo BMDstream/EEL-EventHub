@@ -299,9 +299,8 @@ def register_challenger_and_partner(
         )
  
     # --- EMAIL DISPATCH BLOCK ---
-    # Dispatch individual, branded emails containing QR code images & backup PINs asynchronously
-    background_tasks.add_task(
-        send_resend_email,
+    # Send emails inline to avoid serverless container freezing issues
+    send_resend_email(
         to_email=challenger.email,
         name=challenger.name,
         role="Challenger",
@@ -310,8 +309,7 @@ def register_challenger_and_partner(
         qr_hash=str(challenger_checkin.qr_hash)
     )
  
-    background_tasks.add_task(
-        send_resend_email,
+    send_resend_email(
         to_email=partner.email,
         name=partner.name,
         role="Challenged Partner",

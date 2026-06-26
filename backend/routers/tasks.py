@@ -9,8 +9,8 @@ class TaskPayload(BaseModel):
     task: str
     args: Dict[str, Any]
 
-@router.post("/worker", status_code=status.HTTP_202_ACCEPTED)
-async def tasks_worker(payload: TaskPayload, background_tasks: BackgroundTasks):
+@router.post("/worker", status_code=status.HTTP_200_OK)
+def tasks_worker(payload: TaskPayload):
     """
     HTTP Worker Endpoint for executing QStash tasks in production.
     """
@@ -19,25 +19,17 @@ async def tasks_worker(payload: TaskPayload, background_tasks: BackgroundTasks):
     
     if task_name == "send_confirmation_email":
         try:
-            # We execute it inside background_tasks so the worker responds immediately
-            # avoiding gateway timeouts
-            background_tasks.add_task(
-                send_confirmation_email,
-                **args
-            )
-            return {"status": "accepted", "task": task_name}
+            res = send_confirmation_email(**args)
+            return {"status": "success", "task": task_name, "result": res}
         except Exception as e:
-            raise HTTPException(status_code=400, detail=f"Error preparing task execution: {e}")
+            raise HTTPException(status_code=400, detail=f"Error executing task: {e}")
             
     elif task_name == "send_broadcast_email":
         try:
-            background_tasks.add_task(
-                send_broadcast_email,
-                **args
-            )
-            return {"status": "accepted", "task": task_name}
+            res = send_broadcast_email(**args)
+            return {"status": "success", "task": task_name, "result": res}
         except Exception as e:
-            raise HTTPException(status_code=400, detail=f"Error preparing task execution: {e}")
+            raise HTTPException(status_code=400, detail=f"Error executing task: {e}")
             
     else:
         raise HTTPException(status_code=400, detail=f"Unknown task: {task_name}")
