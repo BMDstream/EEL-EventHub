@@ -473,3 +473,33 @@ def trigger_database_migrations(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Migrations failed: {str(e)}")
 
+@router.get("/settings/diagnostic/resend")
+def debug_resend(
+    session: Session = Depends(get_session)
+):
+    import os
+    import resend
+    resend.api_key = os.getenv("RESEND_API_KEY")
+    
+    key_exists = bool(resend.api_key)
+    key_prefix = resend.api_key[:10] if key_exists else None
+    
+    domains_result = None
+    domains_error = None
+    try:
+        if resend.api_key:
+            res = resend.Domains.list()
+            domains_result = str(res)
+        else:
+            domains_error = "No API key configured"
+    except Exception as e:
+        domains_error = str(e)
+        
+    return {
+        "resend_api_key_exists": key_exists,
+        "resend_api_key_prefix": key_prefix,
+        "domains_result": domains_result,
+        "domains_error": domains_error
+    }
+
+
