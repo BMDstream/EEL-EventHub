@@ -484,22 +484,47 @@ def debug_resend(
     key_exists = bool(resend.api_key)
     key_prefix = resend.api_key[:10] if key_exists else None
     
-    domains_result = None
-    domains_error = None
+    # 1. Test sending from events@eelogistics.co.za
+    send_ee_result = None
+    send_ee_error = None
     try:
         if resend.api_key:
-            res = resend.Domains.list()
-            domains_result = str(res)
+            res = resend.Emails.send({
+                "from": "Test EE <events@eelogistics.co.za>",
+                "to": "barton@bmdcomputing.com",
+                "subject": "Diagnostic test - eelogistics.co.za",
+                "html": "<p>This is a test from eelogistics.co.za</p>"
+            })
+            send_ee_result = str(res)
         else:
-            domains_error = "No API key configured"
+            send_ee_error = "No API key"
     except Exception as e:
-        domains_error = str(e)
+        send_ee_error = str(e)
+
+    # 2. Test sending from events@bmdcomputing.com
+    send_bmd_result = None
+    send_bmd_error = None
+    try:
+        if resend.api_key:
+            res = resend.Emails.send({
+                "from": "Test BMD <events@bmdcomputing.com>",
+                "to": "barton@bmdcomputing.com",
+                "subject": "Diagnostic test - bmdcomputing.com",
+                "html": "<p>This is a test from bmdcomputing.com</p>"
+            })
+            send_bmd_result = str(res)
+        else:
+            send_bmd_error = "No API key"
+    except Exception as e:
+        send_bmd_error = str(e)
         
     return {
         "resend_api_key_exists": key_exists,
         "resend_api_key_prefix": key_prefix,
-        "domains_result": domains_result,
-        "domains_error": domains_error
+        "send_ee_result": send_ee_result,
+        "send_ee_error": send_ee_error,
+        "send_bmd_result": send_bmd_result,
+        "send_bmd_error": send_bmd_error
     }
 
 
