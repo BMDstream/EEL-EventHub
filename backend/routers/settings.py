@@ -479,52 +479,72 @@ def debug_resend(
 ):
     import os
     import resend
+    from backend.models import Event, Client
+    from backend.utils import get_event_email_config
+    from backend.email_service import send_confirmation_email
+    
     resend.api_key = os.getenv("RESEND_API_KEY")
     
-    key_exists = bool(resend.api_key)
-    key_prefix = resend.api_key[:10] if key_exists else None
-    
-    # 1. Test sending from events@eelogistics.co.za
-    send_ee_result = None
-    send_ee_error = None
+    # 1. Fetch event and client details from DB
+    event = session.exec(select(Event).where(Event.slug == "maziv-sportsday-2026")).first()
+    event_dict = None
+    client_dict = None
+    if event:
+        event_dict = {
+            "id": event.id,
+            "title": event.title,
+            "sender_email": event.sender_email,
+            "sender_name": event.sender_name,
+            "confirmation_template_key": event.confirmation_template_key,
+            "client_id": event.client_id
+        }
+        client = session.get(Client, event.client_id) if event.client_id else None
+        if client:
+            client_dict = {
+                "id": client.id,
+                "name": client.name,
+                "sender_name": client.sender_name,
+                "reply_to": client.reply_to
+            }
+            
+    # 2. Get event email config
+    config = None
+    config_error = None
     try:
-        if resend.api_key:
-            res = resend.Emails.send({
-                "from": "Test EE <events@eelogistics.co.za>",
-                "to": "barton@bmdcomputing.com",
-                "subject": "Diagnostic test - eelogistics.co.za",
-                "html": "<p>This is a test from eelogistics.co.za</p>"
-            })
-            send_ee_result = str(res)
-        else:
-            send_ee_error = "No API key"
+        if event:
+            config = get_event_email_config(event, session)
     except Exception as e:
-        send_ee_error = str(e)
-
-    # 2. Test sending from events@bmdcomputing.com
-    send_bmd_result = None
-    send_bmd_error = None
+        config_error = str(e)
+        
+    # 3. Test sending event confirmation email
+    send_result = None
+    send_error = None
     try:
-        if resend.api_key:
-            res = resend.Emails.send({
-                "from": "Test BMD <events@bmdcomputing.com>",
-                "to": "barton@bmdcomputing.com",
-                "subject": "Diagnostic test - bmdcomputing.com",
-                "html": "<p>This is a test from bmdcomputing.com</p>"
-            })
-            send_bmd_result = str(res)
-        else:
-            send_bmd_error = "No API key"
+        if event and config:
+            res = send_confirmation_email(
+                to_email="barton@bmdcomputing.com",
+                first_name="TestBarton",
+                event_title=event.title,
+                clearance_id="M1234",
+                event_details={
+                    "start_date": event.start_date,
+                    "location": event.location,
+                    "address": event.address
+                },
+                config=config,
+                registration_id="test-maziv-reg-id"
+            )
+            send_result = str(res)
     except Exception as e:
-        send_bmd_error = str(e)
+        send_error = str(e)
         
     return {
-        "resend_api_key_exists": key_exists,
-        "resend_api_key_prefix": key_prefix,
-        "send_ee_result": send_ee_result,
-        "send_ee_error": send_ee_error,
-        "send_bmd_result": send_bmd_result,
-        "send_bmd_error": send_bmd_error
+        "event": event_dict,
+        "client": client_dict,
+        "config": config,
+        "config_error": config_error,
+        "send_result": send_result,
+        "send_error": send_error
     }
 
 
