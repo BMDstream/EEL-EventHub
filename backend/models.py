@@ -48,6 +48,7 @@ class Event(SQLModel, table=True):
     collect_company: bool = Field(default=True)
     company_required: bool = Field(default=False)
     background_url: Optional[str] = Field(default=None)
+    confirmation_template_key: Optional[str] = Field(default="global")
     duration_days: int = Field(default=1)
     
     registration_active: bool = Field(default=True)

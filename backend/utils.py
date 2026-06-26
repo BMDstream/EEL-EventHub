@@ -152,6 +152,11 @@ def get_event_email_config(event: Event, session: Session):
     # Expose event banner_url if present
     config["banner_url"] = getattr(event, "banner_url", None)
         
+    # Expose event confirmation_template_key override if present
+    template_key = getattr(event, "confirmation_template_key", None)
+    if template_key and template_key != "global" and template_key != "":
+        config["confirmation_template_key"] = template_key
+        
     return config
 
 def perform_checkin_logic(registration: Registration, day: Optional[int], mode: str, session: Session):

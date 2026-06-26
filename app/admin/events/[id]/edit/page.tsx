@@ -109,6 +109,7 @@ export default function EditEventPage() {
     registration_end: "",
     disclaimer_enabled: false,
     disclaimer_text: "",
+    confirmation_template_key: "global",
   });
 
   useEffect(() => {
@@ -193,6 +194,7 @@ export default function EditEventPage() {
           registration_end: data.registration_end ? data.registration_end.slice(0, 16) : "",
           disclaimer_enabled: !!data.disclaimer_enabled,
           disclaimer_text: data.disclaimer_text || "",
+          confirmation_template_key: data.confirmation_template_key || "global",
         });
         setOriginalBanner(data.banner_url || "");
         setOriginalLogo(data.logo_url || "");
@@ -427,6 +429,23 @@ export default function EditEventPage() {
                       placeholder="e.g. EEL-Events"
                       className="w-full px-5 py-4 rounded-2xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-slate-700 bg-slate-50/50 dark:bg-slate-800 dark:text-white dark:border-slate-700"
                     />
+                  </div>
+
+                  <div className="space-y-3 col-span-1 md:col-span-2 pt-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                      <Mail size={14} /> Confirmation Email Template Override
+                    </label>
+                    <select
+                      name="confirmation_template_key"
+                      value={formData.confirmation_template_key}
+                      onChange={handleChange}
+                      className="w-full px-5 py-4 rounded-2xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-slate-700 bg-slate-50/50 appearance-none cursor-pointer dark:bg-slate-800 dark:text-white dark:border-slate-700"
+                    >
+                      <option value="global">Use Global Settings Default</option>
+                      <option value="registration_confirmed">Attendee Confirmation Email (Standard)</option>
+                      <option value="banner_email">Banner Email (Premium Dark)</option>
+                    </select>
+                    <p className="text-[10px] text-slate-400 italic ml-1">Override the template design used when sending confirmation emails for this event.</p>
                   </div>
                 </div>
               )}
