@@ -477,33 +477,40 @@ def trigger_database_migrations(
 def debug_resend(
     session: Session = Depends(get_session)
 ):
-    from backend.models import Registration, Attendee, Event
+    from backend.models import Event, Client
+    from backend.utils import get_event_email_config
     
-    # Fetch last 10 registrations with attendee and event details
-    regs_query = session.execute(
-        text("""
-            SELECT r.id, a.first_name, a.last_name, a.email, e.title, r.pin, r.created_at, r.status
-            FROM registration r
-            JOIN attendee a ON r.attendee_id = a.id
-            JOIN event e ON r.event_id = e.id
-            ORDER BY r.created_at DESC LIMIT 10
-        """)
-    ).fetchall()
-    
-    regs_list = []
-    for r in regs_query:
-        regs_list.append({
-            "id": str(r[0]),
-            "name": f"{r[1]} {r[2]}",
-            "email": r[3],
-            "event_title": r[4],
-            "pin": r[5],
-            "created_at": r[6].isoformat() if r[6] else None,
-            "status": r[7]
-        })
-        
+    event = session.exec(select(Event).where(Event.title == "Padel Championship")).first()
+    event_dict = None
+    client_dict = None
+    config = None
+    if event:
+        event_dict = {
+            "id": event.id,
+            "title": event.title,
+            "slug": event.slug,
+            "sender_email": event.sender_email,
+            "sender_name": event.sender_name,
+            "confirmation_template_key": event.confirmation_template_key,
+            "client_id": event.client_id
+        }
+        client = session.get(Client, event.client_id) if event.client_id else None
+        if client:
+            client_dict = {
+                "id": client.id,
+                "name": client.name,
+                "sender_name": client.sender_name,
+                "reply_to": client.reply_to
+            }
+        try:
+            config = get_event_email_config(event, session)
+        except Exception as e:
+            config = {"error": str(e)}
+            
     return {
-        "recent_registrations": regs_list
+        "event": event_dict,
+        "client": client_dict,
+        "config": config
     }
 
 
