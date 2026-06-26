@@ -477,74 +477,33 @@ def trigger_database_migrations(
 def debug_resend(
     session: Session = Depends(get_session)
 ):
-    import os
-    import resend
-    from backend.models import Event, Client
-    from backend.utils import get_event_email_config
-    from backend.email_service import send_confirmation_email
+    from backend.models import Registration, Attendee, Event
     
-    resend.api_key = os.getenv("RESEND_API_KEY")
+    # Fetch last 10 registrations with attendee and event details
+    regs_query = session.execute(
+        text("""
+            SELECT r.id, a.first_name, a.last_name, a.email, e.title, r.pin, r.created_at, r.status
+            FROM registration r
+            JOIN attendee a ON r.attendee_id = a.id
+            JOIN event e ON r.event_id = e.id
+            ORDER BY r.created_at DESC LIMIT 10
+        """)
+    ).fetchall()
     
-    # 1. Fetch event and client details from DB
-    event = session.exec(select(Event).where(Event.slug == "maziv-sportsday-2026")).first()
-    event_dict = None
-    client_dict = None
-    if event:
-        event_dict = {
-            "id": event.id,
-            "title": event.title,
-            "sender_email": event.sender_email,
-            "sender_name": event.sender_name,
-            "confirmation_template_key": event.confirmation_template_key,
-            "client_id": event.client_id
-        }
-        client = session.get(Client, event.client_id) if event.client_id else None
-        if client:
-            client_dict = {
-                "id": client.id,
-                "name": client.name,
-                "sender_name": client.sender_name,
-                "reply_to": client.reply_to
-            }
-            
-    # 2. Get event email config
-    config = None
-    config_error = None
-    try:
-        if event:
-            config = get_event_email_config(event, session)
-    except Exception as e:
-        config_error = str(e)
-        
-    # 3. Test sending event confirmation email
-    send_result = None
-    send_error = None
-    try:
-        if event and config:
-            res = send_confirmation_email(
-                to_email="barton@bmdcomputing.com",
-                first_name="TestBarton",
-                event_title=event.title,
-                clearance_id="M1234",
-                event_details={
-                    "start_date": event.start_date,
-                    "location": event.location,
-                    "address": event.address
-                },
-                config=config,
-                registration_id="test-maziv-reg-id"
-            )
-            send_result = str(res)
-    except Exception as e:
-        send_error = str(e)
+    regs_list = []
+    for r in regs_query:
+        regs_list.append({
+            "id": str(r[0]),
+            "name": f"{r[1]} {r[2]}",
+            "email": r[3],
+            "event_title": r[4],
+            "pin": r[5],
+            "created_at": r[6].isoformat() if r[6] else None,
+            "status": r[7]
+        })
         
     return {
-        "event": event_dict,
-        "client": client_dict,
-        "config": config,
-        "config_error": config_error,
-        "send_result": send_result,
-        "send_error": send_error
+        "recent_registrations": regs_list
     }
 
 
