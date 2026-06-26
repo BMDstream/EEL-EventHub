@@ -6,7 +6,7 @@ from uuid import UUID, uuid4
 from datetime import datetime
 from typing import Optional, Dict, Any
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from pydantic import BaseModel, field_validator, ValidationInfo
 from sqlmodel import SQLModel, Field, Session, select
 import resend
@@ -218,13 +218,14 @@ def send_resend_email(to_email: str, name: str, role: str, opponent_name: str, p
 @router.post("/register", status_code=status.HTTP_201_CREATED)
 def register_challenger_and_partner(
     payload: DualRegistrationRequest,
+    background_tasks: BackgroundTasks,
     session: Session = Depends(get_session)
 ):
     """
     Registers a Challenger and a Partner as players, creates check-in credentials
     for both players, and inserts a pending match linking them.
     All operations are committed atomically in a transaction block.
-    Two check-in emails are sent via the Resend SDK.
+    Two check-in emails are sent via the Resend SDK in background threads.
     """
     try:
         # --- ATOMIC TRANSACTION BLOCK ---
@@ -250,7 +251,7 @@ def register_challenger_and_partner(
 
         # Flush to generate database IDs for the players
         session.flush()
-
+ 
         # 3. Create Challenger Event Check-in Pass
         challenger_pin = generate_backup_pin()
         challenger_checkin = EventCheckin(
@@ -260,7 +261,7 @@ def register_challenger_and_partner(
             checked_in=False
         )
         session.add(challenger_checkin)
-
+ 
         # 4. Create Partner Event Check-in Pass
         partner_pin = generate_backup_pin()
         partner_checkin = EventCheckin(
@@ -270,7 +271,7 @@ def register_challenger_and_partner(
             checked_in=False
         )
         session.add(partner_checkin)
-
+ 
         # 5. Create Match Entity linking Challenger and Partner
         match = Match(
             challenger_id=challenger.id,
@@ -278,17 +279,17 @@ def register_challenger_and_partner(
             status="pending"
         )
         session.add(match)
-
+ 
         # Commit all entities atomically
         session.commit()
-
+ 
         # Refresh objects to obtain generated timestamps and fields
         session.refresh(challenger)
         session.refresh(partner)
         session.refresh(challenger_checkin)
         session.refresh(partner_checkin)
         session.refresh(match)
-
+ 
     except Exception as e:
         session.rollback()
         print(f"Tournament registration database transaction failed: {e}")
@@ -296,10 +297,11 @@ def register_challenger_and_partner(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Database transaction failure: {e}"
         )
-
+ 
     # --- EMAIL DISPATCH BLOCK ---
-    # Dispatch individual, branded emails containing QR code images & backup PINs
-    challenger_email_id = send_resend_email(
+    # Dispatch individual, branded emails containing QR code images & backup PINs asynchronously
+    background_tasks.add_task(
+        send_resend_email,
         to_email=challenger.email,
         name=challenger.name,
         role="Challenger",
@@ -307,8 +309,9 @@ def register_challenger_and_partner(
         pin=challenger_checkin.pin,
         qr_hash=str(challenger_checkin.qr_hash)
     )
-
-    partner_email_id = send_resend_email(
+ 
+    background_tasks.add_task(
+        send_resend_email,
         to_email=partner.email,
         name=partner.name,
         role="Challenged Partner",
@@ -316,7 +319,7 @@ def register_challenger_and_partner(
         pin=partner_checkin.pin,
         qr_hash=str(partner_checkin.qr_hash)
     )
-
+ 
     return {
         "status": "success",
         "message": "Tournament dual-registration processed successfully.",
@@ -327,7 +330,7 @@ def register_challenger_and_partner(
             "email": challenger.email,
             "pin": challenger_checkin.pin,
             "qr_hash": str(challenger_checkin.qr_hash),
-            "email_dispatched": challenger_email_id is not None
+            "email_dispatched": True
         },
         "partner": {
             "id": partner.id,
@@ -335,6 +338,6 @@ def register_challenger_and_partner(
             "email": partner.email,
             "pin": partner_checkin.pin,
             "qr_hash": str(partner_checkin.qr_hash),
-            "email_dispatched": partner_email_id is not None
+            "email_dispatched": True
         }
     }

@@ -4,7 +4,7 @@ from typing import List, Dict, Any, Optional
 import hmac
 import hashlib
 import json
-import requests
+import httpx
 import secrets
 from datetime import datetime
 
@@ -19,7 +19,7 @@ def sign_payload(payload_bytes: bytes, secret: str) -> str:
     """Generate HMAC-SHA256 signature for the payload bytes."""
     return hmac.new(secret.encode(), payload_bytes, hashlib.sha256).hexdigest()
 
-def send_webhook_request(url: str, secret: str, event_type: str, payload: dict):
+async def send_webhook_request(url: str, secret: str, event_type: str, payload: dict):
     """Sends the HTTP POST request to the webhook URL with HMAC-SHA256 signature."""
     payload_data = {
         "event": event_type,
@@ -34,8 +34,9 @@ def send_webhook_request(url: str, secret: str, event_type: str, payload: dict):
             "X-EEL-Signature": signature,
             "X-EEL-Event": event_type
         }
-        res = requests.post(url, headers=headers, data=payload_bytes, timeout=10)
-        print(f"Webhook dispatch to {url} status: {res.status_code}")
+        async with httpx.AsyncClient() as client:
+            res = await client.post(url, headers=headers, data=payload_bytes, timeout=10)
+            print(f"Webhook dispatch to {url} status: {res.status_code}")
     except Exception as e:
         print(f"Webhook dispatch failed to {url}: {e}")
 

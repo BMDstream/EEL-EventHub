@@ -5,7 +5,7 @@ from sqlalchemy import func
 from backend.database import get_session
 from backend.models import User
 import os
-import requests
+import httpx
 from datetime import datetime, timedelta
 from jose import jwt
 from dotenv import load_dotenv
@@ -78,25 +78,33 @@ async def azure_callback(request: Request, code: str, session: Session = Depends
         "grant_type": "authorization_code",
     }
     
-    token_response = requests.post(token_url, data=data)
-    if not token_response.ok:
-        print(f"Token Exchange Error: {token_response.text}")
-        raise HTTPException(status_code=400, detail="Failed to exchange token")
-    
-    token_data = token_response.json()
-    access_token = token_data.get("access_token")
+    async with httpx.AsyncClient() as client:
+        try:
+            token_response = await client.post(token_url, data=data)
+            if not token_response.is_success:
+                print(f"Token Exchange Error: {token_response.text}")
+                raise HTTPException(status_code=400, detail="Failed to exchange token")
+        except Exception as e:
+            print(f"Token Exchange connection error: {e}")
+            raise HTTPException(status_code=400, detail="Failed to connect to token server")
+        
+        token_data = token_response.json()
+        access_token = token_data.get("access_token")
 
-    # 2. Get User Profile from Microsoft Graph
-    graph_url = "https://graph.microsoft.com/v1.0/me"
-    headers = {"Authorization": f"Bearer {access_token}"}
-    user_response = requests.get(graph_url, headers=headers)
-    
-    if not user_response.ok:
-        print(f"Graph API Error: {user_response.text}")
-        raise HTTPException(status_code=400, detail="Failed to fetch user profile")
-    
-    user_info = user_response.json()
-    email = user_info.get("mail") or user_info.get("userPrincipalName")
+        # 2. Get User Profile from Microsoft Graph
+        graph_url = "https://graph.microsoft.com/v1.0/me"
+        headers = {"Authorization": f"Bearer {access_token}"}
+        try:
+            user_response = await client.get(graph_url, headers=headers)
+            if not user_response.is_success:
+                print(f"Graph API Error: {user_response.text}")
+                raise HTTPException(status_code=400, detail="Failed to fetch user profile")
+        except Exception as e:
+            print(f"Graph API connection error: {e}")
+            raise HTTPException(status_code=400, detail="Failed to connect to Graph API")
+        
+        user_info = user_response.json()
+        email = user_info.get("mail") or user_info.get("userPrincipalName")
     
     if not email:
         raise HTTPException(status_code=400, detail="Email not found in Microsoft profile")

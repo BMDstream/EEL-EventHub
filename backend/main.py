@@ -31,6 +31,10 @@ def on_startup():
     Structural schema updates are managed by Alembic, but we seed default
     configuration data and clients here to ensure cold starts are always ready.
     """
+    if IS_SERVERLESS:
+        print("Running in serverless mode. Skipping database initialization and migrations on startup.")
+        return
+
     try:
         # For local development we can still call init_db() to build missing tables quickly,
         # but in production Alembic migrations apply schemas.

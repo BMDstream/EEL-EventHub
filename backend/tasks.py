@@ -1,5 +1,5 @@
 import os
-import requests
+import httpx
 from fastapi import BackgroundTasks
 from backend.email_service import send_confirmation_email, send_broadcast_email
 
@@ -18,6 +18,15 @@ elif not APP_BASE_URL:
         APP_BASE_URL = f"https://{vercel_url}"
     else:
         APP_BASE_URL = "http://localhost:8000"
+
+async def _async_post_qstash(url: str, headers: dict, payload: dict, task_name: str):
+    """Asynchronous worker to dispatch the QStash request without blocking the main event thread."""
+    try:
+        async with httpx.AsyncClient() as client:
+            res = await client.post(url, headers=headers, json=payload, timeout=5)
+            print(f"QSTASH DISPATCH {task_name}: status={res.status_code}")
+    except Exception as e:
+        print(f"QStash dispatch failed for {task_name}: {e}")
 
 def dispatch_send_confirmation_email(
     background_tasks: BackgroundTasks,
@@ -47,21 +56,24 @@ def dispatch_send_confirmation_email(
     }
     
     if QSTASH_TOKEN:
-        try:
-            url = f"https://qstash.upstash.io/v2/publish/{APP_BASE_URL}/api/py/tasks/worker"
-            headers = {
-                "Authorization": f"Bearer {QSTASH_TOKEN}",
-                "Content-Type": "application/json"
-            }
-            payload = {
-                "task": "send_confirmation_email",
-                "args": args
-            }
-            res = requests.post(url, headers=headers, json=payload, timeout=5)
-            print(f"QSTASH DISPATCH send_confirmation_email: status={res.status_code}")
-            return
-        except Exception as e:
-            print(f"QStash dispatch failed, falling back to BackgroundTasks: {e}")
+        url = f"https://qstash.upstash.io/v2/publish/{APP_BASE_URL}/api/py/tasks/worker"
+        headers = {
+            "Authorization": f"Bearer {QSTASH_TOKEN}",
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "task": "send_confirmation_email",
+            "args": args
+        }
+        # Run QStash HTTP post on the async event loop out-of-band
+        background_tasks.add_task(
+            _async_post_qstash,
+            url=url,
+            headers=headers,
+            payload=payload,
+            task_name="send_confirmation_email"
+        )
+        return
 
     # Fallback to local background tasks execution
     background_tasks.add_task(
@@ -93,21 +105,24 @@ def dispatch_send_broadcast_email(
     }
     
     if QSTASH_TOKEN:
-        try:
-            url = f"https://qstash.upstash.io/v2/publish/{APP_BASE_URL}/api/py/tasks/worker"
-            headers = {
-                "Authorization": f"Bearer {QSTASH_TOKEN}",
-                "Content-Type": "application/json"
-            }
-            payload = {
-                "task": "send_broadcast_email",
-                "args": args
-            }
-            res = requests.post(url, headers=headers, json=payload, timeout=5)
-            print(f"QSTASH DISPATCH send_broadcast_email: status={res.status_code}")
-            return
-        except Exception as e:
-            print(f"QStash dispatch failed, falling back to BackgroundTasks: {e}")
+        url = f"https://qstash.upstash.io/v2/publish/{APP_BASE_URL}/api/py/tasks/worker"
+        headers = {
+            "Authorization": f"Bearer {QSTASH_TOKEN}",
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "task": "send_broadcast_email",
+            "args": args
+        }
+        # Run QStash HTTP post on the async event loop out-of-band
+        background_tasks.add_task(
+            _async_post_qstash,
+            url=url,
+            headers=headers,
+            payload=payload,
+            task_name="send_broadcast_email"
+        )
+        return
 
     # Fallback to local background tasks execution
     background_tasks.add_task(
