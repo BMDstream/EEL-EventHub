@@ -7,7 +7,7 @@ from io import BytesIO
 from typing import List, Dict, Any, Optional
 from dotenv import load_dotenv
 from urllib.parse import quote
-from functools import lru_cache
+
 from sqlmodel import Session, select
 from backend.database import engine
 from backend.models import EmailTemplate
@@ -34,8 +34,14 @@ def generate_qr_base64(data: str):
     img.save(buffered, format="PNG")
     return base64.b64encode(buffered.getvalue()).decode()
 
-@lru_cache(maxsize=32)
+# Simple in-process template cache — only caches successfully fetched templates.
+# Unlike lru_cache, this will NOT cache None, so the self-healing seeder can
+# always retry on the next call if a template was missing on a cold start.
+_template_cache: dict = {}
+
 def get_template_from_db(key: str) -> Optional[EmailTemplate]:
+    if key in _template_cache:
+        return _template_cache[key]
     try:
         with Session(engine) as session:
             template = session.exec(select(EmailTemplate).where(EmailTemplate.key == key)).first()
@@ -54,10 +60,20 @@ def get_template_from_db(key: str) -> Optional[EmailTemplate]:
                     session.commit()
                     session.refresh(template)
                     print(f"Auto-seeded missing template '{key}' during email dispatch.")
+            if template:
+                _template_cache[key] = template
             return template
     except Exception as e:
         print(f"Error fetching/seeding email template '{key}': {e}")
         return None
+
+def invalidate_template_cache(key: str = None):
+    """Call this after any template update so the next email uses fresh data."""
+    global _template_cache
+    if key:
+        _template_cache.pop(key, None)
+    else:
+        _template_cache.clear()
 
 def inject_banner_placeholder_if_missing(html_str: str) -> str:
     if not html_str:

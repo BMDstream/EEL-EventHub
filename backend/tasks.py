@@ -68,8 +68,14 @@ def dispatch_send_confirmation_email(
         _post_qstash_sync(url=url, headers=headers, payload=payload, task_name="send_confirmation_email")
         return
 
-    # Fallback to local synchronous execution to prevent serverless container freezing
-    send_confirmation_email(**args)
+    # Fallback: Use FastAPI BackgroundTasks so the email is sent AFTER the HTTP response
+    # is returned to the client. This prevents the Vercel serverless function from timing out
+    # while waiting for the Resend API call to complete inline.
+    if background_tasks is not None:
+        background_tasks.add_task(send_confirmation_email, **args)
+    else:
+        # Last resort: synchronous call (e.g. in test/local contexts without background tasks)
+        send_confirmation_email(**args)
 
 def dispatch_send_broadcast_email(
     background_tasks: BackgroundTasks,
@@ -107,5 +113,9 @@ def dispatch_send_broadcast_email(
         _post_qstash_sync(url=url, headers=headers, payload=payload, task_name="send_broadcast_email")
         return
 
-    # Fallback to local synchronous execution to prevent serverless container freezing
-    send_broadcast_email(**args)
+    # Fallback: Use FastAPI BackgroundTasks so the email is sent AFTER the HTTP response
+    # is returned to the client, preventing Vercel serverless timeout.
+    if background_tasks is not None:
+        background_tasks.add_task(send_broadcast_email, **args)
+    else:
+        send_broadcast_email(**args)

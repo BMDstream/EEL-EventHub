@@ -277,8 +277,8 @@ def update_template(
     session.add(template)
     session.commit()
     session.refresh(template)
-    from backend.email_service import get_template_from_db
-    get_template_from_db.cache_clear()
+    from backend.email_service import invalidate_template_cache
+    invalidate_template_cache(key)
     return template
 
 @router.post("/settings/templates/{key}/reset", response_model=EmailTemplate)
@@ -305,8 +305,8 @@ def reset_template(
     session.add(template)
     session.commit()
     session.refresh(template)
-    from backend.email_service import get_template_from_db
-    get_template_from_db.cache_clear()
+    from backend.email_service import invalidate_template_cache
+    invalidate_template_cache(key)
     return template
 
 @router.post("/settings/templates/{key}/test")
@@ -473,44 +473,6 @@ def trigger_database_migrations(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Migrations failed: {str(e)}")
 
-@router.get("/settings/diagnostic/resend")
-def debug_resend(
-    session: Session = Depends(get_session)
-):
-    from backend.models import Event, Client
-    from backend.utils import get_event_email_config
-    
-    event = session.exec(select(Event).where(Event.title == "Padel Championship")).first()
-    event_dict = None
-    client_dict = None
-    config = None
-    if event:
-        event_dict = {
-            "id": event.id,
-            "title": event.title,
-            "slug": event.slug,
-            "sender_email": event.sender_email,
-            "sender_name": event.sender_name,
-            "confirmation_template_key": event.confirmation_template_key,
-            "client_id": event.client_id
-        }
-        client = session.get(Client, event.client_id) if event.client_id else None
-        if client:
-            client_dict = {
-                "id": client.id,
-                "name": client.name,
-                "sender_name": client.sender_name,
-                "reply_to": client.reply_to
-            }
-        try:
-            config = get_event_email_config(event, session)
-        except Exception as e:
-            config = {"error": str(e)}
-            
-    return {
-        "event": event_dict,
-        "client": client_dict,
-        "config": config
-    }
+
 
 
