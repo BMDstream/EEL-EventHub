@@ -190,8 +190,20 @@ def send_confirmation_email(
     meta = parse_template_meta(db_template.body_html) if db_template else {}
 
     show_banner_meta = meta.get("show_banner", "false") if meta else "false"
-    show_banner = show_banner_meta == "true" or (show_banner_meta != "false" and (config.get("show_banner_in_email", False) or t_key == "banner_email"))
-    banner_url = (meta.get("banner_image_url") if meta else None) or config.get("banner_url") or "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800"
+    
+    # CRITICAL BANNER OVERRIDE:
+    # If this event uses a template selected by ID from the UI, we MUST NOT
+    # inject any banner from the event config. The template HTML is the sole
+    # authority for its own banner. This prevents the double-banner bug.
+    uses_custom_template_id = config.get("uses_custom_template_id", False)
+    if uses_custom_template_id:
+        # Honour only what the template meta explicitly declares
+        show_banner = show_banner_meta == "true"
+        banner_url = meta.get("banner_image_url", "") if meta else ""
+    else:
+        show_banner = show_banner_meta == "true" or (show_banner_meta != "false" and (config.get("show_banner_in_email", False) or t_key == "banner_email"))
+        banner_url = (meta.get("banner_image_url") if meta else None) or config.get("banner_url") or "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800"
+
     banner_html = ""
     if show_banner:
         banner_html = f"""

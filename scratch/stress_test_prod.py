@@ -1,0 +1,93 @@
+import requests
+import concurrent.futures
+import time
+import random
+import string
+import sys
+
+# Configuration
+BASE_URL = "https://eel-event-hub-q61e.vercel.app/api/py"
+NUM_REQUESTS = 250
+CONCURRENCY = 15
+EVENT_SLUG = "stress-test-final"
+
+def random_string(length=8):
+    return ''.join(random.choices(string.ascii_lowercase, k=length))
+
+def get_event_id():
+    try:
+        url = f"{BASE_URL}/events/{EVENT_SLUG}"
+        print(f"Fetching event from: {url}")
+        r = requests.get(url, timeout=10)
+        event = r.json()
+        if isinstance(event, dict) and 'id' in event:
+            return event['id']
+        print(f"Response did not contain event ID: {event}")
+        return None
+    except Exception as e:
+        print(f"Error fetching event: {e}")
+        return None
+
+def send_registration(i, event_id):
+    email = f"stress_test_prod_{i}_{random_string(4)}@example.com"
+    payload = {
+        "event_id": event_id,
+        "email": email,
+        "first_name": f"Stress{i}",
+        "last_name": "Tester",
+        "company": "Stress Test Inc",
+        "custom_answers": {},
+        "is_attending": True
+    }
+    try:
+        start = time.time()
+        response = requests.post(f"{BASE_URL}/register", json=payload, timeout=30)
+        end = time.time()
+        return response.status_code, end - start
+    except Exception as e:
+        return 500, str(e)
+
+def main():
+    event_id = get_event_id()
+    if not event_id:
+        print("No events found to test against. Create an event first.")
+        sys.exit(1)
+        
+    print(f"Starting stress test: {NUM_REQUESTS} registrations for event ID {event_id} with concurrency {CONCURRENCY}")
+    start_time = time.time()
+    
+    with concurrent.futures.ThreadPoolExecutor(max_workers=CONCURRENCY) as executor:
+        futures = [executor.submit(send_registration, i, event_id) for i in range(NUM_REQUESTS)]
+        results = [f.result() for f in concurrent.futures.as_completed(futures)]
+    
+    end_time = time.time()
+    total_time = end_time - start_time
+    
+    success_count = sum(1 for status, _ in results if status == 200 or status == 201)
+    failed_count = NUM_REQUESTS - success_count
+    latencies = [latency for status, latency in results if isinstance(latency, (int, float))]
+    
+    avg_latency = sum(latencies) / len(latencies) if latencies else 0
+    max_latency = max(latencies) if latencies else 0
+    min_latency = min(latencies) if latencies else 0
+    
+    # Calculate status code breakdown
+    status_counts = {}
+    for status, _ in results:
+        status_counts[status] = status_counts.get(status, 0) + 1
+        
+    print("\n--- Results ---")
+    print(f"Total Requests: {NUM_REQUESTS}")
+    print(f"Success: {success_count}")
+    print(f"Failed: {failed_count}")
+    print("Status Code Breakdown:")
+    for status, count in sorted(status_counts.items()):
+        print(f"  {status}: {count} requests")
+    print(f"Total Time: {total_time:.2f}s")
+    print(f"Avg Latency: {avg_latency:.4f}s")
+    print(f"Min Latency: {min_latency:.4f}s")
+    print(f"Max Latency: {max_latency:.4f}s")
+    print(f"Throughput: {NUM_REQUESTS / total_time:.2f} req/s")
+
+if __name__ == "__main__":
+    main()

@@ -85,7 +85,8 @@ def run_migrations():
                 ("sender_name", "TEXT"),
                 ("company_required", f"BOOLEAN DEFAULT {bool_false}"),
                 ("background_url", "TEXT"),
-                ("confirmation_template_key", "TEXT DEFAULT 'global'")
+                ("confirmation_template_key", "TEXT DEFAULT 'global'"),
+                ("confirmation_template_id", "INTEGER")
             ]:
                 if col_name not in event_columns:
                     try:

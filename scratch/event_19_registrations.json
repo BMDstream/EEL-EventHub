@@ -1,0 +1,1864 @@
+[
+  {
+    "reg_id": "e37f5c69-13f1-4d7b-b49f-62d954f5e6ad",
+    "email": "abyda@touchnet.co.za",
+    "name": "abyda aziz",
+    "answers": {
+      "field_1779962054556": "Halaal",
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Competitive",
+      "field_1781088483505": {
+        "first_name": "keith ",
+        "last_name": "pillay ",
+        "email": "keith@touchnet.co.za"
+      },
+      "field_1779962303585": "XS",
+      "field_1781158985365": "L"
+    }
+  },
+  {
+    "reg_id": "92040be9-cd63-4855-b8d8-4da659acd47e",
+    "email": "snow@iconnectsa.co.za",
+    "name": "Mark Snow",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Player",
+      "field_1779962303585": "L"
+    }
+  },
+  {
+    "reg_id": "5346a307-400b-4255-998e-53733e4362bb",
+    "email": "suvesh@dfafrica.co.za",
+    "name": "Suvesh Arumugam",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962096590": "Gluten Free",
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Competitive",
+      "field_1779962303585": "L",
+      "field_1781088483505": {
+        "first_name": "Steve",
+        "last_name": "Gallinetti",
+        "email": "steve.gallinetti@dfafrica.co.za"
+      },
+      "field_1781158985365": "XL"
+    }
+  },
+  {
+    "reg_id": "1d8cc2ef-2113-4f3e-b805-436644f1f83a",
+    "email": "steve.gallinetti@dfafrica.co.za",
+    "name": "Steve Gallinetti",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Player",
+      "field_1779962303585": "XL",
+      "field_1779962172868": "Competitive",
+      "field_1781088483505": {
+        "first_name": "Suvesh",
+        "last_name": "Arumugam",
+        "email": "suveshnan.arumugam@dfafrica.co.za"
+      },
+      "field_1781158985365": "XL"
+    }
+  },
+  {
+    "reg_id": "345dd6b5-48d1-450c-8e81-0636b44d42b1",
+    "email": "mk@ictnetworks.co.za",
+    "name": "Marius Kruger",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Spectator"
+    }
+  },
+  {
+    "reg_id": "5bfb4760-23b5-4b36-a3b3-c7cc14a113f8",
+    "email": "brett.berry@openaccessdc.net",
+    "name": "Brett Berry",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Competitive",
+      "field_1779962303585": "L"
+    }
+  },
+  {
+    "reg_id": "26f52ce2-2d2d-421e-8905-9419d5a653cf",
+    "email": "lionel.stone@cmcnetworks.net",
+    "name": "Lionel Stone",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Player"
+    }
+  },
+  {
+    "reg_id": "beb7a209-f2c2-442d-8afe-eef9a0662eea",
+    "email": "kerushan@echosp.co.za",
+    "name": "Kerushan Chetty",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Player",
+      "field_1779962303585": "M",
+      "field_1781158985365": "L",
+      "field_1779962172868": "Competitive",
+      "field_1781088483505": {
+        "first_name": "Aubrey",
+        "last_name": "Simmonds",
+        "email": "aubrey@echosp.co.za"
+      }
+    }
+  },
+  {
+    "reg_id": "28d07058-56f9-4e1d-87a9-e909ece8974c",
+    "email": "aubrey@echosp.co.za",
+    "name": "Aubrey Simmonds",
+    "answers": {}
+  },
+  {
+    "reg_id": "685101c9-2183-45c2-a8cf-147559f824ce",
+    "email": "hugo.fourie@cmcnetworks.net",
+    "name": "Hugo Fourie",
+    "answers": {
+      "field_1779962137331": "Player",
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962172868": "Competitive",
+      "field_1781088483505": {
+        "first_name": "Lionel ",
+        "last_name": "Stone",
+        "email": "lionel.stone@cmcnetworks.net"
+      },
+      "field_1779962303585": "L",
+      "field_1781158985365": "L"
+    }
+  },
+  {
+    "reg_id": "72482d05-e095-40bc-a6f4-dbd19cbbf04c",
+    "email": "philip.willemse@nttdata.com",
+    "name": "Philip Willemse",
+    "answers": {
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Competitive"
+    }
+  },
+  {
+    "reg_id": "56ad4010-889c-4097-bdc9-253a3f9a5b5d",
+    "email": "mauritz.vanwyk@global.ntt",
+    "name": "Mauritz Van Wyk",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Player",
+      "field_1779962303585": "L",
+      "field_1779962172868": "Social"
+    }
+  },
+  {
+    "reg_id": "ccb150e1-abe4-4d95-bafb-4154f0a65039",
+    "email": "george.enslin@seacom.com",
+    "name": "George Enslin",
+    "answers": {
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Competitive"
+    }
+  },
+  {
+    "reg_id": "65c1c640-1b1b-4796-ab3e-db401295a480",
+    "email": "giovanni.dacosta@seacom.com",
+    "name": "Gio Da  Costa",
+    "answers": {}
+  },
+  {
+    "reg_id": "cbaf5487-3fcc-42d0-b10b-0b60a096d3de",
+    "email": "mattm@metrofibre.co.za",
+    "name": "Matt Montagu",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Social",
+      "field_1779962303585": "M",
+      "field_1781158985365": "S"
+    }
+  },
+  {
+    "reg_id": "40b3f0a6-3e07-464c-af85-1770383e1464",
+    "email": "rudolf@crispfibre.co.za",
+    "name": "Rudolf Pretoruis",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Competitive",
+      "field_1781088483505": {
+        "first_name": "Lelani",
+        "last_name": "Pretorius",
+        "email": "info@crispfibre.co.za"
+      },
+      "field_1779962303585": "XL",
+      "field_1781158985365": "S"
+    }
+  },
+  {
+    "reg_id": "ff505c3e-58b3-4026-93ac-0ce354852a4e",
+    "email": "info@crispfibre.co.za",
+    "name": "Lelani Pretorius",
+    "answers": {}
+  },
+  {
+    "reg_id": "a519303a-52c0-431e-9b12-008350b18b45",
+    "email": "brendon.leroux@arcinternational.co.za",
+    "name": "Brendon Le Roux",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Spectator"
+    }
+  },
+  {
+    "reg_id": "78c61af0-427f-4f67-abf2-1e92d503aac5",
+    "email": "bongani@samotelecoms.co.za",
+    "name": "Bongani Nkomo",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Competitive",
+      "field_1779962303585": "L",
+      "field_1781088483505": {
+        "first_name": "",
+        "last_name": "",
+        "email": ""
+      },
+      "field_1781158985365": ""
+    }
+  },
+  {
+    "reg_id": "001f17bc-ab3a-4806-9cae-ed8d2ad2af33",
+    "email": "charl.malan@wiocc.net",
+    "name": "Charl Malan",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Competitive",
+      "field_1779962303585": "XXL",
+      "field_1781088483505": {
+        "first_name": "Brett ",
+        "last_name": "Berry",
+        "email": "brett.berry@wiocc.net"
+      },
+      "field_1781158985365": "L"
+    }
+  },
+  {
+    "reg_id": "ad89fb6f-6322-40d9-9a0a-fb97a7ccd1be",
+    "email": "brett.berry@wiocc.net",
+    "name": "Brett Berry",
+    "answers": {}
+  },
+  {
+    "reg_id": "ffcb2d7b-f137-4501-9378-f9c811d543b4",
+    "email": "moses@samotelecoms.co.za",
+    "name": "Moses Kubeka",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Competitive",
+      "field_1779962303585": "M",
+      "field_1781158985365": "L",
+      "field_1781088483505": {
+        "first_name": "Bongani",
+        "last_name": "Nkomo",
+        "email": "bongani@samotelecoms.co.za"
+      }
+    }
+  },
+  {
+    "reg_id": "d344b046-3182-4fff-accb-a0480bc0d7bf",
+    "email": "nevashin@echosp.co.za",
+    "name": "Nevashin Naidoo",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Player",
+      "field_1779962303585": "M",
+      "field_1781158985365": "M",
+      "field_1779962172868": "Social"
+    }
+  },
+  {
+    "reg_id": "700e674d-0eaf-4a62-ba1f-aaab291fc6e1",
+    "email": "daniel@echosp.co.za",
+    "name": "Daniel Koorbanally",
+    "answers": {
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Competitive",
+      "field_1781088483505": {
+        "first_name": "Hilal",
+        "email": "colin@echosp.co.za",
+        "last_name": "Pillay"
+      },
+      "field_1779962303585": "M",
+      "field_1781158985365": "L",
+      "field_1779962054556": "No Dietary Requirements"
+    }
+  },
+  {
+    "reg_id": "c4fa6502-4acd-4760-bb47-39edfb47750e",
+    "email": "colin@echosp.co.za",
+    "name": "Hilal Pillay",
+    "answers": {}
+  },
+  {
+    "reg_id": "dfffdaeb-e560-4ea4-9ea5-38aff3254380",
+    "email": "jacquesn@metrofibre.co.za",
+    "name": "Jacques Nell",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements"
+    }
+  },
+  {
+    "reg_id": "56e4e58f-7742-4e96-9ab4-73fe2da3b642",
+    "email": "shaun@echosp.co.za",
+    "name": "Shaun Engelbrecht",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Player"
+    }
+  },
+  {
+    "reg_id": "b3c1c2bb-3ea9-4db5-9a05-4cc761a585d0",
+    "email": "anees.ismail@global.ntt",
+    "name": "Anees Ismail",
+    "answers": {
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Competitive"
+    }
+  },
+  {
+    "reg_id": "9df864d8-aeb2-4f96-84ab-bea6f3878103",
+    "email": "tshidi.motloung@openaccessdc.net",
+    "name": "Tshidi Motloung",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Social",
+      "field_1779962303585": "M",
+      "field_1781158985365": "XL"
+    }
+  },
+  {
+    "reg_id": "92f88720-5d9e-4a0e-ac48-6767bf881941",
+    "email": "yashiel.naras@vodacom.co.za",
+    "name": "Yashiel Naras",
+    "answers": {
+      "field_1779962054556": "Halaal",
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Competitive",
+      "field_1781088483505": {
+        "first_name": "Eugene ",
+        "last_name": "Peters",
+        "email": "eugene.peters@vodacom.co.za"
+      },
+      "field_1779962303585": "M",
+      "field_1781158985365": "L"
+    }
+  },
+  {
+    "reg_id": "6c80d6e2-d259-4fce-aebb-c8afa6ebe330",
+    "email": "eugene.peters@vodacom.co.za",
+    "name": "Eugene Peters",
+    "answers": {}
+  },
+  {
+    "reg_id": "53ce2adb-3e59-4670-8f7a-5e57111bee2b",
+    "email": "rudzani.mavula@openaccessdc.net",
+    "name": "Rudzani Mavula",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Player"
+    }
+  },
+  {
+    "reg_id": "bcee6e90-b8f1-4d84-aa13-0c1ac96e7e31",
+    "email": "levian.lobai@dfafrica.co.za",
+    "name": "Levian Lobai",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Competitive",
+      "field_1781088483505": {
+        "first_name": "Suveshnan",
+        "last_name": "Arumugam",
+        "email": "suveshnan.arumugam@dfafrica.co.za"
+      },
+      "field_1779962303585": "L",
+      "field_1781158985365": "L"
+    }
+  },
+  {
+    "reg_id": "8528a217-d9f7-4cc1-81cb-8c1cbba96e3a",
+    "email": "suveshnan.arumugam@dfafrica.co.za",
+    "name": "Suveshnan Arumugam",
+    "answers": {}
+  },
+  {
+    "reg_id": "e8be5a95-6a77-4f36-97cf-f25a7bec8537",
+    "email": "aqeel@echosp.co.za",
+    "name": "Aqeel Mohamed",
+    "answers": {
+      "field_1779962054556": "Halaal",
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Competitive",
+      "field_1781088483505": {
+        "first_name": "Yusuf ",
+        "last_name": "Mahomed",
+        "email": "yusuf@echosp.co.za"
+      },
+      "field_1779962303585": "XL",
+      "field_1781158985365": "XL"
+    }
+  },
+  {
+    "reg_id": "7e5693a3-278e-4815-8a92-181009480b69",
+    "email": "yusuf@echosp.co.za",
+    "name": "Yusuf Mahomed",
+    "answers": {}
+  },
+  {
+    "reg_id": "a27cf635-9ba3-4e1c-9325-2e9e6e9796ba",
+    "email": "warren@rocketnet.co.za",
+    "name": "Warren Thomas",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Social",
+      "field_1779962303585": "L",
+      "field_1781158985365": "L"
+    }
+  },
+  {
+    "reg_id": "7fea8a53-ab4c-41e1-9f0c-9973bca8c012",
+    "email": "eugenia.nalane@nttdata.com",
+    "name": "Eugenia Nalane",
+    "answers": {
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Social"
+    }
+  },
+  {
+    "reg_id": "2393f211-44db-4743-a057-1be5956dfd05",
+    "email": "abigail.scriven@comsol.co.za",
+    "name": "Abigail Scriven",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Social",
+      "field_1779962303585": "M"
+    }
+  },
+  {
+    "reg_id": "39203c4a-c72b-4c57-b094-5ba83bb69854",
+    "email": "leandri.leroux@arcinternational.co.za",
+    "name": "Leandri le Roux",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Spectator"
+    }
+  },
+  {
+    "reg_id": "281304c6-1385-4d2b-8d9f-645a223b7611",
+    "email": "carlien.pillay@wiocc.net",
+    "name": "Carlien Pillay",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Spectator"
+    }
+  },
+  {
+    "reg_id": "9c2b858a-a4c6-4d47-8109-a0d243a7e1d4",
+    "email": "klariensmith6@gmail.com",
+    "name": "Klarien Smith",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Social",
+      "field_1779962303585": "M"
+    }
+  },
+  {
+    "reg_id": "1e758d88-0356-4516-9fa9-fce1c6317440",
+    "email": "christianw@metrofibre.co.za",
+    "name": "Christian Wirtz",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Player",
+      "field_1779962303585": "M",
+      "field_1781158985365": "M"
+    }
+  },
+  {
+    "reg_id": "914bd41c-48c7-459d-9e4f-52b3eea519bb",
+    "email": "karin@comsol.co.za",
+    "name": "Karin Fourie",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Social",
+      "field_1779962303585": "M"
+    }
+  },
+  {
+    "reg_id": "eace2891-9ed0-465d-937e-fae935874b4e",
+    "email": "melanie.chetty@global.ntt",
+    "name": "Melanie Chetty",
+    "answers": {
+      "field_1779962054556": "Halaal",
+      "field_1779962137331": "Spectator"
+    }
+  },
+  {
+    "reg_id": "f95e1e16-c619-4363-a2d0-4b766f221ffd",
+    "email": "jo-anne@clearaccess.co.za",
+    "name": "Jo-Anne Hobday",
+    "answers": {
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Social"
+    }
+  },
+  {
+    "reg_id": "a62c77b7-d5b2-4132-ae1a-18b63423a777",
+    "email": "colin@clearaccess.co.za",
+    "name": "Colin Trollope",
+    "answers": {
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Social"
+    }
+  },
+  {
+    "reg_id": "146e4302-b792-4f3f-b4e4-33f61dc18327",
+    "email": "nicolette.vdheever@borwood.com",
+    "name": "Nicolette van den Heever",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Spectator"
+    }
+  },
+  {
+    "reg_id": "e096a002-3a00-419c-bda5-252dbc091af5",
+    "email": "ettienne@linteglava.co.za",
+    "name": "Ettienne Knipe",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Player",
+      "field_1779962303585": "XL",
+      "field_1781158985365": "L",
+      "field_1779962172868": "Competitive",
+      "field_1781088483505": {
+        "first_name": "Luke",
+        "last_name": "Knipe",
+        "email": "Luke@linteglava.co.za"
+      }
+    }
+  },
+  {
+    "reg_id": "33bb8cd9-c0fc-4d29-92bd-e6facfa8e1bc",
+    "email": "rodney.reddy@mtn.com",
+    "name": "Rodney Reddy",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Social",
+      "field_1779962303585": "L",
+      "field_1781158985365": "L"
+    }
+  },
+  {
+    "reg_id": "354ecdff-0b31-47e9-9ad8-c0d3e2bd17fe",
+    "email": "devan.govender@global.ntt",
+    "name": "Devan Govender",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Social",
+      "field_1779962303585": "M",
+      "field_1781158985365": "S"
+    }
+  },
+  {
+    "reg_id": "76534821-8f8f-4789-911d-5c84d5d45c39",
+    "email": "junaid@echosp.co.za",
+    "name": "Junaid Hattia",
+    "answers": {
+      "field_1779962054556": "Halaal",
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Competitive",
+      "field_1781088483505": {
+        "first_name": "Daniel",
+        "last_name": "Koorbanally",
+        "email": "Daniel@echosp.co.za"
+      },
+      "field_1779962303585": "L",
+      "field_1781158985365": "M"
+    }
+  },
+  {
+    "reg_id": "edb44ec2-c82c-4988-b7e8-bc8e1e5d34ef",
+    "email": "lee-roy@coolideas.co.za",
+    "name": "Lee-Roy Joyce",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Player",
+      "field_1779962303585": "M",
+      "field_1781158985365": "M"
+    }
+  },
+  {
+    "reg_id": "a75e66e5-6086-4b73-8117-ccd7907257fc",
+    "email": "sureka.rambakus@dfafrica.co.za",
+    "name": "Sureka Rambakus",
+    "answers": {
+      "field_1779962054556": "Halaal",
+      "field_1779962137331": "Spectator"
+    }
+  },
+  {
+    "reg_id": "8c15c649-c63d-45c9-92d6-afbedd5acc9b",
+    "email": "vanitha.rajoo@dfafrica.co.za",
+    "name": "Vanitha Rajoo",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Social",
+      "field_1779962303585": "M"
+    }
+  },
+  {
+    "reg_id": "5afd8973-d3ca-4ec5-b8ea-1750cc54f377",
+    "email": "suveshnan.arumugam@dfafrica.co.za",
+    "name": "Suvesh Arumugam",
+    "answers": {}
+  },
+  {
+    "reg_id": "e5756556-0aa3-4141-82ff-eed7e3894fca",
+    "email": "thelma.oliphant@dfafrica.conza",
+    "name": "Thelma Oliphant",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Spectator"
+    }
+  },
+  {
+    "reg_id": "98d86095-19b0-44b1-b7ef-29de690cbed9",
+    "email": "tania.barker@dfafrica.co.za",
+    "name": "Tania Barker",
+    "answers": {
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Social",
+      "field_1779962303585": "M",
+      "field_1779962054556": "Other",
+      "field_1779962096590": "Low carb"
+    }
+  },
+  {
+    "reg_id": "a0cc318e-788c-40b0-8de7-a20903b58c0d",
+    "email": "suraj.kalideen@dfafrica.co.za",
+    "name": "Suraj Kalideen",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Social",
+      "field_1779962303585": "XL"
+    }
+  },
+  {
+    "reg_id": "b16d176d-aeac-4c95-b749-97abc223aa8d",
+    "email": "shelley.durkin@openaccessdc.net",
+    "name": "Shelley Durkin",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Social",
+      "field_1779962303585": "M"
+    }
+  },
+  {
+    "reg_id": "533f69bb-c7bf-44f3-a133-bde38bad9443",
+    "email": "katlego@samotelecoms.co.za",
+    "name": "Katlego Moloko",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Social",
+      "field_1779962303585": "L"
+    }
+  },
+  {
+    "reg_id": "78446139-d8ad-4ca6-a658-4980afc35bd2",
+    "email": "sivaniar@reflex.co.za",
+    "name": "Sivania Reddy",
+    "answers": {
+      "field_1779962137331": "Spectator"
+    }
+  },
+  {
+    "reg_id": "14dfb139-73b6-4a9c-82a2-2f51727db2c8",
+    "email": "siyabonga@molotel.co.za",
+    "name": "Siyabonga Ngobese",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Social",
+      "field_1779962303585": "L"
+    }
+  },
+  {
+    "reg_id": "03298085-6390-48ac-b4df-429f68e22941",
+    "email": "jayesh.doolabh@dfafrica.co.za",
+    "name": "Jayesh Doolabh",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Spectator"
+    }
+  },
+  {
+    "reg_id": "e53145f0-b607-4adf-9a8c-bf57a9e0785b",
+    "email": "ss@ictnetworks.co.zs",
+    "name": "Steven Swanepoel",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Player",
+      "field_1779962303585": "L",
+      "field_1779962172868": "Social",
+      "field_1781158985365": "XL"
+    }
+  },
+  {
+    "reg_id": "0cae75b6-bfa0-411a-9547-6a1ea8ed57ca",
+    "email": "ss@ictnetworks.co.za",
+    "name": "Steven Swanepoel",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Social",
+      "field_1779962303585": "L"
+    }
+  },
+  {
+    "reg_id": "d9d1c3a4-95e8-46d7-a894-6fb7ef5f7d37",
+    "email": "jaco@clearaccess.co.za",
+    "name": "Jaco Minnaar",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Social",
+      "field_1779962303585": "XL"
+    }
+  },
+  {
+    "reg_id": "b6f8dbc6-9b07-45a4-abff-62f11969ad80",
+    "email": "aneesa.bates@dfafrica.co.za",
+    "name": "Aneesa Dowden Bates",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Social",
+      "field_1779962303585": "M"
+    }
+  },
+  {
+    "reg_id": "cc1995ce-39e3-4780-be0b-b497846fb7be",
+    "email": "sakhile@samotelecoms.co.za",
+    "name": "Sakhile Ndlovu",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Social",
+      "field_1779962303585": "M"
+    }
+  },
+  {
+    "reg_id": "3501b58d-e5f1-4c3c-b94a-dfc8645526a9",
+    "email": "douglas.buchanan@comsol.co.za",
+    "name": "Doug Buchanan",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Spectator"
+    }
+  },
+  {
+    "reg_id": "67b537da-f079-4981-a475-35b94abbd031",
+    "email": "julie@touchnet.co.za",
+    "name": "Julie Irmes",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Social",
+      "field_1779962303585": "L"
+    }
+  },
+  {
+    "reg_id": "8aefed26-7cb7-44b1-b7a2-c5a693a57153",
+    "email": "nonhlanhla@samoengineering.co.za",
+    "name": "NONHLANHLA MOLOKO",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Social",
+      "field_1779962303585": "XS"
+    }
+  },
+  {
+    "reg_id": "c6dd4bc5-a78d-4a01-a641-28868475ba01",
+    "email": "lindi.marx7@gmail.com",
+    "name": "Lindi Marx",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Spectator"
+    }
+  },
+  {
+    "reg_id": "d7048722-d388-494c-913e-47de81afbcd9",
+    "email": "keith@touchnet.co.za",
+    "name": "KEITH PILLAY",
+    "answers": {
+      "field_1779962054556": "Halaal",
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Social",
+      "field_1779962303585": "L"
+    }
+  },
+  {
+    "reg_id": "d853006c-c0d9-4e88-86a4-f91387eb0f7e",
+    "email": "andrew@echosp.co.za",
+    "name": "Andrew Nicholson",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Competitive",
+      "field_1781088483505": {
+        "first_name": "Junaid",
+        "last_name": "Hattia"
+      },
+      "field_1779962303585": "L",
+      "field_1781158985365": "L"
+    }
+  },
+  {
+    "reg_id": "6edf62cc-5801-4198-bcdf-6c1a0c51940a",
+    "email": "justus@serve-it.co.za",
+    "name": "Justus Bope",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Spectator"
+    }
+  },
+  {
+    "reg_id": "9bf9bc78-d680-4e6c-8025-1a3d6daa8b5f",
+    "email": "grantp@metrofibre.co.za",
+    "name": "Grant Parker",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Competitive",
+      "field_1779962303585": "S"
+    }
+  },
+  {
+    "reg_id": "151ffb6a-4ffb-4253-a847-8af303a078e6",
+    "email": "koketso.mokganedi@dfafrica.co.za",
+    "name": "Koketso Mokganedi",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Spectator"
+    }
+  },
+  {
+    "reg_id": "674a4425-9361-4d3f-a340-159b0132fd7c",
+    "email": "paul.divall@dfafrica.co.za",
+    "name": "Paul Divall",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Social",
+      "field_1779962303585": "L"
+    }
+  },
+  {
+    "reg_id": "cf512c16-4b7d-4e71-bddb-4fb3d2b577af",
+    "email": "stephan.grimm@echosp.co.za",
+    "name": "Stephan Grimm",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Spectator"
+    }
+  },
+  {
+    "reg_id": "72ef1c20-d0c5-454e-b3e8-3f085510ee1f",
+    "email": "johannes.bekker@cipherwave.co.za",
+    "name": "Johann Bekker",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Player",
+      "field_1779962303585": "M"
+    }
+  },
+  {
+    "reg_id": "a31c7ec9-36c2-4683-b0e9-477254d69574",
+    "email": "naledi@molotel.co.za",
+    "name": "Naledi Gumede",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Spectator"
+    }
+  },
+  {
+    "reg_id": "ef3fdd08-5735-4576-9e7e-c477b5461e39",
+    "email": "mitesh.ramnarain@dfafrica.co.za",
+    "name": "Mitesh Ramnarain",
+    "answers": {
+      "field_1779962054556": "Vegetarian Vegan",
+      "field_1779962137331": "Spectator"
+    }
+  },
+  {
+    "reg_id": "2089a2c1-10d7-40f9-8e64-28b70fbed738",
+    "email": "anthoniel@metrofibre.co.za",
+    "name": "Anthonie Lombard",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Social",
+      "field_1779962303585": "XL"
+    }
+  },
+  {
+    "reg_id": "5fc3ead2-ae57-4b18-a023-3b57af2b4256",
+    "email": "greg.hatfield@nttdata.com",
+    "name": "Greg Hatfield",
+    "answers": {
+      "field_1779962096590": "",
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Competitive",
+      "field_1781088483505": ""
+    }
+  },
+  {
+    "reg_id": "6259f0d2-3efd-44dd-a8a0-ab4f12ca2a52",
+    "email": "martin.springer@nttdata.com",
+    "name": "Martin Springer",
+    "answers": {
+      "field_1779962096590": "",
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Competitive",
+      "field_1781088483505": ""
+    }
+  },
+  {
+    "reg_id": "9e0328e6-001c-48cd-b511-9b48e035f49a",
+    "email": "greg.whitaker@nttdata.com",
+    "name": "Greg Whitaker",
+    "answers": {
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Competitive"
+    }
+  },
+  {
+    "reg_id": "79a82bef-bef0-4132-bac9-ee5811a4d2c0",
+    "email": "devan.govender@nttdata.com",
+    "name": "Devan Govender",
+    "answers": {
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Competitive"
+    }
+  },
+  {
+    "reg_id": "726ad2a5-a3ec-4aef-8650-4c31ee933e7a",
+    "email": "renelle.john@nttdata.com",
+    "name": "Renelle John",
+    "answers": {
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Competitive"
+    }
+  },
+  {
+    "reg_id": "9c9b523f-7c0f-45d7-9cf2-91baf979bcff",
+    "email": "sean.silverman@nttdata.com",
+    "name": "Sean Silverman",
+    "answers": {
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Competitive"
+    }
+  },
+  {
+    "reg_id": "39477ec6-f04f-43dd-a3bf-ed2736835f3e",
+    "email": "bryang@reflex.co.za",
+    "name": "Bryan Groome",
+    "answers": {
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Competitive"
+    }
+  },
+  {
+    "reg_id": "591dcffe-132d-44e8-8416-f6ce599cea0c",
+    "email": "jeffj@reflex.co.za",
+    "name": "Jeff Jack",
+    "answers": {
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Competitive"
+    }
+  },
+  {
+    "reg_id": "748be00d-ebd9-4a0b-a084-191a672b06d7",
+    "email": "wernerv@reflex.co.za",
+    "name": "Werner Van Greunen",
+    "answers": {
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Competitive"
+    }
+  },
+  {
+    "reg_id": "1f535353-d6ee-4e76-85e3-9403d210037a",
+    "email": "kyle.westman@reflex.co.za",
+    "name": "Kyle Westman",
+    "answers": {
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Competitive"
+    }
+  },
+  {
+    "reg_id": "e4f8c352-6f09-41b3-a5d0-e91fccd88c4f",
+    "email": "nickt@reflex.co.za",
+    "name": "Nick Truran",
+    "answers": {
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Competitive"
+    }
+  },
+  {
+    "reg_id": "096193d9-187d-4516-b1c2-55a5b0a716f5",
+    "email": "michaelk@reflex.co.za",
+    "name": "Michael Krynauw",
+    "answers": {
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Competitive"
+    }
+  },
+  {
+    "reg_id": "a9b5f979-3243-4e91-8879-e000363c7b46",
+    "email": "giovanni.dacosta@seacom.com",
+    "name": "Giovanni Da Costa",
+    "answers": {
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Competitive"
+    }
+  },
+  {
+    "reg_id": "d4b6ad27-b747-4a8a-a021-c6cdc2944fa0",
+    "email": "clayton.codd@seacom.com",
+    "name": "Clayton Codd",
+    "answers": {
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Competitive"
+    }
+  },
+  {
+    "reg_id": "9ec099b6-b53e-49a8-a393-d1a13d2499df",
+    "email": "muhammad.akoojee@global.ntt",
+    "name": "Muhammad Akoojee",
+    "answers": {
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Competitive"
+    }
+  },
+  {
+    "reg_id": "9175f036-14b2-439e-8b86-74ccab73a8e8",
+    "email": "melanie.chetty@nttdata.com",
+    "name": "Melanie Chetty",
+    "answers": {
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Social"
+    }
+  },
+  {
+    "reg_id": "bdaa832c-76f1-402d-979e-bbfbfa0db212",
+    "email": "lantzyk@reflex.co.za",
+    "name": "Lantzy Kenny",
+    "answers": {
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Social"
+    }
+  },
+  {
+    "reg_id": "5940a273-17f2-4a18-919a-9423ad8043b1",
+    "email": "charlesc@reflex.co.za",
+    "name": "Charles Castle",
+    "answers": {
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Social"
+    }
+  },
+  {
+    "reg_id": "2a2fbb10-c0f0-45e4-a47c-fdcafff9479c",
+    "email": "deon.geyser@seacom.com",
+    "name": "Deon Geyser",
+    "answers": {
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Social"
+    }
+  },
+  {
+    "reg_id": "be0681f6-ee98-4417-8acd-05fcf34cc323",
+    "email": "jonathan.smit@seacom.com",
+    "name": "Jonathan Smit",
+    "answers": {
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Social"
+    }
+  },
+  {
+    "reg_id": "87b8a312-06fd-4a2e-8f11-1c984b3ec4bf",
+    "email": "jaco@clearaccess.co.za",
+    "name": "Jaco Minnar",
+    "answers": {
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Social"
+    }
+  },
+  {
+    "reg_id": "b3ba7485-6712-4091-8635-4468e552de5b",
+    "email": "mornedn@clearaccess.co.za",
+    "name": "Morne de Noon",
+    "answers": {
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Social"
+    }
+  },
+  {
+    "reg_id": "4249e69e-ef31-43a1-9c05-eaf728c36b95",
+    "email": "moeghsien.mohamed@bcx.co.za",
+    "name": "Moeghsien Mohamed",
+    "answers": {
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Social"
+    }
+  },
+  {
+    "reg_id": "8be2a379-8a94-4234-ac41-4bdb8b769916",
+    "email": "dion.diamond@global.ntt",
+    "name": "Dion Diamond",
+    "answers": {
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Social"
+    }
+  },
+  {
+    "reg_id": "561e3b86-f555-4517-b624-b37cdc6bef1e",
+    "email": "seanv@firstnet.co.za",
+    "name": "Sean van Niekerk",
+    "answers": {
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Social"
+    }
+  },
+  {
+    "reg_id": "c2d65fb7-4f50-4f28-889d-4c117b87c688",
+    "email": "vaughang@firstnet.co.za",
+    "name": "Vaughna Gerson",
+    "answers": {
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Social"
+    }
+  },
+  {
+    "reg_id": "1586ab5b-c586-4f70-8700-cb64fe33f8df",
+    "email": "soniadm@firstnet.co.za",
+    "name": "Sonia De Marigny",
+    "answers": {
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Social"
+    }
+  },
+  {
+    "reg_id": "587b22cd-5828-4628-86f6-94bf929613ea",
+    "email": "benm@firstnet.co.za",
+    "name": "Ben Munn",
+    "answers": {
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Social"
+    }
+  },
+  {
+    "reg_id": "d95fefd1-64b8-410c-8256-52b7dbcb0fb9",
+    "email": "lauren.mccleod@nttdata.com",
+    "name": "Lauren McCleod",
+    "answers": {
+      "field_1779962137331": "Spectator"
+    }
+  },
+  {
+    "reg_id": "e62f3eaa-489c-48e1-99c4-b30cc8ba1129",
+    "email": "celeste.law@nttdata.com",
+    "name": "Celeste Law",
+    "answers": {
+      "field_1779962137331": "Spectator"
+    }
+  },
+  {
+    "reg_id": "499f70db-f749-455d-80de-85fd4102a6fa",
+    "email": "john.shuttleworth@nttdata.com",
+    "name": "John Shuttleworth",
+    "answers": {
+      "field_1779962137331": "Spectator"
+    }
+  },
+  {
+    "reg_id": "f64efdd4-dc30-402c-b90d-80934a28474e",
+    "email": "stephaniem@reflex.co.za",
+    "name": "Stephanie Mcarthy",
+    "answers": {
+      "field_1779962137331": "Spectator"
+    }
+  },
+  {
+    "reg_id": "2184c53a-fa4d-4c28-9813-b854257fa4cd",
+    "email": "jeeteshk@reflex.co.za",
+    "name": "Jeetesh Khusal",
+    "answers": {
+      "field_1779962137331": "Spectator"
+    }
+  },
+  {
+    "reg_id": "f5288e50-4247-4106-a0de-589793755291",
+    "email": "veronan@reflex.co.za",
+    "name": "Verona Naicker",
+    "answers": {
+      "field_1779962137331": "Spectator"
+    }
+  },
+  {
+    "reg_id": "662992e4-5127-4efb-a63a-388886fa8ff1",
+    "email": "charl.slabbert@seacom.com",
+    "name": "Charl Slabbert",
+    "answers": {
+      "field_1779962137331": "Spectator"
+    }
+  },
+  {
+    "reg_id": "b3b45543-1074-45e5-8bab-bf58d5aad970",
+    "email": "prenesh.padayachee@seacom.com",
+    "name": "Prenesh Padayachee",
+    "answers": {
+      "field_1779962137331": "Spectator"
+    }
+  },
+  {
+    "reg_id": "c6d83576-d079-40bd-a246-778ba072f3b1",
+    "email": "cheryl.john@seacom.com",
+    "name": "Cheryl John",
+    "answers": {
+      "field_1779962137331": "Spectator"
+    }
+  },
+  {
+    "reg_id": "3a7f762b-ed3d-409f-bc30-753b2b8d8a47",
+    "email": "percy.macaskill@seacom.com",
+    "name": "Percy Mackaskill",
+    "answers": {
+      "field_1779962137331": "Spectator"
+    }
+  },
+  {
+    "reg_id": "d0813ba6-7667-428f-a1e5-b6ac7b77241c",
+    "email": "reneilwe.mbatha@seacom.com",
+    "name": "Reneilwe Mbatha",
+    "answers": {
+      "field_1779962137331": "Spectator"
+    }
+  },
+  {
+    "reg_id": "c08d2097-2e16-4b82-88f6-6aa4a3004c6c",
+    "email": "beate.ungerer@bitco.co.za",
+    "name": "Beate Ungerer",
+    "answers": {
+      "field_1779962137331": "Spectator"
+    }
+  },
+  {
+    "reg_id": "9eb48ccb-395c-480b-98eb-9202aa437498",
+    "email": "rajeshb@linkafrica.co.za",
+    "name": "Rajesh Bux",
+    "answers": {
+      "field_1779962137331": "Spectator"
+    }
+  },
+  {
+    "reg_id": "924e631b-7f9d-4692-9448-1f169568a1e3",
+    "email": "elmarie.jansenvanvuuren@bitco.co.za",
+    "name": "Elmarie Wellington",
+    "answers": {
+      "field_1779962137331": "Spectator"
+    }
+  },
+  {
+    "reg_id": "dfd4aad0-be80-444f-9110-53cd44f93977",
+    "email": "leoni.vahrmeijer@bitco.co.za",
+    "name": "Leoni Vahrmeijer",
+    "answers": {
+      "field_1779962137331": "Spectator"
+    }
+  },
+  {
+    "reg_id": "d14653e9-debc-4a15-97b2-72dc4225668b",
+    "email": "nicolette.vdheever@borwood.com",
+    "name": "Nicollete van den Heever",
+    "answers": {
+      "field_1779962137331": "Spectator"
+    }
+  },
+  {
+    "reg_id": "23201f55-aeb9-4e41-8903-25555f6f8735",
+    "email": "barbara.tshuma@bcx.co.za",
+    "name": "Barbara Tshuma",
+    "answers": {
+      "field_1779962137331": "Spectator"
+    }
+  },
+  {
+    "reg_id": "70725842-ced9-4d7b-be6c-45e217fbe8b2",
+    "email": "dee.mothusi@nttdata.com",
+    "name": "Dee Mothusi",
+    "answers": {
+      "field_1779962137331": "Spectator"
+    }
+  },
+  {
+    "reg_id": "ecf28b59-d266-4877-90d6-1fd2d1693f90",
+    "email": "jayvani.francis@nttdata.com",
+    "name": "Jayvani Francis",
+    "answers": {
+      "field_1779962137331": "Spectator"
+    }
+  },
+  {
+    "reg_id": "afca71d1-0ad5-4c16-a38b-b323b91b4be1",
+    "email": "david.thompson@seacom.com",
+    "name": "David Thompson",
+    "answers": {
+      "field_1779962137331": "Spectator"
+    }
+  },
+  {
+    "reg_id": "e29f8a3f-e975-48f4-93aa-badfcd487afc",
+    "email": "michael.meiring@seacom.com",
+    "name": "Michael Meiring",
+    "answers": {
+      "field_1779962137331": "Spectator"
+    }
+  },
+  {
+    "reg_id": "5da96520-8341-4ac5-8bc4-aa5b5ee14b86",
+    "email": "sisanda@touchnet.co.za",
+    "name": "Sisanda Mangali",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Social",
+      "field_1779962303585": "M"
+    }
+  },
+  {
+    "reg_id": "205f702f-af7d-4fa2-a3d6-bf33400d5fdf",
+    "email": "kyle@touchnet.co.za",
+    "name": "Kyle Nkosi",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Social",
+      "field_1779962303585": "M"
+    }
+  },
+  {
+    "reg_id": "a1877ba9-51cd-4753-a5c9-7659b2d12a2c",
+    "email": "thamsanqa@touchnet.co.za",
+    "name": "Thamsanqa Hamphrey Munyai",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Spectator"
+    }
+  },
+  {
+    "reg_id": "d7aaa39e-35ae-4af1-aa3f-612127d4369e",
+    "email": "prasheel@touchnet.co.za",
+    "name": "Prasheel Thakor",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Player",
+      "field_1779962303585": "L"
+    }
+  },
+  {
+    "reg_id": "4ae077fa-c341-4767-a287-6ec02a8e51b9",
+    "email": "vironc@pindrop.co.za",
+    "name": "Viron Christopher",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Player",
+      "field_1779962303585": "L"
+    }
+  },
+  {
+    "reg_id": "cee48170-1285-4690-8820-7948ddd52a89",
+    "email": "charl.harmse@borwood.com",
+    "name": "Charl Harmse",
+    "answers": {
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Social",
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962303585": "L"
+    }
+  },
+  {
+    "reg_id": "1f4d5ca3-fcc3-4b71-bd32-c2bfb1bd6212",
+    "email": "radha.valla@seacom.com",
+    "name": "Radha Valla",
+    "answers": {
+      "field_1779962137331": "Spectator",
+      "field_1779962054556": "No Dietary Requirements"
+    }
+  },
+  {
+    "reg_id": "32d8fdd9-efe4-4a4d-8d74-34e3e7aaa723",
+    "email": "vusi.mahlobo@wiocc.net",
+    "name": "Vusi Mahlobo",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Social",
+      "field_1779962303585": "XXL"
+    }
+  },
+  {
+    "reg_id": "c9dc5573-a1dc-4556-8744-d79607ee938f",
+    "email": "lebo@internationalinvestmentholdings.com",
+    "name": "Lebo Ndou",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Spectator"
+    }
+  },
+  {
+    "reg_id": "a2718d1e-ed76-404a-8ef2-94a52ad766a4",
+    "email": "greg.whitaker@dimensiondata.com",
+    "name": "Greg Whitaker",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Player",
+      "field_1779962303585": "XL"
+    }
+  },
+  {
+    "reg_id": "a9b25d1a-0d08-43b5-be1e-de7132afe93a",
+    "email": "david@iconnectsa.co.za",
+    "name": "David Godfrey",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Competitive",
+      "field_1781088483505": {
+        "first_name": "Mark",
+        "last_name": "Snow",
+        "email": "snow@iconnectsa.co.za"
+      },
+      "field_1779962303585": "XL",
+      "field_1781158985365": "L"
+    }
+  },
+  {
+    "reg_id": "f6a22faa-248e-4d8f-88f8-3b72bd9a89b1",
+    "email": "mauritz.vanwyk@nttdata.com",
+    "name": "Mauritz Van Wyk",
+    "answers": {
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Competitive",
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962303585": "L"
+    }
+  },
+  {
+    "reg_id": "83325d2d-8f2c-4e56-8ecc-71d5f23fdefa",
+    "email": "leon@serve-it.co.za",
+    "name": "Leon Kriel",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Spectator"
+    }
+  },
+  {
+    "reg_id": "9e98e7fd-d226-4438-97cd-2f7af4453e97",
+    "email": "umme@touchnet.co.za",
+    "name": "Umme-Romaan Bhamjee",
+    "answers": {
+      "field_1779962054556": "Halaal",
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Competitive",
+      "field_1781088483505": {
+        "first_name": "Vimal",
+        "last_name": "Kana",
+        "email": "vimal@touchnet.co.za"
+      },
+      "field_1781158985365": "M",
+      "field_1779962303585": "S"
+    }
+  },
+  {
+    "reg_id": "6a4db67d-c9c5-4e43-9594-80cfb8ecc66b",
+    "email": "vimal@touchnet.co.za",
+    "name": "Vimal Kana",
+    "answers": {}
+  },
+  {
+    "reg_id": "464a47c0-f070-4798-b46b-ae7e645c27d7",
+    "email": "jace.naidoo@vodacom.co.za",
+    "name": "Jace Naidoo",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Player",
+      "field_1779962303585": "M",
+      "field_1779962172868": "Social"
+    }
+  },
+  {
+    "reg_id": "f3a99b13-769b-4184-9342-92a9a86b487d",
+    "email": "sufyaan.laher@vodacom.co.za",
+    "name": "Sufyaan Laher",
+    "answers": {
+      "field_1779962054556": "Halaal",
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Competitive",
+      "field_1781088483505": {
+        "first_name": "Iftekar",
+        "last_name": "Khan"
+      },
+      "field_1779962303585": "XL",
+      "field_1781158985365": "XL"
+    }
+  },
+  {
+    "reg_id": "4db710c9-6e8b-4330-99b8-4f3fa44edc9f",
+    "email": "aidan.nunn@nttdata.com",
+    "name": "Aidan Nunn",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Competitive",
+      "field_1781088483505": {
+        "first_name": "Dylan",
+        "last_name": "Wright",
+        "email": "dylan.wright@nttdata.com"
+      },
+      "field_1779962303585": "XL",
+      "field_1781158985365": "L"
+    }
+  },
+  {
+    "reg_id": "467da843-c216-41ca-99db-6cc75dd17615",
+    "email": "dylan.wright@nttdata.com",
+    "name": "Dylan Wright",
+    "answers": {}
+  },
+  {
+    "reg_id": "2ae2a7be-9730-49a2-b113-032c973ce7ff",
+    "email": "kylehoundsome@coolideas.co.za",
+    "name": "Kyle Houndsome",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Spectator"
+    }
+  },
+  {
+    "reg_id": "7554abd9-d288-45e7-8deb-b807a6dc0362",
+    "email": "niel.vorster@nttdata.com",
+    "name": "Niel Vorster",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Competitive",
+      "field_1781088483505": {
+        "first_name": "Mauritz",
+        "last_name": "Van Wyk",
+        "email": "mauritz.vanwyk@nttdata.com"
+      },
+      "field_1779962303585": "L",
+      "field_1781158985365": "L"
+    }
+  },
+  {
+    "reg_id": "60ff89df-b217-4903-a8fc-a56fc90f8885",
+    "email": "chantellm@clearaccess.co.za",
+    "name": "Chantell Margeit",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Player",
+      "field_1779962303585": "S",
+      "field_1779962172868": "Social"
+    }
+  },
+  {
+    "reg_id": "67e6791b-c42a-4468-a19b-47f523669b91",
+    "email": "rashaandyker@coolideas.co.za",
+    "name": "Rashaan Dyker",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Social",
+      "field_1779962303585": "XXL"
+    }
+  },
+  {
+    "reg_id": "51cf91ac-ace1-45fb-8358-b4a93eee8584",
+    "email": "ifteka.khan@vcontractor.co.za",
+    "name": "Iftekar Khan",
+    "answers": {
+      "field_1779962054556": "Halaal",
+      "field_1779962137331": "Player",
+      "field_1779962303585": "XL"
+    }
+  },
+  {
+    "reg_id": "8a2f7eb3-46e9-49b3-b7f8-72399e4a2230",
+    "email": "marius.pratt@global.ntt",
+    "name": "Marius Pratt",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Player",
+      "field_1779962303585": "XL"
+    }
+  },
+  {
+    "reg_id": "3af82797-6610-4951-9b8f-a0e2407ebeff",
+    "email": "wessel.vandyk@global.ntt",
+    "name": "Wessel Van Dyk",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Social",
+      "field_1779962303585": "L"
+    }
+  },
+  {
+    "reg_id": "82afb98c-b00d-4cee-82a4-774fc282475f",
+    "email": "eddie.fortune@global.ntt",
+    "name": "Eddie Fortune",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Social",
+      "field_1779962303585": "XXL"
+    }
+  },
+  {
+    "reg_id": "9e0895f4-0209-4d68-b88a-bf82b9ca6688",
+    "email": "gregoryniekerk@coolideas.co.za",
+    "name": "Gregory Niekerk",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Player",
+      "field_1779962303585": "XL",
+      "field_1779962172868": "Social"
+    }
+  },
+  {
+    "reg_id": "c260b2d1-1b98-4965-bda5-a77170dbcf3e",
+    "email": "kyle.bridgelall@vodacom.co.za",
+    "name": "Kyle Bridgelall",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Competitive",
+      "field_1779962303585": "S"
+    }
+  },
+  {
+    "reg_id": "51e91eef-e4fd-45b3-85db-ecebd2f8f3a5",
+    "email": "niven@zoomfibre.co.za",
+    "name": "Niven Naidoo",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Player",
+      "field_1779962303585": "XS"
+    }
+  },
+  {
+    "reg_id": "ddf87089-4f13-427c-ad17-1ecc9cacb3d9",
+    "email": "navin.maharaj@vodacom.co.za",
+    "name": "Navin Maharaj",
+    "answers": {
+      "field_1779962054556": "Halaal",
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Competitive",
+      "field_1779962303585": "XXL",
+      "field_1781158985365": "XXL"
+    }
+  },
+  {
+    "reg_id": "aaf68128-b705-41ec-acc7-c104efd96c30",
+    "email": "justin.pyne-james@global.ntt",
+    "name": "Justin Pyne-James",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Competitive",
+      "field_1779962303585": "M"
+    }
+  },
+  {
+    "reg_id": "f4d522fe-5e53-4cf7-a86a-871dcd9d7026",
+    "email": "luke@linteglava.co.za",
+    "name": "Luke Knipe",
+    "answers": {}
+  },
+  {
+    "reg_id": "3459d6a5-e39e-4399-b35a-03f08b8f0ef9",
+    "email": "louisk@clearaccess.co.za",
+    "name": "Louis Koster",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Social",
+      "field_1779962303585": "L"
+    }
+  },
+  {
+    "reg_id": "740b21ed-39ef-40f6-b187-cb575cfc8f18",
+    "email": "imran@linkafrica.co.za",
+    "name": "Imran Abbas",
+    "answers": {
+      "field_1779962054556": "Halaal",
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Competitive",
+      "field_1779962303585": "M",
+      "field_1781088483505": {
+        "first_name": "Arshad",
+        "last_name": "Mahomed",
+        "email": "Alanb@linkafrica.co.za"
+      },
+      "field_1781158985365": "M"
+    }
+  },
+  {
+    "reg_id": "9608f235-fbb0-4402-ba7d-95557840336e",
+    "email": "alanb@linkafrica.co.za",
+    "name": "Arshad Mahomed",
+    "answers": {
+      "field_1779962054556": "Halaal",
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Competitive",
+      "field_1779962303585": "L"
+    }
+  },
+  {
+    "reg_id": "d97e4729-1b1d-4052-9c88-824773180b27",
+    "email": "ewout@allispsmatter.africa",
+    "name": "Ewout Engelbrecht",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Spectator"
+    }
+  },
+  {
+    "reg_id": "5ca347c5-aa60-410c-8db1-cd7807541cb7",
+    "email": "beateu@linkafrica.co.za",
+    "name": "Beate Ungerer",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Spectator"
+    }
+  },
+  {
+    "reg_id": "4c15908b-87a0-4ec8-9ced-2a9dd5e39ade",
+    "email": "nicke@clearaccess.co.za",
+    "name": "Nick East",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Player",
+      "field_1779962303585": "L"
+    }
+  },
+  {
+    "reg_id": "ef0430d1-c5f6-4545-8b0b-037e95ab4c86",
+    "email": "sinegugu.shabalala@global.ntt",
+    "name": "Sinegugu Shabalala",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Player",
+      "field_1779962303585": "S",
+      "field_1779962172868": "Social"
+    }
+  },
+  {
+    "reg_id": "3bf5ba66-f603-48f0-8657-bef73d3307e3",
+    "email": "wesley.swart@frogfoot.com",
+    "name": "Wesley Swart",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Player",
+      "field_1779962172868": "Competitive",
+      "field_1781088483505": {
+        "first_name": "Ulrich",
+        "last_name": "Sonn",
+        "email": "ulrich.sonn@frogfoot.com"
+      },
+      "field_1779962303585": "L",
+      "field_1781158985365": "M"
+    }
+  },
+  {
+    "reg_id": "dbcce469-51db-4e32-af6c-1ef4d6f32d80",
+    "email": "ulrich.sonn@frogfoot.com",
+    "name": "Ulrich Sonn",
+    "answers": {}
+  },
+  {
+    "reg_id": "4c4ebbda-e949-4f73-8947-bec776dad7b9",
+    "email": "rheinhardt.matzke@global.ntt",
+    "name": "Rheinhardt Matzke",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements",
+      "field_1779962137331": "Player",
+      "field_1779962303585": "L"
+    }
+  },
+  {
+    "reg_id": "7c479a37-1c43-4336-a024-3dfbfefd59ac",
+    "email": "neville.bopape@dimensiondata.com",
+    "name": "Neville Bopape",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements"
+    }
+  },
+  {
+    "reg_id": "a33e5927-c0c3-485a-a9db-7463b6156862",
+    "email": "sunette@clearaccess.co.za",
+    "name": "Sunette Venter",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements"
+    }
+  },
+  {
+    "reg_id": "cedeb3cd-52f2-426c-9516-d0af84063218",
+    "email": "zunaid.mahomed@maziv.com",
+    "name": "Zunaid Mahomed",
+    "answers": {
+      "field_1779962054556": "Halaal"
+    }
+  },
+  {
+    "reg_id": "07f5e9f2-2df2-4faf-b1ca-4db5718abdaa",
+    "email": "jean-pierre.watkins@global.ntt",
+    "name": "Jean-Pierre Watkins",
+    "answers": {
+      "field_1779962054556": "No Dietary Requirements"
+    }
+  },
+  {
+    "reg_id": "1fb667f4-0b36-4870-9588-1c4e4d332480",
+    "email": "fozia.ismail@seacom.com",
+    "name": "Fozia Ismail",
+    "answers": {
+      "field_1779962054556": "Halaal"
+    }
+  }
+]

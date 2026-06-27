@@ -2,7 +2,7 @@ import os
 import resend
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(".env.production.local")
 
 resend.api_key = os.getenv("RESEND_API_KEY")
 print("API Key loaded:", bool(resend.api_key))

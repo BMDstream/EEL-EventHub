@@ -172,6 +172,7 @@ interface Event {
     primary_color?: string;
     accent_color?: string;
     layout?: string;
+    text_color?: string;
   };
   registration_active?: boolean;
   registration_start?: string;
@@ -403,8 +404,12 @@ function PublicRegistrationPageContent() {
                        theme === "nordic_alabaster" || 
                        theme === "champagne_lounge";
 
-  const bannerUrl = event?.background_url || event?.banner_url;
-  const formBannerUrl = event?.background_url ? event?.banner_url : undefined;
+  // Page background: ONLY use background_url — never fall back to banner_url
+  const bannerUrl = event?.background_url || null;
+  // Form card banner thumbnail: ONLY use banner_url — never fall back to background_url
+  // Each field is fully independent — one uploaded image = shown in one place only.
+  const formBannerUrl = event?.banner_url || null;
+  const eventTextColor = event?.banner_settings?.text_color;
   const bannerSize = event?.banner_settings?.size;
   const bannerPosition = event?.banner_settings?.position;
 
@@ -1350,7 +1355,7 @@ function PublicRegistrationPageContent() {
   );
 
   const registrationForm = event ? (
-    <div className={style.bodyBlock || "max-w-md w-full mx-auto relative z-10 py-12"}>
+    <div className={`${style.bodyBlock || "max-w-md w-full mx-auto relative z-10 py-12"} client-form-text-custom`}>
       {formBannerUrl && (
         <div className="mb-8 rounded-2xl overflow-hidden border border-slate-200/10 dark:border-white/5 shadow-lg">
           <img src={formBannerUrl} alt="Event Banner" className="w-full h-auto object-cover max-h-80 md:max-h-96" />
@@ -1653,6 +1658,26 @@ function PublicRegistrationPageContent() {
           background-color: ${eventAccentColor} !important;
           border-color: ${eventAccentColor} !important;
         }
+        ${eventTextColor ? `
+          .client-form-text-custom,
+          .client-form-text-custom h1,
+          .client-form-text-custom h2,
+          .client-form-text-custom h3,
+          .client-form-text-custom p,
+          .client-form-text-custom span,
+          .client-form-text-custom div,
+          .client-form-text-custom label,
+          .client-form-text-custom li {
+            color: ${eventTextColor} !important;
+          }
+          .client-form-text-custom input,
+          .client-form-text-custom select {
+            color: ${eventTextColor} !important;
+          }
+          .client-form-text-custom input::placeholder {
+            color: ${eventTextColor}80 !important;
+          }
+        ` : ""}
       `}} />
       {loading ? (
         <div className={style.loadingBg}>
@@ -1672,7 +1697,7 @@ function PublicRegistrationPageContent() {
         </div>
       ) : registeredId ? (
         <div className={style.successBg}>
-          <div className={style.successCard}>
+          <div className={`${style.successCard} client-form-text-custom`}>
             {(theme === "cyber_dark" || theme === "midnight_executive" || theme === "logistics_glass") && <div className="absolute top-0 left-0 w-full h-1 client-bg-accent"></div>}
             <div className={`${
               theme === "cyber_dark" || theme === "midnight_executive" || theme === "logistics_glass"
@@ -1746,7 +1771,7 @@ function PublicRegistrationPageContent() {
 
           {layout === "centered" && (
             <div className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-8 lg:p-12 relative z-10">
-              <div className={style.centeredCard}>
+              <div className={`${style.centeredCard} client-form-text-custom`}>
                 <div className="mb-8 border-b border-white/10 pb-8">
                   <h1 className={style.title}>{event.title}</h1>
                   <p className={`text-base mb-8 max-w-xl leading-relaxed mt-4 ${style.textMuted}`}>{event.description}</p>

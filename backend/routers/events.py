@@ -631,3 +631,106 @@ def update_event_staff(
             
     session.commit()
     return {"ok": True}
+
+@router.post("/{event_id}/duplicate")
+def duplicate_event(
+    event_id: int,
+    session: Session = Depends(get_session),
+    current_user: Optional[User] = Depends(get_current_user_from_request)
+):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+        
+    db_event = session.get(Event, event_id)
+    if not db_event:
+        raise HTTPException(status_code=404, detail="Event not found")
+        
+    verify_client_access(current_user, db_event.client_id, session)
+    
+    # Generate unique slug
+    base_slug = f"{db_event.slug}-copy"
+    slug = base_slug
+    counter = 1
+    while session.exec(select(Event).where(Event.slug == slug)).first():
+        slug = f"{base_slug}-{counter}"
+        counter += 1
+        
+    duplicate = Event(
+        slug=slug,
+        title=f"{db_event.title} (Copy)",
+        description=db_event.description,
+        start_date=db_event.start_date,
+        location=db_event.location,
+        address=db_event.address,
+        capacity=db_event.capacity,
+        banner_url=db_event.banner_url,
+        logo_url=db_event.logo_url,
+        sender_email=db_event.sender_email,
+        sender_name=db_event.sender_name,
+        client_id=db_event.client_id,
+        collect_company=db_event.collect_company,
+        company_required=db_event.company_required,
+        background_url=db_event.background_url,
+        confirmation_template_key=db_event.confirmation_template_key,
+        confirmation_template_id=getattr(db_event, "confirmation_template_id", None),
+        duration_days=db_event.duration_days,
+        registration_active=db_event.registration_active,
+        registration_start=db_event.registration_start,
+        registration_end=db_event.registration_end,
+        disclaimer_enabled=db_event.disclaimer_enabled,
+        disclaimer_text=db_event.disclaimer_text,
+        custom_fields_schema=db_event.custom_fields_schema,
+        allowed_domains=db_event.allowed_domains,
+        banner_settings=db_event.banner_settings
+    )
+    
+    session.add(duplicate)
+    session.commit()
+    session.refresh(duplicate)
+    
+    # Copy staff assignments (usereventlink)
+    try:
+        stmt = text('SELECT user_id, role FROM "usereventlink" WHERE event_id = :event_id')
+        links = session.execute(stmt, {"event_id": event_id}).all()
+        for link in links:
+            session.execute(
+                text('INSERT INTO "usereventlink" (user_id, event_id, role) VALUES (:user_id, :event_id, :role)'),
+                {"user_id": link[0], "event_id": duplicate.id, "role": link[1]}
+            )
+        session.commit()
+    except Exception as e:
+        session.rollback()
+        print(f"Error copying staff links for duplicate event {duplicate.id}: {e}")
+    
+    # Build response manually from scalar fields — SQLModel .dict() returns {}
+    # on table models with relationships in serverless environments.
+    return {
+        "id": duplicate.id,
+        "slug": duplicate.slug,
+        "title": duplicate.title,
+        "description": duplicate.description,
+        "start_date": duplicate.start_date.isoformat() if duplicate.start_date else None,
+        "location": duplicate.location,
+        "address": duplicate.address,
+        "capacity": duplicate.capacity,
+        "banner_url": duplicate.banner_url,
+        "logo_url": duplicate.logo_url,
+        "sender_email": duplicate.sender_email,
+        "sender_name": duplicate.sender_name,
+        "client_id": duplicate.client_id,
+        "collect_company": duplicate.collect_company,
+        "company_required": duplicate.company_required,
+        "background_url": duplicate.background_url,
+        "confirmation_template_key": duplicate.confirmation_template_key,
+        "confirmation_template_id": getattr(duplicate, "confirmation_template_id", None),
+        "duration_days": duplicate.duration_days,
+        "registration_active": duplicate.registration_active,
+        "registration_start": duplicate.registration_start.isoformat() if duplicate.registration_start else None,
+        "registration_end": duplicate.registration_end.isoformat() if duplicate.registration_end else None,
+        "disclaimer_enabled": duplicate.disclaimer_enabled,
+        "disclaimer_text": duplicate.disclaimer_text,
+        "custom_fields_schema": duplicate.custom_fields_schema,
+        "allowed_domains": duplicate.allowed_domains,
+        "banner_settings": duplicate.banner_settings,
+    }
+

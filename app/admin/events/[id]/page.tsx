@@ -884,6 +884,33 @@ export default function EventDetailsPage() {
                   >
                     Edit Configuration
                   </Link>
+                  {(userRole === "admin" || userRole === "manager") && (
+                    <button
+                      onClick={async () => {
+                        if (confirm(`Are you sure you want to duplicate this event?`)) {
+                          try {
+                            const res = await fetch(`/api/py/events/${id}/duplicate`, {
+                              method: "POST",
+                              headers: { "x-user-email": session?.user?.email || "" }
+                            });
+                            if (res.ok) {
+                              const duplicateData = await res.json();
+                              alert("Event duplicated successfully!");
+                              router.push(`/admin/events/${duplicateData.id}`);
+                            } else {
+                              const err = await res.json();
+                              alert(`Failed to duplicate: ${err.detail || "Unknown error"}`);
+                            }
+                          } catch (err) {
+                            alert("An error occurred while duplicating the event.");
+                          }
+                        }
+                      }}
+                      className="flex items-center justify-center gap-3 bg-white hover:bg-slate-50 text-[#0f172a] px-8 py-5 rounded-2xl font-black transition-all border border-slate-200 uppercase tracking-widest text-xs"
+                    >
+                      Duplicate Event
+                    </button>
+                  )}
                   {userRole === "admin" && (
                     <button
                       onClick={async () => {

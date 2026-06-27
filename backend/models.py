@@ -49,6 +49,7 @@ class Event(SQLModel, table=True):
     company_required: bool = Field(default=False)
     background_url: Optional[str] = Field(default=None)
     confirmation_template_key: Optional[str] = Field(default="global")
+    confirmation_template_id: Optional[int] = Field(default=None, foreign_key="emailtemplate.id", index=True)
     duration_days: int = Field(default=1)
     
     registration_active: bool = Field(default=True)

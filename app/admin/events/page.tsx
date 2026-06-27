@@ -171,6 +171,32 @@ export default function EventsListPage() {
                          >
                            Copy Link
                          </button>
+                         {userRole !== "staff" && (
+                           <button 
+                             onClick={async () => {
+                               if (confirm(`Are you sure you want to duplicate the event "${event.title}"?`)) {
+                                 try {
+                                   const res = await fetch(`/api/py/events/${event.id}/duplicate`, {
+                                     method: "POST",
+                                     headers: { "x-user-email": session?.user?.email || "" }
+                                   });
+                                   if (res.ok) {
+                                     alert("Event duplicated successfully!");
+                                     window.location.reload();
+                                   } else {
+                                     const err = await res.json();
+                                     alert(`Failed to duplicate: ${err.detail || "Unknown error"}`);
+                                   }
+                                 } catch (err) {
+                                   alert("An error occurred while duplicating the event.");
+                                 }
+                               }
+                             }}
+                             className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-blue-550 transition-all"
+                           >
+                             Duplicate
+                           </button>
+                         )}
                          <Link 
                            href={`/admin/events/${event.id}`}
                            className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#0f172a] hover:gap-3 transition-all dark:text-yellow-500 dark:hover:text-white"

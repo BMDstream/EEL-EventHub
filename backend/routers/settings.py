@@ -187,6 +187,12 @@ class EmailTemplateUpdate(BaseModel):
     subject: str
     body_html: str
 
+class EmailTemplateCreate(BaseModel):
+    key: str
+    name: str
+    subject: Optional[str] = "Subject: {event_title}"
+    body_html: Optional[str] = ""
+
 class SendTestEmailPayload(BaseModel):
     email: str
 
@@ -225,6 +231,71 @@ def get_all_templates(
             print(f"Error seeding missing templates: {e}")
             
     return existing_templates
+
+@router.post("/settings/templates", response_model=EmailTemplate)
+def create_template(
+    payload: EmailTemplateCreate,
+    session: Session = Depends(get_session),
+    current_user: Optional[User] = Depends(get_current_user_from_request)
+):
+    if not current_user or current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only admins can create email templates")
+    # Validate key uniqueness
+    existing = session.exec(select(EmailTemplate).where(EmailTemplate.key == payload.key)).first()
+    if existing:
+        raise HTTPException(status_code=400, detail=f"A template with key '{payload.key}' already exists")
+    # Validate key format
+    import re as _re
+    if not _re.match(r'^[a-z0-9_]+$', payload.key):
+        raise HTTPException(status_code=400, detail="Template key must be lowercase letters, numbers, and underscores only")
+    template = EmailTemplate(
+        key=payload.key,
+        name=payload.name,
+        subject=payload.subject or f"Subject: {{event_title}}",
+        body_html=payload.body_html or ""
+    )
+    session.add(template)
+    session.commit()
+    session.refresh(template)
+    return template
+
+SYSTEM_TEMPLATE_KEYS = {
+    "registration_confirmed",
+    "registration_declined",
+    "partner_pending",
+    "broadcast",
+    "tournament_matchup",
+    "banner_email",
+}
+
+@router.delete("/settings/templates/{key}")
+def delete_template(
+    key: str,
+    session: Session = Depends(get_session),
+    current_user: Optional[User] = Depends(get_current_user_from_request)
+):
+    if not current_user or current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only admins can delete email templates")
+    if key in SYSTEM_TEMPLATE_KEYS:
+        raise HTTPException(status_code=400, detail="System default templates cannot be deleted")
+    template = session.exec(select(EmailTemplate).where(EmailTemplate.key == key)).first()
+    if not template:
+        raise HTTPException(status_code=404, detail="Template not found")
+    # Detach any events referencing this template by ID
+    try:
+        session.execute(
+            text('UPDATE "event" SET confirmation_template_id = NULL WHERE confirmation_template_id = :tid'),
+            {"tid": template.id}
+        )
+        session.commit()
+    except Exception as e:
+        session.rollback()
+        print(f"Warning: Could not nullify event template references: {e}")
+    session.delete(template)
+    session.commit()
+    from backend.email_service import invalidate_template_cache
+    invalidate_template_cache(key)
+    return {"ok": True}
 
 @router.get("/settings/templates/{key}", response_model=EmailTemplate)
 def get_template(

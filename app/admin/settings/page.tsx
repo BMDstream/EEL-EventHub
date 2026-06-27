@@ -31,7 +31,10 @@ import {
   Underline,
   Upload,
   Calendar,
-  Image
+  Image,
+  Plus,
+  Trash2,
+  X
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSession } from "next-auth/react";
@@ -800,6 +803,14 @@ export default function SettingsPage() {
   const [copiedVar, setCopiedVar] = useState<string | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
 
+  // Create / Delete template modal state
+  const SYSTEM_TEMPLATE_KEYS = new Set(["registration_confirmed","registration_declined","partner_pending","broadcast","tournament_matchup","banner_email"]);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newTplName, setNewTplName] = useState("");
+  const [newTplKey, setNewTplKey] = useState("");
+  const [creatingTpl, setCreatingTpl] = useState(false);
+  const [deletingTplKey, setDeletingTplKey] = useState<string | null>(null);
+
   const [editorMode, setEditorMode] = useState<"visual" | "html">("visual");
   const [formValues, setFormValues] = useState<Record<string, string>>({});
 
@@ -1139,7 +1150,69 @@ export default function SettingsPage() {
     return html;
   };
 
+  const handleCreateTemplate = async () => {
+    if (!newTplName.trim() || !newTplKey.trim()) return;
+    setCreatingTpl(true);
+    try {
+      const res = await fetch("/api/py/settings/templates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-user-email": (session?.user?.email || "") },
+        body: JSON.stringify({ key: newTplKey.trim(), name: newTplName.trim() }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        setTemplateNotification({ type: "error", text: err.detail || "Failed to create template" });
+        return;
+      }
+      const created: EmailTemplate = await res.json();
+      setTemplates(prev => [...prev, created]);
+      setSelectedKey(created.key);
+      setSubject(created.subject);
+      setBodyHtml(created.body_html);
+      setShowCreateModal(false);
+      setNewTplName("");
+      setNewTplKey("");
+      setTemplateNotification({ type: "success", text: `Template "${created.name}" created successfully.` });
+    } catch (e) {
+      setTemplateNotification({ type: "error", text: "Network error creating template." });
+    } finally {
+      setCreatingTpl(false);
+    }
+  };
+
+  const handleDeleteTemplate = async (key: string, name: string) => {
+    if (!confirm(`Are you sure you want to permanently delete the template "${name}"? Any events using it will revert to the system default.`)) return;
+    setDeletingTplKey(key);
+    try {
+      const res = await fetch(`/api/py/settings/templates/${key}`, {
+        method: "DELETE",
+        headers: { "x-user-email": (session?.user?.email || "") },
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        setTemplateNotification({ type: "error", text: err.detail || "Failed to delete template" });
+        return;
+      }
+      setTemplates(prev => prev.filter(t => t.key !== key));
+      // If the deleted template was selected, fall back to first system template
+      if (selectedKey === key) {
+        const fallback = templates.find(t => t.key !== key);
+        if (fallback) {
+          setSelectedKey(fallback.key);
+          setSubject(fallback.subject);
+          setBodyHtml(fallback.body_html);
+        }
+      }
+      setTemplateNotification({ type: "success", text: `Template "${name}" deleted.` });
+    } catch (e) {
+      setTemplateNotification({ type: "error", text: "Network error deleting template." });
+    } finally {
+      setDeletingTplKey(null);
+    }
+  };
+
   const handleSelectTemplate = (key: string) => {
+
     if (hasUnsavedChanges) {
       if (!confirm("You have unsaved changes. Are you sure you want to switch templates?")) {
         return;
@@ -1506,40 +1579,139 @@ export default function SettingsPage() {
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
                 {/* 1. Template Selection */}
                 <div className="lg:col-span-6 space-y-4">
-                  <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-1">
-                    Select Template
-                  </h3>
+                  <div className="flex items-center justify-between ml-1">
+                    <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">
+                      Select Template
+                    </h3>
+                    <button
+                      onClick={() => { setNewTplName(""); setNewTplKey(""); setShowCreateModal(true); }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#0f172a] hover:bg-[#1e293b] text-white text-[10px] font-black uppercase tracking-wider transition-all shadow-sm"
+                    >
+                      <Plus size={11} />
+                      New Template
+                    </button>
+                  </div>
                   <div className="bg-white rounded-[2rem] p-4 shadow-sm border border-slate-100 dark:bg-[#0f172a] dark:border-slate-800 space-y-2">
                     {templates.map((t) => {
                       const Icon = TEMPLATE_ICONS[t.key] || Mail;
                       const isSelected = t.key === selectedKey;
+                      const isSystem = SYSTEM_TEMPLATE_KEYS.has(t.key);
                       return (
-                        <button
-                          key={t.key}
-                          onClick={() => handleSelectTemplate(t.key)}
-                          className={`w-full flex items-center gap-4 p-4 rounded-2xl text-left transition-all ${
-                            isSelected 
-                              ? "bg-[#0f172a]/5 text-[#0f172a] font-black dark:bg-yellow-400/10 dark:text-yellow-400"
-                              : "text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800/50"
-                          }`}
-                        >
-                          <div className={`p-3 rounded-xl ${
-                            isSelected 
-                              ? "bg-[#0f172a] text-white dark:bg-yellow-400 dark:text-black"
-                              : "bg-slate-100 text-slate-400 dark:bg-slate-800"
-                          }`}>
-                            <Icon size={18} />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-bold truncate">{t.name}</p>
-                            <p className="text-[10px] text-slate-400 font-medium truncate mt-0.5">{t.key}</p>
-                          </div>
-                          <ChevronRight size={14} className={`opacity-40 transition-transform ${isSelected ? "translate-x-1" : ""}`} />
-                        </button>
+                        <div key={t.key} className="relative group/row">
+                          <button
+                            onClick={() => handleSelectTemplate(t.key)}
+                            className={`w-full flex items-center gap-4 p-4 rounded-2xl text-left transition-all ${
+                              isSelected 
+                                ? "bg-[#0f172a]/5 text-[#0f172a] font-black dark:bg-yellow-400/10 dark:text-yellow-400"
+                                : "text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800/50"
+                            }`}
+                          >
+                            <div className={`p-3 rounded-xl ${
+                              isSelected 
+                                ? "bg-[#0f172a] text-white dark:bg-yellow-400 dark:text-black"
+                                : "bg-slate-100 text-slate-400 dark:bg-slate-800"
+                            }`}>
+                              <Icon size={18} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <p className="text-sm font-bold truncate">{t.name}</p>
+                                {isSystem && (
+                                  <span className="text-[8px] font-black uppercase tracking-wider text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-full">System</span>
+                                )}
+                              </div>
+                              <p className="text-[10px] text-slate-400 font-medium truncate mt-0.5">{t.key}</p>
+                            </div>
+                            <ChevronRight size={14} className={`opacity-40 transition-transform ${isSelected ? "translate-x-1" : ""}`} />
+                          </button>
+                          {/* Delete button — only for custom (non-system) templates */}
+                          {!isSystem && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleDeleteTemplate(t.key, t.name); }}
+                              disabled={deletingTplKey === t.key}
+                              title="Delete template"
+                              className="absolute right-14 top-1/2 -translate-y-1/2 opacity-0 group-hover/row:opacity-100 transition-opacity p-2 rounded-xl text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                            >
+                              {deletingTplKey === t.key ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                            </button>
+                          )}
+                        </div>
                       );
                     })}
                   </div>
                 </div>
+
+                {/* Create Template Modal */}
+                <AnimatePresence>
+                  {showCreateModal && (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm"
+                      onClick={() => setShowCreateModal(false)}
+                    >
+                      <motion.div
+                        initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                        animate={{ scale: 1, opacity: 1, y: 0 }}
+                        exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                        onClick={(e) => e.stopPropagation()}
+                        className="bg-white dark:bg-[#0f172a] rounded-[2rem] p-8 shadow-2xl border border-slate-100 dark:border-slate-800 w-full max-w-md mx-4"
+                      >
+                        <div className="flex items-center justify-between mb-6">
+                          <h3 className="text-lg font-black text-[#0f172a] dark:text-white">Create New Template</h3>
+                          <button onClick={() => setShowCreateModal(false)} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-all">
+                            <X size={18} className="text-slate-400" />
+                          </button>
+                        </div>
+                        <div className="space-y-4">
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">Template Name</label>
+                            <input
+                              type="text"
+                              value={newTplName}
+                              onChange={(e) => {
+                                setNewTplName(e.target.value);
+                                // Auto-generate key from name
+                                setNewTplKey(e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, ""));
+                              }}
+                              placeholder="e.g. Maziv Golf Day Invite"
+                              className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:border-yellow-400 outline-none font-bold text-sm text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                              autoFocus
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">Template Key (slug)</label>
+                            <input
+                              type="text"
+                              value={newTplKey}
+                              onChange={(e) => setNewTplKey(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""))}
+                              placeholder="e.g. maziv_golf_invite"
+                              className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:border-yellow-400 outline-none font-mono text-sm text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                            />
+                            <p className="text-[10px] text-slate-400">Lowercase letters, numbers and underscores only. Cannot be changed later.</p>
+                          </div>
+                          <div className="flex gap-3 pt-2">
+                            <button
+                              onClick={() => setShowCreateModal(false)}
+                              className="flex-1 px-4 py-3 rounded-xl border border-slate-200 text-slate-500 font-bold text-sm hover:bg-slate-50 transition-all dark:border-slate-700 dark:hover:bg-slate-800"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              onClick={handleCreateTemplate}
+                              disabled={creatingTpl || !newTplName.trim() || !newTplKey.trim()}
+                              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-[#0f172a] text-white font-black text-sm hover:bg-[#1e293b] transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+                            >
+                              {creatingTpl ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
+                              Create Template
+                            </button>
+                          </div>
+                        </div>
+                      </motion.div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
                 {/* Template Variables Cheat Sheet */}
                 <div className="lg:col-span-6 space-y-4">

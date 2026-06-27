@@ -149,10 +149,29 @@ def get_event_email_config(event: Event, session: Session):
     if getattr(event, "logo_url", None):
         config["logo_url"] = event.logo_url
         
-    # Expose event banner_url if present
+    # Check for a custom template assigned by integer ID (new system).
+    # When present this takes priority over the old key string, and critically
+    # we must NOT inject the event's banner_url into the email — the template
+    # HTML is the sole source of truth for its own banner.
+    custom_template_id = getattr(event, "confirmation_template_id", None)
+    if custom_template_id:
+        try:
+            from backend.models import EmailTemplate as _EmailTemplate
+            tpl = session.get(_EmailTemplate, custom_template_id)
+            if tpl:
+                config["confirmation_template_key"] = tpl.key
+                config["confirmation_template_id"] = custom_template_id
+                config["uses_custom_template_id"] = True
+                # Do NOT expose banner_url — template HTML owns its own banner
+                config["banner_url"] = None
+                return config
+        except Exception as e:
+            print(f"Warning: Could not resolve confirmation_template_id {custom_template_id}: {e}")
+
+    # Expose event banner_url if present (legacy path — no custom template ID)
     config["banner_url"] = getattr(event, "banner_url", None)
         
-    # Expose event confirmation_template_key override if present
+    # Expose event confirmation_template_key override if present (legacy string key)
     template_key = getattr(event, "confirmation_template_key", None)
     if template_key and template_key != "global" and template_key != "":
         config["confirmation_template_key"] = template_key
