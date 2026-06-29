@@ -12,7 +12,7 @@ from sqlmodel import SQLModel, Field, Session, select
 import resend
 
 from backend.database import get_session
-from backend.email_service import get_template_from_db, parse_template, parse_template_meta
+from backend.email_service import get_template_from_db, parse_template, parse_template_meta, process_inline_base64_images
 
 # Create FastAPI Router
 router = APIRouter(prefix="/api/py/tournament", tags=["tournament"])
@@ -198,12 +198,19 @@ def send_resend_email(to_email: str, name: str, role: str, opponent_name: str, p
             if meta and meta.get("sender_name"):
                 sender_name = meta["sender_name"]
                 
+        html_body = db_html if (db_subject and db_html) else html_content
+        html_body, inline_attachments = process_inline_base64_images(html_body)
+        
         email_params = {
             "from": f"{sender_name} <{sender_email}>",
             "to": to_email,
             "subject": db_subject if (db_subject and db_html) else subject,
-            "html": db_html if (db_subject and db_html) else html_content
+            "html": html_body
         }
+        
+        if inline_attachments:
+            email_params["attachments"] = inline_attachments
+            
         res = resend.Emails.send(email_params)
         print(f"Resend success for {to_email}: {res}")
         return res.get("id") if isinstance(res, dict) else str(res)

@@ -75,6 +75,33 @@ def invalidate_template_cache(key: str = None):
     else:
         _template_cache.clear()
 
+def process_inline_base64_images(html_content: str) -> tuple[str, list]:
+    import uuid
+    attachments = []
+    if not html_content:
+        return html_content, attachments
+        
+    # Pattern to match src="data:image/xyz;base64,abc"
+    pattern = r'src=["\'](data:(image/[a-zA-Z0-9+.-]+);base64,([^"\']+\S))["\']'
+    matches = re.findall(pattern, html_content)
+    
+    for idx, (full_data_url, mime_type, base64_data) in enumerate(matches):
+        cid = f"img_{idx}_{uuid.uuid4().hex[:8]}"
+        ext = mime_type.split("/")[-1]
+        if ext == "jpeg":
+            ext = "jpg"
+        filename = f"{cid}.{ext}"
+        
+        attachments.append({
+            "content": base64_data.strip(),
+            "filename": filename,
+            "content_id": cid
+        })
+        
+        html_content = html_content.replace(full_data_url, f"cid:{cid}")
+        
+    return html_content, attachments
+
 def inject_banner_placeholder_if_missing(html_str: str) -> str:
     if not html_str:
         return html_str
@@ -197,9 +224,11 @@ def send_confirmation_email(
     # authority for its own banner. This prevents the double-banner bug.
     uses_custom_template_id = config.get("uses_custom_template_id", False)
     if uses_custom_template_id:
-        # Honour only what the template meta explicitly declares
-        show_banner = show_banner_meta == "true"
-        banner_url = meta.get("banner_image_url", "") if meta else ""
+        if meta:
+            primary_color = meta.get("primary_color", primary_color)
+            accent_color = meta.get("accent_color", accent_color)
+        banner_url = config.get("banner_url") or (meta.get("banner_image_url") if meta else "") or ""
+        show_banner = bool(banner_url)
     else:
         show_banner = show_banner_meta == "true" or (show_banner_meta != "false" and (config.get("show_banner_in_email", False) or t_key == "banner_email"))
         banner_url = (meta.get("banner_image_url") if meta else None) or config.get("banner_url") or "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800"
@@ -554,6 +583,9 @@ def send_confirmation_email(
             else:
                 subject = f"Registration Confirmed: {event_title}" if is_attending else f"RSVP Recorded: {event_title}"
         
+        # Process inline base64 images and convert them to inline attachments
+        html_content, inline_attachments = process_inline_base64_images(html_content)
+        
         email_params = {
             "from": from_address,
             "to": to_email,
@@ -563,6 +595,9 @@ def send_confirmation_email(
                 "X-Entity-Ref-ID": clearance_id
             }
         }
+        
+        if inline_attachments:
+            email_params["attachments"] = inline_attachments
         
         reply_to = config.get("reply_to") if config else None
         if reply_to:
@@ -783,6 +818,9 @@ def send_broadcast_email(
               </tr>
             </table>"""
 
+        # Process inline base64 images and convert them to inline attachments
+        html_content, inline_attachments = process_inline_base64_images(html_content)
+        
         email_params = {
             "from": from_address,
             "to": to_email,
@@ -793,8 +831,14 @@ def send_broadcast_email(
         if reply_to:
             email_params["reply_to"] = reply_to
             
+        combined_attachments = []
         if attachments:
-            email_params["attachments"] = attachments
+            combined_attachments.extend(attachments)
+        if inline_attachments:
+            combined_attachments.extend(inline_attachments)
+            
+        if combined_attachments:
+            email_params["attachments"] = combined_attachments
             
         try:
             resend.Emails.send(email_params)

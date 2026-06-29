@@ -148,11 +148,18 @@ def get_event_email_config(event: Event, session: Session):
     # Override with event-specific logo if provided
     if getattr(event, "logo_url", None):
         config["logo_url"] = event.logo_url
+
+    # Override with event-specific banner settings (colors) if provided
+    if getattr(event, "banner_settings", None) and isinstance(event.banner_settings, dict):
+        if event.banner_settings.get("primary_color"):
+            config["primary_color"] = event.banner_settings["primary_color"]
+        if event.banner_settings.get("accent_color"):
+            config["accent_color"] = event.banner_settings["accent_color"]
+
+    # Expose event banner_url if present
+    config["banner_url"] = getattr(event, "banner_url", None)
         
     # Check for a custom template assigned by integer ID (new system).
-    # When present this takes priority over the old key string, and critically
-    # we must NOT inject the event's banner_url into the email — the template
-    # HTML is the sole source of truth for its own banner.
     custom_template_id = getattr(event, "confirmation_template_id", None)
     if custom_template_id:
         try:
@@ -162,14 +169,9 @@ def get_event_email_config(event: Event, session: Session):
                 config["confirmation_template_key"] = tpl.key
                 config["confirmation_template_id"] = custom_template_id
                 config["uses_custom_template_id"] = True
-                # Do NOT expose banner_url — template HTML owns its own banner
-                config["banner_url"] = None
                 return config
         except Exception as e:
             print(f"Warning: Could not resolve confirmation_template_id {custom_template_id}: {e}")
-
-    # Expose event banner_url if present (legacy path — no custom template ID)
-    config["banner_url"] = getattr(event, "banner_url", None)
         
     # Expose event confirmation_template_key override if present (legacy string key)
     template_key = getattr(event, "confirmation_template_key", None)
