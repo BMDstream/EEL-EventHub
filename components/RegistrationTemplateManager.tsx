@@ -44,6 +44,7 @@ interface RegistrationFormTemplate {
     not_attending_label?: string;
     form_heading?: string;
     form_subheading?: string;
+    form_text_color?: string;
   };
   layout_schema: FormSection[];
   post_submit_config: {
@@ -631,7 +632,7 @@ export default function RegistrationTemplateManager() {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div className="space-y-2">
                           <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-1">Form Card Background Color</label>
                           <div className="flex items-center gap-3">
@@ -645,6 +646,23 @@ export default function RegistrationTemplateManager() {
                               type="text" 
                               value={selectedTemplate.theme_config.form_bg_color || "#ffffff"} 
                               onChange={(e) => updateThemeConfig("form_bg_color", e.target.value)}
+                              className="w-full px-4 py-2.5 rounded-xl border border-slate-100 font-bold text-xs bg-slate-50 dark:bg-slate-800" 
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-1">Form Text Color</label>
+                          <div className="flex items-center gap-3">
+                            <input 
+                              type="color" 
+                              value={selectedTemplate.theme_config.form_text_color || "#0f172a"} 
+                              onChange={(e) => updateThemeConfig("form_text_color", e.target.value)}
+                              className="w-10 h-10 rounded-xl border border-slate-200 cursor-pointer p-0 bg-transparent shrink-0" 
+                            />
+                            <input 
+                              type="text" 
+                              value={selectedTemplate.theme_config.form_text_color || "#0f172a"} 
+                              onChange={(e) => updateThemeConfig("form_text_color", e.target.value)}
                               className="w-full px-4 py-2.5 rounded-xl border border-slate-100 font-bold text-xs bg-slate-50 dark:bg-slate-800" 
                             />
                           </div>
@@ -1075,8 +1093,30 @@ export default function RegistrationTemplateManager() {
               style={{
                 fontFamily: selectedTemplate.theme_config.typography_font || "Calibri, sans-serif"
               }}
-              className={`rounded-[2.5rem] border border-slate-150 p-8 shadow-lg transition-all min-h-[480px] relative overflow-hidden flex flex-col justify-between`}
+              className="rounded-[2.5rem] border border-slate-150 p-8 shadow-lg transition-all min-h-[480px] relative overflow-hidden flex flex-col justify-between preview-form-text-custom"
             >
+              {selectedTemplate.theme_config.form_text_color && (
+                <style dangerouslySetInnerHTML={{ __html: `
+                  .preview-form-text-custom,
+                  .preview-form-text-custom h1,
+                  .preview-form-text-custom h2,
+                  .preview-form-text-custom h3,
+                  .preview-form-text-custom p,
+                  .preview-form-text-custom span,
+                  .preview-form-text-custom div,
+                  .preview-form-text-custom label,
+                  .preview-form-text-custom li {
+                    color: ${selectedTemplate.theme_config.form_text_color} !important;
+                  }
+                  .preview-form-text-custom input,
+                  .preview-form-text-custom select {
+                    color: ${selectedTemplate.theme_config.form_text_color} !important;
+                  }
+                  .preview-form-text-custom input::placeholder {
+                    color: ${selectedTemplate.theme_config.form_text_color}80 !important;
+                  }
+                `}} />
+              )}
               {/* Force theme config values onto the container styles */}
               <div 
                 className="absolute inset-0 z-0 opacity-10 pointer-events-none"

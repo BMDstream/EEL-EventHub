@@ -641,7 +641,7 @@ function PublicRegistrationPageContent() {
   // Form card banner thumbnail: ONLY use banner_url — never fall back to background_url
   // Each field is fully independent — one uploaded image = shown in one place only.
   const formBannerUrl = event?.banner_url || null;
-  const eventTextColor = event?.banner_settings?.text_color;
+  const eventTextColor = event?.registration_form_template?.theme_config?.form_text_color || event?.banner_settings?.text_color;
   const bannerSize = event?.banner_settings?.size;
   const bannerPosition = event?.banner_settings?.position;
 
