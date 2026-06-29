@@ -234,6 +234,330 @@ def run_migrations():
             session.commit()
             print("Seeded default registration form template.")
 
+        # Seed additional templates
+        sports_form = session.exec(select(RegistrationFormTemplate).where(RegistrationFormTemplate.name == "Sports & Team Day Form")).first()
+        if not sports_form:
+            sports_form = RegistrationFormTemplate(
+                name="Sports & Team Day Form",
+                description="Custom form for team sports days. Includes company select, emergency contacts, t-shirt sizes, spectator vs participant role, and sport selection.",
+                theme_config={
+                    "background_pattern": "none",
+                    "form_bg_color": "#ffffff",
+                    "feedback_bg_color": "#f1f5f9",
+                    "typography_font": "Calibri, sans-serif",
+                    "force_sentence_case": True,
+                    "strip_trailing_periods": True,
+                    "force_text_visibility": True,
+                    "attendance_label": "Attendance Status",
+                    "attending_label": "I am attending",
+                    "not_attending_label": "Unable to attend"
+                },
+                layout_schema=[
+                    {
+                        "id": "personal_info",
+                        "title": "Personal Profile",
+                        "fields": [
+                            {
+                                "id": "company_name",
+                                "label": "Company name",
+                                "type": "select",
+                                "required": True,
+                                "options": ["BritelinkMCT", "DFA", "MAZIV", "Rise", "SADV", "Vumatel", "Vumacam"]
+                            },
+                            {
+                                "id": "contact_number",
+                                "label": "Contact number",
+                                "type": "text",
+                                "required": True
+                            },
+                            {
+                                "id": "gender",
+                                "label": "Gender",
+                                "type": "select",
+                                "required": True,
+                                "options": ["Female", "Male"]
+                            }
+                        ]
+                    },
+                    {
+                        "id": "logistics",
+                        "title": "Experience & Logistics",
+                        "fields": [
+                            {
+                                "id": "t_shirt_size",
+                                "label": "T-shirt size",
+                                "type": "select",
+                                "required": True,
+                                "options": ["XS", "S", "M", "L", "XL", "2XL", "3XL", "4XL"]
+                            },
+                            {
+                                "id": "attending_role",
+                                "label": "What will you be attending as?",
+                                "type": "select",
+                                "required": True,
+                                "options": ["Participant", "Spectator"]
+                            },
+                            {
+                                "id": "sport_selection",
+                                "label": "List of possible sports",
+                                "type": "select",
+                                "required": True,
+                                "options": ["Bowls", "Dodgeball", "Five-a-side-soccer", "Hockey", "Netball", "Pickleball"],
+                                "dependsOn": {
+                                    "fieldId": "attending_role",
+                                    "value": "Participant"
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        "id": "health_safety",
+                        "title": "Health & Safety Details",
+                        "fields": [
+                            {
+                                "id": "emergency_contact",
+                                "label": "Emergency contact name and number",
+                                "type": "text",
+                                "required": True
+                            },
+                            {
+                                "id": "dietary_requirements",
+                                "label": "Dietary Requirements",
+                                "type": "select",
+                                "required": True,
+                                "options": ["None", "Chicken only", "Halaal", "Kosher", "Vegan", "Vegetarian"]
+                            },
+                            {
+                                "id": "allergies",
+                                "label": "Please specify any medically diagnosed allergies",
+                                "type": "text",
+                                "required": True
+                            }
+                        ]
+                    }
+                ],
+                post_submit_config={
+                    "onscreen_title": "YOUR REGISTRATION HAS BEEN CONFIRMED.",
+                    "onscreen_description": "Your registration for [Event Name] is confirmed. Verification has been dispatched to [Email Address]",
+                    "clearance_label": "UNIQUE CLEARANCE ID"
+                }
+            )
+            session.add(sports_form)
+            print("Seeded sports form template.")
+
+        golf_form = session.exec(select(RegistrationFormTemplate).where(RegistrationFormTemplate.name == "Golf Invitational Form")).first()
+        if not golf_form:
+            golf_form = RegistrationFormTemplate(
+                name="Golf Invitational Form",
+                description="Preconfigured layout for golf tournaments. Collects Handicap indexes, Glove hand selection, glove sizing, and non-transferable disclaimer agreement.",
+                theme_config={
+                    "background_pattern": "none",
+                    "form_bg_color": "#ffffff",
+                    "feedback_bg_color": "#f1f5f9",
+                    "typography_font": "Calibri, sans-serif",
+                    "force_sentence_case": True,
+                    "strip_trailing_periods": True,
+                    "force_text_visibility": True,
+                    "attendance_label": "Attendance Status",
+                    "attending_label": "I am attending",
+                    "not_attending_label": "Unable to attend"
+                },
+                layout_schema=[
+                    {
+                        "id": "player_profile",
+                        "title": "Player Profile",
+                        "fields": [
+                            {
+                                "id": "contact_number",
+                                "label": "Contact number",
+                                "type": "text",
+                                "required": True
+                            },
+                            {
+                                "id": "handicap",
+                                "label": "HNA Handicap Index",
+                                "type": "text",
+                                "required": True
+                            },
+                            {
+                                "id": "gender",
+                                "label": "Gender",
+                                "type": "select",
+                                "required": True,
+                                "options": ["Male", "Female"]
+                            }
+                        ]
+                    },
+                    {
+                        "id": "apparel_gear",
+                        "title": "Apparel & Gear Sizing",
+                        "fields": [
+                            {
+                                "id": "t_shirt_size",
+                                "label": "T-shirt size",
+                                "type": "select",
+                                "required": True,
+                                "options": ["XS", "S", "M", "L", "XL", "XXL", "XXXL"]
+                            },
+                            {
+                                "id": "glove_hand",
+                                "label": "Glove hand",
+                                "type": "select",
+                                "required": True,
+                                "options": ["Left", "Right"]
+                            },
+                            {
+                                "id": "glove_size",
+                                "label": "Glove size",
+                                "type": "text",
+                                "required": True
+                            }
+                        ]
+                    },
+                    {
+                        "id": "dietary_disclaimer",
+                        "title": "Dietary & Policies",
+                        "fields": [
+                            {
+                                "id": "dietary_requirements",
+                                "label": "Dietary Requirements",
+                                "type": "text",
+                                "required": True
+                            },
+                            {
+                                "id": "non_transferable",
+                                "label": "Disclaimer: Non-Transferable",
+                                "type": "checkbox",
+                                "required": True
+                            }
+                        ]
+                    }
+                ],
+                post_submit_config={
+                    "onscreen_title": "YOUR REGISTRATION HAS BEEN CONFIRMED.",
+                    "onscreen_description": "Your registration for [Event Name] is confirmed. Verification has been dispatched to [Email Address]",
+                    "clearance_label": "UNIQUE CLEARANCE ID"
+                }
+            )
+            session.add(golf_form)
+            print("Seeded golf form template.")
+
+        padel_form = session.exec(select(RegistrationFormTemplate).where(RegistrationFormTemplate.name == "Padel Championship Form")).first()
+        if not padel_form:
+            padel_form = RegistrationFormTemplate(
+                name="Padel Championship Form",
+                description="Optimized for padel and double-team rackets tournaments. Features player category selection, and conditional partner details card integration.",
+                theme_config={
+                    "background_pattern": "none",
+                    "form_bg_color": "#ffffff",
+                    "feedback_bg_color": "#f1f5f9",
+                    "typography_font": "Calibri, sans-serif",
+                    "force_sentence_case": True,
+                    "strip_trailing_periods": True,
+                    "force_text_visibility": True,
+                    "attendance_label": "Attendance Status",
+                    "attending_label": "I am attending",
+                    "not_attending_label": "Unable to attend"
+                },
+                layout_schema=[
+                    {
+                        "id": "personal_profile",
+                        "title": "Personal Profile",
+                        "fields": [
+                            {
+                                "id": "dietary_requirements",
+                                "label": "Dietary Requirements",
+                                "type": "select",
+                                "required": True,
+                                "options": ["No Dietary Requirements", "Halaal", "Vegetarian", "Vegan", "Other"]
+                            },
+                            {
+                                "id": "dietary_other",
+                                "label": "Other",
+                                "type": "text",
+                                "required": False,
+                                "dependsOn": {
+                                    "fieldId": "dietary_requirements",
+                                    "value": "Other"
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        "id": "tournament_details",
+                        "title": "Tournament Details",
+                        "fields": [
+                            {
+                                "id": "entry_role",
+                                "label": "Player or Spectator",
+                                "type": "select",
+                                "required": True,
+                                "options": ["Player", "Spectator"]
+                            },
+                            {
+                                "id": "padel_category",
+                                "label": "Category",
+                                "type": "select",
+                                "required": False,
+                                "options": ["Competitive", "Social"],
+                                "dependsOn": {
+                                    "fieldId": "entry_role",
+                                    "value": "Player"
+                                }
+                            },
+                            {
+                                "id": "t_shirt_size",
+                                "label": "T-Shirt Size",
+                                "type": "select",
+                                "required": False,
+                                "options": ["XS", "S", "M", "L", "XL", "XXL"],
+                                "dependsOn": {
+                                    "fieldId": "entry_role",
+                                    "value": "Player"
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        "id": "double_partners",
+                        "title": "Partner Details",
+                        "fields": [
+                            {
+                                "id": "partner_card",
+                                "label": "Partner Details",
+                                "type": "partner_card",
+                                "required": False,
+                                "dependsOn": {
+                                    "fieldId": "entry_role",
+                                    "value": "Player"
+                                }
+                            },
+                            {
+                                "id": "partner_t_shirt",
+                                "label": "Partner T-Shirt Size",
+                                "type": "select",
+                                "required": False,
+                                "options": ["XS", "S", "M", "L", "XL", "XXL"],
+                                "dependsOn": {
+                                    "fieldId": "entry_role",
+                                    "value": "Player"
+                                }
+                            }
+                        ]
+                    }
+                ],
+                post_submit_config={
+                    "onscreen_title": "YOUR REGISTRATION HAS BEEN CONFIRMED.",
+                    "onscreen_description": "Your registration for [Event Name] is confirmed. Verification has been dispatched to [Email Address]",
+                    "clearance_label": "UNIQUE CLEARANCE ID"
+                }
+            )
+            session.add(padel_form)
+            print("Seeded padel form template.")
+
+            session.commit()
+            print("Seeded default registration form templates.")
+
         # Sweep settings/clients
         sweep_completed = session.exec(select(SystemSetting).where(SystemSetting.key == "terminology_sweep_completed")).first()
         if not sweep_completed:
