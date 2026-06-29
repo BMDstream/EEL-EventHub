@@ -810,6 +810,8 @@ export default function SettingsPage() {
   const [newTplKey, setNewTplKey] = useState("");
   const [creatingTpl, setCreatingTpl] = useState(false);
   const [deletingTplKey, setDeletingTplKey] = useState<string | null>(null);
+  const [duplicateSubject, setDuplicateSubject] = useState("");
+  const [duplicateBodyHtml, setDuplicateBodyHtml] = useState("");
 
   const [editorMode, setEditorMode] = useState<"visual" | "html">("visual");
   const [formValues, setFormValues] = useState<Record<string, string>>({});
@@ -1154,10 +1156,18 @@ export default function SettingsPage() {
     if (!newTplName.trim() || !newTplKey.trim()) return;
     setCreatingTpl(true);
     try {
+      const payload: any = { key: newTplKey.trim(), name: newTplName.trim() };
+      if (duplicateSubject) {
+        payload.subject = duplicateSubject;
+      }
+      if (duplicateBodyHtml) {
+        payload.body_html = duplicateBodyHtml;
+      }
+      
       const res = await fetch("/api/py/settings/templates", {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-user-email": (session?.user?.email || "") },
-        body: JSON.stringify({ key: newTplKey.trim(), name: newTplName.trim() }),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) {
         const err = await res.json();
@@ -1172,6 +1182,8 @@ export default function SettingsPage() {
       setShowCreateModal(false);
       setNewTplName("");
       setNewTplKey("");
+      setDuplicateSubject("");
+      setDuplicateBodyHtml("");
       setTemplateNotification({ type: "success", text: `Template "${created.name}" created successfully.` });
     } catch (e) {
       setTemplateNotification({ type: "error", text: "Network error creating template." });
@@ -1179,6 +1191,7 @@ export default function SettingsPage() {
       setCreatingTpl(false);
     }
   };
+
 
   const handleDeleteTemplate = async (key: string, name: string) => {
     if (!confirm(`Are you sure you want to permanently delete the template "${name}"? Any events using it will revert to the system default.`)) return;
@@ -1584,7 +1597,7 @@ export default function SettingsPage() {
                       Select Template
                     </h3>
                     <button
-                      onClick={() => { setNewTplName(""); setNewTplKey(""); setShowCreateModal(true); }}
+                      onClick={() => { setNewTplName(""); setNewTplKey(""); setDuplicateSubject(""); setDuplicateBodyHtml(""); setShowCreateModal(true); }}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#0f172a] hover:bg-[#1e293b] text-white text-[10px] font-black uppercase tracking-wider transition-all shadow-sm"
                     >
                       <Plus size={11} />
@@ -1597,7 +1610,7 @@ export default function SettingsPage() {
                       const isSelected = t.key === selectedKey;
                       const isSystem = SYSTEM_TEMPLATE_KEYS.has(t.key);
                       return (
-                        <div key={t.key} className="relative group/row">
+                        <div key={t.key} className="relative group/row font-bold">
                           <button
                             onClick={() => handleSelectTemplate(t.key)}
                             className={`w-full flex items-center gap-4 p-4 rounded-2xl text-left transition-all ${
@@ -1613,7 +1626,7 @@ export default function SettingsPage() {
                             }`}>
                               <Icon size={18} />
                             </div>
-                            <div className="flex-1 min-w-0">
+                            <div className="flex-1 min-w-0 pr-16">
                               <div className="flex items-center gap-2">
                                 <p className="text-sm font-bold truncate">{t.name}</p>
                                 {isSystem && (
@@ -1624,6 +1637,23 @@ export default function SettingsPage() {
                             </div>
                             <ChevronRight size={14} className={`opacity-40 transition-transform ${isSelected ? "translate-x-1" : ""}`} />
                           </button>
+                          
+                          {/* Copy button — available for ALL templates */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setNewTplName(`${t.name} (Copy)`);
+                              setNewTplKey(`${t.key}_copy`);
+                              setDuplicateSubject(t.subject || "");
+                              setDuplicateBodyHtml(t.body_html || "");
+                              setShowCreateModal(true);
+                            }}
+                            title="Copy template"
+                            className={`absolute ${isSystem ? "right-14" : "right-24"} top-1/2 -translate-y-1/2 opacity-0 group-hover/row:opacity-100 transition-opacity p-2 rounded-xl text-blue-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20`}
+                          >
+                            <Copy size={14} />
+                          </button>
+
                           {/* Delete button — only for custom (non-system) templates */}
                           {!isSystem && (
                             <button
@@ -1640,6 +1670,7 @@ export default function SettingsPage() {
                     })}
                   </div>
                 </div>
+
 
                 {/* Create Template Modal */}
                 <AnimatePresence>
@@ -1659,7 +1690,7 @@ export default function SettingsPage() {
                         className="bg-white dark:bg-[#0f172a] rounded-[2rem] p-8 shadow-2xl border border-slate-100 dark:border-slate-800 w-full max-w-md mx-4"
                       >
                         <div className="flex items-center justify-between mb-6">
-                          <h3 className="text-lg font-black text-[#0f172a] dark:text-white">Create New Template</h3>
+                          <h3 className="text-lg font-black text-[#0f172a] dark:text-white">{duplicateSubject ? "Copy Template" : "Create New Template"}</h3>
                           <button onClick={() => setShowCreateModal(false)} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-all">
                             <X size={18} className="text-slate-400" />
                           </button>
@@ -1703,10 +1734,11 @@ export default function SettingsPage() {
                               disabled={creatingTpl || !newTplName.trim() || !newTplKey.trim()}
                               className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-[#0f172a] text-white font-black text-sm hover:bg-[#1e293b] transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
                             >
-                              {creatingTpl ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
-                              Create Template
+                              {creatingTpl ? <Loader2 size={16} className="animate-spin" /> : (duplicateSubject ? <Copy size={16} /> : <Plus size={16} />)}
+                              {duplicateSubject ? "Copy Template" : "Create Template"}
                             </button>
                           </div>
+
                         </div>
                       </motion.div>
                     </motion.div>
