@@ -42,6 +42,8 @@ interface RegistrationFormTemplate {
     attendance_label?: string;
     attending_label?: string;
     not_attending_label?: string;
+    form_heading?: string;
+    form_subheading?: string;
   };
   layout_schema: FormSection[];
   post_submit_config: {
@@ -667,6 +669,32 @@ export default function RegistrationTemplateManager() {
                       </div>
 
                       <div className="space-y-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+                        <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Public Form Header Config</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-1">
+                            <label className="text-[8px] font-black uppercase tracking-widest text-slate-400 ml-1">Form Title Heading</label>
+                            <input 
+                              type="text" 
+                              value={selectedTemplate.theme_config.form_heading || ""} 
+                              onChange={(e) => updateThemeConfig("form_heading", e.target.value)}
+                              placeholder="e.g. Register."
+                              className="w-full px-4 py-2.5 rounded-xl border border-slate-100 font-bold text-xs bg-slate-50 dark:bg-slate-800 dark:border-slate-700 text-[#0f172a] dark:text-white" 
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[8px] font-black uppercase tracking-widest text-slate-400 ml-1">Form Subheading / Description</label>
+                            <input 
+                              type="text" 
+                              value={selectedTemplate.theme_config.form_subheading || ""} 
+                              onChange={(e) => updateThemeConfig("form_subheading", e.target.value)}
+                              placeholder="e.g. Secure your credentials for this exclusive engagement."
+                              className="w-full px-4 py-2.5 rounded-xl border border-slate-100 font-bold text-xs bg-slate-50 dark:bg-slate-800 dark:border-slate-700 text-[#0f172a] dark:text-white" 
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-4 pt-4 border-t border-slate-100 dark:border-slate-800">
                         <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Attendance Selector Config</h4>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                           <div className="space-y-1">
@@ -1074,10 +1102,10 @@ export default function RegistrationTemplateManager() {
                     {/* Header */}
                     <div className="border-b border-slate-100 dark:border-slate-800 pb-4">
                       <h3 className="text-xl font-bold text-[#0f172a] dark:text-white">
-                        {formatHeading(selectedTemplate.name)}
+                        {formatHeading(selectedTemplate.theme_config.form_heading || selectedTemplate.name)}
                       </h3>
                       <p className="text-slate-400 text-[10px] font-medium uppercase tracking-wider mt-1">
-                        {selectedTemplate.description || "Public Registration Form"}
+                        {selectedTemplate.theme_config.form_subheading || selectedTemplate.description || "Public Registration Form"}
                       </p>
                     </div>
 
