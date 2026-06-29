@@ -88,7 +88,7 @@ def read_event(slug: str, session: Session = Depends(get_session)):
         
     if reg_tpl:
         event_dict["registration_form_template"] = reg_tpl.dict()
-        if reg_tpl.layout_schema:
+        if not event.custom_fields_schema and reg_tpl.layout_schema:
             event_dict["custom_fields_schema"] = reg_tpl.layout_schema
     else:
         event_dict["registration_form_template"] = None
