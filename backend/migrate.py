@@ -555,6 +555,33 @@ def run_migrations():
             session.add(padel_form)
             print("Seeded padel form template.")
 
+        original_rsvp = session.exec(select(RegistrationFormTemplate).where(RegistrationFormTemplate.name == "Original RSVP Form")).first()
+        if not original_rsvp:
+            original_rsvp = RegistrationFormTemplate(
+                name="Original RSVP Form",
+                description="The original minimal layout. Collects only name, email, and attendance confirmation using clean, big choice buttons.",
+                theme_config={
+                    "background_pattern": "none",
+                    "form_bg_color": "#ffffff",
+                    "feedback_bg_color": "#f1f5f9",
+                    "typography_font": "Calibri, sans-serif",
+                    "force_sentence_case": True,
+                    "strip_trailing_periods": True,
+                    "force_text_visibility": True,
+                    "attendance_label": "Attendance Status",
+                    "attending_label": "I am attending",
+                    "not_attending_label": "Unable to attend"
+                },
+                layout_schema=[],
+                post_submit_config={
+                    "onscreen_title": "YOUR REGISTRATION HAS BEEN CONFIRMED.",
+                    "onscreen_description": "Your registration for [Event Name] is confirmed. Verification has been dispatched to [Email Address]",
+                    "clearance_label": "UNIQUE CLEARANCE ID"
+                }
+            )
+            session.add(original_rsvp)
+            print("Seeded original RSVP form template.")
+
             session.commit()
             print("Seeded default registration form templates.")
 
