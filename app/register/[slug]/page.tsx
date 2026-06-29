@@ -1598,11 +1598,17 @@ function PublicRegistrationPageContent() {
       <div className="mb-12">
         <h2 className={style.heading}>
           {event?.registration_form_template 
-            ? formatLabel(event.registration_form_template.theme_config?.form_heading || event.registration_form_template.name) 
+            ? (event.registration_form_template.theme_config?.form_heading !== undefined && event.registration_form_template.theme_config?.form_heading !== null
+                ? formatLabel(event.registration_form_template.theme_config.form_heading)
+                : formatLabel(event.registration_form_template.name))
             : "Register."}
         </h2>
         <p className={style.subHeading}>
-          {event?.registration_form_template?.theme_config?.form_subheading || event?.registration_form_template?.description || "Secure your credentials for this exclusive engagement."}
+          {event?.registration_form_template 
+            ? (event.registration_form_template.theme_config?.form_subheading !== undefined && event.registration_form_template.theme_config?.form_subheading !== null
+                ? event.registration_form_template.theme_config.form_subheading
+                : (event.registration_form_template.description || "Secure your credentials for this exclusive engagement."))
+            : "Secure your credentials for this exclusive engagement."}
         </p>
       </div>
 

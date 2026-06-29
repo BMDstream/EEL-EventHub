@@ -1102,10 +1102,14 @@ export default function RegistrationTemplateManager() {
                     {/* Header */}
                     <div className="border-b border-slate-100 dark:border-slate-800 pb-4">
                       <h3 className="text-xl font-bold text-[#0f172a] dark:text-white">
-                        {formatHeading(selectedTemplate.theme_config.form_heading || selectedTemplate.name)}
+                        {selectedTemplate.theme_config.form_heading !== undefined && selectedTemplate.theme_config.form_heading !== null
+                          ? formatHeading(selectedTemplate.theme_config.form_heading)
+                          : formatHeading(selectedTemplate.name)}
                       </h3>
                       <p className="text-slate-400 text-[10px] font-medium uppercase tracking-wider mt-1">
-                        {selectedTemplate.theme_config.form_subheading || selectedTemplate.description || "Public Registration Form"}
+                        {selectedTemplate.theme_config.form_subheading !== undefined && selectedTemplate.theme_config.form_subheading !== null
+                          ? selectedTemplate.theme_config.form_subheading
+                          : selectedTemplate.description || "Public Registration Form"}
                       </p>
                     </div>
 
