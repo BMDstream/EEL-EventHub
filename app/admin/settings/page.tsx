@@ -391,7 +391,64 @@ const DEFAULT_FORM_FIELDS: Record<string, Record<string, string>> = {
   }
 };
 
+const resolveBaseTemplateKey = (key: string, templates: EmailTemplate[] = []): string => {
+  const SYSTEM_KEYS = ["registration_confirmed", "registration_declined", "partner_pending", "broadcast", "tournament_matchup", "banner_email"];
+  if (SYSTEM_KEYS.includes(key)) {
+    return key;
+  }
+  
+  // Find template in list to inspect its content or name
+  const tpl = templates.find(t => t.key === key);
+  const bodyHtml = tpl?.body_html || "";
+  const name = tpl?.name || "";
+  
+  if (bodyHtml) {
+    if (bodyHtml.includes("Attendee Pass") || bodyHtml.includes("qr_block_html") || bodyHtml.includes("warning_block_html")) {
+      return "registration_confirmed";
+    }
+    if (bodyHtml.includes("Response Recorded") || bodyHtml.includes("registration_declined")) {
+      return "registration_declined";
+    }
+    if (bodyHtml.includes("partner_pending") || bodyHtml.includes("urgent_title") || bodyHtml.includes("urgent_body")) {
+      return "partner_pending";
+    }
+    if (bodyHtml.includes("Broadcast Dispatch") || bodyHtml.includes("signature")) {
+      return "broadcast";
+    }
+    if (bodyHtml.includes("opponent_name") || bodyHtml.includes("tournament_matchup") || bodyHtml.includes("Tournament Dispatch")) {
+      return "tournament_matchup";
+    }
+    if (bodyHtml.includes("itinerary_title") || bodyHtml.includes("included_title") || bodyHtml.includes("included_body") || bodyHtml.includes("banner_email")) {
+      return "banner_email";
+    }
+  }
+  
+  // Check the key / name strings
+  const lowerStr = (key + " " + name).toLowerCase();
+  if (lowerStr.includes("confirmed") || lowerStr.includes("confirm") || lowerStr.includes("attendee")) {
+    return "registration_confirmed";
+  }
+  if (lowerStr.includes("declined") || lowerStr.includes("decline")) {
+    return "registration_declined";
+  }
+  if (lowerStr.includes("partner") || lowerStr.includes("pending")) {
+    return "partner_pending";
+  }
+  if (lowerStr.includes("broadcast")) {
+    return "broadcast";
+  }
+  if (lowerStr.includes("matchup") || lowerStr.includes("tournament") || lowerStr.includes("match")) {
+    return "tournament_matchup";
+  }
+  if (lowerStr.includes("banner") || lowerStr.includes("invite") || lowerStr.includes("golf") || lowerStr.includes("sports")) {
+    return "banner_email";
+  }
+  
+  return "registration_confirmed";
+};
+
 const parseTemplateMeta = (html: string): Record<string, string> | null => {
+
   if (!html || typeof html !== "string") return null;
   const match = html.match(/<!-- TEMPLATE_META: ({.*?}) -->/);
   if (match) {
@@ -405,10 +462,11 @@ const parseTemplateMeta = (html: string): Record<string, string> | null => {
 };
 
 const compileTemplateHtml = (key: string, values: Record<string, string> = {}, fontFamily = "Calibri, sans-serif", fontSize = "16px", config?: Record<string, any>) => {
+  const baseKey = resolveBaseTemplateKey(key);
   const metaComment = `<!-- TEMPLATE_META: ${JSON.stringify(values)} -->`;
   let html = "";
   
-  const showBanner = values.show_banner === "true" || (key === "banner_email" && values.show_banner !== "false");
+  const showBanner = values.show_banner === "true" || (baseKey === "banner_email" && values.show_banner !== "false");
   const bannerUrl = values.banner_image_url || config?.banner_url || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800";
   const bannerHtml = showBanner ? `
         <tr>
@@ -418,7 +476,7 @@ const compileTemplateHtml = (key: string, values: Record<string, string> = {}, f
         </tr>
   ` : "";
 
-  if (key === "registration_confirmed") {
+  if (baseKey === "registration_confirmed") {
     const warningHtml = values.warning_text ? `
             <div style="background: #fffbeb; padding: 28px; border-radius: 24px; border: 1px solid #fef3c7; margin-bottom: 40px; text-align: center;">
                 <p style="color: #b45309; font-size: 14px; font-weight: 700; margin: 0; line-height: 1.5; text-transform: uppercase; letter-spacing: 0.05em; font-family: ${fontFamily};">
@@ -479,7 +537,7 @@ const compileTemplateHtml = (key: string, values: Record<string, string> = {}, f
     </td>
   </tr>
 </table>`;
-  } else if (key === "registration_declined") {
+  } else if (baseKey === "registration_declined") {
     html = `
 <table width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; table-layout: fixed; margin: 0; padding: 0;">
   <tr>
@@ -528,7 +586,7 @@ const compileTemplateHtml = (key: string, values: Record<string, string> = {}, f
     </td>
   </tr>
 </table>`;
-  } else if (key === "partner_pending") {
+  } else if (baseKey === "partner_pending") {
     html = `
 <table width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; table-layout: fixed; margin: 0; padding: 0;">
   <tr>
@@ -600,7 +658,7 @@ const compileTemplateHtml = (key: string, values: Record<string, string> = {}, f
     </td>
   </tr>
 </table>`;
-  } else if (key === "broadcast") {
+  } else if (baseKey === "broadcast") {
     html = `
 <table width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; table-layout: fixed; margin: 0; padding: 0;">
   <tr>
@@ -650,7 +708,7 @@ const compileTemplateHtml = (key: string, values: Record<string, string> = {}, f
     </td>
   </tr>
 </table>`;
-  } else if (key === "tournament_matchup") {
+  } else if (baseKey === "tournament_matchup") {
     html = `
 <div style="font-family: ${fontFamily}; font-size: ${fontSize}; background-color: ${values.primary_color || ""}; color: #ffffff; padding: 40px; border-radius: 24px; max-width: 600px; margin: 0 auto; border: 1px solid #1f2937;">
     <div style="text-align: center; margin-bottom: 30px;">
@@ -691,7 +749,7 @@ const compileTemplateHtml = (key: string, values: Record<string, string> = {}, f
         </p>
     </div>
 </div>`;
-  } else if (key === "banner_email") {
+  } else if (baseKey === "banner_email") {
     const itineraryHtml = (values.itinerary_body || "")
       .split("\n")
       .map(line => {
@@ -779,6 +837,7 @@ const compileTemplateHtml = (key: string, values: Record<string, string> = {}, f
   return (metaComment + "\n" + html).trim();
 };
 
+
 export default function SettingsPage() {
   const { data: session, status: sessionStatus } = useSession();
   const userRole = (session?.user as any)?.role || "staff";
@@ -791,6 +850,7 @@ export default function SettingsPage() {
   // ==========================================
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
   const [selectedKey, setSelectedKey] = useState<string>("registration_confirmed");
+  const baseKey = resolveBaseTemplateKey(selectedKey, templates);
   const [subject, setSubject] = useState<string>("");
   const [bodyHtml, setBodyHtml] = useState<string>("");
   const [loadingTemplates, setLoadingTemplates] = useState<boolean>(true);
@@ -847,14 +907,14 @@ export default function SettingsPage() {
       const current = templates.find((t) => t.key === selectedKey);
       if (current) {
         const meta = parseTemplateMeta(current.body_html);
-        const defaults = DEFAULT_FORM_FIELDS[selectedKey] || {};
+        const defaults = DEFAULT_FORM_FIELDS[baseKey] || {};
         const bodyVal = meta?.body_text || defaults.body_text || "";
         if (editorRef.current.innerHTML !== bodyVal) {
           editorRef.current.innerHTML = bodyVal;
         }
       }
     }
-  }, [selectedKey, activeTab, templates]);
+  }, [selectedKey, baseKey, activeTab, templates]);
 
   // ==========================================
   // GLOBAL SETTINGS STATES
@@ -957,7 +1017,7 @@ export default function SettingsPage() {
             
             // Sync Form values
             const meta = parseTemplateMeta(current.body_html);
-            const defaults = DEFAULT_FORM_FIELDS[selectedKey] || {};
+            const defaults = DEFAULT_FORM_FIELDS[baseKey] || {};
             setFormValues({ ...defaults, ...meta });
           }
         }
@@ -974,7 +1034,7 @@ export default function SettingsPage() {
     } else if (sessionStatus === "unauthenticated" || (sessionStatus === "authenticated" && userRole !== "admin")) {
       setLoadingTemplates(false);
     }
-  }, [session, sessionStatus, selectedKey, userRole]);
+  }, [session, sessionStatus, selectedKey, baseKey, userRole]);
 
   // Write compiled content directly into iframe (Templates visual preview)
   useEffect(() => {
@@ -987,7 +1047,7 @@ export default function SettingsPage() {
         doc.close();
       }
     }
-  }, [bodyHtml, selectedKey, activeTab, userRole]);
+  }, [bodyHtml, selectedKey, baseKey, activeTab, userRole]);
 
   // Warn before unload if there are unsaved template changes
   useEffect(() => {
@@ -1007,10 +1067,10 @@ export default function SettingsPage() {
   // Re-compile template preview when font, size or banner config changes
   useEffect(() => {
     if (activeTab === "templates") {
-      const compiled = compileTemplateHtml(selectedKey, formValues, config.font_family, config.font_size, config);
+      const compiled = compileTemplateHtml(baseKey, formValues, config.font_family, config.font_size, config);
       setBodyHtml(compiled);
     }
-  }, [config.font_family, config.font_size, config.show_banner_in_email, selectedKey, activeTab]);
+  }, [config.font_family, config.font_size, config.show_banner_in_email, selectedKey, baseKey, activeTab]);
 
 
   // ==========================================
@@ -1021,7 +1081,7 @@ export default function SettingsPage() {
     if (editorRef.current) {
       const html = editorRef.current.innerHTML;
       setFormValues(prev => ({ ...prev, body_text: html }));
-      const compiled = compileTemplateHtml(selectedKey, { ...formValues, body_text: html }, config.font_family, config.font_size, config);
+      const compiled = compileTemplateHtml(baseKey, { ...formValues, body_text: html }, config.font_family, config.font_size, config);
       setBodyHtml(compiled);
       setHasUnsavedChanges(true);
     }
@@ -1088,7 +1148,8 @@ export default function SettingsPage() {
   const getPreviewHtml = () => {
     const activeFont = config.font_family || "Calibri, sans-serif";
     let html = bodyHtml;
-    const mockVars = { ...(MOCK_PREVIEW_DATA[selectedKey] || {}) };
+    const baseKey = resolveBaseTemplateKey(selectedKey, templates);
+    const mockVars = { ...(MOCK_PREVIEW_DATA[baseKey] || {}) };
     
     // Construct dynamic logo_html based on formValues
     const logoText = formValues.logo_text || "BMD";
@@ -1239,7 +1300,7 @@ export default function SettingsPage() {
       setHasUnsavedChanges(false);
       
       const meta = parseTemplateMeta(target.body_html);
-      const defaults = DEFAULT_FORM_FIELDS[key] || {};
+      const defaults = DEFAULT_FORM_FIELDS[resolveBaseTemplateKey(key, templates)] || {};
       setFormValues({ ...defaults, ...meta });
     }
   };
@@ -1247,7 +1308,7 @@ export default function SettingsPage() {
   const handleFormChange = (field: string, val: string) => {
     const nextValues = { ...formValues, [field]: val };
     setFormValues(nextValues);
-    const compiled = compileTemplateHtml(selectedKey, nextValues, config.font_family, config.font_size, config);
+    const compiled = compileTemplateHtml(baseKey, nextValues, config.font_family, config.font_size, config);
     setBodyHtml(compiled);
     setHasUnsavedChanges(true);
   };
@@ -1304,7 +1365,7 @@ export default function SettingsPage() {
         
         // Reset Visual Form Fields
         const meta = parseTemplateMeta(resetTemplate.body_html);
-        const defaults = DEFAULT_FORM_FIELDS[selectedKey] || {};
+        const defaults = DEFAULT_FORM_FIELDS[baseKey] || {};
         setFormValues({ ...defaults, ...meta });
         
         setTemplateNotification({ type: "success", text: "Template restored to default layout successfully!" });
@@ -1759,7 +1820,7 @@ export default function SettingsPage() {
                       Click any variable key to copy it into your clipboard, then paste it in the subject or body editor.
                     </p>
                     <div className="space-y-2 max-h-[220px] overflow-y-auto pr-2 custom-scrollbar">
-                      {CHEATSHEET_VARIABLES[selectedKey]?.map((variable) => {
+                      {CHEATSHEET_VARIABLES[baseKey]?.map((variable) => {
                         const isCopied = copiedVar === variable.name;
                         return (
                           <button
@@ -1881,7 +1942,7 @@ export default function SettingsPage() {
                                 </div>
                               </div>
 
-                              {selectedKey !== "broadcast" && (
+                              {baseKey !== "broadcast" && (
                                 <div className="space-y-2">
                                   <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
                                     Accent Color
@@ -2174,7 +2235,7 @@ export default function SettingsPage() {
                           </div>
 
                           {/* Header Titles Section */}
-                          {["registration_confirmed", "registration_declined", "partner_pending", "tournament_matchup"].includes(selectedKey) && (
+                          {["registration_confirmed", "registration_declined", "partner_pending", "tournament_matchup"].includes(baseKey) && (
                             <div className="space-y-4 bg-slate-50/50 dark:bg-slate-800/20 p-5 rounded-2xl border border-slate-100/50 dark:border-slate-800/50">
                               <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#0f172a] dark:text-white flex items-center gap-2">
                                 <Type size={12} className="text-blue-500" />
@@ -2212,7 +2273,7 @@ export default function SettingsPage() {
                           )}
 
                           {/* Alerts and Special Banners */}
-                          {selectedKey === "partner_pending" && (
+                          {baseKey === "partner_pending" && (
                             <div className="space-y-4 bg-orange-50/30 dark:bg-orange-950/10 p-5 rounded-2xl border border-orange-100/50 dark:border-orange-900/30">
                               <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-605 dark:text-orange-400 flex items-center gap-2">
                                 <AlertTriangle size={12} />
@@ -2344,7 +2405,7 @@ export default function SettingsPage() {
                                 onInput={(e) => {
                                   const html = e.currentTarget.innerHTML;
                                   setFormValues(prev => ({ ...prev, body_text: html }));
-                                  const compiled = compileTemplateHtml(selectedKey, { ...formValues, body_text: html }, config.font_family, config.font_size, config);
+                                  const compiled = compileTemplateHtml(baseKey, { ...formValues, body_text: html }, config.font_family, config.font_size, config);
                                   setBodyHtml(compiled);
                                   setHasUnsavedChanges(true);
                                   saveSelection();
@@ -2364,7 +2425,7 @@ export default function SettingsPage() {
                             </div>
 
                             {/* Warning copy for Confirmation Template */}
-                            {selectedKey === "registration_confirmed" && (
+                            {baseKey === "registration_confirmed" && (
                               <div className="space-y-1.5">
                                 <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
                                   Alert Note (QR check-in instructions)
@@ -2380,7 +2441,7 @@ export default function SettingsPage() {
                             )}
 
                             {/* Button text config */}
-                            {["partner_pending", "tournament_matchup"].includes(selectedKey) && (
+                            {["partner_pending", "tournament_matchup"].includes(baseKey) && (
                               <div className="space-y-1.5">
                                 <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block flex items-center gap-1.5">
                                   <Link size={10} /> Button Call-to-Action Label
@@ -2396,7 +2457,7 @@ export default function SettingsPage() {
                             )}
 
                             {/* Broadcaster signature config */}
-                            {selectedKey === "broadcast" && (
+                            {baseKey === "broadcast" && (
                               <div className="space-y-1.5">
                                 <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
                                   Sender Signature / Sign-off
@@ -2412,7 +2473,7 @@ export default function SettingsPage() {
                             )}
 
                             {/* Matchup & Card Wording customization */}
-                            {["registration_confirmed", "partner_pending", "tournament_matchup"].includes(selectedKey) && (
+                            {["registration_confirmed", "partner_pending", "tournament_matchup"].includes(baseKey) && (
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="space-y-1.5">
                                   <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
@@ -2426,7 +2487,7 @@ export default function SettingsPage() {
                                   />
                                 </div>
 
-                                {["registration_confirmed", "partner_pending"].includes(selectedKey) && (
+                                {["registration_confirmed", "partner_pending"].includes(baseKey) && (
                                   <div className="space-y-1.5">
                                     <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
                                       Engagement Card Title
@@ -2440,7 +2501,7 @@ export default function SettingsPage() {
                                   </div>
                                 )}
                                 
-                                {selectedKey === "tournament_matchup" && (
+                                {baseKey === "tournament_matchup" && (
                                   <div className="space-y-1.5">
                                     <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
                                       PIN Instruction Label
@@ -2457,7 +2518,7 @@ export default function SettingsPage() {
                             )}
 
                             {/* Banner Email Custom Schedule & Inclusions Config */}
-                            {selectedKey === "banner_email" && (
+                            {baseKey === "banner_email" && (
                               <div className="space-y-6 bg-slate-50/50 dark:bg-slate-800/20 p-5 rounded-2xl border border-slate-100/50 dark:border-slate-800/50">
                                 <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#0f172a] dark:text-white flex items-center gap-2">
                                   <Calendar size={12} className="text-pink-500" />

@@ -67,6 +67,33 @@ const parseTemplateMeta = (html: string): Record<string, string> | null => {
   return null;
 };
 
+const resolveBaseTemplateKey = (key: string, bodyHtml = ""): string => {
+  const SYSTEM_KEYS = ["registration_confirmed", "registration_declined", "partner_pending", "broadcast", "tournament_matchup", "banner_email"];
+  if (SYSTEM_KEYS.includes(key)) {
+    return key;
+  }
+  const lowerStr = (key + " " + bodyHtml).toLowerCase();
+  if (lowerStr.includes("confirmed") || lowerStr.includes("confirm") || lowerStr.includes("attendee") || lowerStr.includes("pass")) {
+    return "registration_confirmed";
+  }
+  if (lowerStr.includes("declined") || lowerStr.includes("decline")) {
+    return "registration_declined";
+  }
+  if (lowerStr.includes("partner") || lowerStr.includes("pending") || lowerStr.includes("urgent")) {
+    return "partner_pending";
+  }
+  if (lowerStr.includes("broadcast")) {
+    return "broadcast";
+  }
+  if (lowerStr.includes("matchup") || lowerStr.includes("tournament") || lowerStr.includes("match")) {
+    return "tournament_matchup";
+  }
+  if (lowerStr.includes("banner") || lowerStr.includes("invite") || lowerStr.includes("golf") || lowerStr.includes("sports")) {
+    return "banner_email";
+  }
+  return "registration_confirmed";
+};
+
 const compileTemplatePreview = (
   key: string,
   bodyHtml: string,
@@ -74,9 +101,11 @@ const compileTemplatePreview = (
   eventLogoUrl: string,
   primaryColor: string,
   accentColor: string,
+  eventData?: any,
   fontFamily = "Calibri, sans-serif",
   fontSize = "16px"
 ): string => {
+  const baseKey = resolveBaseTemplateKey(key, bodyHtml);
   const meta = parseTemplateMeta(bodyHtml) || {};
   const primary = primaryColor || meta.primary_color || "#0f172a";
   const accent = accentColor || meta.accent_color || "#94a3b8";
@@ -90,114 +119,229 @@ const compileTemplatePreview = (
 
   const logoHtml = logoUrl
     ? `<td align="right" valign="middle"><img src="${logoUrl}" style="max-height:48px;max-width:120px;object-fit:contain;" alt="Logo"/></td>`
-    : `<td align="right" valign="middle"><div style="background:${primary};padding:8px 16px;border-radius:8px;color:#fff;font-weight:bold;font-size:14px;display:inline-block;">BMD</div></td>`;
+    : `<td align="right" valign="middle"><div style="background:${primary};padding:8px 16px;border-radius:8px;color:#fff;font-weight:bold;font-size:14px;display:inline-block;font-family:${fontFamily};">BMD</div></td>`;
 
-  if (key === "registration_confirmed") {
-    const bodyText = meta.body_text || "Your registration has been confirmed. Below are your secure credentials for terminal verification.";
-    const headingTitle = meta.heading_title || "Registration";
-    const headingSubtitle = meta.heading_subtitle || "Confirmed";
-    const footerText = meta.footer_text || "Automated Event Management System";
-    const warningText = meta.warning_text || "Please present this QR code at the check-in desk.";
+  // Formatting date/time from eventData
+  let dateStr = "Thursday, June 25, 2026";
+  let timeStr = "10:00 AM";
+  if (eventData?.start_date) {
+    try {
+      const dt = new Date(eventData.start_date);
+      if (!isNaN(dt.getTime())) {
+        dateStr = dt.toLocaleDateString("en-US", { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        timeStr = dt.toLocaleTimeString("en-US", { hour: 'numeric', minute: '2-digit' });
+      }
+    } catch (e) {
+      console.error("Failed to parse start_date", e);
+    }
+  }
 
-    return `<table width="100%" border="0" cellspacing="0" cellpadding="0" style="width:100%;table-layout:fixed;margin:0;padding:0;background:#f8fafc;">
-  <tr><td align="center" style="padding:40px 0;">
-    <table width="100%" border="0" cellspacing="0" cellpadding="0" style="width:100%;max-width:600px;border:1px solid #f1f5f9;border-radius:40px;background-color:#ffffff;box-shadow:0 20px 50px rgba(0,0,0,0.05);overflow:hidden;border-collapse:separate;">
-      ${bannerHtml}
-      <tr><td style="padding:40px;font-family:${fontFamily};font-size:${fontSize};">
-        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom:48px;">
-          <tr>
-            <td align="left" valign="middle">
-              <div style="background:${primary};padding:12px 28px;border-radius:16px;display:inline-block;">
-                <span style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:0.4em;color:#fff;">Attendee Pass</span>
-              </div>
-            </td>
-            ${logoHtml}
-          </tr>
-        </table>
-        <h2 style="font-size:38px;font-weight:900;color:${primary};margin-bottom:28px;text-transform:uppercase;font-style:italic;letter-spacing:-0.04em;line-height:1;margin-top:0;">
-          ${headingTitle} <span style="color:${accent};">${headingSubtitle}</span>
-        </h2>
-        <p style="font-size:${fontSize};line-height:1.7;margin-bottom:40px;color:#475569;">
-          Hello <strong>John</strong>,<br/><br/>
-          ${bodyText.replace(/\n/g, "<br/>")}
-        </p>
-        <div style="background:#f8fafc;padding:48px;border-radius:32px;text-align:center;border:1px solid #f1f5f9;margin-bottom:40px;">
-          <div style="width:140px;height:140px;background:${primary};margin:0 auto 24px auto;border-radius:16px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:bold;box-shadow:0 25px 50px -12px rgba(0,0,0,0.15);">QR CODE</div>
-          <p style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:0.3em;color:#64748b;margin-bottom:12px;">Ticket Reference ID</p>
-          <div style="display:inline-block;background:#ffffff;padding:12px 28px;border-radius:16px;border:2px solid ${primary};">
-            <code style="font-size:28px;font-weight:900;color:${primary};letter-spacing:0.25em;font-family:monospace;">1234</code>
+  const title = eventData?.title || "Padels Tournament 2026";
+  const venue = eventData?.location || "Arena Center";
+  const address = eventData?.address || "123 Main St";
+
+  // Construct blocks
+  const addressHtml = address ? `
+  <div style="margin-top: 20px; font-family: ${fontFamily};">
+      <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin: 0 0 4px 0; font-family: ${fontFamily};">Address</p>
+      <p style="font-size: 16px; font-weight: 700; color: #0f172a; margin: 0 0 10px 0; font-family: ${fontFamily};">${address}</p>
+      <a href="#" style="display: inline-block; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.05em; color: #ffffff; background-color: ${primary}; text-decoration: none; padding: 10px 20px; border-radius: 12px; margin-top: 4px; font-family: ${fontFamily};">
+          🗺️ Open in Google Maps
+      </a>
+  </div>
+  ` : "";
+
+  const detailsHtml = `
+  <div style="background: #ffffff; padding: 32px; border: 1px solid #f1f5f9; border-radius: 32px; margin-bottom: 40px; font-family: ${fontFamily};">
+      <p style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.3em; color: ${accent}; margin-bottom: 24px; font-family: ${fontFamily};">${meta.engagement_title || "Engagement Details"}</p>
+      
+      <div style="margin-bottom: 20px; font-family: ${fontFamily};">
+          <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin: 0 0 4px 0; font-family: ${fontFamily};">Event</p>
+          <p style="font-size: 18px; font-weight: 800; color: ${primary}; margin: 0; font-family: ${fontFamily};">${title}</p>
+      </div>
+
+      <div style="margin-bottom: 20px; font-family: ${fontFamily};">
+          <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin: 0 0 4px 0; font-family: ${fontFamily};">Date & Time</p>
+          <p style="font-size: 16px; font-weight: 700; color: #0f172a; margin: 0; font-family: ${fontFamily};">${dateStr} @ ${timeStr}</p>
+      </div>
+
+      <div style="margin-bottom: 20px; font-family: ${fontFamily};">
+          <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin: 0 0 4px 0; font-family: ${fontFamily};">Venue</p>
+          <p style="font-size: 16px; font-weight: 700; color: #0f172a; margin: 0; font-family: ${fontFamily};">${venue}</p>
+      </div>
+      ${addressHtml}
+  </div>
+  `;
+
+  const qrBlockHtml = `
+  <div style="background: #f8fafc; padding: 48px; border-radius: 32px; text-align: center; border: 1px solid #f1f5f9; margin-bottom: 40px; position: relative; overflow: hidden; font-family: ${fontFamily};">
+      <div style="width:140px;height:140px;background:${primary};margin:0 auto 24px auto;border-radius:16px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:bold;box-shadow:0 25px 50px -12px rgba(0,0,0,0.15);">QR CODE</div>
+      <p style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.3em; color: #64748b; margin-bottom: 16px; font-family: ${fontFamily};">Ticket Reference ID</p>
+      <div style="display: inline-block; background: #ffffff; padding: 16px 32px; border-radius: 20px; border: 2px solid ${primary}; font-family: ${fontFamily};">
+          <code style="font-size: 32px; font-weight: 900; color: ${primary}; letter-spacing: 0.25em; font-family: monospace;">1234</code>
+      </div>
+  </div>
+  `;
+
+  const warningText = meta.warning_text || "Please present this QR code at the check-in desk.";
+  const warningBlockHtml = `
+  <div style="background: #fffbeb; padding: 28px; border-radius: 24px; border: 1px solid #fef3c7; margin-bottom: 40px; text-align: center; font-family: ${fontFamily};">
+      <p style="color: #b45309; font-size: 14px; font-weight: 700; margin: 0; line-height: 1.5; text-transform: uppercase; letter-spacing: 0.05em; font-family: ${fontFamily};">
+          ${warningText}
+      </p>
+  </div>
+  `;
+
+  const buttonText = meta.button_text || "Update Details";
+  const buttonBlockHtml = `
+  <div style="text-align: center; margin-top: 10px; margin-bottom: 40px;">
+      <a href="#" style="background-color: ${accent}; color: #000000; padding: 16px 32px; border-radius: 16px; font-size: 13px; font-weight: 950; text-decoration: none; text-transform: uppercase; letter-spacing: 0.1em; display: inline-block; box-shadow: 0 4px 12px rgba(234,179,8,0.2); font-family: ${fontFamily};">
+          ${buttonText}
+      </a>
+  </div>
+  `;
+
+  let html = bodyHtml;
+
+  // Use baseKey layouts if bodyHtml is empty or missing typical structure
+  if (!html || !html.includes("<table")) {
+    if (baseKey === "registration_confirmed") {
+      const bodyText = meta.body_text || "Your registration has been confirmed. Below are your secure credentials for terminal verification.";
+      const headingTitle = meta.heading_title || "Registration";
+      const headingSubtitle = meta.heading_subtitle || "Confirmed";
+      const footerText = meta.footer_text || "Automated Event Management System";
+
+      html = `<table width="100%" border="0" cellspacing="0" cellpadding="0" style="width:100%;table-layout:fixed;margin:0;padding:0;background:#f8fafc;">
+    <tr><td align="center" style="padding:40px 0;">
+      <table width="100%" border="0" cellspacing="0" cellpadding="0" style="width:100%;max-width:600px;border:1px solid #f1f5f9;border-radius:40px;background-color:#ffffff;box-shadow:0 20px 50px rgba(0,0,0,0.05);overflow:hidden;border-collapse:separate;">
+        ${bannerHtml}
+        <tr><td style="padding:40px;font-family:${fontFamily};font-size:${fontSize};">
+          <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom:48px;">
+            <tr>
+              <td align="left" valign="middle">
+                <div style="background:${primary};padding:12px 28px;border-radius:16px;display:inline-block;">
+                  <span style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:0.4em;color:#fff;">Attendee Pass</span>
+                </div>
+              </td>
+              {logo_html}
+            </tr>
+          </table>
+          <h2 style="font-size:38px;font-weight:900;color:${primary};margin-bottom:28px;text-transform:uppercase;font-style:italic;letter-spacing:-0.04em;line-height:1;margin-top:0;">
+            ${headingTitle} <span style="color:${accent};">${headingSubtitle}</span>
+          </h2>
+          <p style="font-size:${fontSize};line-height:1.7;margin-bottom:40px;color:#475569;">
+            Hello <strong>John</strong>,<br/><br/>
+            ${bodyText}
+          </p>
+          {details_html}
+          {qr_block_html}
+          {warning_block_html}
+          {button_block_html}
+          <hr style="border:0;border-top:1px solid #f1f5f9;margin:40px 0;"/>
+          <p style="font-size:11px;color:#94a3b8;text-align:center;line-height:1.6;margin:0;">${footerText}</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>`;
+    } else if (baseKey === "banner_email") {
+      const headingTitle = meta.heading_title || "MAZIV";
+      const headingSubtitle = meta.heading_subtitle || "GROUP";
+      const bodyText = meta.body_text || "Thank you for confirming your attendance. Below are more details for the day.";
+      const footerText = meta.footer_text || "events@company.com";
+      const itineraryTitle = meta.itinerary_title || "Programme";
+      const itineraryBody = meta.itinerary_body || "Registration: 08:30\nOpening: 09:00\nClose: 17:00";
+      const bannerDisplayUrl = bannerUrl || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800";
+
+      html = `<table width="100%" border="0" cellspacing="0" cellpadding="0" style="width:100%;table-layout:fixed;margin:0;padding:0;background:#f8fafc;">
+    <tr><td align="center" style="padding:40px 0;">
+      <table width="100%" border="0" cellspacing="0" cellpadding="0" style="width:100%;max-width:600px;border-radius:40px;overflow:hidden;border-collapse:separate;background:#ffffff;box-shadow:0 20px 50px rgba(0,0,0,0.05);">
+        <tr><td align="center" style="padding:0;line-height:0;">
+          <img src="${bannerDisplayUrl}" width="600" style="width:100%;max-width:600px;height:auto;display:block;" alt="Event Banner"/>
+        </td></tr>
+        <tr><td style="background:${primary};padding:32px 40px;">
+          <h1 style="font-size:36px;font-weight:900;color:#ffffff;margin:0;text-transform:uppercase;letter-spacing:-0.02em;font-style:italic;">
+            ${headingTitle} <span style="color:${accent};">${headingSubtitle}</span>
+          </h1>
+        </td></tr>
+        <tr><td style="padding:40px;font-family:${fontFamily};font-size:${fontSize};">
+          <p style="color:#475569;line-height:1.7;margin-bottom:32px;">Dear <strong>John</strong>,<br/><br/>${bodyText}</p>
+          <div style="background:#f8fafc;border-radius:24px;padding:28px;border:1px solid #f1f5f9;margin-bottom:24px;">
+            <p style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:0.2em;color:${accent};margin:0 0 12px 0;">${itineraryTitle}</p>
+            <p style="color:#334155;line-height:1.8;margin:0;">{itinerary_html}</p>
           </div>
-        </div>
-        <div style="background:#fffbeb;padding:28px;border-radius:24px;border:1px solid #fef3c7;margin-bottom:40px;text-align:center;">
-          <p style="color:#b45309;font-size:14px;font-weight:700;margin:0;line-height:1.5;text-transform:uppercase;letter-spacing:0.05em;">${warningText}</p>
-        </div>
-        <hr style="border:0;border-top:1px solid #f1f5f9;margin:40px 0;"/>
-        <p style="font-size:11px;color:#94a3b8;text-align:center;line-height:1.6;margin:0;">${footerText.replace(/\n/g, "<br/>")}</p>
-      </td></tr>
-    </table>
-  </td></tr>
-</table>`;
+          <hr style="border:0;border-top:1px solid #f1f5f9;margin:32px 0;"/>
+          <p style="font-size:11px;color:#94a3b8;text-align:center;">${footerText}</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>`;
+    } else {
+      const footerText = meta.footer_text || "Automated Event Management System";
+      const headingTitle = meta.heading_title || "Notification";
+      const headingSubtitle = meta.heading_subtitle || "Sent";
+      const bodyText = meta.body_text || "This is a preview of your email template.";
+
+      html = `<table width="100%" border="0" cellspacing="0" cellpadding="0" style="width:100%;table-layout:fixed;margin:0;padding:0;background:#f8fafc;">
+    <tr><td align="center" style="padding:40px 0;">
+      <table width="100%" border="0" cellspacing="0" cellpadding="0" style="width:100%;max-width:600px;border:1px solid #f1f5f9;border-radius:40px;background:#fff;overflow:hidden;border-collapse:separate;">
+        ${bannerHtml}
+        <tr><td style="padding:40px;font-family:${fontFamily};font-size:${fontSize};">
+          <table width="100%" border="0" style="margin-bottom:40px;"><tr>
+            <td><div style="background:${primary};padding:12px 24px;border-radius:14px;display:inline-block;"><span style="color:#fff;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:0.3em;">EventHub</span></div></td>
+            {logo_html}
+          </tr></table>
+          <h2 style="font-size:34px;font-weight:900;color:${primary};margin:0 0 24px 0;text-transform:uppercase;font-style:italic;letter-spacing:-0.03em;">
+            ${headingTitle} <span style="color:${accent};">${headingSubtitle}</span>
+          </h2>
+          <p style="color:#475569;line-height:1.7;margin-bottom:40px;">Hello <strong>John</strong>,<br/><br/>${bodyText}</p>
+          <hr style="border:0;border-top:1px solid #f1f5f9;margin:40px 0;"/>
+          <p style="font-size:11px;color:#94a3b8;text-align:center;line-height:1.6;">${footerText}</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>`;
+    }
   }
 
-  if (key === "banner_email") {
-    const headingTitle = meta.heading_title || "MAZIV";
-    const headingSubtitle = meta.heading_subtitle || "GROUP";
-    const bodyText = meta.body_text || "Thank you for confirming your attendance. Below are more details for the day.";
-    const footerText = meta.footer_text || "events@company.com";
-    const itineraryTitle = meta.itinerary_title || "Programme";
-    const itineraryBody = meta.itinerary_body || "Registration: 08:30\nOpening: 09:00\nClose: 17:00";
-    const bannerDisplayUrl = bannerUrl || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800";
+  // Generate itinerary html for Banner Email from formValues or meta
+  const itineraryBody = meta.itinerary_body || "Registration: 08:30\nOpening: 09:00\nClose: 17:00";
+  const itineraryHtml = itineraryBody
+    .split("\n")
+    .map((line: string) => {
+      const parts = line.split(":");
+      if (parts.length > 1) {
+        return `<div style="margin-bottom: 6px; font-family: ${fontFamily};"><strong>${parts[0].trim()}:</strong> ${parts.slice(1).join(":").trim()}</div>`;
+      }
+      return `<div style="margin-bottom: 6px; font-family: ${fontFamily};">${line.trim()}</div>`;
+    })
+    .join("");
 
-    return `<table width="100%" border="0" cellspacing="0" cellpadding="0" style="width:100%;table-layout:fixed;margin:0;padding:0;background:#f8fafc;">
-  <tr><td align="center" style="padding:40px 0;">
-    <table width="100%" border="0" cellspacing="0" cellpadding="0" style="width:100%;max-width:600px;border-radius:40px;overflow:hidden;border-collapse:separate;background:#ffffff;box-shadow:0 20px 50px rgba(0,0,0,0.05);">
-      <tr><td align="center" style="padding:0;line-height:0;">
-        <img src="${bannerDisplayUrl}" width="600" style="width:100%;max-width:600px;height:auto;display:block;" alt="Event Banner"/>
-      </td></tr>
-      <tr><td style="background:${primary};padding:32px 40px;">
-        <h1 style="font-size:36px;font-weight:900;color:#ffffff;margin:0;text-transform:uppercase;letter-spacing:-0.02em;font-style:italic;">
-          ${headingTitle} <span style="color:${accent};">${headingSubtitle}</span>
-        </h1>
-      </td></tr>
-      <tr><td style="padding:40px;font-family:${fontFamily};font-size:${fontSize};">
-        <p style="color:#475569;line-height:1.7;margin-bottom:32px;">Dear <strong>John</strong>,<br/><br/>${bodyText.replace(/\n/g, "<br/>")}</p>
-        <div style="background:#f8fafc;border-radius:24px;padding:28px;border:1px solid #f1f5f9;margin-bottom:24px;">
-          <p style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:0.2em;color:${accent};margin:0 0 12px 0;">${itineraryTitle}</p>
-          <p style="color:#334155;line-height:1.8;margin:0;">${itineraryBody.replace(/\n/g, "<br/>")}</p>
-        </div>
-        <hr style="border:0;border-top:1px solid #f1f5f9;margin:32px 0;"/>
-        <p style="font-size:11px;color:#94a3b8;text-align:center;">${footerText}</p>
-      </td></tr>
-    </table>
-  </td></tr>
-</table>`;
-  }
+  // Global placeholder replacements inside the template HTML
+  const finalHtml = html
+    .replaceAll("{logo_html}", logoHtml)
+    .replaceAll("{details_html}", detailsHtml)
+    .replaceAll("{qr_block_html}", qrBlockHtml)
+    .replaceAll("{warning_block_html}", warningBlockHtml)
+    .replaceAll("{button_block_html}", buttonBlockHtml)
+    .replaceAll("{itinerary_html}", itineraryHtml)
+    .replaceAll("{event_title}", title)
+    .replaceAll("{title}", title)
+    .replaceAll("{event_location}", venue)
+    .replaceAll("{location}", venue)
+    .replaceAll("{venue}", venue)
+    .replaceAll("{event_address}", address)
+    .replaceAll("{address}", address)
+    .replaceAll("{event_date}", `${dateStr} @ ${timeStr}`)
+    .replaceAll("{date}", `${dateStr} @ ${timeStr}`)
+    .replaceAll("{start_date}", eventData?.start_date || "2026-06-25")
+    .replaceAll("{start_time}", timeStr)
+    .replaceAll("{first_name}", "John")
+    .replaceAll("{last_name}", "Doe")
+    .replaceAll("{to_email}", "john@example.com")
+    .replaceAll("{pin}", "1234")
+    .replaceAll("{clearance_id}", "1234");
 
-  // Generic fallback for other template types
-  const footerText = meta.footer_text || "Automated Event Management System";
-  const headingTitle = meta.heading_title || "Notification";
-  const headingSubtitle = meta.heading_subtitle || "Sent";
-  const bodyText = meta.body_text || "This is a preview of your email template.";
-
-  return `<table width="100%" border="0" cellspacing="0" cellpadding="0" style="width:100%;table-layout:fixed;margin:0;padding:0;background:#f8fafc;">
-  <tr><td align="center" style="padding:40px 0;">
-    <table width="100%" border="0" cellspacing="0" cellpadding="0" style="width:100%;max-width:600px;border:1px solid #f1f5f9;border-radius:40px;background:#fff;overflow:hidden;border-collapse:separate;">
-      ${bannerHtml}
-      <tr><td style="padding:40px;font-family:${fontFamily};font-size:${fontSize};">
-        <table width="100%" border="0" style="margin-bottom:40px;"><tr>
-          <td><div style="background:${primary};padding:12px 24px;border-radius:14px;display:inline-block;"><span style="color:#fff;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:0.3em;">EventHub</span></div></td>
-          ${logoHtml}
-        </tr></table>
-        <h2 style="font-size:34px;font-weight:900;color:${primary};margin:0 0 24px 0;text-transform:uppercase;font-style:italic;letter-spacing:-0.03em;">
-          ${headingTitle} <span style="color:${accent};">${headingSubtitle}</span>
-        </h2>
-        <p style="color:#475569;line-height:1.7;margin-bottom:40px;">Hello <strong>John</strong>,<br/><br/>${bodyText}</p>
-        <hr style="border:0;border-top:1px solid #f1f5f9;margin:40px 0;"/>
-        <p style="font-size:11px;color:#94a3b8;text-align:center;line-height:1.6;">${footerText.replace(/\n/g, "<br/>")}</p>
-      </td></tr>
-    </table>
-  </td></tr>
-</table>`;
+  return finalHtml;
 };
 
 const compressImage = (file: File, maxWidth = 1200, maxHeight = 630, quality = 0.8): Promise<string> => {
@@ -391,9 +535,10 @@ export default function EditEventPage() {
       formData.logo_url,
       formData.banner_primary_color,
       formData.banner_accent_color,
+      formData,
     );
     setPreviewHtml(html);
-  }, [activeTab, formData.confirmation_template_id, formData.confirmation_template_key, formData.banner_url, formData.logo_url, formData.banner_primary_color, formData.banner_accent_color, templates]);
+  }, [activeTab, formData.confirmation_template_id, formData.confirmation_template_key, formData.banner_url, formData.logo_url, formData.banner_primary_color, formData.banner_accent_color, formData.title, formData.start_date, formData.location, formData.address, templates]);
 
   // Write preview into iframe
   useEffect(() => {
