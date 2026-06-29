@@ -49,10 +49,16 @@ def read_events(
                     events.append(ae)
         
     result = []
+    # Batch-fetch clients to solve N+1 queries
+    client_ids = list({e.client_id for e in events if e.client_id})
+    clients_map = {}
+    if client_ids:
+        clients = session.exec(select(Client).where(Client.id.in_(client_ids))).all()
+        clients_map = {c.id: c.dict() for c in clients}
+
     for event in events:
-        client = session.get(Client, event.client_id) if event.client_id else None
         event_dict = event.dict()
-        event_dict["client"] = client.dict() if client else None
+        event_dict["client"] = clients_map.get(event.client_id) if event.client_id else None
         result.append(event_dict)
     return result
 
