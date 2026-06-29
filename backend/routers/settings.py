@@ -495,55 +495,6 @@ def test_send_template(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to send test email: {str(e)}")
 
-@router.get("/settings/{key}")
-def get_setting(
-    key: str,
-    session: Session = Depends(get_session),
-    current_user: Optional[User] = Depends(get_current_user_from_request)
-):
-    if not current_user:
-        raise HTTPException(status_code=401, detail="Authentication required")
-    setting = session.exec(select(SystemSetting).where(SystemSetting.key == key)).first()
-    if not setting:
-        return {"key": key, "value": {}}
-    return setting
-
-@router.put("/settings/{key}")
-def update_setting(
-    key: str,
-    data: Dict[str, Any],
-    session: Session = Depends(get_session),
-    current_user: Optional[User] = Depends(get_current_user_from_request)
-):
-    if not current_user or current_user.role not in ["admin", "manager"]:
-        raise HTTPException(status_code=403, detail="Clearance level not met to update settings")
-    setting = session.exec(select(SystemSetting).where(SystemSetting.key == key)).first()
-    if not setting:
-        setting = SystemSetting(key=key, value=data)
-    else:
-        setting.value = data
-    session.add(setting)
-    session.commit()
-    session.refresh(setting)
-    return setting
-
-@router.post("/settings/migrate")
-def trigger_database_migrations(
-    session: Session = Depends(get_session),
-    current_user: Optional[User] = Depends(get_current_user_from_request)
-):
-    if not current_user:
-        raise HTTPException(status_code=401, detail="Authentication required")
-    if current_user.role != "admin":
-        raise HTTPException(status_code=403, detail="Admin authorization required")
-        
-    from backend.migrate import run_migrations
-    try:
-        run_migrations()
-        return {"status": "success", "message": "Database migrations completed successfully."}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Migrations failed: {str(e)}")
-
 # Pydantic models for RegistrationFormTemplate
 class RegistrationFormTemplateCreate(BaseModel):
     name: str
@@ -669,6 +620,57 @@ def delete_registration_template(
     session.delete(template)
     session.commit()
     return {"ok": True, "message": "Template deleted successfully"}
+
+@router.get("/settings/{key}")
+def get_setting(
+    key: str,
+    session: Session = Depends(get_session),
+    current_user: Optional[User] = Depends(get_current_user_from_request)
+):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    setting = session.exec(select(SystemSetting).where(SystemSetting.key == key)).first()
+    if not setting:
+        return {"key": key, "value": {}}
+    return setting
+
+@router.put("/settings/{key}")
+def update_setting(
+    key: str,
+    data: Dict[str, Any],
+    session: Session = Depends(get_session),
+    current_user: Optional[User] = Depends(get_current_user_from_request)
+):
+    if not current_user or current_user.role not in ["admin", "manager"]:
+        raise HTTPException(status_code=403, detail="Clearance level not met to update settings")
+    setting = session.exec(select(SystemSetting).where(SystemSetting.key == key)).first()
+    if not setting:
+        setting = SystemSetting(key=key, value=data)
+    else:
+        setting.value = data
+    session.add(setting)
+    session.commit()
+    session.refresh(setting)
+    return setting
+
+@router.post("/settings/migrate")
+def trigger_database_migrations(
+    session: Session = Depends(get_session),
+    current_user: Optional[User] = Depends(get_current_user_from_request)
+):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin authorization required")
+        
+    from backend.migrate import run_migrations
+    try:
+        run_migrations()
+        return {"status": "success", "message": "Database migrations completed successfully."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Migrations failed: {str(e)}")
+
+# registration form templates CRUD moved above wildcard settings routes
 
 
 
