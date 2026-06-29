@@ -109,13 +109,15 @@ const compileTemplatePreview = (
   const meta = parseTemplateMeta(bodyHtml) || {};
   const primary = primaryColor || meta.primary_color || "#0f172a";
   const accent = accentColor || meta.accent_color || "#94a3b8";
-  const bannerUrl = eventBannerUrl || meta.banner_image_url || "";
-  const logoUrl = eventLogoUrl || meta.logo_image_url || "";
-  const showBanner = !!(bannerUrl);
+  const usesCustomTemplate = !!(eventData?.confirmation_template_id);
+  const showBanner = !!(usesCustomTemplate && meta.banner_image_url && meta.show_banner === "true");
+  const bannerUrl = showBanner ? meta.banner_image_url : "";
 
   const bannerHtml = showBanner
     ? `<tr><td align="center" style="padding:0;margin:0;line-height:0;"><img src="${bannerUrl}" width="600" style="width:100%;max-width:600px;height:auto;display:block;border-top-left-radius:38px;border-top-right-radius:38px;" alt="Event Banner"/></td></tr>`
     : "";
+
+  const logoUrl = eventLogoUrl || meta.logo_image_url || "";
 
   const logoHtml = logoUrl
     ? `<td align="right" valign="middle"><img src="${logoUrl}" style="max-height:48px;max-width:120px;object-fit:contain;" alt="Logo"/></td>`
@@ -318,6 +320,7 @@ const compileTemplatePreview = (
 
   // Global placeholder replacements inside the template HTML
   const finalHtml = html
+    .replaceAll("{banner_html}", bannerHtml)
     .replaceAll("{logo_html}", logoHtml)
     .replaceAll("{details_html}", detailsHtml)
     .replaceAll("{qr_block_html}", qrBlockHtml)

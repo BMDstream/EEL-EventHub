@@ -222,16 +222,18 @@ def send_confirmation_email(
     # If this event uses a template selected by ID from the UI, we MUST NOT
     # inject any banner from the event config. The template HTML is the sole
     # authority for its own banner. This prevents the double-banner bug.
-    uses_custom_template_id = config.get("uses_custom_template_id", False)
-    if uses_custom_template_id:
-        if meta:
+    uses_custom_template_id = config.get("uses_custom_template_id", False) if config else False
+    if uses_custom_template_id and meta and meta.get("banner_image_url") and meta.get("show_banner") == "true":
+        show_banner = True
+        banner_url = meta.get("banner_image_url")
+        primary_color = meta.get("primary_color", primary_color)
+        accent_color = meta.get("accent_color", accent_color)
+    else:
+        show_banner = False
+        banner_url = ""
+        if uses_custom_template_id and meta:
             primary_color = meta.get("primary_color", primary_color)
             accent_color = meta.get("accent_color", accent_color)
-        banner_url = config.get("banner_url") or (meta.get("banner_image_url") if meta else "") or ""
-        show_banner = bool(banner_url)
-    else:
-        show_banner = show_banner_meta == "true" or (show_banner_meta != "false" and (config.get("show_banner_in_email", False) or t_key == "banner_email"))
-        banner_url = (meta.get("banner_image_url") if meta else None) or config.get("banner_url") or "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800"
 
     banner_html = ""
     if show_banner:
@@ -558,7 +560,7 @@ def send_confirmation_email(
                 "included_html": included_html
             }
             db_subject = parse_template(db_template.subject, variables)
-            db_body = inject_banner_placeholder_if_missing(db_template.body_html)
+            db_body = db_template.body_html
             db_html = parse_template(db_body, variables)
     except Exception as ex:
         print(f"Error applying database template override: {ex}")
@@ -746,7 +748,7 @@ def send_broadcast_email(
 
         if db_template:
             p_subject = parse_template(db_template.subject, variables)
-            db_body = inject_banner_placeholder_if_missing(db_template.body_html)
+            db_body = db_template.body_html
             html_content = parse_template(db_body, variables)
         else:
             # Fallback to hardcoded layout
