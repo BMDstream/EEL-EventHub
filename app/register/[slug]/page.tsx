@@ -1775,18 +1775,7 @@ function PublicRegistrationPageContent() {
         }
         ${eventTextColor ? `
           .client-form-text-custom,
-          .client-form-text-custom h1,
-          .client-form-text-custom h2,
-          .client-form-text-custom h3,
-          .client-form-text-custom p,
-          .client-form-text-custom span,
-          .client-form-text-custom div,
-          .client-form-text-custom label,
-          .client-form-text-custom li {
-            color: ${eventTextColor} !important;
-          }
-          .client-form-text-custom input,
-          .client-form-text-custom select {
+          .client-form-text-custom * {
             color: ${eventTextColor} !important;
           }
           .client-form-text-custom input::placeholder {

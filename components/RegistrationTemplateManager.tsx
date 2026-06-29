@@ -1098,18 +1098,7 @@ export default function RegistrationTemplateManager() {
               {selectedTemplate.theme_config.form_text_color && (
                 <style dangerouslySetInnerHTML={{ __html: `
                   .preview-form-text-custom,
-                  .preview-form-text-custom h1,
-                  .preview-form-text-custom h2,
-                  .preview-form-text-custom h3,
-                  .preview-form-text-custom p,
-                  .preview-form-text-custom span,
-                  .preview-form-text-custom div,
-                  .preview-form-text-custom label,
-                  .preview-form-text-custom li {
-                    color: ${selectedTemplate.theme_config.form_text_color} !important;
-                  }
-                  .preview-form-text-custom input,
-                  .preview-form-text-custom select {
+                  .preview-form-text-custom * {
                     color: ${selectedTemplate.theme_config.form_text_color} !important;
                   }
                   .preview-form-text-custom input::placeholder {
