@@ -1097,12 +1097,16 @@ export default function RegistrationTemplateManager() {
             >
               {selectedTemplate.theme_config.form_text_color && (
                 <style dangerouslySetInnerHTML={{ __html: `
-                  .preview-form-text-custom,
-                  .preview-form-text-custom * {
+                  .preview-form-text-custom h1,
+                  .preview-form-text-custom h2,
+                  .preview-form-text-custom h3,
+                  .preview-form-text-custom h4,
+                  .preview-form-text-custom p,
+                  .preview-form-text-custom span,
+                  .preview-form-text-custom label,
+                  .preview-form-text-custom li,
+                  .preview-form-text-custom legend {
                     color: ${selectedTemplate.theme_config.form_text_color} !important;
-                  }
-                  .preview-form-text-custom input::placeholder {
-                    color: ${selectedTemplate.theme_config.form_text_color}80 !important;
                   }
                 `}} />
               )}
@@ -1130,12 +1134,18 @@ export default function RegistrationTemplateManager() {
                   <>
                     {/* Header */}
                     <div className="border-b border-slate-100 dark:border-slate-800 pb-4">
-                      <h3 className="text-xl font-bold text-[#0f172a] dark:text-white">
+                      <h3 
+                        className="text-xl font-bold text-[#0f172a] dark:text-white"
+                        style={{ color: selectedTemplate.theme_config.form_text_color || undefined }}
+                      >
                         {selectedTemplate.theme_config.form_heading !== undefined && selectedTemplate.theme_config.form_heading !== null
                           ? formatHeading(selectedTemplate.theme_config.form_heading)
                           : formatHeading(selectedTemplate.name)}
                       </h3>
-                      <p className="text-slate-400 text-[10px] font-medium uppercase tracking-wider mt-1">
+                      <p 
+                        className="text-slate-400 text-[10px] font-medium uppercase tracking-wider mt-1"
+                        style={{ color: selectedTemplate.theme_config.form_text_color || undefined }}
+                      >
                         {selectedTemplate.theme_config.form_subheading !== undefined && selectedTemplate.theme_config.form_subheading !== null
                           ? selectedTemplate.theme_config.form_subheading
                           : selectedTemplate.description || "Public Registration Form"}
