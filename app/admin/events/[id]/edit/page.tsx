@@ -448,7 +448,7 @@ export default function EditEventPage() {
       .then((data) => setClients(data))
       .catch((err) => console.error("Failed to fetch clients", err));
 
-    fetch("/api/py/settings/registration-templates")
+    fetch("/api/py/settings/registration-templates", { headers: { "x-user-email": session.user.email } })
       .then((res) => res.json())
       .then((data) => { if (Array.isArray(data)) setRegTemplates(data); })
       .catch((err) => console.error("Failed to load registration templates", err));

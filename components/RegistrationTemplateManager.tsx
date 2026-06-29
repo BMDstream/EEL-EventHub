@@ -76,9 +76,12 @@ export default function RegistrationTemplateManager() {
 
   // Load all templates
   const loadTemplates = async (selectIdToActivate?: number) => {
+    if (!session?.user?.email) return;
     try {
       setLoading(true);
-      const res = await fetch("/api/py/settings/registration-templates");
+      const res = await fetch("/api/py/settings/registration-templates", {
+        headers: { "x-user-email": session.user.email }
+      });
       if (!res.ok) throw new Error("Failed to load registration templates");
       const data = await res.json();
       setTemplates(data);
@@ -101,8 +104,10 @@ export default function RegistrationTemplateManager() {
   };
 
   useEffect(() => {
-    loadTemplates();
-  }, []);
+    if (session?.user?.email) {
+      loadTemplates();
+    }
+  }, [session?.user?.email]);
 
   const showNotification = (type: "success" | "error", text: string) => {
     setNotification({ type, text });
@@ -131,7 +136,10 @@ export default function RegistrationTemplateManager() {
     try {
       const res = await fetch("/api/py/settings/registration-templates", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "x-user-email": session?.user?.email || ""
+        },
         body: JSON.stringify({
           name: newTplName,
           description: newTplDesc,
@@ -175,7 +183,10 @@ export default function RegistrationTemplateManager() {
     try {
       const res = await fetch("/api/py/settings/registration-templates", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "x-user-email": session?.user?.email || ""
+        },
         body: JSON.stringify({
           name: `${tpl.name} (Copy)`,
           description: tpl.description || `Copy of ${tpl.name}`,
@@ -201,7 +212,8 @@ export default function RegistrationTemplateManager() {
 
     try {
       const res = await fetch(`/api/py/settings/registration-templates/${id}`, {
-        method: "DELETE"
+        method: "DELETE",
+        headers: { "x-user-email": session?.user?.email || "" }
       });
       if (!res.ok) throw new Error("Failed to delete template");
       showNotification("success", `Template "${name}" deleted.`);
@@ -218,7 +230,10 @@ export default function RegistrationTemplateManager() {
       setSaving(true);
       const res = await fetch(`/api/py/settings/registration-templates/${selectedId}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "x-user-email": session?.user?.email || ""
+        },
         body: JSON.stringify({
           name: selectedTemplate.name,
           description: selectedTemplate.description,
