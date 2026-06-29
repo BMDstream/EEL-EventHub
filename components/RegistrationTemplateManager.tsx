@@ -39,6 +39,9 @@ interface RegistrationFormTemplate {
     force_sentence_case?: boolean;
     strip_trailing_periods?: boolean;
     force_text_visibility?: boolean;
+    attendance_label?: string;
+    attending_label?: string;
+    not_attending_label?: string;
   };
   layout_schema: FormSection[];
   post_submit_config: {
@@ -664,6 +667,42 @@ export default function RegistrationTemplateManager() {
                       </div>
 
                       <div className="space-y-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+                        <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Attendance Selector Config</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div className="space-y-1">
+                            <label className="text-[8px] font-black uppercase tracking-widest text-slate-400 ml-1">Question Label</label>
+                            <input 
+                              type="text" 
+                              value={selectedTemplate.theme_config.attendance_label || ""} 
+                              onChange={(e) => updateThemeConfig("attendance_label", e.target.value)}
+                              placeholder="e.g. Attendance Status"
+                              className="w-full px-4 py-2.5 rounded-xl border border-slate-100 font-bold text-xs bg-slate-50 dark:bg-slate-800 dark:border-slate-700 text-[#0f172a] dark:text-white" 
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[8px] font-black uppercase tracking-widest text-slate-400 ml-1">"Attending" Option</label>
+                            <input 
+                              type="text" 
+                              value={selectedTemplate.theme_config.attending_label || ""} 
+                              onChange={(e) => updateThemeConfig("attending_label", e.target.value)}
+                              placeholder="e.g. I am attending"
+                              className="w-full px-4 py-2.5 rounded-xl border border-slate-100 font-bold text-xs bg-slate-50 dark:bg-slate-800 dark:border-slate-700 text-[#0f172a] dark:text-white" 
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[8px] font-black uppercase tracking-widest text-slate-400 ml-1">"Not Attending" Option</label>
+                            <input 
+                              type="text" 
+                              value={selectedTemplate.theme_config.not_attending_label || ""} 
+                              onChange={(e) => updateThemeConfig("not_attending_label", e.target.value)}
+                              placeholder="e.g. Unable to attend"
+                              className="w-full px-4 py-2.5 rounded-xl border border-slate-100 font-bold text-xs bg-slate-50 dark:bg-slate-800 dark:border-slate-700 text-[#0f172a] dark:text-white" 
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-4 pt-4 border-t border-slate-100 dark:border-slate-800">
                         <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Typography & Accessibility Rules</h4>
                         
                         <div className="space-y-3">
@@ -1057,6 +1096,21 @@ export default function RegistrationTemplateManager() {
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-slate-500 block">Email Address *</label>
                         <input type="email" disabled placeholder="john.doe@company.com" className="w-full px-4 py-2.5 rounded-xl border border-slate-100 bg-slate-50/50 text-xs font-semibold" />
+                      </div>
+
+                      {/* Attendance Status preview */}
+                      <div className="space-y-2 pt-2">
+                        <label className="text-[10px] font-bold text-slate-500 block">
+                          {formatHeading(selectedTemplate.theme_config.attendance_label || "Attendance Status")} *
+                        </label>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="py-2.5 rounded-xl border border-slate-200 bg-slate-50/20 text-center text-xs font-bold text-[#0f172a] dark:text-white">
+                            {selectedTemplate.theme_config.attending_label || "I am attending"}
+                          </div>
+                          <div className="py-2.5 rounded-xl border border-slate-150 bg-slate-50/50 text-center text-xs font-bold text-slate-400">
+                            {selectedTemplate.theme_config.not_attending_label || "Unable to attend"}
+                          </div>
+                        </div>
                       </div>
                     </div>
 

@@ -1596,8 +1596,14 @@ function PublicRegistrationPageContent() {
         </div>
       )}
       <div className="mb-12">
-        <h2 className={style.heading}>{event?.registration_form_template ? formatLabel("Register.") : "Register."}</h2>
-        <p className={style.subHeading}>Secure your credentials for this exclusive engagement.</p>
+        <h2 className={style.heading}>
+          {event?.registration_form_template 
+            ? formatLabel(event.registration_form_template.name) 
+            : "Register."}
+        </h2>
+        <p className={style.subHeading}>
+          {event?.registration_form_template?.description || "Secure your credentials for this exclusive engagement."}
+        </p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-8">
@@ -1666,7 +1672,9 @@ function PublicRegistrationPageContent() {
 
           <div className={style.rsvpBorder}>
             <label className={style.label}>
-              Attendance Status <span className={`${isLightTheme ? "client-text-primary" : "client-text-accent"} ml-0.5 font-bold`}>*</span>
+              {event?.registration_form_template?.theme_config?.attendance_label 
+                ? formatLabel(event.registration_form_template.theme_config.attendance_label) 
+                : "Attendance Status"} <span className={`${isLightTheme ? "client-text-primary" : "client-text-accent"} ml-0.5 font-bold`}>*</span>
             </label>
             <div className="grid grid-cols-2 gap-4">
               <button
@@ -1674,14 +1682,14 @@ function PublicRegistrationPageContent() {
                 onClick={() => setIsAttending(true)}
                 className={style.btnAttending(isAttending === true)}
               >
-                I am attending
+                {event?.registration_form_template?.theme_config?.attending_label || "I am attending"}
               </button>
               <button
                 type="button"
                 onClick={() => setIsAttending(false)}
                 className={style.btnNotAttending(isAttending === false)}
               >
-                Unable to attend
+                {event?.registration_form_template?.theme_config?.not_attending_label || "Unable to attend"}
               </button>
             </div>
           </div>
