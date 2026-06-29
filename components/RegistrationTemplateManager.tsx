@@ -1105,7 +1105,8 @@ export default function RegistrationTemplateManager() {
                   .preview-form-text-custom span,
                   .preview-form-text-custom label,
                   .preview-form-text-custom li,
-                  .preview-form-text-custom legend {
+                  .preview-form-text-custom legend,
+                  .preview-form-text-custom select {
                     color: ${selectedTemplate.theme_config.form_text_color} !important;
                   }
                 `}} />

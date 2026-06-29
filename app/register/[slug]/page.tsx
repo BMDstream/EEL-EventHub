@@ -330,11 +330,11 @@ function PublicRegistrationPageContent() {
               <select
                 required={field.required}
                 onChange={(e) => handleCustomChange(field.id, e.target.value)}
-                className={`${style.select} ${event.registration_form_template?.theme_config?.force_text_visibility ? "text-black bg-white" : ""}`}
+                className={style.select}
               >
-                <option value="" className={optionColorClass}>Select Option</option>
+                <option value="">Select Option</option>
                 {field.options?.map((opt: string) => (
-                  <option key={opt} value={opt} className={optionColorClass}>
+                  <option key={opt} value={opt}>
                     {opt}
                   </option>
                 ))}
@@ -1775,7 +1775,7 @@ function PublicRegistrationPageContent() {
         }
         ${eventTextColor ? `
           .client-form-text-custom,
-          .client-form-text-custom * {
+          .client-form-text-custom *:not(option) {
             color: ${eventTextColor} !important;
           }
           .client-form-text-custom input::placeholder {
