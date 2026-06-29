@@ -2,7 +2,7 @@
 
 import { useEffect, useState, Suspense } from "react";
 import { useParams, useSearchParams } from "next/navigation";
-import { Calendar, MapPin, CheckCircle2, Loader2, AlertCircle, ChevronDown } from "lucide-react";
+import { Calendar, MapPin, CheckCircle2, Loader2, AlertCircle, ChevronDown, Users } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 
 const THEME_DEFAULTS = {
@@ -163,8 +163,9 @@ interface Event {
   background_url?: string;
   collect_company?: boolean;
   company_required?: boolean;
-  custom_fields_schema?: FormField[];
+  custom_fields_schema?: any[];
   client?: Client;
+  registration_form_template?: any;
   banner_settings?: {
     size?: string;
     position?: string;
@@ -213,6 +214,235 @@ function PublicRegistrationPageContent() {
   const [customAnswers, setCustomAnswers] = useState<Record<string, any>>({});
   const [disclaimerAccepted, setDisclaimerAccepted] = useState(false);
 
+  const getFlatFields = (): any[] => {
+    if (!event?.custom_fields_schema) return [];
+    if (event.custom_fields_schema.length > 0 && "fields" in event.custom_fields_schema[0]) {
+      return (event.custom_fields_schema as any).reduce((acc: any[], sec: any) => {
+        return [...acc, ...(sec.fields || [])];
+      }, []);
+    }
+    return event.custom_fields_schema;
+  };
+
+  const getPostSubmitTitle = () => {
+    const customTitle = event?.registration_form_template?.post_submit_config?.onscreen_title;
+    if (customTitle) return formatSuccessText(customTitle);
+    return statusMessage || (isAttending ? "Access Granted." : "Response Recorded.");
+  };
+
+  const getPostSubmitDesc = () => {
+    const customDesc = event?.registration_form_template?.post_submit_config?.onscreen_description;
+    if (customDesc) return formatSuccessText(customDesc);
+    return (
+      <>
+        Your registration for <span className={`${style.textMain} font-bold`}>{event?.title}</span> is {isAttending ? 'confirmed' : 'submitted'}.  
+        {isAttending 
+          ? ` Verification has been dispatched to `
+          : ` We've noted that you are unable to attend. Thank you for letting us know. `}
+        {isAttending && <span className={`${isLightTheme ? "client-text-primary" : "client-text-accent"} font-bold`}>{formData.email}</span>}
+      </>
+    );
+  };
+
+  const getClearanceLabel = () => {
+    return event?.registration_form_template?.post_submit_config?.clearance_label || "Unique Clearance ID";
+  };
+
+  const formatSuccessText = (templateText: string) => {
+    if (!templateText) return "";
+    const clearanceCode = registeredPin || (registeredId ? registeredId.substring(0, 8) : "");
+    return templateText
+      .replace(/\[Name\]/g, `${formData.first_name || ""} ${formData.last_name || ""}`.trim())
+      .replace(/\[Event Name\]/g, event?.title || "")
+      .replace(/\[Email Address\]/g, formData.email || "")
+      .replace(/\[Clearance ID\]/g, clearanceCode);
+  };
+
+  const formatLabel = (txt: string) => {
+    if (!txt) return "";
+    let res = txt;
+    if (event?.registration_form_template?.theme_config?.force_sentence_case) {
+      res = res.charAt(0).toUpperCase() + res.slice(1).toLowerCase();
+    }
+    if (event?.registration_form_template?.theme_config?.strip_trailing_periods) {
+      res = res.replace(/\.+$/, "");
+    }
+    return res;
+  };
+
+  const renderCustomFields = () => {
+    if (!event || !event.custom_fields_schema || event.custom_fields_schema.length === 0) return null;
+
+    const isSectioned = "fields" in event.custom_fields_schema[0];
+
+    const renderField = (field: any) => {
+      if (field.inactive) return null;
+
+      const isPartnerRelated = field.type === "partner_card" || 
+                               field.label?.toLowerCase().includes("partner") || 
+                               field.description?.toLowerCase().includes("partner");
+      if (isUpdateFlow && isPartnerRelated) {
+        return null;
+      }
+
+      if (field.dependsOn) {
+        const parentAnswers = customAnswers;
+        const parentVal = parentAnswers[field.dependsOn.fieldId];
+        const parentValStr = typeof parentVal === "boolean" ? String(parentVal) : parentVal;
+        if (parentValStr !== field.dependsOn.value) {
+          return null;
+        }
+      }
+
+      const optionColorClass = event.registration_form_template?.theme_config?.force_text_visibility 
+        ? "text-black bg-white" 
+        : isLightTheme ? "text-black" : "text-white";
+
+      return (
+        <div key={field.id} className="space-y-3">
+          <label className={style.label}>
+            {formatLabel(field.label)} {field.required && <span className={`${isLightTheme ? "client-text-primary" : "client-text-accent"} ml-0.5 font-bold`}>*</span>}
+          </label>
+          
+          {field.description && (
+            <div className={`p-4 rounded-[1.2rem] flex items-start gap-3 text-xs leading-normal border ${
+              isLightTheme
+                ? "bg-slate-100/80 border-slate-200 text-slate-600" 
+                : "bg-black/30 border-white/5 text-zinc-400"
+            }`}>
+              <span className="shrink-0 text-emerald-500">✅</span>
+              <span className="italic font-medium">{field.description}</span>
+            </div>
+          )}
+          
+          {field.type === "text" && (
+            <input
+              required={field.required}
+              type="text"
+              placeholder="Enter your answer"
+              onChange={(e) => handleCustomChange(field.id, e.target.value)}
+              className={style.input}
+            />
+          )}
+
+          {field.type === "select" && (
+            <div className="relative">
+              <select
+                required={field.required}
+                onChange={(e) => handleCustomChange(field.id, e.target.value)}
+                className={`${style.select} ${event.registration_form_template?.theme_config?.force_text_visibility ? "text-black bg-white" : ""}`}
+              >
+                <option value="" className={optionColorClass}>Select Option</option>
+                {field.options?.map((opt: string) => (
+                  <option key={opt} value={opt} className={optionColorClass}>
+                    {opt}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-6 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" size={20} />
+            </div>
+          )}
+
+          {field.type === "checkbox" && (
+            <label className={`${style.checkbox} ${event.registration_form_template?.theme_config?.force_text_visibility ? "text-black" : ""}`}>
+               <input 
+                 type="checkbox" 
+                 onChange={(e) => handleCustomChange(field.id, e.target.checked)}
+                 className={style.checkboxInput || "w-6 h-6 rounded-lg bg-zinc-900 border-white/10 client-checkbox transition-all"} 
+               />
+               <span className="select-none font-bold ml-3">{formatLabel(field.label)}</span>
+            </label>
+          )}
+
+          {field.type === "partner_card" && (
+            <div className={`p-8 rounded-[2rem] border ${
+              isLightTheme 
+                ? "bg-slate-50/50 border-slate-200/60" 
+                : "bg-zinc-900/50 border-white/5"
+            } space-y-6`}>
+              <div className="flex items-center gap-3">
+                <Users className={isLightTheme ? "text-[#1e293b]" : "text-yellow-400"} size={20} />
+                <p className={`text-xs font-black uppercase tracking-widest ${isLightTheme ? "text-[#1e293b]" : "text-white"}`}>Corporate Partner Details</p>
+              </div>
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider leading-relaxed">
+                Provide your corporate partner's details to automatically link your registrations.
+              </p>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-slate-500">First Name {field.required && "*"}</label>
+                  <input
+                    type="text"
+                    required={field.required}
+                    onChange={(e) => {
+                      const prev = customAnswers[field.id] || {};
+                      handleCustomChange(field.id, { ...prev, first_name: e.target.value });
+                    }}
+                    placeholder="Partner name"
+                    className={style.input}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-slate-500">Last Name {field.required && "*"}</label>
+                  <input
+                    type="text"
+                    required={field.required}
+                    onChange={(e) => {
+                      const prev = customAnswers[field.id] || {};
+                      handleCustomChange(field.id, { ...prev, last_name: e.target.value });
+                    }}
+                    placeholder="Partner surname"
+                    className={style.input}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-slate-500">Corporate Email {field.required && "*"}</label>
+                <input
+                  type="email"
+                  required={field.required}
+                  onChange={(e) => {
+                    const prev = customAnswers[field.id] || {};
+                    handleCustomChange(field.id, { ...prev, email: e.target.value });
+                  }}
+                  placeholder="partner@company.com"
+                  className={style.input}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    if (isSectioned) {
+      return (
+        <div className="space-y-10">
+          {(event.custom_fields_schema as any).map((sec: any) => (
+            <div key={sec.id} className="space-y-6">
+              <div className="pt-6 border-t border-slate-100/10">
+                <p className={`text-[10px] font-black uppercase tracking-[0.3em] ${isLightTheme ? "client-text-primary" : "client-text-accent"}`}>
+                  {formatLabel(sec.title)}
+                </p>
+              </div>
+              <div className="space-y-6">
+                {(sec.fields || []).map((f: any) => renderField(f))}
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-8">
+        <div className="pt-6">
+          <p className={`text-[10px] font-black uppercase tracking-[0.3em] ${isLightTheme ? "client-text-primary" : "client-text-accent"}`}>Additional Details</p>
+        </div>
+        {event.custom_fields_schema.map((f: any) => renderField(f))}
+      </div>
+    );
+  };
+
   // Pre-fill fields from search params (staged partner completion)
   useEffect(() => {
     const emailParam = searchParams.get("email");
@@ -231,12 +461,13 @@ function PublicRegistrationPageContent() {
 
   // Prune any custom answers for fields that are hidden because of conditional branching
   useEffect(() => {
-    if (!event?.custom_fields_schema) return;
+    const flatFields = getFlatFields();
+    if (flatFields.length === 0) return;
     
     let changed = false;
     const newAnswers = { ...customAnswers };
     
-    for (const field of event.custom_fields_schema) {
+    for (const field of flatFields) {
       if (field.dependsOn) {
         const parentVal = newAnswers[field.dependsOn.fieldId];
         const parentValStr = typeof parentVal === "boolean" ? String(parentVal) : parentVal;
@@ -316,8 +547,9 @@ function PublicRegistrationPageContent() {
     }
     
     // Validate partner card fields (identical check and corporate domain validation)
-    if (isAttending && event.custom_fields_schema) {
-      for (const field of event.custom_fields_schema) {
+    const flatFields = getFlatFields();
+    if (isAttending && flatFields.length > 0) {
+      for (const field of flatFields) {
         if (field.inactive) continue;
         if (field.type === "partner_card") {
           if (isUpdateFlow) continue;
@@ -1354,15 +1586,17 @@ function PublicRegistrationPageContent() {
     </div>
   );
 
+  const customFormBg = event?.registration_form_template?.theme_config?.form_bg_color;
+
   const registrationForm = event ? (
-    <div className={`${style.bodyBlock || "max-w-md w-full mx-auto relative z-10 py-12"} client-form-text-custom`}>
+    <div className={`${style.bodyBlock || "max-w-md w-full mx-auto relative z-10 py-12"} client-form-text-custom`} style={customFormBg ? { backgroundColor: customFormBg, padding: '2rem', borderRadius: '2.5rem' } : undefined}>
       {formBannerUrl && (
         <div className="mb-8 rounded-2xl overflow-hidden border border-slate-200/10 dark:border-white/5 shadow-lg">
           <img src={formBannerUrl} alt="Event Banner" className="w-full h-auto object-cover max-h-80 md:max-h-96" />
         </div>
       )}
       <div className="mb-12">
-        <h2 className={style.heading}>Register.</h2>
+        <h2 className={style.heading}>{event?.registration_form_template ? formatLabel("Register.") : "Register."}</h2>
         <p className={style.subHeading}>Secure your credentials for this exclusive engagement.</p>
       </div>
 
@@ -1453,142 +1687,7 @@ function PublicRegistrationPageContent() {
           </div>
         </div>
 
-        {isAttending && event.custom_fields_schema && event.custom_fields_schema.length > 0 && (
-          <div className="space-y-8">
-            <div className="pt-6">
-              <p className={`text-[10px] font-black uppercase tracking-[0.3em] ${isLightTheme ? "client-text-primary" : "client-text-accent"}`}>Additional Details</p>
-            </div>
-            {event.custom_fields_schema.map((field) => {
-              if (field.inactive) {
-                return null;
-              }
-
-              // Hide partner card field & partner-related details if in update flow
-              const isPartnerRelated = field.type === "partner_card" || 
-                                       field.label?.toLowerCase().includes("partner") || 
-                                       field.description?.toLowerCase().includes("partner");
-              if (isUpdateFlow && isPartnerRelated) {
-                return null;
-              }
-
-              // Evaluation of conditional rendering
-              if (field.dependsOn) {
-                const parentVal = customAnswers[field.dependsOn.fieldId];
-                const parentValStr = typeof parentVal === "boolean" ? String(parentVal) : parentVal;
-                if (parentValStr !== field.dependsOn.value) {
-                  return null;
-                }
-              }
-
-              return (
-                <div key={field.id} className="space-y-3">
-                  <label className={style.label}>
-                    {field.label} {field.required && <span className={`${isLightTheme ? "client-text-primary" : "client-text-accent"} ml-0.5 font-bold`}>*</span>}
-                  </label>
-                  
-                  {field.description && (
-                    <div className={`p-4 rounded-[1.2rem] flex items-start gap-3 text-xs leading-normal border ${
-                      isLightTheme
-                        ? "bg-slate-100/80 border-slate-200 text-slate-600" 
-                        : "bg-black/30 border-white/5 text-zinc-400"
-                    }`}>
-                      <span className="shrink-0 text-emerald-500">✅</span>
-                      <span className="italic font-medium">{field.description}</span>
-                    </div>
-                  )}
-                  
-                  {field.type === "text" && (
-                    <input
-                      required={field.required}
-                      type="text"
-                      placeholder="Enter your answer"
-                      onChange={(e) => handleCustomChange(field.id, e.target.value)}
-                      className={style.input}
-                    />
-                  )}
-
-                  {field.type === "select" && (
-                    <div className="relative">
-                      <select
-                        required={field.required}
-                        onChange={(e) => handleCustomChange(field.id, e.target.value)}
-                        className={style.select}
-                      >
-                        <option value="" className={isLightTheme ? "text-black" : "text-white"}>Select Option</option>
-                        {field.options?.map(opt => <option key={opt} value={opt} className={isLightTheme ? "text-black" : "text-white"}>{opt}</option>)}
-                      </select>
-                      <ChevronDown className="absolute right-6 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" size={20} />
-                    </div>
-                  )}
-
-                  {field.type === "checkbox" && (
-                    <label className={style.checkbox}>
-                       <input 
-                         type="checkbox" 
-                         onChange={(e) => handleCustomChange(field.id, e.target.checked)}
-                         className={style.checkboxInput || "w-6 h-6 rounded-lg bg-zinc-900 border-white/10 client-checkbox transition-all"} 
-                       />
-                       <span className={style.checkboxText}>Yes, I agree / confirm</span>
-                    </label>
-                  )}
-
-                  {field.type === "partner_card" && (
-                    <div className={`space-y-6 p-6 rounded-2xl border ${
-                      isLightTheme 
-                        ? "bg-slate-50 border-slate-200 text-slate-850" 
-                        : "bg-zinc-900/30 border-white/5 text-zinc-100"
-                    }`}>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Partner First Name *</label>
-                          <input
-                            required={field.required}
-                            type="text"
-                            placeholder="e.g. Alan"
-                            value={customAnswers[field.id]?.first_name || ""}
-                            onChange={(e) => handleCustomChange(field.id, {
-                              ...customAnswers[field.id],
-                              first_name: e.target.value
-                            })}
-                            className={style.input}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Partner Last Name *</label>
-                          <input
-                            required={field.required}
-                            type="text"
-                            placeholder="e.g. Turing"
-                            value={customAnswers[field.id]?.last_name || ""}
-                            onChange={(e) => handleCustomChange(field.id, {
-                              ...customAnswers[field.id],
-                              last_name: e.target.value
-                            })}
-                            className={style.input}
-                          />
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Partner Email *</label>
-                        <input
-                          required={field.required}
-                          type="email"
-                          placeholder="partner@company.com"
-                          value={customAnswers[field.id]?.email || ""}
-                          onChange={(e) => handleCustomChange(field.id, {
-                            ...customAnswers[field.id],
-                            email: e.target.value
-                          })}
-                          className={style.input}
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
+        {isAttending && renderCustomFields()}
 
         {/* Disclaimer & Indemnity */}
         {isAttending && event.disclaimer_enabled && event.disclaimer_text && (
@@ -1629,8 +1728,10 @@ function PublicRegistrationPageContent() {
     </div>
   ) : null;
 
+   const customFont = event?.registration_form_template?.theme_config?.typography_font;
+
   return (
-    <>
+    <div style={customFont ? { fontFamily: customFont } : undefined} className="w-full">
       <style dangerouslySetInnerHTML={{ __html: `
         @keyframes aurora {
           0% { background-position: 0% 50%; }
@@ -1697,7 +1798,7 @@ function PublicRegistrationPageContent() {
         </div>
       ) : registeredId ? (
         <div className={style.successBg}>
-          <div className={`${style.successCard} client-form-text-custom`}>
+          <div className={`${style.successCard} client-form-text-custom`} style={customFormBg ? { backgroundColor: customFormBg } : undefined}>
             {(theme === "cyber_dark" || theme === "midnight_executive" || theme === "logistics_glass") && <div className="absolute top-0 left-0 w-full h-1 client-bg-accent"></div>}
             <div className={`${
               theme === "cyber_dark" || theme === "midnight_executive" || theme === "logistics_glass"
@@ -1711,14 +1812,10 @@ function PublicRegistrationPageContent() {
               <CheckCircle2 className={isLightTheme && theme !== "brutalist_retro" ? "text-white" : "text-black"} size={56} />
             </div>
             <h1 className={`text-4xl font-black mb-6 font-bricolage italic uppercase tracking-tight ${style.textMain}`}>
-              {statusMessage || (isAttending ? "Access Granted." : "Response Recorded.")}
+              {getPostSubmitTitle()}
             </h1>
             <p className={`${style.textMuted} mb-12 font-medium leading-relaxed`}>
-              Your registration for <span className={`${style.textMain} font-bold`}>{event.title}</span> is {isAttending ? 'confirmed' : 'submitted'}. 
-              {isAttending 
-                ? ` Verification has been dispatched to `
-                : ` We've noted that you are unable to attend. Thank you for letting us know. `}
-              {isAttending && <span className={`${isLightTheme ? "client-text-primary" : "client-text-accent"} font-bold`}>{formData.email}</span>}
+              {getPostSubmitDesc()}
             </p>
             {isAttending && (
               <div className={style.successQR}>
@@ -1731,7 +1828,7 @@ function PublicRegistrationPageContent() {
                     />
                   </div>
                 </div>
-                <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 mb-1">Unique Clearance ID</p>
+                <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 mb-1">{getClearanceLabel()}</p>
                 <p className={`text-3xl font-black ${isLightTheme ? "client-text-primary" : "client-text-accent"} tracking-tighter italic font-bricolage`}>
                   {registeredPin || (registeredId ? registeredId.substring(0, 8) : "")}
                 </p>
@@ -1744,6 +1841,23 @@ function PublicRegistrationPageContent() {
           {/* Background Images / Overlay rendering */}
           {style.leftBgImage}
           <div className={style.leftOverlay}></div>
+
+          {/* Background pattern overlay from registration form template */}
+          {event?.registration_form_template?.theme_config?.background_pattern && 
+           event.registration_form_template.theme_config.background_pattern !== "none" && (
+            <div 
+              className="absolute inset-0 z-0 opacity-10 pointer-events-none"
+              style={{
+                background: event.registration_form_template.theme_config.background_pattern === "cyber_dark" 
+                  ? "radial-gradient(circle, #facc15 1px, transparent 1px) 0 0/16px 16px" 
+                  : event.registration_form_template.theme_config.background_pattern === "midnight_executive"
+                    ? "linear-gradient(135deg, #1d4ed8 0%, #1e1b4b 100%)"
+                    : event.registration_form_template.theme_config.background_pattern === "brutalist_retro"
+                      ? "repeating-linear-gradient(45deg, #facc15, #facc15 10px, #000 10px, #000 20px)"
+                      : "none"
+              }}
+            />
+          )}
 
           {layout === "split" && (
             <div className="grid grid-cols-1 lg:grid-cols-2 min-h-screen relative z-10">
@@ -1778,23 +1892,29 @@ function PublicRegistrationPageContent() {
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="flex items-center gap-4">
-                      <Calendar size={24} className={isLightTheme ? "client-text-primary" : "client-text-accent"} />
-                      <div>
-                        <p className={`${style.textMuted} text-[9px] font-black uppercase tracking-[0.25em] mb-1`}>Time Frame</p>
-                        <p className={`text-sm font-bold tracking-tight ${style.textMain}`}>{new Date(event.start_date).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}</p>
+                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${isLightTheme ? "bg-slate-100 text-slate-800" : "bg-white/5 text-[#fff] border border-white/10"}`}>
+                        <Calendar size={22} className={isLightTheme ? "text-[#1e293b]" : "text-yellow-400"} />
+                      </div>
+                      <div className="text-left font-bold">
+                        <p className={`text-[10px] uppercase tracking-widest ${isLightTheme ? "text-slate-400" : "text-zinc-500"}`}>Date &amp; Time</p>
+                        <p className={`text-xs mt-0.5 ${style.textMain}`}>
+                          {event.start_date ? new Date(event.start_date).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : "TBA"}
+                        </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-5">
-                      <div className={style.card}>
-                        <MapPin size={24} className={isLightTheme ? "client-text-primary" : "client-text-accent"} />
+
+                    <div className="flex items-center gap-4">
+                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${isLightTheme ? "bg-slate-100 text-slate-800" : "bg-white/5 text-[#fff] border border-white/10"}`}>
+                        <MapPin size={22} className={isLightTheme ? "text-[#1e293b]" : "text-yellow-400"} />
                       </div>
-                      <div>
-                        <p className={`${style.textMuted} text-[8px] font-black uppercase tracking-[0.3em]`}>Venue</p>
-                        <p className={`text-sm font-bold ${style.textMain}`}>{event.location}</p>
+                      <div className="text-left font-bold">
+                        <p className={`text-[10px] uppercase tracking-widest ${isLightTheme ? "text-slate-400" : "text-zinc-500"}`}>Venue</p>
+                        <p className={`text-xs mt-0.5 ${style.textMain}`}>{event.location || "TBA"}</p>
                       </div>
                     </div>
                   </div>
                 </div>
+
                 {registrationForm}
               </div>
               <div className="mt-8 mb-12 flex justify-center w-full">
@@ -1840,6 +1960,6 @@ function PublicRegistrationPageContent() {
           )}
         </div>
       )}
-    </>
+    </div>
   );
 }

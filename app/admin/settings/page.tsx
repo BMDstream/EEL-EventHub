@@ -38,6 +38,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSession } from "next-auth/react";
+import RegistrationTemplateManager from "@/components/RegistrationTemplateManager";
 
 interface EmailTemplate {
   id?: number;
@@ -843,7 +844,7 @@ export default function SettingsPage() {
   const userRole = (session?.user as any)?.role || "staff";
 
   // Tab State
-  const [activeTab, setActiveTab] = useState<"templates" | "global">("templates");
+  const [activeTab, setActiveTab] = useState<"templates" | "global" | "registration">("templates");
 
   // ==========================================
   // EMAIL TEMPLATE STATES
@@ -1572,6 +1573,23 @@ export default function SettingsPage() {
             }`}
           >
             Global Settings
+          </button>
+          <button
+            onClick={() => {
+              if (hasUnsavedChanges) {
+                if (!confirm("You have unsaved template changes. Switching tabs will lose these changes. Proceed?")) {
+                  return;
+                }
+              }
+              setActiveTab("registration");
+            }}
+            className={`px-8 py-4 font-black uppercase tracking-widest text-xs transition-all border-b-2 -mb-[2px] ${
+              activeTab === "registration"
+                ? "border-yellow-400 text-[#0f172a] dark:text-white"
+                : "border-transparent text-slate-400 hover:text-slate-650 dark:hover:text-slate-300"
+            }`}
+          >
+            Registration Forms
           </button>
         </div>
 
@@ -3020,6 +3038,15 @@ export default function SettingsPage() {
               </button>
             </div>
           </form>
+        )}
+
+        {/* ======================================================== */}
+        {/* REGISTRATION FORM TEMPLATES TAB CONTENT */}
+        {/* ======================================================== */}
+        {activeTab === "registration" && (
+          <div className="bg-slate-50/30 rounded-[2.5rem] p-8 border border-slate-100 dark:bg-slate-900/10 dark:border-slate-800">
+            <RegistrationTemplateManager />
+          </div>
         )}
 
         {/* ======================================================== */}

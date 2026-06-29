@@ -79,6 +79,20 @@ def read_event(slug: str, session: Session = Depends(get_session)):
     client = session.get(Client, event.client_id) if event.client_id else None
     event_dict = event.dict()
     event_dict["client"] = client.dict() if client else None
+    
+    # Resolve registration form template relation
+    reg_tpl = None
+    if getattr(event, "registration_form_template_id", None):
+        from backend.models import RegistrationFormTemplate
+        reg_tpl = session.get(RegistrationFormTemplate, event.registration_form_template_id)
+        
+    if reg_tpl:
+        event_dict["registration_form_template"] = reg_tpl.dict()
+        if reg_tpl.layout_schema:
+            event_dict["custom_fields_schema"] = reg_tpl.layout_schema
+    else:
+        event_dict["registration_form_template"] = None
+        
     return event_dict
 
 @router.get("/id/{event_id}")
@@ -118,6 +132,14 @@ def read_event_by_id(
             
     event_dict = event.dict()
     event_dict["client"] = client.dict() if client else None
+    
+    # Resolve registration form template relation
+    reg_tpl = None
+    if getattr(event, "registration_form_template_id", None):
+        from backend.models import RegistrationFormTemplate
+        reg_tpl = session.get(RegistrationFormTemplate, event.registration_form_template_id)
+    event_dict["registration_form_template"] = reg_tpl.dict() if reg_tpl else None
+    
     event_dict["user_role_for_client"] = user_role
     return event_dict
 
@@ -673,6 +695,7 @@ def duplicate_event(
         background_url=db_event.background_url,
         confirmation_template_key=db_event.confirmation_template_key,
         confirmation_template_id=getattr(db_event, "confirmation_template_id", None),
+        registration_form_template_id=getattr(db_event, "registration_form_template_id", None),
         duration_days=db_event.duration_days,
         registration_active=db_event.registration_active,
         registration_start=db_event.registration_start,
@@ -723,6 +746,7 @@ def duplicate_event(
         "background_url": duplicate.background_url,
         "confirmation_template_key": duplicate.confirmation_template_key,
         "confirmation_template_id": getattr(duplicate, "confirmation_template_id", None),
+        "registration_form_template_id": getattr(duplicate, "registration_form_template_id", None),
         "duration_days": duplicate.duration_days,
         "registration_active": duplicate.registration_active,
         "registration_start": duplicate.registration_start.isoformat() if duplicate.registration_start else None,

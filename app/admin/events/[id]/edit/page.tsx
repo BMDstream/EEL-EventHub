@@ -397,10 +397,11 @@ export default function EditEventPage() {
 
   // Email tab states
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
-  const [loadingTemplates, setLoadingTemplates] = useState(false);
+   const [loadingTemplates, setLoadingTemplates] = useState(false);
   const [previewHtml, setPreviewHtml] = useState("");
   const [saveEmailNotification, setSaveEmailNotification] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const previewFrameRef = useRef<HTMLIFrameElement>(null);
+  const [regTemplates, setRegTemplates] = useState<any[]>([]);
 
   const [formData, setFormData] = useState({
     title: "",
@@ -434,6 +435,7 @@ export default function EditEventPage() {
     disclaimer_text: "",
     confirmation_template_key: "global",
     confirmation_template_id: null as number | null,
+    registration_form_template_id: null as number | null,
   });
 
   // ---------------------------------------------------------------------------
@@ -445,6 +447,11 @@ export default function EditEventPage() {
       .then((res) => res.json())
       .then((data) => setClients(data))
       .catch((err) => console.error("Failed to fetch clients", err));
+
+    fetch("/api/py/settings/registration-templates")
+      .then((res) => res.json())
+      .then((data) => { if (Array.isArray(data)) setRegTemplates(data); })
+      .catch((err) => console.error("Failed to load registration templates", err));
   }, [session]);
 
   useEffect(() => {
@@ -496,6 +503,7 @@ export default function EditEventPage() {
           disclaimer_text: data.disclaimer_text || "",
           confirmation_template_key: data.confirmation_template_key || "global",
           confirmation_template_id: data.confirmation_template_id || null,
+          registration_form_template_id: data.registration_form_template_id || null,
         });
         setOriginalBanner(data.banner_url || "");
         setOriginalLogo(data.logo_url || "");
@@ -590,6 +598,7 @@ export default function EditEventPage() {
       if (formData.background_url !== originalBg) payload.background_url = formData.background_url;
       // Always send confirmation_template_id so it can be cleared back to null
       payload.confirmation_template_id = formData.confirmation_template_id || null;
+      payload.registration_form_template_id = formData.registration_form_template_id || null;
 
       const response = await fetch(`/api/py/events/${id}`, {
         method: "PUT",
@@ -972,6 +981,27 @@ export default function EditEventPage() {
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Intelligence / Description</label>
                 <textarea required name="description" value={formData.description} onChange={handleChange} rows={4}
                   className="w-full px-5 py-4 rounded-2xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-slate-700 bg-slate-50/50 resize-none" />
+              </div>
+
+              <div className="space-y-3">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Registration Form Template</label>
+                <select 
+                  name="registration_form_template_id" 
+                  value={formData.registration_form_template_id || ""} 
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFormData({ 
+                      ...formData, 
+                      registration_form_template_id: val ? parseInt(val) : null 
+                    });
+                  }}
+                  className="w-full px-4 py-3 rounded-xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-xs text-slate-700 bg-slate-50/50 cursor-pointer"
+                >
+                  <option value="">Default Form (Custom questions managed below)</option>
+                  {regTemplates.map((t) => (
+                    <option key={t.id} value={t.id}>{t.name} ({t.description || "No description"})</option>
+                  ))}
+                </select>
               </div>
 
               <div className="space-y-3">

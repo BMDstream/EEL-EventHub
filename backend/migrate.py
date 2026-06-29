@@ -6,7 +6,7 @@ from sqlmodel import Session, SQLModel, select
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from backend.database import engine, init_db
-from backend.models import SystemSetting, Client, EmailTemplate
+from backend.models import SystemSetting, Client, EmailTemplate, RegistrationFormTemplate
 
 def run_migrations():
     print("Starting database schema migration and seeding...")
@@ -86,7 +86,8 @@ def run_migrations():
                 ("company_required", f"BOOLEAN DEFAULT {bool_false}"),
                 ("background_url", "TEXT"),
                 ("confirmation_template_key", "TEXT DEFAULT 'global'"),
-                ("confirmation_template_id", "INTEGER")
+                ("confirmation_template_id", "INTEGER"),
+                ("registration_form_template_id", "INTEGER")
             ]:
                 if col_name not in event_columns:
                     try:
@@ -177,6 +178,61 @@ def run_migrations():
             session.add(default_client)
             session.commit()
             print("Seeded default BMD client.")
+
+        # Seed default registration form template
+        default_form_template = session.exec(select(RegistrationFormTemplate)).first()
+        if not default_form_template:
+            default_form_template = RegistrationFormTemplate(
+                name="Default Registration Form",
+                description="Standard registration form layout with default settings and fields.",
+                theme_config={
+                    "background_pattern": "none",
+                    "form_bg_color": "#ffffff",
+                    "feedback_bg_color": "#f1f5f9",
+                    "typography_font": "Calibri, sans-serif",
+                    "force_sentence_case": True,
+                    "strip_trailing_periods": True,
+                    "force_text_visibility": True
+                },
+                layout_schema=[
+                    {
+                        "id": "personal_info",
+                        "title": "Personal Profile",
+                        "fields": []
+                    },
+                    {
+                        "id": "logistics",
+                        "title": "Experience & Logistics",
+                        "fields": [
+                            {
+                                "id": "attendance_status",
+                                "label": "Are you attending?",
+                                "type": "select",
+                                "required": True,
+                                "options": ["Yes, I will attend", "No, I cannot attend"]
+                            },
+                            {
+                                "id": "dietary_requirements",
+                                "label": "Dietary Requirements",
+                                "type": "text",
+                                "required": False,
+                                "dependsOn": {
+                                    "fieldId": "attendance_status",
+                                    "value": "Yes, I will attend"
+                                }
+                            }
+                        ]
+                    }
+                ],
+                post_submit_config={
+                    "onscreen_title": "YOUR REGISTRATION HAS BEEN CONFIRMED.",
+                    "onscreen_description": "Your registration for [Event Name] is confirmed. Verification has been dispatched to [Email Address]",
+                    "clearance_label": "UNIQUE CLEARANCE ID"
+                }
+            )
+            session.add(default_form_template)
+            session.commit()
+            print("Seeded default registration form template.")
 
         # Sweep settings/clients
         sweep_completed = session.exec(select(SystemSetting).where(SystemSetting.key == "terminology_sweep_completed")).first()

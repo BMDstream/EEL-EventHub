@@ -50,6 +50,7 @@ class Event(SQLModel, table=True):
     background_url: Optional[str] = Field(default=None)
     confirmation_template_key: Optional[str] = Field(default="global")
     confirmation_template_id: Optional[int] = Field(default=None, foreign_key="emailtemplate.id", index=True)
+    registration_form_template_id: Optional[int] = Field(default=None, foreign_key="registrationformtemplate.id", index=True)
     duration_days: int = Field(default=1)
     
     registration_active: bool = Field(default=True)
@@ -121,5 +122,16 @@ class EmailTemplate(SQLModel, table=True):
     name: str
     subject: str
     body_html: str
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+class RegistrationFormTemplate(SQLModel, table=True):
+    __tablename__ = "registrationformtemplate"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    name: str
+    description: Optional[str] = None
+    theme_config: Optional[Dict[str, Any]] = Field(default={}, sa_column=Column(JSON))
+    layout_schema: Optional[List[Dict[str, Any]]] = Field(default=[], sa_column=Column(JSON))
+    post_submit_config: Optional[Dict[str, Any]] = Field(default={}, sa_column=Column(JSON))
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)

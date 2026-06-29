@@ -4,7 +4,7 @@ from sqlalchemy import text
 from typing import List, Dict, Any, Optional
 
 from backend.database import get_session
-from backend.models import User, Client, SystemSetting, Event, EmailTemplate
+from backend.models import User, Client, SystemSetting, Event, EmailTemplate, RegistrationFormTemplate
 from backend.utils import get_current_user_from_request
 from datetime import datetime
 from pydantic import BaseModel
@@ -543,6 +543,132 @@ def trigger_database_migrations(
         return {"status": "success", "message": "Database migrations completed successfully."}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Migrations failed: {str(e)}")
+
+# Pydantic models for RegistrationFormTemplate
+class RegistrationFormTemplateCreate(BaseModel):
+    name: str
+    description: Optional[str] = None
+    theme_config: Optional[Dict[str, Any]] = None
+    layout_schema: Optional[List[Dict[str, Any]]] = None
+    post_submit_config: Optional[Dict[str, Any]] = None
+
+class RegistrationFormTemplateUpdate(BaseModel):
+    name: str
+    description: Optional[str] = None
+    theme_config: Optional[Dict[str, Any]] = None
+    layout_schema: Optional[List[Dict[str, Any]]] = None
+    post_submit_config: Optional[Dict[str, Any]] = None
+
+# ==========================================
+# REGISTRATION FORM TEMPLATES CRUD
+# ==========================================
+
+@router.get("/settings/registration-templates", response_model=List[RegistrationFormTemplate])
+def get_all_registration_templates(
+    session: Session = Depends(get_session),
+    current_user: Optional[User] = Depends(get_current_user_from_request)
+):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    if current_user.role not in ["admin", "manager"]:
+        raise HTTPException(status_code=403, detail="Not authorized to view templates")
+    
+    return session.exec(select(RegistrationFormTemplate)).all()
+
+@router.get("/settings/registration-templates/{tpl_id}", response_model=RegistrationFormTemplate)
+def get_registration_template(
+    tpl_id: int,
+    session: Session = Depends(get_session),
+    current_user: Optional[User] = Depends(get_current_user_from_request)
+):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    if current_user.role not in ["admin", "manager"]:
+        raise HTTPException(status_code=403, detail="Not authorized to view templates")
+    
+    template = session.get(RegistrationFormTemplate, tpl_id)
+    if not template:
+        raise HTTPException(status_code=404, detail="Registration form template not found")
+    return template
+
+@router.post("/settings/registration-templates", response_model=RegistrationFormTemplate)
+def create_registration_template(
+    payload: RegistrationFormTemplateCreate,
+    session: Session = Depends(get_session),
+    current_user: Optional[User] = Depends(get_current_user_from_request)
+):
+    if not current_user or current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only admins can create registration templates")
+    
+    template = RegistrationFormTemplate(
+        name=payload.name,
+        description=payload.description,
+        theme_config=payload.theme_config or {},
+        layout_schema=payload.layout_schema or [],
+        post_submit_config=payload.post_submit_config or {},
+        created_at=datetime.utcnow(),
+        updated_at=datetime.utcnow()
+    )
+    session.add(template)
+    session.commit()
+    session.refresh(template)
+    return template
+
+@router.put("/settings/registration-templates/{tpl_id}", response_model=RegistrationFormTemplate)
+def update_registration_template(
+    tpl_id: int,
+    payload: RegistrationFormTemplateUpdate,
+    session: Session = Depends(get_session),
+    current_user: Optional[User] = Depends(get_current_user_from_request)
+):
+    if not current_user or current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only admins can edit registration templates")
+    
+    template = session.get(RegistrationFormTemplate, tpl_id)
+    if not template:
+        raise HTTPException(status_code=404, detail="Registration form template not found")
+    
+    template.name = payload.name
+    template.description = payload.description
+    if payload.theme_config is not None:
+        template.theme_config = payload.theme_config
+    if payload.layout_schema is not None:
+        template.layout_schema = payload.layout_schema
+    if payload.post_submit_config is not None:
+        template.post_submit_config = payload.post_submit_config
+    template.updated_at = datetime.utcnow()
+    
+    session.add(template)
+    session.commit()
+    session.refresh(template)
+    return template
+
+@router.delete("/settings/registration-templates/{tpl_id}")
+def delete_registration_template(
+    tpl_id: int,
+    session: Session = Depends(get_session),
+    current_user: Optional[User] = Depends(get_current_user_from_request)
+):
+    if not current_user or current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only admins can delete registration templates")
+    
+    template = session.get(RegistrationFormTemplate, tpl_id)
+    if not template:
+        raise HTTPException(status_code=404, detail="Registration form template not found")
+        
+    try:
+        session.execute(
+            text('UPDATE "event" SET registration_form_template_id = NULL WHERE registration_form_template_id = :tid'),
+            {"tid": tpl_id}
+        )
+        session.commit()
+    except Exception as e:
+        session.rollback()
+        print(f"Warning: Could not nullify event template references: {e}")
+        
+    session.delete(template)
+    session.commit()
+    return {"ok": True, "message": "Template deleted successfully"}
 
 
 
