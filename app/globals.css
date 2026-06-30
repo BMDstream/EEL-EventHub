@@ -5,11 +5,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Carlito:ital,wght@0,400;0,700;1,400;1,700&display=swap');
 
 @layer base {
-  *, *::before, *::after, html, body, input, textarea, select, button, span, div, p, label, h1, h2, h3, h4, h5, h6 { font-family: 'Carlito', Calibri, Candara, Segoe, "Segoe UI", Optima, Arial, sans-serif !important; }
-
-  input::placeholder, textarea::placeholder {
-    font-family: 'Carlito', Calibri, Candara, Segoe, "Segoe UI", Optima, Arial, sans-serif !important;
-  }
 
   :root {
     --foreground-rgb: 15, 23, 42;
@@ -412,3 +407,14 @@
   color: #ffffff !important;
 }
 
+/* ==========================================================================
+   Unlayered Font Overrides (Forces Calibri/Carlito globally on all themes)
+   ========================================================================== */
+*, *::before, *::after, html, body, input, textarea, select, button, span, div, p, label, h1, h2, h3, h4, h5, h6,
+.font-bricolage, .font-outfit, .font-serif, .font-mono, .font-sans {
+  font-family: 'Carlito', Calibri, Candara, Segoe, "Segoe UI", Optima, Arial, sans-serif !important;
+}
+
+input::placeholder, textarea::placeholder {
+  font-family: 'Carlito', Calibri, Candara, Segoe, "Segoe UI", Optima, Arial, sans-serif !important;
+}

@@ -650,8 +650,8 @@ export default function RegistrationTemplateManager() {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
-                        <div className="space-y-2">
+                      <div className="flex flex-wrap gap-6">
+                        <div className="space-y-2 flex-1 min-w-[220px]">
                           <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-1">Form Card Background Color</label>
                           <div className="flex items-center gap-3">
                             <input 
@@ -668,7 +668,7 @@ export default function RegistrationTemplateManager() {
                             />
                           </div>
                         </div>
-                        <div className="space-y-2">
+                        <div className="space-y-2 flex-1 min-w-[220px]">
                           <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-1">Form Text Color</label>
                           <div className="flex items-center gap-3">
                             <input 
@@ -685,7 +685,7 @@ export default function RegistrationTemplateManager() {
                             />
                           </div>
                         </div>
-                        <div className="space-y-2">
+                        <div className="space-y-2 flex-1 min-w-[220px]">
                           <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-1">Feedback Blocks Background</label>
                           <div className="flex items-center gap-3">
                             <input 
@@ -702,7 +702,7 @@ export default function RegistrationTemplateManager() {
                             />
                           </div>
                         </div>
-                        <div className="space-y-2">
+                        <div className="space-y-2 flex-1 min-w-[220px]">
                           <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-1">Attendee Pass Badge Color</label>
                           <div className="flex items-center gap-3">
                             <input 
@@ -719,7 +719,7 @@ export default function RegistrationTemplateManager() {
                             />
                           </div>
                         </div>
-                        <div className="space-y-2">
+                        <div className="space-y-2 flex-1 min-w-[220px]">
                           <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-1">Engagement Details Color</label>
                           <div className="flex items-center gap-3">
                             <input 
