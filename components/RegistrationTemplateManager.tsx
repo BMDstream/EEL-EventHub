@@ -48,6 +48,10 @@ interface RegistrationFormTemplate {
     form_text_color?: string;
     attendeePassBgColor?: string;
     engagementDetailsColor?: string;
+    base_font_size?: string | number;
+    heading_weight?: string;
+    body_weight?: string;
+    disclaimerCheckboxLabel?: string;
   };
   layout_schema: FormSection[];
   post_submit_config: {
@@ -636,16 +640,67 @@ export default function RegistrationTemplateManager() {
                           </select>
                         </div>
                         <div className="space-y-2">
-                          <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-1">Global Typography Stack</label>
+                          <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-1">Font Family Selection</label>
                           <select 
-                            value={selectedTemplate.theme_config.typography_font || "Calibri, sans-serif"}
+                            value={selectedTemplate.theme_config.typography_font || "'Carlito', Calibri, sans-serif"}
                             onChange={(e) => updateThemeConfig("typography_font", e.target.value)}
                             className="w-full px-4 py-3 rounded-xl border border-slate-100 focus:border-[#1e293b] outline-none font-bold text-xs text-slate-700 bg-slate-50 cursor-pointer dark:bg-slate-800 dark:text-white"
                           >
-                            <option value="Calibri, sans-serif">(Recommended) Calibri Stack</option>
-                            <option value="Outfit, sans-serif">Outfit (Premium Rounded)</option>
-                            <option value="Inter, sans-serif">Inter (Standard Modern)</option>
-                            <option value="system-ui, sans-serif">System Sans-serif</option>
+                            <option value="'Carlito', Calibri, sans-serif">Calibri Stack (Default Flagship)</option>
+                            <option value="'Fluent Calibri', 'Carlito', Calibri, sans-serif">Fluent Calibri Stack</option>
+                            <option value="'Fluent Sitka', serif">Sitka Small Stack</option>
+                            <option value="'Segoe UI', sans-serif">Segoe UI</option>
+                            <option value="Arial, sans-serif">Arial</option>
+                            <option value="Inter, sans-serif">Inter</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 border-t border-slate-100/50 dark:border-slate-800/30">
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-1">
+                            Base Font Size: {selectedTemplate.theme_config.base_font_size || 16}px
+                          </label>
+                          <div className="flex items-center gap-3">
+                            <input 
+                              type="range" 
+                              min="14" 
+                              max="20" 
+                              value={selectedTemplate.theme_config.base_font_size || 16}
+                              onChange={(e) => updateThemeConfig("base_font_size", parseInt(e.target.value))}
+                              className="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-[#0f172a] dark:accent-white"
+                            />
+                            <span className="text-xs font-black text-slate-500 w-8 text-right shrink-0">{selectedTemplate.theme_config.base_font_size || 16}px</span>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-1">Body Font Weight & Style</label>
+                          <select 
+                            value={selectedTemplate.theme_config.body_weight || "Regular"}
+                            onChange={(e) => updateThemeConfig("body_weight", e.target.value)}
+                            className="w-full px-4 py-2.5 rounded-xl border border-slate-100 focus:border-[#1e293b] outline-none font-bold text-xs text-slate-700 bg-slate-50 cursor-pointer dark:bg-slate-800 dark:text-white"
+                          >
+                            <option value="Light">Light</option>
+                            <option value="Light Italic">Light Italic</option>
+                            <option value="Regular">Regular</option>
+                            <option value="Regular Italic">Regular Italic</option>
+                            <option value="Bold">Bold</option>
+                            <option value="Bold Italic">Bold Italic</option>
+                          </select>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-1">Heading Font Weight & Style</label>
+                          <select 
+                            value={selectedTemplate.theme_config.heading_weight || "Bold"}
+                            onChange={(e) => updateThemeConfig("heading_weight", e.target.value)}
+                            className="w-full px-4 py-2.5 rounded-xl border border-slate-100 focus:border-[#1e293b] outline-none font-bold text-xs text-slate-700 bg-slate-50 cursor-pointer dark:bg-slate-800 dark:text-white"
+                          >
+                            <option value="Light">Light</option>
+                            <option value="Light Italic">Light Italic</option>
+                            <option value="Regular">Regular</option>
+                            <option value="Regular Italic">Regular Italic</option>
+                            <option value="Bold">Bold</option>
+                            <option value="Bold Italic">Bold Italic</option>
                           </select>
                         </div>
                       </div>
@@ -664,7 +719,7 @@ export default function RegistrationTemplateManager() {
                               type="text" 
                               value={selectedTemplate.theme_config.form_bg_color || "#ffffff"} 
                               onChange={(e) => updateThemeConfig("form_bg_color", e.target.value)}
-                              className="w-full px-4 py-2.5 rounded-xl border border-slate-100 font-bold text-xs bg-slate-50 dark:bg-slate-800" 
+                              className="w-24 shrink-0 px-3 py-2.5 rounded-xl border border-slate-100 font-mono font-bold text-xs bg-slate-50 dark:bg-slate-800" 
                             />
                           </div>
                         </div>
@@ -681,7 +736,7 @@ export default function RegistrationTemplateManager() {
                               type="text" 
                               value={selectedTemplate.theme_config.form_text_color || "#0f172a"} 
                               onChange={(e) => updateThemeConfig("form_text_color", e.target.value)}
-                              className="w-full px-4 py-2.5 rounded-xl border border-slate-100 font-bold text-xs bg-slate-50 dark:bg-slate-800" 
+                              className="w-24 shrink-0 px-3 py-2.5 rounded-xl border border-slate-100 font-mono font-bold text-xs bg-slate-50 dark:bg-slate-800" 
                             />
                           </div>
                         </div>
@@ -698,7 +753,7 @@ export default function RegistrationTemplateManager() {
                               type="text" 
                               value={selectedTemplate.theme_config.feedback_bg_color || "#f1f5f9"} 
                               onChange={(e) => updateThemeConfig("feedback_bg_color", e.target.value)}
-                              className="w-full px-4 py-2.5 rounded-xl border border-slate-100 font-bold text-xs bg-slate-50 dark:bg-slate-800" 
+                              className="w-24 shrink-0 px-3 py-2.5 rounded-xl border border-slate-100 font-mono font-bold text-xs bg-slate-50 dark:bg-slate-800" 
                             />
                           </div>
                         </div>
@@ -715,7 +770,7 @@ export default function RegistrationTemplateManager() {
                               type="text" 
                               value={selectedTemplate.theme_config.attendeePassBgColor || "#000000"} 
                               onChange={(e) => updateThemeConfig("attendeePassBgColor", e.target.value)}
-                              className="w-full px-4 py-2.5 rounded-xl border border-slate-100 font-bold text-xs bg-slate-50 dark:bg-slate-800 font-mono" 
+                              className="w-24 shrink-0 px-3 py-2.5 rounded-xl border border-slate-100 font-mono font-bold text-xs bg-slate-50 dark:bg-slate-800 font-mono" 
                             />
                           </div>
                         </div>
@@ -732,13 +787,13 @@ export default function RegistrationTemplateManager() {
                               type="text" 
                               value={selectedTemplate.theme_config.engagementDetailsColor || "#0f172a"} 
                               onChange={(e) => updateThemeConfig("engagementDetailsColor", e.target.value)}
-                              className="w-full px-4 py-2.5 rounded-xl border border-slate-100 font-bold text-xs bg-slate-50 dark:bg-slate-800 font-mono" 
+                              className="w-24 shrink-0 px-3 py-2.5 rounded-xl border border-slate-100 font-mono font-bold text-xs bg-slate-50 dark:bg-slate-800 font-mono" 
                             />
                           </div>
                         </div>
                       </div>
 
-                      <div className="space-y-6 pt-8 pb-4 border-t border-slate-100 dark:border-slate-800">
+                      <div className="space-y-6 pt-12 pb-6 border-t border-slate-100 dark:border-slate-800 mt-8">
                         <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Public Form Header Config</h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                           <div className="space-y-2.5">
@@ -764,7 +819,7 @@ export default function RegistrationTemplateManager() {
                         </div>
                       </div>
 
-                      <div className="space-y-6 pt-8 pb-4 border-t border-slate-100 dark:border-slate-800">
+                      <div className="space-y-6 pt-12 pb-6 border-t border-slate-100 dark:border-slate-800 mt-8">
                         <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Attendance Selector Config</h4>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                           <div className="space-y-2.5">
@@ -800,7 +855,7 @@ export default function RegistrationTemplateManager() {
                         </div>
                       </div>
 
-                      <div className="space-y-6 pt-8 pb-4 border-t border-slate-100 dark:border-slate-800">
+                      <div className="space-y-6 pt-12 pb-6 border-t border-slate-100 dark:border-slate-800 mt-8">
                         <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Typography & Accessibility Rules</h4>
                         
                         <div className="space-y-5">
@@ -837,6 +892,22 @@ export default function RegistrationTemplateManager() {
                               Force explicit options list text colors (fixes hover text black on black visibility issue)
                             </span>
                           </label>
+                        </div>
+                      </div>
+
+                      <div className="space-y-6 pt-12 pb-6 border-t border-slate-100 dark:border-slate-800 mt-8">
+                        <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Disclaimer & Consent Config</h4>
+                        <div className="space-y-4">
+                          <div className="space-y-2.5">
+                            <label className="text-[8px] font-black uppercase tracking-widest text-slate-400 ml-1">Custom Checkbox Phrasing Text</label>
+                            <input 
+                              type="text" 
+                              value={selectedTemplate.theme_config.disclaimerCheckboxLabel || ""} 
+                              onChange={(e) => updateThemeConfig("disclaimerCheckboxLabel", e.target.value)}
+                              placeholder="I have read and accept the Disclaimer and Indemnity"
+                              className="w-full px-4 py-2.5 rounded-xl border border-slate-100 font-bold text-xs bg-slate-50 dark:bg-slate-800 dark:border-slate-700 text-[#0f172a] dark:text-white" 
+                            />
+                          </div>
                         </div>
                       </div>
                     </div>

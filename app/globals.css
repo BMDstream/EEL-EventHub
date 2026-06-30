@@ -2,6 +2,64 @@
 @tailwind components;
 @tailwind utilities;
 
+@font-face {
+  font-family: 'Fluent Calibri';
+  src: url('/fonts/Fluent_Calibri.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Fluent Calibri';
+  src: url('/fonts/Fluent_Calibri-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Fluent Calibri';
+  src: url('/fonts/Fluent_Calibri-Italic.ttf') format('truetype');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Fluent Calibri';
+  src: url('/fonts/Fluent_Calibri-BoldItalic.ttf') format('truetype');
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Fluent Sitka';
+  src: url('/fonts/Fluent_SitkaSmall.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Fluent Sitka';
+  src: url('/fonts/Fluent_SitkaSmall-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Fluent Sitka';
+  src: url('/fonts/Fluent_SitkaSmall-Italic.ttf') format('truetype');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Fluent Sitka';
+  src: url('/fonts/Fluent_SitkaSmall-BoldItalic.ttf') format('truetype');
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
 @import url('https://fonts.googleapis.com/css2?family=Carlito:ital,wght@0,400;0,700;1,400;1,700&family=Open+Sans:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&display=swap');
 
 @layer base {
@@ -410,31 +468,54 @@
 /* ==========================================================================
    Unlayered Font Overrides (Forces Calibri/Carlito stack with specific weights)
    ========================================================================== */
-/* 1. Base Default Fallback (Calibri Regular) */
-*, *::before, *::after, html, body, button, span, div, p, a,
+/* 1. Global / Registration form container rules (adheres to dynamically injected CSS variables) */
+.registration-form-container, .registration-form-container * {
+  font-family: var(--selected-font-family, 'Carlito', 'Open Sans', Calibri, sans-serif) !important;
+  font-size: var(--base-font-size, 16px) !important;
+}
+
+/* Base body/other text fallback styling inside form */
+.registration-form-container p,
+.registration-form-container span,
+.registration-form-container div,
+.registration-form-container a,
+.registration-form-container button {
+  font-weight: var(--selected-font-weight, 400) !important;
+  font-style: var(--selected-font-style, normal) !important;
+}
+
+/* Headings styling inside form */
+.registration-form-container h1,
+.registration-form-container h2,
+.registration-form-container h3,
+.registration-form-container h4,
+.registration-form-container h5,
+.registration-form-container h6,
+.registration-form-container .client-event-heading {
+  font-weight: var(--heading-font-weight, 700) !important;
+  font-style: var(--heading-font-style, normal) !important;
+}
+
+/* Form Questions / Labels styling */
+.registration-form-container label,
+.registration-form-container .client-question-label {
+  font-weight: var(--question-font-weight, 400) !important;
+  font-style: var(--question-font-style, italic) !important;
+}
+
+/* Form inputs & options styling */
+.registration-form-container input,
+.registration-form-container textarea,
+.registration-form-container select,
+.registration-form-container option,
+.registration-form-container input::placeholder,
+.registration-form-container textarea::placeholder {
+  font-weight: var(--input-font-weight, 300) !important;
+  font-style: var(--input-font-style, normal) !important;
+}
+
+/* 2. Global defaults outside registration-form-container (Forces Calibri/Carlito stack generally) */
+html, body, button, span, div, p, a, label, input, textarea, select, option,
 .font-bricolage, .font-outfit, .font-serif, .font-mono, .font-sans {
-  font-family: 'Carlito', 'Open Sans', Calibri, Candara, Segoe, "Segoe UI", Optima, Arial, sans-serif !important;
-  font-weight: 400 !important;
-  font-style: normal !important;
-}
-
-/* 2. Event Heading (Calibri Bold) */
-h1, h2, h3, h4, h5, h6, .client-event-heading {
-  font-family: 'Carlito', 'Open Sans', Calibri, Candara, Segoe, "Segoe UI", Optima, Arial, sans-serif !important;
-  font-weight: 700 !important;
-  font-style: normal !important;
-}
-
-/* 3. Form Questions Wording (Calibri Regular Italic) */
-label, .client-question-label {
-  font-family: 'Carlito', 'Open Sans', Calibri, Candara, Segoe, "Segoe UI", Optima, Arial, sans-serif !important;
-  font-weight: 400 !important;
-  font-style: italic !important;
-}
-
-/* 4. Question Answers, Inputs & Select Options (Calibri Light) */
-input, textarea, select, option, input::placeholder, textarea::placeholder {
-  font-family: 'Carlito', 'Open Sans', 'Calibri Light', Calibri, Candara, Segoe, "Segoe UI", Optima, Arial, sans-serif !important;
-  font-weight: 300 !important;
-  font-style: normal !important;
+  font-family: 'Carlito', 'Open Sans', Calibri, Candara, Segoe, "Segoe UI", Optima, Arial, sans-serif;
 }

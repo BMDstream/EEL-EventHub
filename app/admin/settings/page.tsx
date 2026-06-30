@@ -72,25 +72,25 @@ const MOCK_PREVIEW_DATA: Record<string, Record<string, string>> = {
     logo_html: '<td align="right" valign="middle"><div style="background-color:#0f172a;padding:8px 16px;border-radius:8px;color:#fff;font-weight:bold;font-size:14px;display:inline-block;">BMD</div></td>',
     body_html: "Your registration has been confirmed. Below are your secure credentials for terminal verification.",
     details_html: `<div style="background: #ffffff; padding: 32px; border: 1px solid #f1f5f9; border-radius: 32px; margin-bottom: 40px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
-      <p style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.3em; color: #eab308; margin-bottom: 24px;">Engagement Details</p>
+      <p style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.3em; color: #ENG_COLOR#; margin-bottom: 24px;">Engagement Details</p>
       
       <div style="margin-bottom: 20px;">
-        <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin: 0 0 4px 0;">Event</p>
+        <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #ENG_COLOR#; opacity: 0.8; margin: 0 0 4px 0;">Event</p>
         <p style="font-size: 18px; font-weight: 800; color: #ENG_COLOR#; margin: 0;">Padels Tournament 2026</p>
       </div>
 
       <div style="margin-bottom: 20px;">
-        <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin: 0 0 4px 0;">Date & Time</p>
+        <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #ENG_COLOR#; opacity: 0.8; margin: 0 0 4px 0;">Date & Time</p>
         <p style="font-size: 16px; font-weight: 700; color: #ENG_COLOR#; margin: 0;">Thursday, June 25, 2026 @ 10:00 AM</p>
       </div>
 
       <div style="margin-bottom: 20px;">
-        <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin: 0 0 4px 0;">Venue</p>
+        <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #ENG_COLOR#; opacity: 0.8; margin: 0 0 4px 0;">Venue</p>
         <p style="font-size: 16px; font-weight: 700; color: #ENG_COLOR#; margin: 0;">Arena Center</p>
       </div>
 
       <div style="margin-bottom: 20px;">
-        <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin: 0 0 4px 0;">Address</p>
+        <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #ENG_COLOR#; opacity: 0.8; margin: 0 0 4px 0;">Address</p>
         <p style="font-size: 16px; font-weight: 700; color: #ENG_COLOR#; margin: 0 0 10px 0;">123 Padel Court Way</p>
         <a href="#" style="display: inline-block; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.05em; color: #ffffff; background-color: #ENG_COLOR#; text-decoration: none; padding: 10px 20px; border-radius: 12px; margin-top: 4px;">
           🗺️ Open in Google Maps
@@ -98,7 +98,7 @@ const MOCK_PREVIEW_DATA: Record<string, Record<string, string>> = {
       </div>
 
       <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #f1f5f9;">
-        <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.15em; color: #eab308; margin: 0 0 4px 0;">Matchup Details</p>
+        <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.15em; color: #ENG_COLOR#; margin: 0 0 4px 0;">Matchup Details</p>
         <p style="font-size: 18px; font-weight: 800; color: #ENG_COLOR#; margin: 0;">John Doe vs Jane Smith</p>
         <p style="font-size: 11px; color: #64748b; margin: 2px 0 0 0;">Sports Tournament Series</p>
       </div>

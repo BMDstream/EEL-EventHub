@@ -359,7 +359,7 @@ def send_confirmation_email(
             maps_url = f"https://www.google.com/maps/search/?api=1&query={quote(query_str)}"
             address_html = f"""
             <div style="margin-top: 20px; font-family: {font_family};">
-                <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin: 0 0 4px 0; font-family: {font_family};">Address</p>
+                <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: {engagement_details_color}; opacity: 0.8; margin: 0 0 4px 0; font-family: {font_family};">Address</p>
                 <p style="font-size: 16px; font-weight: 700; color: {engagement_details_color}; margin: 0 0 10px 0; font-family: {font_family};">{event_details.get('address')}</p>
                 <a href="{maps_url}" target="_blank" style="display: inline-block; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.05em; color: #ffffff; background-color: {engagement_details_color}; text-decoration: none; padding: 10px 20px; border-radius: 12px; margin-top: 4px; font-family: {font_family};">
                     🗺️ Open in Google Maps
@@ -372,7 +372,7 @@ def send_confirmation_email(
             details_title = meta.get("details_title", "Partnered With")
             matchup_html = f"""
             <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #f1f5f9; font-family: {font_family};">
-                <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.15em; color: #eab308; margin: 0 0 4px 0; font-family: {font_family};">{details_title}</p>
+                <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.15em; color: {engagement_details_color}; margin: 0 0 4px 0; font-family: {font_family};">{details_title}</p>
                 <p style="font-size: 18px; font-weight: 800; color: {engagement_details_color}; margin: 0; font-family: {font_family};">{matchup}</p>
                 <p style="font-size: 11px; color: #64748b; margin: 2px 0 0 0; font-family: {font_family};">Sports Tournament Series</p>
             </div>
@@ -380,20 +380,20 @@ def send_confirmation_email(
 
         details_html = f"""
         <div style="background: #ffffff; padding: 32px; border: 1px solid #f1f5f9; border-radius: 32px; margin-bottom: 40px; font-family: {font_family};">
-            <p style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.3em; color: {accent_color}; margin-bottom: 24px; font-family: {font_family};">{meta.get('engagement_title', 'Engagement Details')}</p>
+            <p style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.3em; color: {engagement_details_color}; margin-bottom: 24px; font-family: {font_family};">{meta.get('engagement_title', 'Engagement Details')}</p>
             
             <div style="margin-bottom: 20px; font-family: {font_family};">
-                <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin: 0 0 4px 0; font-family: {font_family};">Event</p>
+                <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: {engagement_details_color}; opacity: 0.8; margin: 0 0 4px 0; font-family: {font_family};">Event</p>
                 <p style="font-size: 18px; font-weight: 800; color: {engagement_details_color}; margin: 0; font-family: {font_family};">{event_title}</p>
             </div>
 
             <div style="margin-bottom: 20px; font-family: {font_family};">
-                <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin: 0 0 4px 0; font-family: {font_family};">Date & Time</p>
+                <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: {engagement_details_color}; opacity: 0.8; margin: 0 0 4px 0; font-family: {font_family};">Date & Time</p>
                 <p style="font-size: 16px; font-weight: 700; color: {engagement_details_color}; margin: 0; font-family: {font_family};">{date_str} @ {time_str}</p>
             </div>
 
             <div style="margin-bottom: 20px; font-family: {font_family};">
-                <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin: 0 0 4px 0; font-family: {font_family};">Venue</p>
+                <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: {engagement_details_color}; opacity: 0.8; margin: 0 0 4px 0; font-family: {font_family};">Venue</p>
                 <p style="font-size: 16px; font-weight: 700; color: {engagement_details_color}; margin: 0; font-family: {font_family};">{event_details.get('location', 'TBA')}</p>
             </div>
             {address_html}
@@ -577,7 +577,18 @@ def send_confirmation_email(
             sender_name = "BMD-EventHub"
             
         sender_email = config.get("sender_email") if config else None
-        if not sender_email:
+        
+        # Verify sender_email domain and restrict to verified default configurations
+        allowed_domains = ["eelogistics.co.za", "bmdcomputing.com"]
+        is_valid_domain = False
+        if sender_email:
+            email_parts = sender_email.split("@")
+            if len(email_parts) > 1:
+                domain = email_parts[-1].strip().lower()
+                if domain in allowed_domains:
+                    is_valid_domain = True
+        
+        if not sender_email or not is_valid_domain:
             sender_email = "events@eelogistics.co.za"
             
         from_address = f"{sender_name} <{sender_email}>"
@@ -594,13 +605,21 @@ def send_confirmation_email(
         # Process inline base64 images and convert them to inline attachments
         html_content, inline_attachments = process_inline_base64_images(html_content)
         
+        # RFC 2822 Compliance: unique Message-ID and List-Unsubscribe mapping
+        import uuid
+        domain_part = sender_email.split("@")[-1] if "@" in sender_email else "eelogistics.co.za"
+        msg_id = f"<{uuid.uuid4()}@{domain_part}>"
+        unsubscribe_header = f"<mailto:events@eelogistics.co.za?subject=unsubscribe-{clearance_id}>"
+        
         email_params = {
             "from": from_address,
             "to": to_email,
             "subject": subject,
             "html": html_content,
             "headers": {
-                "X-Entity-Ref-ID": clearance_id
+                "X-Entity-Ref-ID": clearance_id,
+                "Message-ID": msg_id,
+                "List-Unsubscribe": unsubscribe_header
             }
         }
         
@@ -673,7 +692,18 @@ def send_broadcast_email(
         sender_name = "BMD-EventHub"
         
     sender_email = config.get("sender_email") if config else None
-    if not sender_email:
+    
+    # Verify sender_email domain and restrict to verified default configurations
+    allowed_domains = ["eelogistics.co.za", "bmdcomputing.com"]
+    is_valid_domain = False
+    if sender_email:
+        email_parts = sender_email.split("@")
+        if len(email_parts) > 1:
+            domain = email_parts[-1].strip().lower()
+            if domain in allowed_domains:
+                is_valid_domain = True
+    
+    if not sender_email or not is_valid_domain:
         sender_email = "events@eelogistics.co.za"
         
     from_address = f"{sender_name} <{sender_email}>"
@@ -836,11 +866,20 @@ def send_broadcast_email(
         # Process inline base64 images and convert them to inline attachments
         html_content, inline_attachments = process_inline_base64_images(html_content)
         
+        import uuid
+        domain_part = sender_email.split("@")[-1] if "@" in sender_email else "eelogistics.co.za"
+        msg_id = f"<{uuid.uuid4()}@{domain_part}>"
+        unsubscribe_header = f"<mailto:events@eelogistics.co.za?subject=unsubscribe-{reg.get('id', 'broadcast')}>"
+        
         email_params = {
             "from": from_address,
             "to": to_email,
             "subject": p_subject,
-            "html": html_content
+            "html": html_content,
+            "headers": {
+                "Message-ID": msg_id,
+                "List-Unsubscribe": unsubscribe_header
+            }
         }
         
         if reply_to:

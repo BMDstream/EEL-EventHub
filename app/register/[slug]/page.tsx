@@ -330,7 +330,7 @@ function PublicRegistrationPageContent() {
           
           {field.type === "text" && (
             <input
-              required={field.required}
+              required={isAttending !== false && field.required}
               type="text"
               placeholder="Enter your answer"
               onChange={(e) => handleCustomChange(field.id, e.target.value)}
@@ -340,7 +340,7 @@ function PublicRegistrationPageContent() {
 
           {field.type === "numeric" && (
             <input
-              required={field.required}
+              required={isAttending !== false && field.required}
               type="tel"
               inputMode="numeric"
               placeholder="Numbers only"
@@ -356,7 +356,7 @@ function PublicRegistrationPageContent() {
           {field.type === "select" && (
             <div className="relative">
               <select
-                required={field.required}
+                required={isAttending !== false && field.required}
                 onChange={(e) => handleCustomChange(field.id, e.target.value)}
                 className={style.select}
               >
@@ -400,7 +400,7 @@ function PublicRegistrationPageContent() {
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold text-slate-500">First Name {field.required && "*"}</label>
                   <input
-                    required={field.required}
+                    required={isAttending !== false && field.required}
                     type="text"
                     placeholder="Partner's first name"
                     onChange={(e) => {
@@ -413,7 +413,7 @@ function PublicRegistrationPageContent() {
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold text-slate-500">Last Name {field.required && "*"}</label>
                   <input
-                    required={field.required}
+                    required={isAttending !== false && field.required}
                     type="text"
                     placeholder="Partner's last name"
                     onChange={(e) => {
@@ -428,7 +428,7 @@ function PublicRegistrationPageContent() {
               <div className="space-y-2">
                 <label className="text-[10px] font-bold text-slate-500">Corporate Email {field.required && "*"}</label>
                 <input
-                  required={field.required}
+                  required={isAttending !== false && field.required}
                   type="email"
                   placeholder="partner@company.com"
                   onChange={(e) => {
@@ -1718,7 +1718,7 @@ function PublicRegistrationPageContent() {
                 Organization / Company {event.company_required && <span className={`${isLightTheme ? "client-text-primary" : "client-text-accent"} ml-0.5 font-bold`}>*</span>}
               </label>
               <input
-                required={event.company_required}
+                required={isAttending !== false && event.company_required}
                 type="text"
                 name="company"
                 value={formData.company}

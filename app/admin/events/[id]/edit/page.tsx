@@ -147,7 +147,7 @@ const compileTemplatePreview = (
   // Construct blocks
   const addressHtml = address ? `
   <div style="margin-top: 20px; font-family: ${fontFamily};">
-      <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin: 0 0 4px 0; font-family: ${fontFamily};">Address</p>
+      <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: ${engagementDetailsColor}; opacity: 0.8; margin: 0 0 4px 0; font-family: ${fontFamily};">Address</p>
       <p style="font-size: 16px; font-weight: 700; color: ${engagementDetailsColor}; margin: 0 0 10px 0; font-family: ${fontFamily};">${address}</p>
       <a href="#" style="display: inline-block; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.05em; color: #ffffff; background-color: ${engagementDetailsColor}; text-decoration: none; padding: 10px 20px; border-radius: 12px; margin-top: 4px; font-family: ${fontFamily};">
           🗺️ Open in Google Maps
@@ -157,20 +157,20 @@ const compileTemplatePreview = (
 
   const detailsHtml = `
   <div style="background: #ffffff; padding: 32px; border: 1px solid #f1f5f9; border-radius: 32px; margin-bottom: 40px; font-family: ${fontFamily};">
-      <p style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.3em; color: ${accent}; margin-bottom: 24px; font-family: ${fontFamily};">${meta.engagement_title || "Engagement Details"}</p>
+      <p style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.3em; color: ${engagementDetailsColor}; margin-bottom: 24px; font-family: ${fontFamily};">${meta.engagement_title || "Engagement Details"}</p>
       
       <div style="margin-bottom: 20px; font-family: ${fontFamily};">
-          <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin: 0 0 4px 0; font-family: ${fontFamily};">Event</p>
+          <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: ${engagementDetailsColor}; opacity: 0.8; margin: 0 0 4px 0; font-family: ${fontFamily};">Event</p>
           <p style="font-size: 18px; font-weight: 800; color: ${engagementDetailsColor}; margin: 0; font-family: ${fontFamily};">${title}</p>
       </div>
 
       <div style="margin-bottom: 20px; font-family: ${fontFamily};">
-          <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin: 0 0 4px 0; font-family: ${fontFamily};">Date & Time</p>
+          <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: ${engagementDetailsColor}; opacity: 0.8; margin: 0 0 4px 0; font-family: ${fontFamily};">Date & Time</p>
           <p style="font-size: 16px; font-weight: 700; color: ${engagementDetailsColor}; margin: 0; font-family: ${fontFamily};">${dateStr} @ ${timeStr}</p>
       </div>
 
       <div style="margin-bottom: 20px; font-family: ${fontFamily};">
-          <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin: 0 0 4px 0; font-family: ${fontFamily};">Venue</p>
+          <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: ${engagementDetailsColor}; opacity: 0.8; margin: 0 0 4px 0; font-family: ${fontFamily};">Venue</p>
           <p style="font-size: 16px; font-weight: 700; color: ${engagementDetailsColor}; margin: 0; font-family: ${fontFamily};">${venue}</p>
       </div>
       ${addressHtml}
