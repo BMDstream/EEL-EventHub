@@ -2,43 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
-@font-face {
-  font-family: 'Fluent Calibri';
-  src: url('/fonts/Fluent_Calibri.ttf') format('truetype');
-  font-weight: normal;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Fluent Calibri';
-  src: url('/fonts/Fluent_Calibri-Bold.ttf') format('truetype');
-  font-weight: bold;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Fluent Calibri';
-  src: url('/fonts/Fluent_Calibri-Italic.ttf') format('truetype');
-  font-weight: normal;
-  font-style: italic;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Fluent Calibri';
-  src: url('/fonts/Fluent_Calibri-BoldItalic.ttf') format('truetype');
-  font-weight: bold;
-  font-style: italic;
-  font-display: swap;
-}
+@import url('https://fonts.googleapis.com/css2?family=Carlito:ital,wght@0,400;0,700;1,400;1,700&display=swap');
 
 @layer base {
-  *, *::before, *::after, html, body, input, textarea, select, button, span, div, p, label, h1, h2, h3, h4, h5, h6 { font-family: 'Fluent Calibri', Calibri, Candara, Segoe, "Segoe UI", Optima, Arial, sans-serif !important; }
+  *, *::before, *::after, html, body, input, textarea, select, button, span, div, p, label, h1, h2, h3, h4, h5, h6 { font-family: 'Carlito', Calibri, Candara, Segoe, "Segoe UI", Optima, Arial, sans-serif !important; }
 
   input::placeholder, textarea::placeholder {
-    font-family: 'Fluent Calibri', Calibri, Candara, Segoe, "Segoe UI", Optima, Arial, sans-serif !important;
+    font-family: 'Carlito', Calibri, Candara, Segoe, "Segoe UI", Optima, Arial, sans-serif !important;
   }
 
   :root {

@@ -154,9 +154,9 @@ def get_logo_html(config: Optional[dict], meta: dict, primary_color: str) -> str
             """
         logo_text = meta.get("logo_text", "BMD")
         logo_bg = primary_color or meta.get("primary_color", "#0f172a")
-        font_family = "'Fluent Calibri', Calibri, Candara, Segoe, 'Segoe UI', Optima, Arial, sans-serif"
+        font_family = "'Carlito', Calibri, Candara, Segoe, 'Segoe UI', Optima, Arial, sans-serif"
         if config and isinstance(config, dict):
-            font_family = config.get("font_family", "'Fluent Calibri', Calibri, Candara, Segoe, 'Segoe UI', Optima, Arial, sans-serif")
+            font_family = config.get("font_family", "'Carlito', Calibri, Candara, Segoe, 'Segoe UI', Optima, Arial, sans-serif")
         return f"""
         <td align="right" valign="middle">
             <div style="background-color:{logo_bg};padding:8px 16px;border-radius:8px;color:#fff;font-weight:bold;font-size:14px;display:inline-block;font-family:{font_family};">
@@ -198,7 +198,7 @@ def send_confirmation_email(
     accent_color = config.get("accent_color", "#94a3b8")
     attendee_pass_bg_color = config.get("attendee_pass_bg_color", "#000000")
     engagement_details_color = config.get("engagement_details_color", primary_color)
-    font_family = config.get("font_family", "'Fluent Calibri', Calibri, Candara, Segoe, 'Segoe UI', Optima, Arial, sans-serif")
+    font_family = config.get("font_family", "'Carlito', Calibri, Candara, Segoe, 'Segoe UI', Optima, Arial, sans-serif")
     font_size = config.get("font_size", "16px")
     
     footer_text_raw = config.get("footer_text", "")
@@ -645,7 +645,7 @@ def send_broadcast_email(
     accent_color = config.get("accent_color", "#94a3b8")
     attendee_pass_bg_color = config.get("attendee_pass_bg_color", "#000000")
     engagement_details_color = config.get("engagement_details_color", primary_color)
-    font_family = config.get("font_family", "'Fluent Calibri', Calibri, Candara, Segoe, 'Segoe UI', Optima, Arial, sans-serif")
+    font_family = config.get("font_family", "'Carlito', Calibri, Candara, Segoe, 'Segoe UI', Optima, Arial, sans-serif")
     font_size = config.get("font_size", "16px")
     
     db_template = get_template_from_db("broadcast")

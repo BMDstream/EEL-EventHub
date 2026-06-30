@@ -117,7 +117,7 @@ def get_event_email_config(event: Event, session: Session):
             "sender_name": client.sender_name or client.name,
             "reply_to": client.reply_to,
             "logo_url": client.logo_url,
-            "font_family": getattr(client, "font_family", "'Fluent Calibri', Calibri, Candara, Segoe, 'Segoe UI', Optima, Arial, sans-serif") or "'Fluent Calibri', Calibri, Candara, Segoe, 'Segoe UI', Optima, Arial, sans-serif",
+            "font_family": getattr(client, "font_family", "'Carlito', Calibri, Candara, Segoe, 'Segoe UI', Optima, Arial, sans-serif") or "'Carlito', Calibri, Candara, Segoe, 'Segoe UI', Optima, Arial, sans-serif",
             "font_size": getattr(client, "font_size", "16px") or "16px"
         }
     else:
@@ -129,7 +129,7 @@ def get_event_email_config(event: Event, session: Session):
             
     # Set default font settings if not configured
     if not config.get("font_family"):
-        config["font_family"] = "'Fluent Calibri', Calibri, Candara, Segoe, 'Segoe UI', Optima, Arial, sans-serif"
+        config["font_family"] = "'Carlito', Calibri, Candara, Segoe, 'Segoe UI', Optima, Arial, sans-serif"
     if not config.get("font_size"):
         config["font_size"] = "16px"
             
