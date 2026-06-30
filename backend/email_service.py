@@ -196,6 +196,8 @@ def send_confirmation_email(
     # Process branding colors and headers
     primary_color = config.get("primary_color", "#0f172a")
     accent_color = config.get("accent_color", "#94a3b8")
+    attendee_pass_bg_color = config.get("attendee_pass_bg_color", "#000000")
+    engagement_details_color = config.get("engagement_details_color", primary_color)
     font_family = config.get("font_family", "Calibri, sans-serif")
     font_size = config.get("font_size", "16px")
     
@@ -215,6 +217,9 @@ def send_confirmation_email(
 
     db_template = get_template_from_db(t_key)
     meta = parse_template_meta(db_template.body_html) if db_template else {}
+    if meta:
+        attendee_pass_bg_color = meta.get("attendeePassBgColor", attendee_pass_bg_color)
+        engagement_details_color = meta.get("engagementDetailsColor", engagement_details_color)
 
     show_banner_meta = meta.get("show_banner", "false") if meta else "false"
     
@@ -356,7 +361,7 @@ def send_confirmation_email(
             <div style="margin-top: 20px; font-family: {font_family};">
                 <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin: 0 0 4px 0; font-family: {font_family};">Address</p>
                 <p style="font-size: 16px; font-weight: 700; color: #0f172a; margin: 0 0 10px 0; font-family: {font_family};">{event_details.get('address')}</p>
-                <a href="{maps_url}" target="_blank" style="display: inline-block; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.05em; color: #ffffff; background-color: {primary_color}; text-decoration: none; padding: 10px 20px; border-radius: 12px; margin-top: 4px; font-family: {font_family};">
+                <a href="{maps_url}" target="_blank" style="display: inline-block; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.05em; color: #ffffff; background-color: {engagement_details_color}; text-decoration: none; padding: 10px 20px; border-radius: 12px; margin-top: 4px; font-family: {font_family};">
                     🗺️ Open in Google Maps
                 </a>
             </div>
@@ -368,19 +373,18 @@ def send_confirmation_email(
             matchup_html = f"""
             <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #f1f5f9; font-family: {font_family};">
                 <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.15em; color: #eab308; margin: 0 0 4px 0; font-family: {font_family};">{details_title}</p>
-                <p style="font-size: 18px; font-weight: 800; color: {primary_color}; margin: 0; font-family: {font_family};">{matchup}</p>
+                <p style="font-size: 18px; font-weight: 800; color: {engagement_details_color}; margin: 0; font-family: {font_family};">{matchup}</p>
                 <p style="font-size: 11px; color: #64748b; margin: 2px 0 0 0; font-family: {font_family};">Sports Tournament Series</p>
             </div>
             """
 
-        engagement_title = meta.get("engagement_title", "Engagement Details")
         details_html = f"""
         <div style="background: #ffffff; padding: 32px; border: 1px solid #f1f5f9; border-radius: 32px; margin-bottom: 40px; font-family: {font_family};">
-            <p style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.3em; color: {accent_color}; margin-bottom: 24px; font-family: {font_family};">{engagement_title}</p>
+            <p style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.3em; color: {accent_color}; margin-bottom: 24px; font-family: {font_family};">{meta.get('engagement_title', 'Engagement Details')}</p>
             
             <div style="margin-bottom: 20px; font-family: {font_family};">
                 <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin: 0 0 4px 0; font-family: {font_family};">Event</p>
-                <p style="font-size: 18px; font-weight: 800; color: {primary_color}; margin: 0; font-family: {font_family};">{event_title}</p>
+                <p style="font-size: 18px; font-weight: 800; color: {engagement_details_color}; margin: 0; font-family: {font_family};">{event_title}</p>
             </div>
 
             <div style="margin-bottom: 20px; font-family: {font_family};">
@@ -538,6 +542,8 @@ def send_confirmation_email(
                 "pin": clearance_id,
                 "primary_color": primary_color,
                 "accent_color": accent_color,
+                "attendee_pass_bg_color": attendee_pass_bg_color,
+                "engagement_details_color": engagement_details_color,
                 "heading_title": heading_title,
                 "heading_subtitle": heading_subtitle,
                 "logo_html": logo_td_html,
@@ -637,11 +643,16 @@ def send_broadcast_email(
 
     primary_color = config.get("primary_color", "#0f172a")
     accent_color = config.get("accent_color", "#94a3b8")
+    attendee_pass_bg_color = config.get("attendee_pass_bg_color", "#000000")
+    engagement_details_color = config.get("engagement_details_color", primary_color)
     font_family = config.get("font_family", "Calibri, sans-serif")
     font_size = config.get("font_size", "16px")
     
     db_template = get_template_from_db("broadcast")
     meta = parse_template_meta(db_template.body_html) if db_template else {}
+    if meta:
+        attendee_pass_bg_color = meta.get("attendeePassBgColor", attendee_pass_bg_color)
+        engagement_details_color = meta.get("engagementDetailsColor", engagement_details_color)
     logo_td_html = get_logo_html(config, meta, primary_color)
 
     show_banner_meta = meta.get("show_banner", "false") if meta else "false"
@@ -704,6 +715,8 @@ def send_broadcast_email(
             "start_date": f"{date_str} @ {time_str}",
             "primary_color": primary_color,
             "accent_color": accent_color,
+            "attendee_pass_bg_color": attendee_pass_bg_color,
+            "engagement_details_color": engagement_details_color,
             "logo_html": logo_td_html,
             "broadcast_body": body.replace("{first_name}", first_name).replace("{last_name}", last_name).replace("{pin}", pin).replace("{event_title}", event_title).replace("\n", "<br>"),
             "broadcast_signature": signature.replace("\n", "<br>") if signature else "",

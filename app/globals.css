@@ -3,6 +3,8 @@
 @tailwind utilities;
 
 @layer base {
+  html, body, button, input, select, textarea, span, div { font-family: Calibri, Candara, Segoe, "Segoe UI", Optima, Arial, sans-serif !important; }
+
   :root {
     --foreground-rgb: 15, 23, 42;
     --background-rgb: 241, 245, 249;

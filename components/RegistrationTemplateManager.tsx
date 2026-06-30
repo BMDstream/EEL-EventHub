@@ -46,6 +46,8 @@ interface RegistrationFormTemplate {
     form_heading?: string;
     form_subheading?: string;
     form_text_color?: string;
+    attendeePassBgColor?: string;
+    engagementDetailsColor?: string;
   };
   layout_schema: FormSection[];
   post_submit_config: {
@@ -170,7 +172,9 @@ export default function RegistrationTemplateManager() {
             typography_font: "Calibri, sans-serif",
             force_sentence_case: true,
             strip_trailing_periods: true,
-            force_text_visibility: true
+            force_text_visibility: true,
+            attendeePassBgColor: "#000000",
+            engagementDetailsColor: "#0f172a"
           },
           layout_schema: [
             {
@@ -646,7 +650,7 @@ export default function RegistrationTemplateManager() {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
                         <div className="space-y-2">
                           <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-1">Form Card Background Color</label>
                           <div className="flex items-center gap-3">
@@ -695,6 +699,40 @@ export default function RegistrationTemplateManager() {
                               value={selectedTemplate.theme_config.feedback_bg_color || "#f1f5f9"} 
                               onChange={(e) => updateThemeConfig("feedback_bg_color", e.target.value)}
                               className="w-full px-4 py-2.5 rounded-xl border border-slate-100 font-bold text-xs bg-slate-50 dark:bg-slate-800" 
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-1">Attendee Pass Badge Color</label>
+                          <div className="flex items-center gap-3">
+                            <input 
+                              type="color" 
+                              value={selectedTemplate.theme_config.attendeePassBgColor || "#000000"} 
+                              onChange={(e) => updateThemeConfig("attendeePassBgColor", e.target.value)}
+                              className="w-10 h-10 rounded-xl border border-slate-200 cursor-pointer p-0 bg-transparent shrink-0" 
+                            />
+                            <input 
+                              type="text" 
+                              value={selectedTemplate.theme_config.attendeePassBgColor || "#000000"} 
+                              onChange={(e) => updateThemeConfig("attendeePassBgColor", e.target.value)}
+                              className="w-full px-4 py-2.5 rounded-xl border border-slate-100 font-bold text-xs bg-slate-50 dark:bg-slate-800 font-mono" 
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-1">Engagement Details Color</label>
+                          <div className="flex items-center gap-3">
+                            <input 
+                              type="color" 
+                              value={selectedTemplate.theme_config.engagementDetailsColor || "#0f172a"} 
+                              onChange={(e) => updateThemeConfig("engagementDetailsColor", e.target.value)}
+                              className="w-10 h-10 rounded-xl border border-slate-200 cursor-pointer p-0 bg-transparent shrink-0" 
+                            />
+                            <input 
+                              type="text" 
+                              value={selectedTemplate.theme_config.engagementDetailsColor || "#0f172a"} 
+                              onChange={(e) => updateThemeConfig("engagementDetailsColor", e.target.value)}
+                              className="w-full px-4 py-2.5 rounded-xl border border-slate-100 font-bold text-xs bg-slate-50 dark:bg-slate-800 font-mono" 
                             />
                           </div>
                         </div>
@@ -1303,31 +1341,49 @@ export default function RegistrationTemplateManager() {
                   </>
                 ) : (
                   // Success Screen View
-                  <div 
-                    className="p-6 rounded-2xl text-center space-y-6 shadow-sm border border-slate-100/50"
-                    style={{ backgroundColor: selectedTemplate.theme_config.feedback_bg_color || "#f1f5f9" }}
-                  >
-                    <div className="w-16 h-16 rounded-2xl bg-green-500 flex items-center justify-center mx-auto shadow-md">
-                      <CheckCircle2 size={36} className="text-white animate-bounce" />
-                    </div>
+                  (() => {
+                    const config = {
+                      theme: selectedTemplate.theme_config || {}
+                    };
+                    return (
+                      <div 
+                        className="p-6 rounded-2xl text-center space-y-6 shadow-sm border border-slate-100/50"
+                        style={{ backgroundColor: selectedTemplate.theme_config.feedback_bg_color || "#f1f5f9" }}
+                      >
+                        <div className="w-16 h-16 rounded-2xl bg-green-500 flex items-center justify-center mx-auto shadow-md">
+                          <CheckCircle2 size={36} className="text-white animate-bounce" />
+                        </div>
 
-                    <h1 className="text-2xl font-bold text-[#0f172a] tracking-tight">
-                      {selectedTemplate.post_submit_config.onscreen_title || "YOUR REGISTRATION HAS BEEN CONFIRMED."}
-                    </h1>
+                        <div className="flex justify-center">
+                          <div 
+                            className="px-5 py-1.5 rounded-full inline-flex items-center justify-center"
+                            style={{ backgroundColor: config.theme.attendeePassBgColor || '#000000' }}
+                          >
+                            <span className="text-[9px] font-black uppercase tracking-[0.4em] text-white">
+                              Attendee Pass
+                            </span>
+                          </div>
+                        </div>
 
-                    <p className="text-slate-500 text-xs font-medium leading-relaxed">
-                      {formatPostSubmit(selectedTemplate.post_submit_config.onscreen_description || "Your registration is confirmed.")}
-                    </p>
+                        <h1 className="text-2xl font-bold text-[#0f172a] tracking-tight">
+                          {selectedTemplate.post_submit_config.onscreen_title || "YOUR REGISTRATION HAS BEEN CONFIRMED."}
+                        </h1>
 
-                    <div className="pt-4 border-t border-slate-200/50 space-y-1">
-                      <p className="text-[8px] uppercase tracking-[0.25em] text-slate-400 font-bold">
-                        {selectedTemplate.post_submit_config.clearance_label || "UNIQUE CLEARANCE ID"}
-                      </p>
-                      <p className="text-2xl font-black text-slate-800 italic tracking-tighter">
-                        EEL-987A
-                      </p>
-                    </div>
-                  </div>
+                        <p className="text-slate-500 text-xs font-medium leading-relaxed whitespace-pre-line">
+                          {formatPostSubmit(selectedTemplate.post_submit_config.onscreen_description || "Your registration is confirmed.")}
+                        </p>
+
+                        <div className="pt-4 border-t border-slate-200/50 space-y-1">
+                          <p className="text-[8px] uppercase tracking-[0.25em] text-slate-400 font-bold">
+                            {selectedTemplate.post_submit_config.clearance_label || "UNIQUE CLEARANCE ID"}
+                          </p>
+                          <p className="text-2xl font-black text-slate-800 italic tracking-tighter">
+                            EEL-987A
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })()
                 )}
               </div>
             </div>

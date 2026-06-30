@@ -76,7 +76,7 @@ const MOCK_PREVIEW_DATA: Record<string, Record<string, string>> = {
       
       <div style="margin-bottom: 20px;">
         <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin: 0 0 4px 0;">Event</p>
-        <p style="font-size: 18px; font-weight: 800; color: #0f172a; margin: 0;">Padels Tournament 2026</p>
+        <p style="font-size: 18px; font-weight: 800; color: #ENG_COLOR#; margin: 0;">Padels Tournament 2026</p>
       </div>
 
       <div style="margin-bottom: 20px;">
@@ -92,14 +92,14 @@ const MOCK_PREVIEW_DATA: Record<string, Record<string, string>> = {
       <div style="margin-bottom: 20px;">
         <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin: 0 0 4px 0;">Address</p>
         <p style="font-size: 16px; font-weight: 700; color: #0f172a; margin: 0 0 10px 0;">123 Padel Court Way</p>
-        <a href="#" style="display: inline-block; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.05em; color: #ffffff; background-color: #0f172a; text-decoration: none; padding: 10px 20px; border-radius: 12px; margin-top: 4px;">
+        <a href="#" style="display: inline-block; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.05em; color: #ffffff; background-color: #ENG_COLOR#; text-decoration: none; padding: 10px 20px; border-radius: 12px; margin-top: 4px;">
           🗺️ Open in Google Maps
         </a>
       </div>
 
       <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #f1f5f9;">
         <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.15em; color: #eab308; margin: 0 0 4px 0;">Matchup Details</p>
-        <p style="font-size: 18px; font-weight: 800; color: #0f172a; margin: 0;">John Doe vs Jane Smith</p>
+        <p style="font-size: 18px; font-weight: 800; color: #ENG_COLOR#; margin: 0;">John Doe vs Jane Smith</p>
         <p style="font-size: 11px; color: #64748b; margin: 2px 0 0 0;">Sports Tournament Series</p>
       </div>
     </div>`,
@@ -499,7 +499,7 @@ const compileTemplateHtml = (key: string, values: Record<string, string> = {}, f
                 <td align="left" valign="middle">
                   <table border="0" cellspacing="0" cellpadding="0" style="display: inline-block;">
                     <tr>
-                      <td align="center" style="background: ${values.primary_color || ""}; padding: 12px 28px; border-radius: 16px;">
+                      <td align="center" style="background: ${values.attendeePassBgColor || config?.attendeePassBgColor || "#000000"}; padding: 12px 28px; border-radius: 16px;">
                         <span style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.4em; color: #ffffff;">Attendee Pass</span>
                       </td>
                     </tr>
@@ -923,6 +923,8 @@ export default function SettingsPage() {
   const [config, setConfig] = useState({
     primary_color: "#0f172a",
     accent_color: "#94a3b8",
+    engagementDetailsColor: "",
+    attendeePassBgColor: "",
     heading_text: "Access Granted.",
     body_text: "Your registration for **{event_title}** has been confirmed. Below are your secure credentials for terminal verification.",
     footer_text: "Automated Event Management System\nSecurity Tier: Level 4 Authorized",
@@ -1174,7 +1176,9 @@ export default function SettingsPage() {
     if (mockVars.details_html) {
       const detailsTitle = formValues.details_title || "Matchup Details";
       const engagementTitle = formValues.engagement_title || "Engagement Details";
+      const engCol = formValues.engagementDetailsColor || config.engagementDetailsColor || primaryCol;
       mockVars.details_html = mockVars.details_html
+        .replaceAll("#ENG_COLOR#", engCol)
         .replaceAll("#0f172a", primaryCol)
         .replaceAll("#eab308", accentCol)
         .replaceAll("font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;", `font-family: ${activeFont};`)
@@ -1938,7 +1942,7 @@ export default function SettingsPage() {
                               Theme & Color Palette
                             </h4>
                             
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-1">
                               <div className="space-y-2">
                                 <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
                                   Primary Color
@@ -1982,6 +1986,48 @@ export default function SettingsPage() {
                                   </div>
                                 </div>
                               )}
+
+                              <div className="space-y-2">
+                                <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
+                                  Engagement Details Color
+                                </label>
+                                <div className="flex gap-2.5">
+                                  <input 
+                                    type="color"
+                                    value={formValues.engagementDetailsColor || formValues.primary_color || "#0f172a"}
+                                    onChange={(e) => handleFormChange("engagementDetailsColor", e.target.value)}
+                                    className="w-12 h-12 rounded-xl cursor-pointer border border-slate-200 dark:border-slate-700 bg-transparent p-0"
+                                  />
+                                  <input 
+                                    type="text"
+                                    value={formValues.engagementDetailsColor || ""}
+                                    onChange={(e) => handleFormChange("engagementDetailsColor", e.target.value)}
+                                    placeholder="#000000"
+                                    className="flex-1 px-4 py-2.5 rounded-xl bg-white border border-slate-200 focus:border-yellow-400 outline-none font-bold text-sm text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white font-mono"
+                                  />
+                                </div>
+                              </div>
+
+                              <div className="space-y-2">
+                                <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
+                                  Attendee Pass Color
+                                </label>
+                                <div className="flex gap-2.5">
+                                  <input 
+                                    type="color"
+                                    value={formValues.attendeePassBgColor || "#000000"}
+                                    onChange={(e) => handleFormChange("attendeePassBgColor", e.target.value)}
+                                    className="w-12 h-12 rounded-xl cursor-pointer border border-slate-200 dark:border-slate-700 bg-transparent p-0"
+                                  />
+                                  <input 
+                                    type="text"
+                                    value={formValues.attendeePassBgColor || ""}
+                                    onChange={(e) => handleFormChange("attendeePassBgColor", e.target.value)}
+                                    placeholder="#000000"
+                                    className="flex-1 px-4 py-2.5 rounded-xl bg-white border border-slate-200 focus:border-yellow-400 outline-none font-bold text-sm text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white font-mono"
+                                  />
+                                </div>
+                              </div>
                             </div>
                           </div>
 
@@ -2779,6 +2825,48 @@ export default function SettingsPage() {
                         value={config.accent_color}
                         onChange={(e) => setConfig({ ...config, accent_color: e.target.value })}
                         className="flex-1 px-6 py-4 rounded-2xl bg-slate-50 border border-slate-200 focus:border-yellow-400 outline-none font-bold text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-1 flex items-center gap-2">
+                      <Palette size={12} /> Engagement Details Color
+                    </label>
+                    <div className="flex gap-4">
+                      <input 
+                        type="color" 
+                        value={config.engagementDetailsColor || config.primary_color || "#0f172a"}
+                        onChange={(e) => setConfig({ ...config, engagementDetailsColor: e.target.value })}
+                        className="w-16 h-16 rounded-2xl cursor-pointer border-none p-0 bg-transparent"
+                      />
+                      <input 
+                        type="text" 
+                        value={config.engagementDetailsColor || ""}
+                        onChange={(e) => setConfig({ ...config, engagementDetailsColor: e.target.value })}
+                        placeholder="#000000"
+                        className="flex-1 px-6 py-4 rounded-2xl bg-slate-50 border border-slate-200 focus:border-yellow-400 outline-none font-bold text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white font-mono"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-1 flex items-center gap-2">
+                      <Palette size={12} /> Attendee Pass Color
+                    </label>
+                    <div className="flex gap-4">
+                      <input 
+                        type="color" 
+                        value={config.attendeePassBgColor || "#000000"}
+                        onChange={(e) => setConfig({ ...config, attendeePassBgColor: e.target.value })}
+                        className="w-16 h-16 rounded-2xl cursor-pointer border-none p-0 bg-transparent"
+                      />
+                      <input 
+                        type="text" 
+                        value={config.attendeePassBgColor || ""}
+                        onChange={(e) => setConfig({ ...config, attendeePassBgColor: e.target.value })}
+                        placeholder="#000000"
+                        className="flex-1 px-6 py-4 rounded-2xl bg-slate-50 border border-slate-200 focus:border-yellow-400 outline-none font-bold text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white font-mono"
                       />
                     </div>
                   </div>

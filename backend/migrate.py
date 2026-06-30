@@ -192,7 +192,9 @@ def run_migrations():
                     "typography_font": "Calibri, sans-serif",
                     "force_sentence_case": True,
                     "strip_trailing_periods": True,
-                    "force_text_visibility": True
+                    "force_text_visibility": True,
+                    "attendeePassBgColor": "#000000",
+                    "engagementDetailsColor": "#0f172a"
                 },
                 layout_schema=[
                     {
@@ -250,7 +252,9 @@ def run_migrations():
                     "force_text_visibility": True,
                     "attendance_label": "Attendance Status",
                     "attending_label": "I am attending",
-                    "not_attending_label": "Unable to attend"
+                    "not_attending_label": "Unable to attend",
+                    "attendeePassBgColor": "#000000",
+                    "engagementDetailsColor": "#0f172a"
                 },
                 layout_schema=[
                     {
@@ -360,7 +364,9 @@ def run_migrations():
                     "force_text_visibility": True,
                     "attendance_label": "Attendance Status",
                     "attending_label": "I am attending",
-                    "not_attending_label": "Unable to attend"
+                    "not_attending_label": "Unable to attend",
+                    "attendeePassBgColor": "#000000",
+                    "engagementDetailsColor": "#0f172a"
                 },
                 layout_schema=[
                     {
@@ -457,7 +463,9 @@ def run_migrations():
                     "force_text_visibility": True,
                     "attendance_label": "Attendance Status",
                     "attending_label": "I am attending",
-                    "not_attending_label": "Unable to attend"
+                    "not_attending_label": "Unable to attend",
+                    "attendeePassBgColor": "#000000",
+                    "engagementDetailsColor": "#0f172a"
                 },
                 layout_schema=[
                     {
@@ -570,7 +578,9 @@ def run_migrations():
                     "force_text_visibility": True,
                     "attendance_label": "Attendance Status",
                     "attending_label": "I am attending",
-                    "not_attending_label": "Unable to attend"
+                    "not_attending_label": "Unable to attend",
+                    "attendeePassBgColor": "#000000",
+                    "engagementDetailsColor": "#0f172a"
                 },
                 layout_schema=[],
                 post_submit_config={

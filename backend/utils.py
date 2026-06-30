@@ -177,6 +177,25 @@ def get_event_email_config(event: Event, session: Session):
     template_key = getattr(event, "confirmation_template_key", None)
     if template_key and template_key != "global" and template_key != "":
         config["confirmation_template_key"] = template_key
+    # Fetch attendeePassBgColor and engagementDetailsColor from event's registration form template if it exists
+    attendee_pass_bg_color = "#000000"
+    engagement_details_color = None
+    if getattr(event, "registration_form_template_id", None):
+        try:
+            from backend.models import RegistrationFormTemplate
+            tpl = session.get(RegistrationFormTemplate, event.registration_form_template_id)
+            if tpl and tpl.theme_config:
+                attendee_pass_bg_color = tpl.theme_config.get("attendeePassBgColor", "#000000")
+                engagement_details_color = tpl.theme_config.get("engagementDetailsColor")
+        except Exception as e:
+            print(f"Warning: Could not fetch registration form template: {e}")
+    
+    # Fallback to primary_color if engagement_details_color is undefined
+    if not engagement_details_color:
+        engagement_details_color = config.get("primary_color", "#0f172a")
+
+    config["attendee_pass_bg_color"] = attendee_pass_bg_color
+    config["engagement_details_color"] = engagement_details_color
         
     return config
 

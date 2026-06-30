@@ -109,6 +109,8 @@ const compileTemplatePreview = (
   const meta = parseTemplateMeta(bodyHtml) || {};
   const primary = primaryColor || meta.primary_color || "#0f172a";
   const accent = accentColor || meta.accent_color || "#94a3b8";
+  const attendeePassBgColor = eventData?.registration_form_template?.theme_config?.attendeePassBgColor || "#000000";
+  const engagementDetailsColor = eventData?.registration_form_template?.theme_config?.engagementDetailsColor || primary;
   const usesCustomTemplate = !!(eventData?.confirmation_template_id);
   const showBanner = !!(usesCustomTemplate && meta.banner_image_url && meta.show_banner === "true");
   const bannerUrl = showBanner ? meta.banner_image_url : "";
@@ -147,7 +149,7 @@ const compileTemplatePreview = (
   <div style="margin-top: 20px; font-family: ${fontFamily};">
       <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin: 0 0 4px 0; font-family: ${fontFamily};">Address</p>
       <p style="font-size: 16px; font-weight: 700; color: #0f172a; margin: 0 0 10px 0; font-family: ${fontFamily};">${address}</p>
-      <a href="#" style="display: inline-block; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.05em; color: #ffffff; background-color: ${primary}; text-decoration: none; padding: 10px 20px; border-radius: 12px; margin-top: 4px; font-family: ${fontFamily};">
+      <a href="#" style="display: inline-block; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.05em; color: #ffffff; background-color: ${engagementDetailsColor}; text-decoration: none; padding: 10px 20px; border-radius: 12px; margin-top: 4px; font-family: ${fontFamily};">
           🗺️ Open in Google Maps
       </a>
   </div>
@@ -159,7 +161,7 @@ const compileTemplatePreview = (
       
       <div style="margin-bottom: 20px; font-family: ${fontFamily};">
           <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin: 0 0 4px 0; font-family: ${fontFamily};">Event</p>
-          <p style="font-size: 18px; font-weight: 800; color: ${primary}; margin: 0; font-family: ${fontFamily};">${title}</p>
+          <p style="font-size: 18px; font-weight: 800; color: ${engagementDetailsColor}; margin: 0; font-family: ${fontFamily};">${title}</p>
       </div>
 
       <div style="margin-bottom: 20px; font-family: ${fontFamily};">
@@ -221,7 +223,7 @@ const compileTemplatePreview = (
           <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom:48px;">
             <tr>
               <td align="left" valign="middle">
-                <div style="background:${primary};padding:12px 28px;border-radius:16px;display:inline-block;">
+                <div style="background:${attendeePassBgColor};padding:12px 28px;border-radius:16px;display:inline-block;">
                   <span style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:0.4em;color:#fff;">Attendee Pass</span>
                 </div>
               </td>

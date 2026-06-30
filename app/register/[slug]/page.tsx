@@ -1841,10 +1841,27 @@ function PublicRegistrationPageContent() {
             } w-24 h-24 rounded-[2rem] flex items-center justify-center mx-auto mb-10 shadow-2xl`}>
               <CheckCircle2 className={isLightTheme && theme !== "brutalist_retro" ? "text-white" : "text-black"} size={56} />
             </div>
+            {(() => {
+              const config = {
+                theme: event?.registration_form_template?.theme_config || {}
+              };
+              return isAttending ? (
+                <div className="flex justify-center mb-6">
+                  <div 
+                    className="px-6 py-2 rounded-full inline-flex items-center justify-center animate-in fade-in duration-500"
+                    style={{ backgroundColor: config.theme.attendeePassBgColor || '#000000' }}
+                  >
+                    <span className="text-[11px] font-black uppercase tracking-[0.4em] text-white">
+                      Attendee Pass
+                    </span>
+                  </div>
+                </div>
+              ) : null;
+            })()}
             <h1 className={`text-4xl font-black mb-6 font-bricolage italic uppercase tracking-tight ${style.textMain}`}>
               {getPostSubmitTitle()}
             </h1>
-            <p className={`${style.textMuted} mb-12 font-medium leading-relaxed`}>
+            <p className={`${style.textMuted} mb-12 font-medium leading-relaxed whitespace-pre-line`}>
               {getPostSubmitDesc()}
             </p>
             {isAttending && (
