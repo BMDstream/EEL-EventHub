@@ -1733,7 +1733,7 @@ function PublicRegistrationPageContent() {
               <p className="text-red-300 text-sm font-medium leading-snug">{submitError}</p>
             </div>
           )}
-          <button type="submit" disabled={registering} className={style.btnSubmit}>
+          <button type="submit" disabled={registering} className={`${style.btnSubmit} client-btn-submit-override`}>
             {registering ? <Loader2 className="animate-spin" size={20} /> : null}
             {registering ? "Dispatching..." : "Submit Registration"}
           </button>
@@ -1758,6 +1758,12 @@ function PublicRegistrationPageContent() {
         }
         .client-text-accent { color: ${eventAccentColor} !important; }
         .client-bg-accent { background-color: ${eventAccentColor} !important; }
+        .client-btn-submit-override {
+          background-color: ${eventAccentColor} !important;
+          background-image: none !important;
+          border-color: ${eventAccentColor} !important;
+          box-shadow: 0 25px 50px -12px ${eventAccentColor}30 !important;
+        }
         .client-border-accent { border-color: ${eventAccentColor} !important; }
         .client-hover-border-accent:hover { border-color: ${eventAccentColor} !important; }
         .client-hover-bg-accent:hover { background-color: ${eventAccentColor} !important; }
