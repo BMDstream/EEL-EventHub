@@ -314,6 +314,12 @@ function PublicRegistrationPageContent() {
               <span className="italic font-medium">{field.description}</span>
             </div>
           )}
+
+          {field.image_url && (
+            <div className="mt-2 relative rounded-2xl overflow-hidden border border-slate-100 dark:border-slate-850 shadow-sm max-w-sm bg-white/5 p-1">
+              <img src={field.image_url} alt={field.label} className="w-full h-auto max-h-48 object-contain rounded-xl" />
+            </div>
+          )}
           
           {field.type === "text" && (
             <input
@@ -321,6 +327,21 @@ function PublicRegistrationPageContent() {
               type="text"
               placeholder="Enter your answer"
               onChange={(e) => handleCustomChange(field.id, e.target.value)}
+              className={style.input}
+            />
+          )}
+
+          {field.type === "numeric" && (
+            <input
+              required={field.required}
+              type="tel"
+              inputMode="numeric"
+              placeholder="Numbers only"
+              value={customAnswers[field.id] || ""}
+              onChange={(e) => {
+                const cleaned = e.target.value.replace(/[^0-9]/g, '');
+                handleCustomChange(field.id, cleaned);
+              }}
               className={style.input}
             />
           )}

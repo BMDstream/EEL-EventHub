@@ -12,13 +12,14 @@ import { useSession } from "next-auth/react";
 interface FormField {
   id: string;
   label: string;
-  type: "text" | "select" | "checkbox" | "partner_card";
+  type: "text" | "select" | "checkbox" | "partner_card" | "numeric";
   required: boolean;
   options?: string[]; // For select type
   dependsOn?: {
     fieldId: string;
     value: string;
   };
+  image_url?: string;
 }
 
 interface FormSection {
@@ -907,6 +908,7 @@ export default function RegistrationTemplateManager() {
                                           className="w-full text-[10px] font-bold text-slate-650 bg-slate-50 dark:bg-slate-800 rounded-lg p-1.5 border border-slate-100"
                                         >
                                           <option value="text">Text Input</option>
+                                          <option value="numeric">Phone / Numeric Input</option>
                                           <option value="select">Dropdown Select</option>
                                           <option value="checkbox">Single Checkbox</option>
                                           <option value="partner_card">Corporate Partner Validation Card</option>
@@ -931,6 +933,18 @@ export default function RegistrationTemplateManager() {
                                           />
                                         </div>
                                       )}
+                                    </div>
+
+                                    {/* Reference Image input */}
+                                    <div className="pt-2 border-t border-slate-50 dark:border-slate-800">
+                                      <label className="text-[8px] font-black uppercase tracking-widest text-slate-400 ml-0.5">Attach Reference Image (Optional)</label>
+                                      <input 
+                                        type="text" 
+                                        placeholder="e.g. https://.../image.png"
+                                        value={field.image_url || ""}
+                                        onChange={(e) => updateFieldProperty(section.id, field.id, "image_url", e.target.value)}
+                                        className="w-full text-[10px] font-bold text-slate-650 bg-slate-50 dark:bg-slate-800 rounded-lg p-1.5 border border-slate-100"
+                                      />
                                     </div>
 
                                     {/* Conditional branch trigger */}
@@ -1202,6 +1216,10 @@ export default function RegistrationTemplateManager() {
 
                               {field.type === "text" && (
                                 <input type="text" disabled placeholder="Enter answer..." className="w-full px-4 py-2.5 rounded-xl border border-slate-100 bg-slate-50/50 text-xs font-semibold" />
+                              )}
+
+                              {field.type === "numeric" && (
+                                <input type="text" disabled placeholder="Numeric/Phone answer (Numbers only)..." className="w-full px-4 py-2.5 rounded-xl border border-slate-100 bg-slate-50/50 text-xs font-semibold cursor-not-allowed" />
                               )}
 
                               {field.type === "select" && (
