@@ -515,6 +515,26 @@ const compileTemplateHtml = (key: string, values: Record<string, any> = {}, font
   const alertFontFamily = sections.alertNote?.fontFamily || fontFamily;
   const alertFontSize = sections.alertNote?.fontSize || "14px";
 
+  const getInlineFontStyleWeightStyle = (fontStyleWeight?: string, defaultWeight = "400", defaultStyle = "normal") => {
+    if (!fontStyleWeight) return `font-weight: ${defaultWeight}; font-style: ${defaultStyle};`;
+    const lower = fontStyleWeight.toLowerCase();
+    let weight = defaultWeight;
+    let style = defaultStyle;
+    
+    if (lower.includes("light")) weight = "300";
+    else if (lower.includes("regular")) weight = "400";
+    else if (lower.includes("bold")) weight = "700";
+    else if (lower.includes("black")) weight = "900";
+    
+    if (lower.includes("italic")) style = "italic";
+    else style = "normal";
+    
+    return `font-weight: ${weight}; font-style: ${style};`;
+  };
+
+  const mainBodyStyles = getInlineFontStyleWeightStyle(sections.mainBodyMessage?.fontStyleWeight, "400", "normal");
+  const alertStyles = getInlineFontStyleWeightStyle(sections.alertNote?.fontStyleWeight, "700", "normal");
+
   const showBanner = values.show_banner === "true" || (baseKey === "banner_email" && values.show_banner !== "false");
   const bannerUrl = values.banner_image_url || config?.banner_url || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800";
   const bannerHtml = showBanner ? `
@@ -528,7 +548,7 @@ const compileTemplateHtml = (key: string, values: Record<string, any> = {}, font
   if (baseKey === "registration_confirmed") {
     const warningHtml = values.warning_text ? `
             <div style="background: #fffbeb; padding: 28px; border-radius: 24px; border: 1px solid #fef3c7; margin-bottom: 40px; text-align: center;">
-                <p style="color: #b45309; font-size: ${alertFontSize}; font-weight: 700; margin: 0; line-height: 1.5; text-transform: uppercase; letter-spacing: 0.05em; font-family: ${alertFontFamily};">
+                <p style="color: #b45309; font-size: ${alertFontSize}; ${alertStyles} margin: 0; line-height: 1.5; text-transform: uppercase; letter-spacing: 0.05em; font-family: ${alertFontFamily};">
                     ${values.warning_text}
                 </p>
             </div>
@@ -559,7 +579,7 @@ const compileTemplateHtml = (key: string, values: Record<string, any> = {}, font
             <h2 style="font-size: 38px; font-weight: 900; color: ${values.primary_color || ""}; margin-bottom: 28px; text-transform: uppercase; font-style: italic; letter-spacing: -0.04em; line-height: 1; margin-top: 0;">
                 ${values.heading_title || ""} <span style="color: ${values.accent_color || ""};">${values.heading_subtitle || ""}</span>
             </h2>
-            <p style="font-family: ${mainBodyFontFamily}; font-size: ${mainBodyFontSize}; line-height: 1.7; margin-bottom: 40px; color: #475569;">
+            <p style="font-family: ${mainBodyFontFamily}; font-size: ${mainBodyFontSize}; ${mainBodyStyles} line-height: 1.7; margin-bottom: 40px; color: #475569;">
                 Hello <strong>{first_name}</strong>,<br><br>
                 ${(values.body_text || "").replace(/\n/g, "<br>")}
             </p>
@@ -612,7 +632,7 @@ const compileTemplateHtml = (key: string, values: Record<string, any> = {}, font
             <h2 style="font-size: 38px; font-weight: 900; color: ${values.primary_color || ""}; margin-bottom: 28px; text-transform: uppercase; font-style: italic; letter-spacing: -0.04em; line-height: 1; margin-top: 0;">
                 ${values.heading_title || ""} <span style="color: ${values.accent_color || ""};">${values.heading_subtitle || ""}</span>
             </h2>
-            <p style="font-family: ${mainBodyFontFamily}; font-size: ${mainBodyFontSize}; line-height: 1.7; margin-bottom: 40px; color: #475569;">
+            <p style="font-family: ${mainBodyFontFamily}; font-size: ${mainBodyFontSize}; ${mainBodyStyles} line-height: 1.7; margin-bottom: 40px; color: #475569;">
                 Hello <strong>{first_name}</strong>,<br><br>
                 ${(values.body_text || "").replace(/\n/g, "<br>")}
             </p>
@@ -674,7 +694,7 @@ const compileTemplateHtml = (key: string, values: Record<string, any> = {}, font
                 </p>
             </div>
             
-            <p style="font-family: ${mainBodyFontFamily}; font-size: ${mainBodyFontSize}; line-height: 1.7; margin-bottom: 40px; color: #475569;">
+            <p style="font-family: ${mainBodyFontFamily}; font-size: ${mainBodyFontSize}; ${mainBodyStyles} line-height: 1.7; margin-bottom: 40px; color: #475569;">
                 Hello <strong>{first_name}</strong>,<br><br>
                 ${(values.body_text || "").replace(/\n/g, "<br>")}
             </p>
@@ -730,7 +750,7 @@ const compileTemplateHtml = (key: string, values: Record<string, any> = {}, font
                 {logo_html}
               </tr>
             </table>
-            <p style="font-family: ${mainBodyFontFamily}; font-size: ${mainBodyFontSize}; line-height: 1.7; margin-bottom: 40px; color: #475569;">
+            <p style="font-family: ${mainBodyFontFamily}; font-size: ${mainBodyFontSize}; ${mainBodyStyles} line-height: 1.7; margin-bottom: 40px; color: #475569;">
                 Hello <strong>{first_name}</strong>,<br><br>
                 ${(values.body_text || "").replace(/\n/g, "<br>")}
             </p>
@@ -768,7 +788,7 @@ const compileTemplateHtml = (key: string, values: Record<string, any> = {}, font
         ${values.heading_title || ""} <span style="color: ${values.accent_color || ""};">${values.heading_subtitle || ""}</span>
     </h2>
     
-    <p style="font-family: ${mainBodyFontFamily}; font-size: ${mainBodyFontSize}; color: #9ca3af; text-align: center; margin-bottom: 30px; font-weight: 500;">
+    <p style="font-family: ${mainBodyFontFamily}; font-size: ${mainBodyFontSize}; color: #9ca3af; text-align: center; margin-bottom: 30px; ${mainBodyStyles}">
         ${(values.body_text || "").replace(/\n/g, "<br>")}
     </p>
  
@@ -828,10 +848,10 @@ const compileTemplateHtml = (key: string, values: Record<string, any> = {}, font
         ${bannerHtml}
         <tr>
           <td style="padding: 40px; font-family: ${fontFamily}; font-size: ${fontSize};">
-            <p style="font-family: ${mainBodyFontFamily}; font-size: ${mainBodyFontSize}; line-height: 1.7; margin-bottom: 24px; color: #e7e5e4;">
+            <p style="font-family: ${mainBodyFontFamily}; font-size: ${mainBodyFontSize}; ${mainBodyStyles} line-height: 1.7; margin-bottom: 24px; color: #e7e5e4;">
                 Dear <strong>{first_name}</strong>,
             </p>
-            <p style="font-family: ${mainBodyFontFamily}; font-size: ${mainBodyFontSize}; line-height: 1.7; margin-bottom: 32px; color: #d6d3d1;">
+            <p style="font-family: ${mainBodyFontFamily}; font-size: ${mainBodyFontSize}; ${mainBodyStyles} line-height: 1.7; margin-bottom: 32px; color: #d6d3d1;">
                 ${(values.body_text || "").replace(/\n/g, "<br>")}
             </p>
             
@@ -1203,6 +1223,25 @@ export default function SettingsPage() {
     const detailsFont = sections.engagementDetails?.fontFamily || activeFont;
     const alertFont = sections.alertNote?.fontFamily || activeFont;
     const alertFontSize = sections.alertNote?.fontSize || "14px";
+
+    const getWeightStyleValues = (fontStyleWeight?: string, defaultWeight = "400", defaultStyle = "normal") => {
+      if (!fontStyleWeight) return { weight: defaultWeight, style: defaultStyle };
+      const lower = fontStyleWeight.toLowerCase();
+      let weight = defaultWeight;
+      let style = defaultStyle;
+      
+      if (lower.includes("light")) weight = "300";
+      else if (lower.includes("regular")) weight = "400";
+      else if (lower.includes("bold")) weight = "700";
+      else if (lower.includes("black")) weight = "900";
+      
+      if (lower.includes("italic")) style = "italic";
+      else style = "normal";
+      
+      return { weight, style };
+    };
+
+    const detailsStyles = getWeightStyleValues(sections.engagementDetails?.fontStyleWeight, "700", "normal");
     
     let html = bodyHtml;
     const baseKey = resolveBaseTemplateKey(selectedKey, templates);
@@ -1237,6 +1276,9 @@ export default function SettingsPage() {
         .replaceAll("#eab308", accentCol)
         .replaceAll("font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;", `font-family: ${detailsFont};`)
         .replaceAll("font-family: sans-serif;", `font-family: ${detailsFont};`)
+        .replaceAll("font-weight: 900;", `font-weight: ${detailsStyles.weight}; font-style: ${detailsStyles.style};`)
+        .replaceAll("font-weight: 800;", `font-weight: ${detailsStyles.weight}; font-style: ${detailsStyles.style};`)
+        .replaceAll("font-weight: 700;", `font-weight: ${detailsStyles.weight}; font-style: ${detailsStyles.style};`)
         .replace("Matchup Details", detailsTitle)
         .replace("Engagement Details", engagementTitle);
     }
@@ -2498,6 +2540,21 @@ export default function SettingsPage() {
                                   <option value="32px">32px</option>
                                 </select>
 
+                                <select
+                                  value={formValues.sections?.mainBodyMessage?.fontStyleWeight || "Regular"}
+                                  onChange={(e) => handleSectionStyleChange("mainBodyMessage", "fontStyleWeight", e.target.value)}
+                                  className="px-2 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 outline-none cursor-pointer"
+                                >
+                                  <option value="Light">Light</option>
+                                  <option value="Light Italic">Light Italic</option>
+                                  <option value="Regular">Regular</option>
+                                  <option value="Regular Italic">Regular Italic</option>
+                                  <option value="Bold">Bold</option>
+                                  <option value="Bold Italic">Bold Italic</option>
+                                  <option value="Black">Black</option>
+                                  <option value="Black Italic">Black Italic</option>
+                                </select>
+
                                 <div className="w-px h-5 bg-slate-300 dark:bg-slate-600 mx-1.5" />
 
                                 <button
@@ -2568,7 +2625,11 @@ export default function SettingsPage() {
                                 }}
                                 style={{
                                   fontFamily: formValues.sections?.mainBodyMessage?.fontFamily || "Calibri, sans-serif",
-                                  fontSize: formValues.sections?.mainBodyMessage?.fontSize || "16px"
+                                  fontSize: formValues.sections?.mainBodyMessage?.fontSize || "16px",
+                                  fontWeight: (formValues.sections?.mainBodyMessage?.fontStyleWeight?.toLowerCase().includes("light") ? "300" :
+                                               formValues.sections?.mainBodyMessage?.fontStyleWeight?.toLowerCase().includes("bold") ? "700" :
+                                               formValues.sections?.mainBodyMessage?.fontStyleWeight?.toLowerCase().includes("black") ? "900" : "400"),
+                                  fontStyle: (formValues.sections?.mainBodyMessage?.fontStyleWeight?.toLowerCase().includes("italic") ? "italic" : "normal")
                                 }}
                                 className="w-full min-h-[220px] max-h-[400px] overflow-y-auto p-4 rounded-b-2xl bg-white border border-t-0 border-slate-200 focus:border-yellow-400 outline-none text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white"
                               />
@@ -2592,41 +2653,60 @@ export default function SettingsPage() {
                                      className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 focus:border-yellow-400 outline-none font-medium text-sm text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white"
                                    />
                                  </div>
-                                 <div className="grid grid-cols-2 gap-4">
-                                   <div className="space-y-1.5">
-                                     <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
-                                       Alert Font Family
-                                     </label>
-                                     <select
-                                       value={formValues.sections?.alertNote?.fontFamily || "Calibri, sans-serif"}
-                                       onChange={(e) => handleSectionStyleChange("alertNote", "fontFamily", e.target.value)}
-                                       className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 outline-none text-xs font-bold text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white"
-                                     >
-                                       <option value="Calibri, sans-serif">Calibri</option>
-                                       <option value="'Helvetica Neue', Helvetica, Arial, sans-serif">Helvetica Neue</option>
-                                       <option value="'Inter', sans-serif">Inter</option>
-                                       <option value="'Outfit', sans-serif">Outfit</option>
-                                       <option value="'Bricolage Grotesque', sans-serif">Bricolage</option>
-                                       <option value="Georgia, serif">Georgia</option>
-                                     </select>
-                                   </div>
-                                   <div className="space-y-1.5">
-                                     <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
-                                       Alert Font Size
-                                     </label>
-                                     <select
-                                       value={formValues.sections?.alertNote?.fontSize || "14px"}
-                                       onChange={(e) => handleSectionStyleChange("alertNote", "fontSize", e.target.value)}
-                                       className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 outline-none text-xs font-bold text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white"
-                                     >
-                                       <option value="12px">12px</option>
-                                       <option value="13px">13px</option>
-                                       <option value="14px">14px</option>
-                                       <option value="15px">15px</option>
-                                       <option value="16px">16px</option>
-                                     </select>
-                                   </div>
-                                 </div>
+                                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                    <div className="space-y-1.5">
+                                      <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
+                                        Alert Font Family
+                                      </label>
+                                      <select
+                                        value={formValues.sections?.alertNote?.fontFamily || "Calibri, sans-serif"}
+                                        onChange={(e) => handleSectionStyleChange("alertNote", "fontFamily", e.target.value)}
+                                        className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 outline-none text-xs font-bold text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                                      >
+                                        <option value="Calibri, sans-serif">Calibri</option>
+                                        <option value="'Helvetica Neue', Helvetica, Arial, sans-serif">Helvetica Neue</option>
+                                        <option value="'Inter', sans-serif">Inter</option>
+                                        <option value="'Outfit', sans-serif">Outfit</option>
+                                        <option value="'Bricolage Grotesque', sans-serif">Bricolage</option>
+                                        <option value="Georgia, serif">Georgia</option>
+                                      </select>
+                                    </div>
+                                    <div className="space-y-1.5">
+                                      <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
+                                        Alert Font Size
+                                      </label>
+                                      <select
+                                        value={formValues.sections?.alertNote?.fontSize || "14px"}
+                                        onChange={(e) => handleSectionStyleChange("alertNote", "fontSize", e.target.value)}
+                                        className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 outline-none text-xs font-bold text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                                      >
+                                        <option value="12px">12px</option>
+                                        <option value="13px">13px</option>
+                                        <option value="14px">14px</option>
+                                        <option value="15px">15px</option>
+                                        <option value="16px">16px</option>
+                                      </select>
+                                    </div>
+                                    <div className="space-y-1.5">
+                                      <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
+                                        Alert Font Style & Weight
+                                      </label>
+                                      <select
+                                        value={formValues.sections?.alertNote?.fontStyleWeight || "Regular"}
+                                        onChange={(e) => handleSectionStyleChange("alertNote", "fontStyleWeight", e.target.value)}
+                                        className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 outline-none text-xs font-bold text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                                      >
+                                        <option value="Light">Light</option>
+                                        <option value="Light Italic">Light Italic</option>
+                                        <option value="Regular">Regular</option>
+                                        <option value="Regular Italic">Regular Italic</option>
+                                        <option value="Bold">Bold</option>
+                                        <option value="Bold Italic">Bold Italic</option>
+                                        <option value="Black">Black</option>
+                                        <option value="Black Italic">Black Italic</option>
+                                      </select>
+                                    </div>
+                                  </div>
                                </div>
                              )}
 
@@ -2708,7 +2788,7 @@ export default function SettingsPage() {
                             )}
 
                             {["registration_confirmed", "partner_pending", "tournament_matchup", "banner_email"].includes(baseKey) && (
-                              <div className="grid grid-cols-2 gap-4 mt-3 pt-3 border-t border-slate-100 dark:border-slate-800/40">
+                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-3 pt-3 border-t border-slate-100 dark:border-slate-800/40">
                                 <div className="space-y-1.5">
                                   <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
                                     Engagement Font Family
@@ -2740,6 +2820,25 @@ export default function SettingsPage() {
                                     <option value="14px">14px</option>
                                     <option value="15px">15px</option>
                                     <option value="16px">16px</option>
+                                  </select>
+                                </div>
+                                <div className="space-y-1.5">
+                                  <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
+                                    Engagement Font Style & Weight
+                                  </label>
+                                  <select
+                                    value={formValues.sections?.engagementDetails?.fontStyleWeight || "Regular"}
+                                    onChange={(e) => handleSectionStyleChange("engagementDetails", "fontStyleWeight", e.target.value)}
+                                    className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 outline-none text-xs font-bold text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                                  >
+                                    <option value="Light">Light</option>
+                                    <option value="Light Italic">Light Italic</option>
+                                    <option value="Regular">Regular</option>
+                                    <option value="Regular Italic">Regular Italic</option>
+                                    <option value="Bold">Bold</option>
+                                    <option value="Bold Italic">Bold Italic</option>
+                                    <option value="Black">Black</option>
+                                    <option value="Black Italic">Black Italic</option>
                                   </select>
                                 </div>
                               </div>

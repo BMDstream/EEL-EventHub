@@ -166,6 +166,30 @@ def get_logo_html(config: Optional[dict], meta: dict, primary_color: str) -> str
     </td>
     """
 
+def get_font_weight_style_css(font_style_weight_str, default_weight="400", default_style="normal"):
+    if not font_style_weight_str:
+        return f"font-weight: {default_weight}; font-style: {default_style};"
+    
+    lower = str(font_style_weight_str).lower()
+    weight = default_weight
+    style = default_style
+    
+    if "light" in lower:
+        weight = "300"
+    elif "regular" in lower:
+        weight = "400"
+    elif "bold" in lower:
+        weight = "700"
+    elif "black" in lower:
+        weight = "900"
+        
+    if "italic" in lower:
+        style = "italic"
+    else:
+        style = "normal"
+        
+    return f"font-weight: {weight}; font-style: {style};"
+
 def send_confirmation_email(
     to_email: str, 
     first_name: str, 
@@ -232,14 +256,17 @@ def send_confirmation_email(
     main_body_config = sections.get("mainBodyMessage", {})
     main_body_font_family = main_body_config.get("fontFamily", font_family)
     main_body_font_size = main_body_config.get("fontSize", font_size)
+    main_body_styles = get_font_weight_style_css(main_body_config.get("fontStyleWeight"), "400", "normal")
 
     details_config = sections.get("engagementDetails", {})
     details_font_family = details_config.get("fontFamily", font_family)
     details_font_size = details_config.get("fontSize", "14px")
+    details_styles = get_font_weight_style_css(details_config.get("fontStyleWeight"), "700", "normal")
 
     alert_config = sections.get("alertNote", {})
     alert_font_family = alert_config.get("fontFamily", font_family)
     alert_font_size = alert_config.get("fontSize", "14px")
+    alert_styles = get_font_weight_style_css(alert_config.get("fontStyleWeight"), "700", "normal")
 
     if meta:
         attendee_pass_bg_color = meta.get("attendeePassBgColor", attendee_pass_bg_color)
@@ -430,6 +457,10 @@ def send_confirmation_email(
             {matchup_html}
         </div>
         """
+        if details_styles:
+            details_html = details_html.replace("font-weight: 900;", details_styles).replace("font-weight: 800;", details_styles).replace("font-weight: 700;", details_styles)
+            if matchup_html:
+                matchup_html = matchup_html.replace("font-weight: 900;", details_styles).replace("font-weight: 800;", details_styles).replace("font-weight: 700;", details_styles)
 
     qr_block_html = ""
     warning_block_html = ""
@@ -452,7 +483,7 @@ def send_confirmation_email(
         warning_text = meta.get("warning_text", "Please present this QR code OR number at the registration desk.")
         warning_block_html = f"""
         <div style="background: #fffbeb; padding: 28px; border-radius: 24px; border: 1px solid #fef3c7; margin-bottom: 40px; text-align: center; font-family: {alert_font_family};">
-            <p style="color: #b45309; font-size: {alert_font_size}; font-weight: 700; margin: 0; line-height: 1.5; text-transform: uppercase; letter-spacing: 0.05em; font-family: {alert_font_family};">
+            <p style="color: #b45309; font-size: {alert_font_size}; {alert_styles} margin: 0; line-height: 1.5; text-transform: uppercase; letter-spacing: 0.05em; font-family: {alert_font_family};">
                 {warning_text}
             </p>
         </div>
@@ -523,7 +554,7 @@ def send_confirmation_email(
                 
                 {urgent_banner_html}
                 
-                <p style="font-family: {main_body_font_family}; font-size: {main_body_font_size}; line-height: 1.7; margin-bottom: 40px; color: #475569;">
+                <p style="font-family: {main_body_font_family}; font-size: {main_body_font_size}; {main_body_styles} line-height: 1.7; margin-bottom: 40px; color: #475569;">
                     Hello <strong>{first_name}</strong><br><br>
                     {body_html}
                 </p>
@@ -576,6 +607,9 @@ def send_confirmation_email(
                 "primary_color": primary_color,
                 "accent_color": accent_color,
                 "attendee_pass_bg_color": attendee_pass_bg_color,
+                "main_body_styles": main_body_styles,
+                "details_styles": details_styles,
+                "alert_styles": alert_styles,
                 "engagement_details_color": engagement_details_color,
                 "heading_title": heading_title,
                 "heading_subtitle": heading_subtitle,
@@ -713,14 +747,17 @@ def send_broadcast_email(
     main_body_config = sections.get("mainBodyMessage", {})
     main_body_font_family = main_body_config.get("fontFamily", font_family)
     main_body_font_size = main_body_config.get("fontSize", font_size)
+    main_body_styles = get_font_weight_style_css(main_body_config.get("fontStyleWeight"), "400", "normal")
 
     details_config = sections.get("engagementDetails", {})
     details_font_family = details_config.get("fontFamily", font_family)
     details_font_size = details_config.get("fontSize", "14px")
+    details_styles = get_font_weight_style_css(details_config.get("fontStyleWeight"), "700", "normal")
 
     alert_config = sections.get("alertNote", {})
     alert_font_family = alert_config.get("fontFamily", font_family)
     alert_font_size = alert_config.get("fontSize", "14px")
+    alert_styles = get_font_weight_style_css(alert_config.get("fontStyleWeight"), "700", "normal")
 
     if meta:
         attendee_pass_bg_color = meta.get("attendeePassBgColor", attendee_pass_bg_color)
@@ -799,6 +836,9 @@ def send_broadcast_email(
             "primary_color": primary_color,
             "accent_color": accent_color,
             "attendee_pass_bg_color": attendee_pass_bg_color,
+            "main_body_styles": main_body_styles,
+            "details_styles": details_styles,
+            "alert_styles": alert_styles,
             "engagement_details_color": engagement_details_color,
             "logo_html": logo_td_html,
             "broadcast_body": body.replace("{first_name}", first_name).replace("{last_name}", last_name).replace("{pin}", pin).replace("{event_title}", event_title).replace("\n", "<br>"),
@@ -840,6 +880,8 @@ def send_broadcast_email(
             </div>
         </div>
         """
+        if details_styles:
+            details_html = details_html.replace("font-weight: 900;", details_styles).replace("font-weight: 800;", details_styles).replace("font-weight: 700;", details_styles)
         variables["details_html"] = details_html
 
         if db_template:
@@ -895,7 +937,7 @@ def send_broadcast_email(
                         <h2 style="font-size: 32px; font-weight: 900; color: {primary_color}; margin-bottom: 28px; text-transform: uppercase; font-style: italic; letter-spacing: -0.04em; line-height: 1.1; margin-top: 0;">
                             Update: <span style="color: {accent_color};">{event_title}</span>
                         </h2>
-                        <div style="font-size: {font_size}; line-height: 1.8; color: #334155; margin-bottom: 40px;">
+                        <div style="font-size: {font_size}; {main_body_styles} line-height: 1.8; color: #334155; margin-bottom: 40px;">
                             {p_body.replace("\n", "<br>")}
                         </div>
                         {signature_html}

@@ -1818,6 +1818,34 @@ function PublicRegistrationPageContent() {
 
    const customFont = event?.registration_form_template?.theme_config?.typography_font;
    const questionFontSize = event?.registration_form_template?.theme_config?.question_font_size;
+   const tc = event?.registration_form_template?.theme_config || {};
+   const questionWeightStyle = tc.question_weight || "Regular Italic";
+   const bodyWeightStyle = tc.body_weight || "Regular";
+   const headingWeightStyle = tc.heading_weight || "Bold";
+   const successTitleWeightStyle = tc.success_title_weight || "Bold";
+   const successDescWeightStyle = tc.success_desc_weight || "Regular";
+
+   const parseWeightStyle = (val: string, defaultWeight = "400", defaultStyle = "normal") => {
+     const lower = val.toLowerCase();
+     let weight = defaultWeight;
+     let style = defaultStyle;
+     
+     if (lower.includes("light")) weight = "300";
+     else if (lower.includes("regular")) weight = "400";
+     else if (lower.includes("bold")) weight = "700";
+     else if (lower.includes("black")) weight = "900";
+     
+     if (lower.includes("italic")) style = "italic";
+     else style = "normal";
+     
+     return { weight, style };
+   };
+
+   const qStyles = parseWeightStyle(questionWeightStyle, "400", "italic");
+   const bStyles = parseWeightStyle(bodyWeightStyle, "400", "normal");
+   const hStyles = parseWeightStyle(headingWeightStyle, "700", "normal");
+   const sTitleStyles = parseWeightStyle(successTitleWeightStyle, "700", "normal");
+   const sDescStyles = parseWeightStyle(successDescWeightStyle, "400", "normal");
 
   return (
     <div style={customFont ? { fontFamily: customFont } : undefined} className="w-full">
@@ -1831,8 +1859,39 @@ function PublicRegistrationPageContent() {
           background-size: 200% 200%;
           animation: aurora 15s ease infinite;
         }
+        .client-form-text-custom,
+        .client-form-text-custom p,
+        .client-form-text-custom span,
+        .client-form-text-custom div,
+        .client-form-text-custom a,
+        .client-form-text-custom input,
+        .client-form-text-custom select,
+        .client-form-text-custom textarea {
+          font-weight: ${bStyles.weight} !important;
+          font-style: ${bStyles.style} !important;
+        }
+        .client-form-text-custom h1,
+        .client-form-text-custom h2,
+        .client-form-text-custom h3,
+        .client-form-text-custom h4,
+        .client-form-text-custom h5,
+        .client-form-text-custom h6,
+        .client-event-heading {
+          font-weight: ${hStyles.weight} !important;
+          font-style: ${hStyles.style} !important;
+        }
         .client-question-label {
           font-size: ${questionFontSize ? `${questionFontSize}px` : '14px'} !important;
+          font-weight: ${qStyles.weight} !important;
+          font-style: ${qStyles.style} !important;
+        }
+        .client-success-title {
+          font-weight: ${sTitleStyles.weight} !important;
+          font-style: ${sTitleStyles.style} !important;
+        }
+        .client-success-desc {
+          font-weight: ${sDescStyles.weight} !important;
+          font-style: ${sDescStyles.style} !important;
         }
         @media (max-width: 640px) {
           .client-question-label {
@@ -1920,10 +1979,10 @@ function PublicRegistrationPageContent() {
                 </div>
               ) : null;
             })()}
-            <h1 className={`text-4xl font-black mb-6 font-bricolage italic uppercase tracking-tight ${style.textMain}`}>
+            <h1 className={`text-4xl mb-6 tracking-tight client-success-title ${style.textMain}`}>
               {getPostSubmitTitle()}
             </h1>
-            <p className={`${style.textMuted} mb-12 font-medium leading-relaxed whitespace-pre-line`} style={{ whiteSpace: 'pre-line' }}>
+            <p className={`${style.textMuted} mb-12 leading-relaxed whitespace-pre-line client-success-desc`} style={{ whiteSpace: 'pre-line' }}>
               {getPostSubmitDesc()}
             </p>
             {isAttending && (

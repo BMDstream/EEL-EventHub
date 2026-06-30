@@ -51,6 +51,9 @@ interface RegistrationFormTemplate {
     base_font_size?: string | number;
     heading_weight?: string;
     body_weight?: string;
+    question_weight?: string;
+    success_title_weight?: string;
+    success_desc_weight?: string;
     disclaimerCheckboxLabel?: string;
     question_font_size?: string | number;
   };
@@ -179,7 +182,10 @@ export default function RegistrationTemplateManager() {
             strip_trailing_periods: true,
             force_text_visibility: true,
             attendeePassBgColor: "#000000",
-            engagementDetailsColor: "#0f172a"
+            engagementDetailsColor: "#0f172a",
+            question_weight: "Regular Italic",
+            success_title_weight: "Bold",
+            success_desc_weight: "Regular"
           },
           layout_schema: [
             {
@@ -703,6 +709,8 @@ export default function RegistrationTemplateManager() {
                             <option value="Regular Italic">Regular Italic</option>
                             <option value="Bold">Bold</option>
                             <option value="Bold Italic">Bold Italic</option>
+                            <option value="Black">Black</option>
+                            <option value="Black Italic">Black Italic</option>
                           </select>
                         </div>
                         <div className="space-y-2">
@@ -718,6 +726,59 @@ export default function RegistrationTemplateManager() {
                             <option value="Regular Italic">Regular Italic</option>
                             <option value="Bold">Bold</option>
                             <option value="Bold Italic">Bold Italic</option>
+                            <option value="Black">Black</option>
+                            <option value="Black Italic">Black Italic</option>
+                          </select>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-1">Question Font Weight & Style</label>
+                          <select 
+                            value={selectedTemplate.theme_config.question_weight || "Regular Italic"}
+                            onChange={(e) => updateThemeConfig("question_weight", e.target.value)}
+                            className="w-full px-4 py-2.5 rounded-xl border border-slate-100 focus:border-[#1e293b] outline-none font-bold text-xs text-slate-700 bg-slate-50 cursor-pointer dark:bg-slate-800 dark:text-white"
+                          >
+                            <option value="Light">Light</option>
+                            <option value="Light Italic">Light Italic</option>
+                            <option value="Regular">Regular</option>
+                            <option value="Regular Italic">Regular Italic</option>
+                            <option value="Bold">Bold</option>
+                            <option value="Bold Italic">Bold Italic</option>
+                            <option value="Black">Black</option>
+                            <option value="Black Italic">Black Italic</option>
+                          </select>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-1">Success Title Weight & Style</label>
+                          <select 
+                            value={selectedTemplate.theme_config.success_title_weight || "Bold"}
+                            onChange={(e) => updateThemeConfig("success_title_weight", e.target.value)}
+                            className="w-full px-4 py-2.5 rounded-xl border border-slate-100 focus:border-[#1e293b] outline-none font-bold text-xs text-slate-700 bg-slate-50 cursor-pointer dark:bg-slate-800 dark:text-white"
+                          >
+                            <option value="Light">Light</option>
+                            <option value="Light Italic">Light Italic</option>
+                            <option value="Regular">Regular</option>
+                            <option value="Regular Italic">Regular Italic</option>
+                            <option value="Bold">Bold</option>
+                            <option value="Bold Italic">Bold Italic</option>
+                            <option value="Black">Black</option>
+                            <option value="Black Italic">Black Italic</option>
+                          </select>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-1">Success Desc Weight & Style</label>
+                          <select 
+                            value={selectedTemplate.theme_config.success_desc_weight || "Regular"}
+                            onChange={(e) => updateThemeConfig("success_desc_weight", e.target.value)}
+                            className="w-full px-4 py-2.5 rounded-xl border border-slate-100 focus:border-[#1e293b] outline-none font-bold text-xs text-slate-700 bg-slate-50 cursor-pointer dark:bg-slate-800 dark:text-white"
+                          >
+                            <option value="Light">Light</option>
+                            <option value="Light Italic">Light Italic</option>
+                            <option value="Regular">Regular</option>
+                            <option value="Regular Italic">Regular Italic</option>
+                            <option value="Bold">Bold</option>
+                            <option value="Bold Italic">Bold Italic</option>
+                            <option value="Black">Black</option>
+                            <option value="Black Italic">Black Italic</option>
                           </select>
                         </div>
                       </div>
@@ -1276,32 +1337,84 @@ export default function RegistrationTemplateManager() {
             </div>
           </div>
 
-          {selectedTemplate ? (
-            <div 
-              style={{
-                fontFamily: selectedTemplate.theme_config.typography_font || "Calibri, sans-serif"
-              }}
-              className="rounded-[2.5rem] border border-slate-150 p-8 shadow-lg transition-all min-h-[480px] relative overflow-hidden flex flex-col justify-between preview-form-text-custom"
-            >
-              <style dangerouslySetInnerHTML={{ __html: `
-                ${selectedTemplate.theme_config.form_text_color ? `
+          {selectedTemplate ? (() => {
+            const parseWeightStyle = (val?: string, defaultWeight = "400", defaultStyle = "normal") => {
+              if (!val) return { weight: defaultWeight, style: defaultStyle };
+              const lower = val.toLowerCase();
+              let weight = defaultWeight;
+              let style = defaultStyle;
+              
+              if (lower.includes("light")) weight = "300";
+              else if (lower.includes("regular")) weight = "400";
+              else if (lower.includes("bold")) weight = "700";
+              else if (lower.includes("black")) weight = "900";
+              
+              if (lower.includes("italic")) style = "italic";
+              else style = "normal";
+              
+              return { weight, style };
+            };
+
+            const bodyStyle = parseWeightStyle(selectedTemplate.theme_config.body_weight, "400", "normal");
+            const headingStyle = parseWeightStyle(selectedTemplate.theme_config.heading_weight, "700", "normal");
+            const questionStyle = parseWeightStyle(selectedTemplate.theme_config.question_weight, "400", "italic");
+            const successTitleStyle = parseWeightStyle(selectedTemplate.theme_config.success_title_weight, "700", "normal");
+            const successDescStyle = parseWeightStyle(selectedTemplate.theme_config.success_desc_weight, "400", "normal");
+
+            return (
+              <div 
+                style={{
+                  fontFamily: selectedTemplate.theme_config.typography_font || "Calibri, sans-serif"
+                }}
+                className="rounded-[2.5rem] border border-slate-150 p-8 shadow-lg transition-all min-h-[480px] relative overflow-hidden flex flex-col justify-between preview-form-text-custom"
+              >
+                <style dangerouslySetInnerHTML={{ __html: `
+                  ${selectedTemplate.theme_config.form_text_color ? `
+                    .preview-form-text-custom h1,
+                    .preview-form-text-custom h2,
+                    .preview-form-text-custom h3,
+                    .preview-form-text-custom h4,
+                    .preview-form-text-custom p,
+                    .preview-form-text-custom span,
+                    .preview-form-text-custom label,
+                    .preview-form-text-custom li,
+                    .preview-form-text-custom legend,
+                    .preview-form-text-custom select {
+                      color: ${selectedTemplate.theme_config.form_text_color} !important;
+                    }
+                  ` : ""}
+                  .preview-form-text-custom, 
+                  .preview-form-text-custom p,
+                  .preview-form-text-custom span,
+                  .preview-form-text-custom div,
+                  .preview-form-text-custom input,
+                  .preview-form-text-custom select {
+                    font-weight: ${bodyStyle.weight} !important;
+                    font-style: ${bodyStyle.style} !important;
+                  }
                   .preview-form-text-custom h1,
                   .preview-form-text-custom h2,
                   .preview-form-text-custom h3,
                   .preview-form-text-custom h4,
-                  .preview-form-text-custom p,
-                  .preview-form-text-custom span,
-                  .preview-form-text-custom label,
-                  .preview-form-text-custom li,
-                  .preview-form-text-custom legend,
-                  .preview-form-text-custom select {
-                    color: ${selectedTemplate.theme_config.form_text_color} !important;
+                  .preview-form-text-custom h5,
+                  .preview-form-text-custom h6 {
+                    font-weight: ${headingStyle.weight} !important;
+                    font-style: ${headingStyle.style} !important;
                   }
-                ` : ""}
-                .preview-form-text-custom label {
-                  font-size: ${selectedTemplate.theme_config.question_font_size ? `${selectedTemplate.theme_config.question_font_size}px` : '10px'} !important;
-                }
-              `}} />
+                  .preview-form-text-custom label {
+                    font-size: ${selectedTemplate.theme_config.question_font_size ? `${selectedTemplate.theme_config.question_font_size}px` : '10px'} !important;
+                    font-weight: ${questionStyle.weight} !important;
+                    font-style: ${questionStyle.style} !important;
+                  }
+                  .preview-success-title {
+                    font-weight: ${successTitleStyle.weight} !important;
+                    font-style: ${successTitleStyle.style} !important;
+                  }
+                  .preview-success-desc {
+                    font-weight: ${successDescStyle.weight} !important;
+                    font-style: ${successDescStyle.style} !important;
+                  }
+                `}} />
               {/* Force theme config values onto the container styles */}
               <div 
                 className="absolute inset-0 z-0 opacity-10 pointer-events-none"
@@ -1456,11 +1569,11 @@ export default function RegistrationTemplateManager() {
                           </div>
                         </div>
 
-                        <h1 className="text-2xl font-bold text-[#0f172a] tracking-tight">
+                        <h1 className="text-2xl font-bold text-[#0f172a] tracking-tight preview-success-title">
                           {selectedTemplate.post_submit_config.onscreen_title || "YOUR REGISTRATION HAS BEEN CONFIRMED."}
                         </h1>
 
-                        <p className="text-slate-500 text-xs font-medium leading-relaxed whitespace-pre-line" style={{ whiteSpace: 'pre-line' }}>
+                        <p className="text-slate-500 text-xs font-medium leading-relaxed whitespace-pre-line preview-success-desc" style={{ whiteSpace: 'pre-line' }}>
                           {formatPostSubmit(selectedTemplate.post_submit_config.onscreen_description || "Your registration is confirmed.")}
                         </p>
 
@@ -1478,7 +1591,8 @@ export default function RegistrationTemplateManager() {
                 )}
               </div>
             </div>
-          ) : (
+          );
+        })() : (
             <div className="bg-slate-50 rounded-[2.5rem] p-10 text-center border border-slate-100 dark:bg-slate-900/10 dark:border-slate-800 py-40 min-h-[480px] flex items-center justify-center">
               <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">Select a template to view preview</p>
             </div>
