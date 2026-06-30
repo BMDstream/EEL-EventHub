@@ -678,7 +678,7 @@ export default function EditEventPage() {
   // ---------------------------------------------------------------------------
   return (
     <div className="min-h-screen bg-[#f8fafc] p-8">
-      <div className="max-w-3xl mx-auto">
+      <div className="max-w-5xl mx-auto">
         <div className="flex justify-between items-center mb-10">
           <Link
             href={`/admin/events/${id}`}
@@ -731,301 +731,342 @@ export default function EditEventPage() {
 
           {/* ===== DETAILS TAB ===== */}
           {activeTab === "details" && (
-            <form onSubmit={handleSubmit} className="p-10 space-y-8">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="space-y-3">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Event Title</label>
-                  <input required type="text" name="title" value={formData.title} onChange={handleChange}
-                    className="w-full px-5 py-4 rounded-2xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-slate-700 bg-slate-50/50" />
+            <form onSubmit={handleSubmit} className="p-10 space-y-12">
+              {/* 1. Core Parameters */}
+              <div className="space-y-6">
+                <div className="border-b border-slate-100 pb-3">
+                  <h3 className="text-xs font-black text-[#1e293b] uppercase tracking-[0.2em] flex items-center gap-2">
+                    <Building2 size={16} className="text-slate-400" /> 1. Core Parameters
+                  </h3>
                 </div>
-
-                <div className="space-y-3">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">URL Slug</label>
-                  <input required type="text" name="slug" value={formData.slug} onChange={handleChange}
-                    className="w-full px-5 py-4 rounded-2xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-slate-700 bg-slate-50/50" />
-                </div>
-
-                <div className="space-y-3">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
-                    <Building2 size={14} /> Brand Client
-                  </label>
-                  <select name="client_id" value={formData.client_id} onChange={handleChange}
-                    className="w-full px-5 py-4 rounded-2xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-slate-700 bg-slate-50/50 appearance-none cursor-pointer">
-                    {clients.map((c) => (
-                      <option key={c.id} value={c.id.toString()}>{c.name}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="space-y-3">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Date &amp; Time</label>
-                  <input required type="datetime-local" name="start_date" value={formData.start_date} onChange={handleChange}
-                    className="w-full px-5 py-4 rounded-2xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-slate-700 bg-slate-50/50" />
-                </div>
-
-                <div className="space-y-3">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Venue</label>
-                  <input required type="text" name="location" value={formData.location} onChange={handleChange}
-                    className="w-full px-5 py-4 rounded-2xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-slate-700 bg-slate-50/50" />
-                </div>
-
-                <div className="space-y-3">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Address</label>
-                  <input required type="text" name="address" value={formData.address} onChange={handleChange}
-                    className="w-full px-5 py-4 rounded-2xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-slate-700 bg-slate-50/50" />
-                </div>
-
-                <div className="space-y-3">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Capacity</label>
-                  <input required type="number" name="capacity" value={formData.capacity} onChange={handleChange}
-                    className="w-full px-5 py-4 rounded-2xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-slate-700 bg-slate-50/50" />
-                </div>
-
-                <div className="space-y-3">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Duration (Days)</label>
-                  <input required type="number" min={1} name="duration_days" value={formData.duration_days} onChange={handleChange}
-                    className="w-full px-5 py-4 rounded-2xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-slate-700 bg-slate-50/50" />
-                </div>
-
-                <div className="space-y-3">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-between justify-between">
-                    Background Banner
-                    {formData.banner_url && <button type="button" onClick={() => setFormData({ ...formData, banner_url: "" })} className="text-red-500 hover:underline">Remove</button>}
-                  </label>
-                  <div className="relative group">
-                    <input type="file" accept="image/*" onChange={async (e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        try { const compressed = await compressImage(file, 1600, 1600, 0.85); setFormData(prev => ({ ...prev, banner_url: compressed })); }
-                        catch { const reader = new FileReader(); reader.onloadend = () => setFormData(prev => ({ ...prev, banner_url: reader.result as string })); reader.readAsDataURL(file); }
-                      }
-                    }} className="absolute inset-0 opacity-0 cursor-pointer z-10" />
-                    <div className={`w-full h-24 rounded-2xl border-2 border-dashed ${formData.banner_url ? "border-green-500/30 bg-green-50/50" : "border-slate-200 bg-slate-50/50"} relative transition-all overflow-hidden`}>
-                      {formData.banner_url ? (
-                        <div className="absolute inset-0">
-                          {formData.banner_size === "contain" && <div className="absolute inset-0 scale-110 blur-md opacity-60 bg-cover bg-center" style={{ backgroundImage: `url(${formData.banner_url})` }} />}
-                          <div className="absolute inset-0" style={{ backgroundImage: `url(${formData.banner_url})`, backgroundSize: formData.banner_size, backgroundPosition: formData.banner_position, backgroundRepeat: "no-repeat" }} />
-                        </div>
-                      ) : (
-                        <div className="flex flex-col items-center justify-center h-full">
-                          <p className="text-[10px] font-black text-slate-400 uppercase">Upload Banner Image</p>
-                          <p className="text-[8px] text-slate-300 uppercase mt-1">Recommended: 1920x1080</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {formData.banner_url && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Banner Display Settings</label>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-1 block mb-1">Fit / Scale</label>
-                        <select name="banner_size" value={formData.banner_size} onChange={handleChange}
-                          className="w-full px-4 py-3 rounded-xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-xs text-slate-700 bg-slate-50/50 cursor-pointer">
-                          <option value="cover">Cover (Fill Screen)</option>
-                          <option value="contain">Contain (Show Full Image)</option>
-                          <option value="100% 100%">Stretch to Fit</option>
-                          <option value="auto 100%">Fit Height (Top to Bottom)</option>
-                          <option value="100% auto">Fit Width</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-1 block mb-1">Focus / Position</label>
-                        <select name="banner_position" value={formData.banner_position} onChange={handleChange}
-                          className="w-full px-4 py-3 rounded-xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-xs text-slate-700 bg-slate-50/50 cursor-pointer">
-                          <option value="center">Center</option>
-                          <option value="top">Top</option>
-                          <option value="bottom">Bottom</option>
-                          <option value="left">Left</option>
-                          <option value="right">Right</option>
-                        </select>
-                      </div>
-                    </div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Event Title</label>
+                    <input required type="text" name="title" value={formData.title} onChange={handleChange}
+                      className="w-full px-5 py-4 rounded-2xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-slate-700 bg-slate-50/50" />
                   </div>
-                )}
 
-                <div className="space-y-3">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center justify-between">
-                    Registration Page Background Image (Optional)
-                    {formData.background_url && <button type="button" onClick={() => setFormData({ ...formData, background_url: "" })} className="text-red-500 hover:underline">Remove</button>}
-                  </label>
-                  <div className="relative group">
-                    <input type="file" accept="image/*" onChange={async (e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        try { const compressed = await compressImage(file, 1600, 1600, 0.85); setFormData(prev => ({ ...prev, background_url: compressed })); }
-                        catch { const reader = new FileReader(); reader.onloadend = () => setFormData(prev => ({ ...prev, background_url: reader.result as string })); reader.readAsDataURL(file); }
-                      }
-                    }} className="absolute inset-0 opacity-0 cursor-pointer z-10" />
-                    <div className={`w-full h-24 rounded-2xl border-2 border-dashed ${formData.background_url ? "border-green-500/30 bg-green-50/50" : "border-slate-200 bg-slate-50/50"} relative transition-all overflow-hidden`}>
-                      {formData.background_url ? (
-                        <div className="absolute inset-0"><div className="absolute inset-0" style={{ backgroundImage: `url(${formData.background_url})`, backgroundSize: "cover", backgroundPosition: "center", backgroundRepeat: "no-repeat" }} /></div>
-                      ) : (
-                        <div className="flex flex-col items-center justify-center h-full">
-                          <p className="text-[10px] font-black text-slate-400 uppercase">Upload Background Image</p>
-                          <p className="text-[8px] text-slate-300 uppercase mt-1">Recommended: 1920x1080</p>
-                        </div>
-                      )}
-                    </div>
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">URL Slug</label>
+                    <input required type="text" name="slug" value={formData.slug} onChange={handleChange}
+                      className="w-full px-5 py-4 rounded-2xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-slate-700 bg-slate-50/50" />
                   </div>
-                </div>
 
-                <div className="space-y-3">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center justify-between">
-                    Event Email Logo Override
-                    {formData.logo_url && <button type="button" onClick={() => setFormData({ ...formData, logo_url: "" })} className="text-red-500 hover:underline">Remove</button>}
-                  </label>
-                  <div className="relative group">
-                    <input type="file" accept="image/*" onChange={async (e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        try { const compressed = await compressImage(file, 800, 800, 0.85); setFormData(prev => ({ ...prev, logo_url: compressed })); }
-                        catch { const reader = new FileReader(); reader.onloadend = () => setFormData(prev => ({ ...prev, logo_url: reader.result as string })); reader.readAsDataURL(file); }
-                      }
-                    }} className="absolute inset-0 opacity-0 cursor-pointer z-10" />
-                    <div className={`w-full h-24 rounded-2xl border-2 border-dashed ${formData.logo_url ? "border-green-500/30 bg-green-50/50" : "border-slate-200 bg-slate-50/50"} relative transition-all overflow-hidden`}>
-                      {formData.logo_url ? (
-                        <div className="absolute inset-0 flex items-center justify-center p-4 bg-slate-900/5">
-                          <img src={formData.logo_url} alt="Logo Preview" className="max-h-full max-w-full object-contain" />
-                        </div>
-                      ) : (
-                        <div className="flex flex-col items-center justify-center h-full">
-                          <p className="text-[10px] font-black text-slate-400 uppercase">Upload Custom Email Logo</p>
-                          <p className="text-[8px] text-slate-300 uppercase mt-1">Overrides client/default logo for this event</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Registration Form Design Style</label>
-                  <select name="banner_theme" value={formData.banner_theme} onChange={handleChange}
-                    className="w-full px-4 py-3 rounded-xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-xs text-slate-700 bg-slate-50/50 cursor-pointer">
-                    <option value="cyber_dark">Cyber Dark (Premium Black &amp; Gold)</option>
-                    <option value="minimal_light">Minimal Light (Clean White &amp; Slate)</option>
-                    <option value="glassmorphism">Glassmorphism (Frosted Glass Overlay)</option>
-                    <option value="brutalist_retro">Brutalist Retro (Bold Typography &amp; Retro Tech)</option>
-                    <option value="midnight_luxury">Midnight Luxury (Deep Royal Blue &amp; Gold)</option>
-                    <option value="neon_horizon">Neon Horizon (Synthwave &amp; Neon Glow)</option>
-                    <option value="forest_zen">Forest Zen (Deep Emerald &amp; Sage Stacked)</option>
-                    <option value="aurora_glow">Aurora Glow (Dynamic Gradient &amp; Glassmorphism)</option>
-                    <option value="crimson_sunset">Crimson Sunset (Burgundy &amp; Warm Coral)</option>
-                    <option value="cyberpunk_terminal">Cyberpunk Terminal (Matrix Green &amp; Scanlines)</option>
-                    <option value="corporate_mono">Corporate Mono (Slate Grey &amp; Pure Minimalist)</option>
-                    <option value="nordic_alabaster">Nordic Alabaster (Off-White &amp; Editorial Serif)</option>
-                    <option value="midnight_executive">Midnight Executive (Deep Charcoal &amp; Electric Blue)</option>
-                    <option value="champagne_lounge">Champagne Lounge (Warm Alabaster &amp; Brushed Gold)</option>
-                    <option value="logistics_glass">Logistics Glass (Translucent Slate &amp; Steel Borders)</option>
-                  </select>
-                </div>
-
-                <div className="space-y-3">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Registration Form Layout</label>
-                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-                    {[
-                      { id: "", label: "Default", desc: "Theme default" },
-                      { id: "stacked", label: "Stacked", desc: "Top Banner" },
-                      { id: "split", label: "Split Right", desc: "Form on Right" },
-                      { id: "reversed", label: "Split Left", desc: "Form on Left" },
-                      { id: "centered", label: "Centered", desc: "Centered Card" }
-                    ].map((lay) => {
-                      const active = formData.banner_layout === lay.id;
-                      return (
-                        <button key={lay.id} type="button" onClick={() => setFormData(prev => ({ ...prev, banner_layout: lay.id }))}
-                          className={`flex flex-col items-center justify-between p-2.5 rounded-xl border text-center transition-all bg-white hover:border-slate-350 ${active ? "border-slate-800 ring-2 ring-slate-800/10 shadow-sm" : "border-slate-100 shadow-sm opacity-80 hover:opacity-100"}`}>
-                          {lay.id === "" && <div className="relative w-full h-10 bg-slate-100 rounded flex items-center justify-center border border-slate-200/60 mb-2 overflow-hidden"><div className="text-[9px] font-black tracking-tighter text-slate-400 uppercase">Default</div></div>}
-                          {lay.id === "stacked" && <div className="flex flex-col gap-0.5 w-full h-10 bg-slate-150 rounded p-1 border border-slate-200/60 mb-2"><div className="bg-slate-350 h-2 w-full rounded-sm"></div><div className="bg-white h-5 w-4/5 mx-auto rounded-sm border border-slate-200 flex items-center justify-center"><span className="w-1.5 h-1.5 bg-slate-300 rounded-full"></span></div></div>}
-                          {lay.id === "split" && <div className="flex gap-0.5 w-full h-10 bg-slate-150 rounded p-1 border border-slate-200/60 mb-2"><div className="bg-slate-350 w-2/5 h-full rounded-sm"></div><div className="bg-white w-3/5 h-full rounded-sm border border-slate-200 flex items-center justify-center"><span className="w-1.5 h-1.5 bg-slate-300 rounded-full"></span></div></div>}
-                          {lay.id === "reversed" && <div className="flex gap-0.5 w-full h-10 bg-slate-150 rounded p-1 border border-slate-200/60 mb-2"><div className="bg-white w-3/5 h-full rounded-sm border border-slate-200 flex items-center justify-center"><span className="w-1.5 h-1.5 bg-slate-300 rounded-full"></span></div><div className="bg-slate-350 w-2/5 h-full rounded-sm"></div></div>}
-                          {lay.id === "centered" && <div className="relative w-full h-10 bg-slate-200 rounded p-1 border border-slate-250 mb-2 flex items-center justify-center"><div className="bg-white w-3/4 h-6 rounded-sm border border-slate-300 shadow-sm flex items-center justify-center"><span className="w-1.5 h-1.5 bg-slate-300 rounded-full"></span></div></div>}
-                          <span className="text-[10px] font-black tracking-tight text-slate-800 block leading-tight">{lay.label}</span>
-                          <span className="text-[8px] text-slate-400 font-bold block">{lay.desc}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {[
-                    { name: "banner_primary_color", label: "Custom Primary Color Override", placeholder: "e.g. #0f172a" },
-                    { name: "banner_accent_color", label: "Custom Accent Color Override", placeholder: "e.g. #eab308" },
-                    { name: "banner_text_color", label: "Custom Text Color Override", placeholder: "e.g. #ffffff" },
-                  ].map((field) => (
-                    <div key={field.name} className="space-y-2">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 block">{field.label}</label>
-                      <div className="flex items-center gap-3">
-                        <input type="color" name={field.name} value={(formData as any)[field.name] || "#000000"} onChange={handleChange}
-                          className="w-10 h-10 rounded-xl border border-slate-200 cursor-pointer p-0 bg-transparent shrink-0" />
-                        <input type="text" name={field.name} value={(formData as any)[field.name]} onChange={handleChange}
-                          placeholder={field.placeholder}
-                          className="w-full px-4 py-2.5 rounded-xl border border-slate-100 focus:border-[#1e293b] outline-none font-bold text-xs text-slate-700 bg-slate-50/50" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Approved Email Domains (Optional - comma separated)</label>
-                <input type="text" name="allowed_domains" value={formData.allowed_domains} onChange={handleChange}
-                  placeholder="e.g. bmdcomputing.com, companyname.co.za"
-                  className="w-full px-5 py-4 rounded-2xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-slate-700 bg-slate-50/50" />
-                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest ml-1">Guests will only be permitted to register if their email ends in one of these domains.</p>
-              </div>
-
-              <div className="space-y-3">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Intelligence / Description</label>
-                <textarea required name="description" value={formData.description} onChange={handleChange} rows={4}
-                  className="w-full px-5 py-4 rounded-2xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-slate-700 bg-slate-50/50 resize-none" />
-              </div>
-
-              <div className="space-y-3">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Registration Form Template</label>
-                <select 
-                  name="registration_form_template_id" 
-                  value={formData.registration_form_template_id || ""} 
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setFormData({ 
-                      ...formData, 
-                      registration_form_template_id: val ? parseInt(val) : null 
-                    });
-                  }}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-xs text-slate-700 bg-slate-50/50 cursor-pointer"
-                >
-                  <option value="">Default Form (Custom questions managed below)</option>
-                  {regTemplates.map((t) => (
-                    <option key={t.id} value={t.id}>{t.name} ({t.description || "No description"})</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-3">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Registration Options</label>
-                <div className="space-y-3 bg-slate-50/50 rounded-2xl border border-slate-100 p-5">
-                  <label className="flex items-center gap-4 cursor-pointer">
-                    <input type="checkbox" name="collect_company" checked={formData.collect_company} onChange={handleChange}
-                      className="w-5 h-5 rounded border-slate-300 text-[#1e293b] focus:ring-[#1e293b]/5" />
-                    <span className="text-xs font-bold text-slate-600">Collect Organization / Company name from guests</span>
-                  </label>
-                  {formData.collect_company && (
-                    <label className="flex items-center gap-4 pl-9 mt-2 cursor-pointer border-t border-slate-100/50 pt-2">
-                      <input type="checkbox" name="company_required" checked={formData.company_required} onChange={handleChange}
-                        className="w-5 h-5 rounded border-slate-300 text-[#1e293b] focus:ring-[#1e293b]/5" />
-                      <span className="text-xs font-bold text-slate-600">Organization / Company is required</span>
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                      <Building2 size={14} /> Brand Client
                     </label>
+                    <select name="client_id" value={formData.client_id} onChange={handleChange}
+                      className="w-full px-5 py-4 rounded-2xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-slate-700 bg-slate-50/50 appearance-none cursor-pointer">
+                      {clients.map((c) => (
+                        <option key={c.id} value={c.id.toString()}>{c.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Date &amp; Time</label>
+                    <input required type="datetime-local" name="start_date" value={formData.start_date} onChange={handleChange}
+                      className="w-full px-5 py-4 rounded-2xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-slate-700 bg-slate-50/50" />
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Venue</label>
+                    <input required type="text" name="location" value={formData.location} onChange={handleChange}
+                      className="w-full px-5 py-4 rounded-2xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-slate-700 bg-slate-50/50" />
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Address</label>
+                    <input required type="text" name="address" value={formData.address} onChange={handleChange}
+                      className="w-full px-5 py-4 rounded-2xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-slate-700 bg-slate-50/50" />
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Capacity</label>
+                    <input required type="number" name="capacity" value={formData.capacity} onChange={handleChange}
+                      className="w-full px-5 py-4 rounded-2xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-slate-700 bg-slate-50/50" />
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Duration (Days)</label>
+                    <input required type="number" min={1} name="duration_days" value={formData.duration_days} onChange={handleChange}
+                      className="w-full px-5 py-4 rounded-2xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-slate-700 bg-slate-50/50" />
+                  </div>
+                </div>
+              </div>
+
+              {/* 2. Page Styling & Background */}
+              <div className="space-y-6 pt-8 border-t border-slate-100">
+                <div className="border-b border-slate-100 pb-3">
+                  <h3 className="text-xs font-black text-[#1e293b] uppercase tracking-[0.2em] flex items-center gap-2">
+                    <Calendar size={16} className="text-slate-400" /> 2. Page Styling &amp; Background
+                  </h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-between justify-between">
+                      Background Banner
+                      {formData.banner_url && <button type="button" onClick={() => setFormData({ ...formData, banner_url: "" })} className="text-red-500 hover:underline text-[9px] uppercase font-bold tracking-widest">Remove</button>}
+                    </label>
+                    <div className="relative group">
+                      <input type="file" accept="image/*" onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          try { const compressed = await compressImage(file, 1600, 1600, 0.85); setFormData(prev => ({ ...prev, banner_url: compressed })); }
+                          catch { const reader = new FileReader(); reader.onloadend = () => setFormData(prev => ({ ...prev, banner_url: reader.result as string })); reader.readAsDataURL(file); }
+                        }
+                      }} className="absolute inset-0 opacity-0 cursor-pointer z-10" />
+                      <div className={`w-full h-24 rounded-2xl border-2 border-dashed ${formData.banner_url ? "border-green-500/30 bg-green-50/50" : "border-slate-200 bg-slate-50/50"} relative transition-all overflow-hidden`}>
+                        {formData.banner_url ? (
+                          <div className="absolute inset-0">
+                            {formData.banner_size === "contain" && <div className="absolute inset-0 scale-110 blur-md opacity-60 bg-cover bg-center" style={{ backgroundImage: `url(${formData.banner_url})` }} />}
+                            <div className="absolute inset-0" style={{ backgroundImage: `url(${formData.banner_url})`, backgroundSize: formData.banner_size, backgroundPosition: formData.banner_position, backgroundRepeat: "no-repeat" }} />
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center h-full">
+                            <p className="text-[10px] font-black text-slate-400 uppercase">Upload Banner Image</p>
+                            <p className="text-[8px] text-slate-300 uppercase mt-1">Recommended: 1920x1080</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center justify-between">
+                      Registration Page Background Image (Optional)
+                      {formData.background_url && <button type="button" onClick={() => setFormData({ ...formData, background_url: "" })} className="text-red-500 hover:underline text-[9px] uppercase font-bold tracking-widest">Remove</button>}
+                    </label>
+                    <div className="relative group">
+                      <input type="file" accept="image/*" onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          try { const compressed = await compressImage(file, 1600, 1600, 0.85); setFormData(prev => ({ ...prev, background_url: compressed })); }
+                          catch { const reader = new FileReader(); reader.onloadend = () => setFormData(prev => ({ ...prev, background_url: reader.result as string })); reader.readAsDataURL(file); }
+                        }
+                      }} className="absolute inset-0 opacity-0 cursor-pointer z-10" />
+                      <div className={`w-full h-24 rounded-2xl border-2 border-dashed ${formData.background_url ? "border-green-500/30 bg-green-50/50" : "border-slate-200 bg-slate-50/50"} relative transition-all overflow-hidden`}>
+                        {formData.background_url ? (
+                          <div className="absolute inset-0"><div className="absolute inset-0" style={{ backgroundImage: `url(${formData.background_url})`, backgroundSize: "cover", backgroundPosition: "center", backgroundRepeat: "no-repeat" }} /></div>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center h-full">
+                            <p className="text-[10px] font-black text-slate-400 uppercase">Upload Background Image</p>
+                            <p className="text-[8px] text-slate-300 uppercase mt-1">Recommended: 1920x1080</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {(formData.banner_url || formData.background_url) && (
+                    <div className="space-y-3 md:col-span-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Banner &amp; Background Display Settings</label>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50/50 rounded-2xl border border-slate-100 p-6">
+                        <div>
+                          <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-1 block mb-1">Fit / Scale</label>
+                          <select name="banner_size" value={formData.banner_size} onChange={handleChange}
+                            className="w-full px-4 py-3 rounded-xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-xs text-slate-700 bg-white cursor-pointer">
+                            <option value="cover">Cover (Fill Screen)</option>
+                            <option value="contain">Contain (Show Full Image)</option>
+                            <option value="100% 100%">Stretch to Fit</option>
+                            <option value="auto 100%">Fit Height (Top to Bottom)</option>
+                            <option value="100% auto">Fit Width</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-1 block mb-1">Focus / Position</label>
+                          <select name="banner_position" value={formData.banner_position} onChange={handleChange}
+                            className="w-full px-4 py-3 rounded-xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-xs text-slate-700 bg-white cursor-pointer">
+                            <option value="center">Center</option>
+                            <option value="top">Top</option>
+                            <option value="bottom">Bottom</option>
+                            <option value="left">Left</option>
+                            <option value="right">Right</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
                   )}
                 </div>
               </div>
 
-              {/* Registration Access & Disclaimer */}
+              {/* 3. Form Design & Layout */}
+              <div className="space-y-6 pt-8 border-t border-slate-100">
+                <div className="border-b border-slate-100 pb-3">
+                  <h3 className="text-xs font-black text-[#1e293b] uppercase tracking-[0.2em] flex items-center gap-2">
+                    <Layers size={16} className="text-slate-400" /> 3. Form Design &amp; Layout
+                  </h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center justify-between">
+                      Event Email Logo Override
+                      {formData.logo_url && <button type="button" onClick={() => setFormData({ ...formData, logo_url: "" })} className="text-red-500 hover:underline text-[9px] uppercase font-bold tracking-widest">Remove</button>}
+                    </label>
+                    <div className="relative group">
+                      <input type="file" accept="image/*" onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          try { const compressed = await compressImage(file, 800, 800, 0.85); setFormData(prev => ({ ...prev, logo_url: compressed })); }
+                          catch { const reader = new FileReader(); reader.onloadend = () => setFormData(prev => ({ ...prev, logo_url: reader.result as string })); reader.readAsDataURL(file); }
+                        }
+                      }} className="absolute inset-0 opacity-0 cursor-pointer z-10" />
+                      <div className={`w-full h-24 rounded-2xl border-2 border-dashed ${formData.logo_url ? "border-green-500/30 bg-green-50/50" : "border-slate-200 bg-slate-50/50"} relative transition-all overflow-hidden`}>
+                        {formData.logo_url ? (
+                          <div className="absolute inset-0 flex items-center justify-center p-4 bg-slate-900/5">
+                            <img src={formData.logo_url} alt="Logo Preview" className="max-h-full max-w-full object-contain" />
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center h-full">
+                            <p className="text-[10px] font-black text-slate-400 uppercase">Upload Custom Email Logo</p>
+                            <p className="text-[8px] text-slate-300 uppercase mt-1">Overrides client/default logo for this event</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Registration Form Design Style</label>
+                    <select name="banner_theme" value={formData.banner_theme} onChange={handleChange}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-xs text-slate-700 bg-slate-50/50 cursor-pointer">
+                      <option value="cyber_dark">Cyber Dark (Premium Black &amp; Gold)</option>
+                      <option value="minimal_light">Minimal Light (Clean White &amp; Slate)</option>
+                      <option value="glassmorphism">Glassmorphism (Frosted Glass Overlay)</option>
+                      <option value="brutalist_retro">Brutalist Retro (Bold Typography &amp; Retro Tech)</option>
+                      <option value="midnight_luxury">Midnight Luxury (Deep Royal Blue &amp; Gold)</option>
+                      <option value="neon_horizon">Neon Horizon (Synthwave &amp; Neon Glow)</option>
+                      <option value="forest_zen">Forest Zen (Deep Emerald &amp; Sage Stacked)</option>
+                      <option value="aurora_glow">Aurora Glow (Dynamic Gradient &amp; Glassmorphism)</option>
+                      <option value="crimson_sunset">Crimson Sunset (Burgundy &amp; Warm Coral)</option>
+                      <option value="cyberpunk_terminal">Cyberpunk Terminal (Matrix Green &amp; Scanlines)</option>
+                      <option value="corporate_mono">Corporate Mono (Slate Grey &amp; Pure Minimalist)</option>
+                      <option value="nordic_alabaster">Nordic Alabaster (Off-White &amp; Editorial Serif)</option>
+                      <option value="midnight_executive">Midnight Executive (Deep Charcoal &amp; Electric Blue)</option>
+                      <option value="champagne_lounge">Champagne Lounge (Warm Alabaster &amp; Brushed Gold)</option>
+                      <option value="logistics_glass">Logistics Glass (Translucent Slate &amp; Steel Borders)</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-3 md:col-span-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Registration Form Layout</label>
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                      {[
+                        { id: "", label: "Default", desc: "Theme default" },
+                        { id: "stacked", label: "Stacked", desc: "Top Banner" },
+                        { id: "split", label: "Split Right", desc: "Form on Right" },
+                        { id: "reversed", label: "Split Left", desc: "Form on Left" },
+                        { id: "centered", label: "Centered", desc: "Centered Card" }
+                      ].map((lay) => {
+                        const active = formData.banner_layout === lay.id;
+                        return (
+                          <button key={lay.id} type="button" onClick={() => setFormData(prev => ({ ...prev, banner_layout: lay.id }))}
+                            className={`flex flex-col items-center justify-between p-2.5 rounded-xl border text-center transition-all bg-white hover:border-slate-350 ${active ? "border-slate-800 ring-2 ring-slate-800/10 shadow-sm" : "border-slate-100 shadow-sm opacity-80 hover:opacity-100"}`}>
+                            {lay.id === "" && <div className="relative w-full h-10 bg-slate-100 rounded flex items-center justify-center border border-slate-200/60 mb-2 overflow-hidden"><div className="text-[9px] font-black tracking-tighter text-slate-400 uppercase">Default</div></div>}
+                            {lay.id === "stacked" && <div className="flex flex-col gap-0.5 w-full h-10 bg-slate-150 rounded p-1 border border-slate-200/60 mb-2"><div className="bg-slate-350 h-2 w-full rounded-sm"></div><div className="bg-white h-5 w-4/5 mx-auto rounded-sm border border-slate-200 flex items-center justify-center"><span className="w-1.5 h-1.5 bg-slate-300 rounded-full"></span></div></div>}
+                            {lay.id === "split" && <div className="flex gap-0.5 w-full h-10 bg-slate-150 rounded p-1 border border-slate-200/60 mb-2"><div className="bg-slate-350 w-2/5 h-full rounded-sm"></div><div className="bg-white w-3/5 h-full rounded-sm border border-slate-200 flex items-center justify-center"><span className="w-1.5 h-1.5 bg-slate-300 rounded-full"></span></div></div>}
+                            {lay.id === "reversed" && <div className="flex gap-0.5 w-full h-10 bg-slate-150 rounded p-1 border border-slate-200/60 mb-2"><div className="bg-white w-3/5 h-full rounded-sm border border-slate-200 flex items-center justify-center"><span className="w-1.5 h-1.5 bg-slate-300 rounded-full"></span></div><div className="bg-slate-350 w-2/5 h-full rounded-sm"></div></div>}
+                            {lay.id === "centered" && <div className="relative w-full h-10 bg-slate-200 rounded p-1 border border-slate-250 mb-2 flex items-center justify-center"><div className="bg-white w-3/4 h-6 rounded-sm border border-slate-300 shadow-sm flex items-center justify-center"><span className="w-1.5 h-1.5 bg-slate-300 rounded-full"></span></div></div>}
+                            <span className="text-[10px] font-black tracking-tight text-slate-800 block leading-tight">{lay.label}</span>
+                            <span className="text-[8px] text-slate-400 font-bold block">{lay.desc}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="space-y-3 md:col-span-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Registration Form Template</label>
+                    <select 
+                      name="registration_form_template_id" 
+                      value={formData.registration_form_template_id || ""} 
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setFormData({ 
+                          ...formData, 
+                          registration_form_template_id: val ? parseInt(val) : null 
+                        });
+                      }}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-xs text-slate-700 bg-slate-50/50 cursor-pointer"
+                    >
+                      <option value="">Default Form (Custom questions managed below)</option>
+                      {regTemplates.map((t) => (
+                        <option key={t.id} value={t.id}>{t.name} ({t.description || "No description"})</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-3 md:col-span-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Custom Color Overrides</label>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50/50 rounded-2xl border border-slate-100 p-6">
+                      {[
+                        { name: "banner_primary_color", label: "Custom Primary Color Override", placeholder: "e.g. #0f172a" },
+                        { name: "banner_accent_color", label: "Custom Accent Color Override", placeholder: "e.g. #eab308" },
+                        { name: "banner_text_color", label: "Custom Text Color Override", placeholder: "e.g. #ffffff" },
+                      ].map((field) => (
+                        <div key={field.name} className="space-y-2">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 block">{field.label}</label>
+                          <div className="flex items-center gap-3">
+                            <input type="color" name={field.name} value={(formData as any)[field.name] || "#000000"} onChange={handleChange}
+                              className="w-10 h-10 rounded-xl border border-slate-200 cursor-pointer p-0 bg-transparent shrink-0" />
+                            <input type="text" name={field.name} value={(formData as any)[field.name]} onChange={handleChange}
+                              placeholder={field.placeholder}
+                              className="w-full px-4 py-2.5 rounded-xl border border-slate-100 focus:border-[#1e293b] outline-none font-bold text-xs text-slate-700 bg-white" />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-3 md:col-span-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Intelligence / Description</label>
+                    <textarea required name="description" value={formData.description} onChange={handleChange} rows={4}
+                      className="w-full px-5 py-4 rounded-2xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-slate-700 bg-slate-50/50 resize-none" />
+                  </div>
+                </div>
+              </div>
+
+              {/* 4. Access Rules & Options */}
+              <div className="space-y-6 pt-8 border-t border-slate-100">
+                <div className="border-b border-slate-100 pb-3">
+                  <h3 className="text-xs font-black text-[#1e293b] uppercase tracking-[0.2em] flex items-center gap-2">
+                    <Award size={16} className="text-slate-400" /> 4. Access Rules &amp; Options
+                  </h3>
+                </div>
+                <div className="grid grid-cols-1 gap-6">
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Approved Email Domains (Optional - comma separated)</label>
+                    <input type="text" name="allowed_domains" value={formData.allowed_domains} onChange={handleChange}
+                      placeholder="e.g. bmdcomputing.com, companyname.co.za"
+                      className="w-full px-5 py-4 rounded-2xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-slate-700 bg-slate-50/50" />
+                    <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest ml-1">Guests will only be permitted to register if their email ends in one of these domains.</p>
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Registration Options</label>
+                    <div className="space-y-3 bg-slate-50/50 rounded-2xl border border-slate-100 p-5">
+                      <label className="flex items-center gap-4 cursor-pointer">
+                        <input type="checkbox" name="collect_company" checked={formData.collect_company} onChange={handleChange}
+                          className="w-5 h-5 rounded border-slate-300 text-[#1e293b] focus:ring-[#1e293b]/5" />
+                        <span className="text-xs font-bold text-slate-600">Collect Organization / Company name from guests</span>
+                      </label>
+                      {formData.collect_company && (
+                        <label className="flex items-center gap-4 pl-9 mt-2 cursor-pointer border-t border-slate-100/50 pt-2">
+                          <input type="checkbox" name="company_required" checked={formData.company_required} onChange={handleChange}
+                            className="w-5 h-5 rounded border-slate-300 text-[#1e293b] focus:ring-[#1e293b]/5" />
+                          <span className="text-xs font-bold text-slate-600">Organization / Company is required</span>
+                        </label>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 5. Registration Access & Disclaimer */}
               <div className="border-t border-slate-100 pt-8 mt-6 space-y-6">
                 <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-3">
-                  <Lock size={16} /> Registration Access &amp; Disclaimer
+                  <Lock size={16} className="text-slate-400" /> 5. Registration Access &amp; Disclaimer
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-3 md:col-span-2">
