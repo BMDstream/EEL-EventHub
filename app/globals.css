@@ -4,7 +4,7 @@
 
 @font-face {
   font-family: 'Fluent Calibri';
-  src: url('/fonts/Fluent_Calibri.ttf') format('truetype');
+  src: url('/fonts/Fluent_SitkaSmall.ttf') format('truetype');
   font-weight: normal;
   font-style: normal;
   font-display: swap;
@@ -12,7 +12,7 @@
 
 @font-face {
   font-family: 'Fluent Calibri';
-  src: url('/fonts/Fluent_Calibri-Bold.ttf') format('truetype');
+  src: url('/fonts/Fluent_SitkaSmall-Bold.ttf') format('truetype');
   font-weight: bold;
   font-style: normal;
   font-display: swap;
@@ -20,7 +20,7 @@
 
 @font-face {
   font-family: 'Fluent Calibri';
-  src: url('/fonts/Fluent_Calibri-Italic.ttf') format('truetype');
+  src: url('/fonts/Fluent_SitkaSmall-Italic.ttf') format('truetype');
   font-weight: normal;
   font-style: italic;
   font-display: swap;
@@ -28,17 +28,17 @@
 
 @font-face {
   font-family: 'Fluent Calibri';
-  src: url('/fonts/Fluent_Calibri-BoldItalic.ttf') format('truetype');
+  src: url('/fonts/Fluent_SitkaSmall-BoldItalic.ttf') format('truetype');
   font-weight: bold;
   font-style: italic;
   font-display: swap;
 }
 
 @layer base {
-  *, *::before, *::after, html, body, input, textarea, select, button, span, div, p, label, h1, h2, h3, h4, h5, h6 { font-family: 'Fluent Calibri', Calibri, Candara, sans-serif !important; }
+  *, *::before, *::after, html, body, input, textarea, select, button, span, div, p, label, h1, h2, h3, h4, h5, h6 { font-family: 'Fluent Calibri', Georgia, Cambria, 'Times New Roman', Times, serif !important; }
 
   input::placeholder, textarea::placeholder {
-    font-family: 'Fluent Calibri', Calibri, Candara, sans-serif !important;
+    font-family: 'Fluent Calibri', Georgia, Cambria, 'Times New Roman', Times, serif !important;
   }
 
   :root {
