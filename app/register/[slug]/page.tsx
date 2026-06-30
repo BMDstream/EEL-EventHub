@@ -1770,7 +1770,10 @@ function PublicRegistrationPageContent() {
                 onChange={(e) => setDisclaimerAccepted(e.target.checked)}
                 className={style.checkboxInput || "w-6 h-6 rounded-lg bg-zinc-900 border-white/10 client-checkbox transition-all"}
               />
-              <span className="text-xs font-bold opacity-80 group-hover:opacity-100 transition-opacity">
+              <span 
+                className="text-base font-bold text-slate-900 dark:text-white select-none ml-3"
+                style={{ fontFamily: 'Calibri, sans-serif' }}
+              >
                 {config.legal.disclaimerCheckboxLabel || "I have read and accept the Disclaimer and Indemnity"} <span className="text-red-500 font-bold">*</span>
               </span>
             </label>

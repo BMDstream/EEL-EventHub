@@ -119,11 +119,15 @@ const compileTemplatePreview = (
     ? `<tr><td align="center" style="padding:0;margin:0;line-height:0;"><img src="${bannerUrl}" width="600" style="width:100%;max-width:600px;height:auto;display:block;border-top-left-radius:38px;border-top-right-radius:38px;" alt="Event Banner"/></td></tr>`
     : "";
 
+  const showLogo = meta.show_logo !== "false";
   const logoUrl = eventLogoUrl || meta.logo_image_url || "";
+  const logoText = meta.logo_text || "BMD";
 
-  const logoHtml = logoUrl
-    ? `<td align="right" valign="middle"><img src="${logoUrl}" style="max-height:48px;max-width:120px;object-fit:contain;" alt="Logo"/></td>`
-    : `<td align="right" valign="middle"><div style="background:${primary};padding:8px 16px;border-radius:8px;color:#fff;font-weight:bold;font-size:14px;display:inline-block;font-family:${fontFamily};">BMD</div></td>`;
+  const logoHtml = showLogo
+    ? (logoUrl
+      ? `<td align="right" valign="middle"><img src="${logoUrl}" style="max-height:48px;max-width:120px;object-fit:contain;" alt="Logo"/></td>`
+      : `<td align="right" valign="middle"><div style="background:${primary};padding:8px 16px;border-radius:8px;color:#fff;font-weight:bold;font-size:14px;display:inline-block;font-family:${fontFamily};">${logoText}</div></td>`)
+    : "";
 
   // Formatting date/time from eventData
   let dateStr = "Thursday, June 25, 2026";

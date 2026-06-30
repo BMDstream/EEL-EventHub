@@ -136,6 +136,9 @@ def parse_template_meta(html: str) -> dict:
     return {}
 
 def get_logo_html(config: Optional[dict], meta: dict, primary_color: str) -> str:
+    show_logo = meta.get("show_logo", "true") != "false"
+    if not show_logo:
+        return ""
     logo_url = config.get("logo_url") if config else None
     if logo_url:
         return f"""
@@ -143,28 +146,25 @@ def get_logo_html(config: Optional[dict], meta: dict, primary_color: str) -> str
             <img src="{logo_url}" style="max-height: 48px; max-width: 140px; object-fit: contain; display: block;" alt="Client Logo" />
         </td>
         """
-    show_logo = meta.get("show_logo", "true") != "false"
-    if show_logo:
-        logo_image_url = meta.get("logo_image_url")
-        if logo_image_url:
-            return f"""
-            <td align="right" valign="middle" style="padding-bottom: 0px;">
-                <img src="{logo_image_url}" style="max-height: 48px; max-width: 140px; object-fit: contain; display: block;" alt="Logo" />
-            </td>
-            """
-        logo_text = meta.get("logo_text", "BMD")
-        logo_bg = primary_color or meta.get("primary_color", "#0f172a")
-        font_family = "'Carlito', Calibri, Candara, Segoe, 'Segoe UI', Optima, Arial, sans-serif"
-        if config and isinstance(config, dict):
-            font_family = config.get("font_family", "'Carlito', Calibri, Candara, Segoe, 'Segoe UI', Optima, Arial, sans-serif")
+    logo_image_url = meta.get("logo_image_url")
+    if logo_image_url:
         return f"""
-        <td align="right" valign="middle">
-            <div style="background-color:{logo_bg};padding:8px 16px;border-radius:8px;color:#fff;font-weight:bold;font-size:14px;display:inline-block;font-family:{font_family};">
-                {logo_text}
-            </div>
+        <td align="right" valign="middle" style="padding-bottom: 0px;">
+            <img src="{logo_image_url}" style="max-height: 48px; max-width: 140px; object-fit: contain; display: block;" alt="Logo" />
         </td>
         """
-    return ""
+    logo_text = meta.get("logo_text", "BMD")
+    logo_bg = primary_color or meta.get("primary_color", "#0f172a")
+    font_family = "'Carlito', Calibri, Candara, Segoe, 'Segoe UI', Optima, Arial, sans-serif"
+    if config and isinstance(config, dict):
+        font_family = config.get("font_family", "'Carlito', Calibri, Candara, Segoe, 'Segoe UI', Optima, Arial, sans-serif")
+    return f"""
+    <td align="right" valign="middle">
+        <div style="background-color:{logo_bg};padding:8px 16px;border-radius:8px;color:#fff;font-weight:bold;font-size:14px;display:inline-block;font-family:{font_family};">
+            {logo_text}
+        </div>
+    </td>
+    """
 
 def send_confirmation_email(
     to_email: str, 
