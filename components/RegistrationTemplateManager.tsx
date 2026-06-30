@@ -64,6 +64,19 @@ export default function RegistrationTemplateManager() {
   const [templates, setTemplates] = useState<RegistrationFormTemplate[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<RegistrationFormTemplate | null>(null);
+  const [dragOverFieldId, setDragOverFieldId] = useState<string | null>(null);
+
+  const handleTemplateImageUpload = (secId: string, fieldId: string, file: File) => {
+    if (!file.type.startsWith("image/")) {
+      alert("Please select an image file.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      updateFieldProperty(secId, fieldId, "image_url", reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -938,12 +951,47 @@ export default function RegistrationTemplateManager() {
                                     {/* Reference Image input */}
                                     <div className="pt-2 border-t border-slate-50 dark:border-slate-800">
                                       <label className="text-[8px] font-black uppercase tracking-widest text-slate-400 ml-0.5">Attach Reference Image (Optional)</label>
+                                      
+                                      <div 
+                                        onDragOver={(e) => { e.preventDefault(); setDragOverFieldId(field.id); }}
+                                        onDragLeave={() => setDragOverFieldId(null)}
+                                        onDrop={(e) => { e.preventDefault(); setDragOverFieldId(null); if (e.dataTransfer.files?.[0]) handleTemplateImageUpload(section.id, field.id, e.dataTransfer.files[0]); }}
+                                        className={`relative group h-20 rounded-xl border border-dashed transition-all flex flex-col items-center justify-center p-2 bg-slate-50 dark:bg-slate-800 cursor-pointer overflow-hidden ${
+                                          dragOverFieldId === field.id ? "border-yellow-400 bg-yellow-50/10" : "border-slate-200 hover:border-yellow-400 dark:border-slate-700"
+                                        }`}
+                                      >
+                                        <input 
+                                          type="file" 
+                                          accept="image/*" 
+                                          onChange={(e) => { if (e.target.files?.[0]) handleTemplateImageUpload(section.id, field.id, e.target.files[0]); }}
+                                          className="absolute inset-0 opacity-0 cursor-pointer z-10" 
+                                        />
+                                        
+                                        {field.image_url ? (
+                                          <div className="absolute inset-0 flex items-center justify-between p-2 bg-slate-50/95 dark:bg-[#0f172a]/95 z-20">
+                                            <img src={field.image_url} alt="Preview" className="h-full w-12 object-contain rounded border border-slate-200 dark:border-slate-750" />
+                                            <button 
+                                              type="button" 
+                                              onClick={(e) => { e.stopPropagation(); updateFieldProperty(section.id, field.id, "image_url", ""); }}
+                                              className="text-red-500 hover:underline text-[8px] uppercase font-bold tracking-widest"
+                                            >
+                                              Remove
+                                            </button>
+                                          </div>
+                                        ) : (
+                                          <div className="flex flex-col items-center text-center">
+                                            <p className="text-[8px] font-black text-slate-400 uppercase">Drag &amp; drop image, or click</p>
+                                            <p className="text-[6px] text-slate-300 uppercase mt-0.5">PNG, JPG, WEBP</p>
+                                          </div>
+                                        )}
+                                      </div>
+
                                       <input 
                                         type="text" 
-                                        placeholder="e.g. https://.../image.png"
+                                        placeholder="Or paste an image URL directly..."
                                         value={field.image_url || ""}
                                         onChange={(e) => updateFieldProperty(section.id, field.id, "image_url", e.target.value)}
-                                        className="w-full text-[10px] font-bold text-slate-650 bg-slate-50 dark:bg-slate-800 rounded-lg p-1.5 border border-slate-100"
+                                        className="w-full text-[10px] font-bold text-slate-650 bg-slate-50 dark:bg-slate-800 rounded-lg p-1.5 border border-slate-100 mt-1.5"
                                       />
                                     </div>
 

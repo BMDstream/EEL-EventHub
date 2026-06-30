@@ -26,6 +26,19 @@ export default function FormBuilder({ eventId, initialSchema, onSave }: { eventI
   const [saving, setSaving] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragAllowed, setDragAllowed] = useState(false);
+  const [dragOverFieldId, setDragOverFieldId] = useState<string | null>(null);
+
+  const handleImageUpload = (fieldId: string, file: File) => {
+    if (!file.type.startsWith("image/")) {
+      alert("Please select an image file.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      updateField(fieldId, { image_url: reader.result as string });
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleDragStart = (index: number) => {
     setDraggedIndex(index);
@@ -285,12 +298,47 @@ export default function FormBuilder({ eventId, initialSchema, onSave }: { eventI
                                </div>
                                <div className="space-y-2">
                                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Attach Reference Image (Optional)</label>
+                                  
+                                  <div 
+                                    onDragOver={(e) => { e.preventDefault(); setDragOverFieldId(field.id); }}
+                                    onDragLeave={() => setDragOverFieldId(null)}
+                                    onDrop={(e) => { e.preventDefault(); setDragOverFieldId(null); if (e.dataTransfer.files?.[0]) handleImageUpload(field.id, e.dataTransfer.files[0]); }}
+                                    className={`relative group h-24 rounded-2xl border-2 border-dashed transition-all flex flex-col items-center justify-center p-3 bg-slate-50 cursor-pointer overflow-hidden ${
+                                      dragOverFieldId === field.id ? "border-yellow-400 bg-yellow-50/10" : "border-slate-200 hover:border-yellow-400"
+                                    }`}
+                                  >
+                                    <input 
+                                      type="file" 
+                                      accept="image/*" 
+                                      onChange={(e) => { if (e.target.files?.[0]) handleImageUpload(field.id, e.target.files[0]); }}
+                                      className="absolute inset-0 opacity-0 cursor-pointer z-10" 
+                                    />
+                                    
+                                    {field.image_url ? (
+                                      <div className="absolute inset-0 flex items-center justify-between p-3 bg-slate-50/95 z-20">
+                                        <img src={field.image_url} alt="Preview" className="h-full w-16 object-contain rounded-lg border border-slate-200" />
+                                        <button 
+                                          type="button" 
+                                          onClick={(e) => { e.stopPropagation(); updateField(field.id, { image_url: "" }); }}
+                                          className="text-red-500 hover:underline text-[9px] uppercase font-bold tracking-widest"
+                                        >
+                                          Remove
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      <div className="flex flex-col items-center text-center">
+                                        <p className="text-[9px] font-black text-slate-400 uppercase">Drag &amp; drop image here, or click to upload</p>
+                                        <p className="text-[7px] text-slate-300 uppercase mt-0.5">Accepts PNG, JPG, WEBP</p>
+                                      </div>
+                                    )}
+                                  </div>
+                                  
                                   <input 
                                     type="text" 
                                     value={field.image_url || ""}
                                     onChange={(e) => updateField(field.id, { image_url: e.target.value })}
-                                    placeholder="e.g. https://.../image.png"
-                                    className="w-full px-6 py-4 bg-slate-50 rounded-xl border-none outline-none font-bold text-[#0f172a] focus:ring-2 focus:ring-yellow-400"
+                                    placeholder="Or paste an image URL directly..."
+                                    className="w-full px-5 py-3 bg-slate-50 rounded-xl border-none outline-none font-bold text-[#0f172a] text-xs focus:ring-2 focus:ring-yellow-400 mt-2"
                                   />
                                </div>
                              </div>
