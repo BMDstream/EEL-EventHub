@@ -169,14 +169,29 @@ def get_event_email_config(event: Event, session: Session):
                 config["confirmation_template_key"] = tpl.key
                 config["confirmation_template_id"] = custom_template_id
                 config["uses_custom_template_id"] = True
-                return config
         except Exception as e:
             print(f"Warning: Could not resolve confirmation_template_id {custom_template_id}: {e}")
-        
-    # Expose event confirmation_template_key override if present (legacy string key)
-    template_key = getattr(event, "confirmation_template_key", None)
-    if template_key and template_key != "global" and template_key != "":
-        config["confirmation_template_key"] = template_key
+    else:
+        template_key = getattr(event, "confirmation_template_key", None)
+        if template_key and template_key != "global" and template_key != "":
+            config["confirmation_template_key"] = template_key
+
+    # Check for custom decline template
+    decline_template_id = getattr(event, "decline_template_id", None)
+    if decline_template_id:
+        try:
+            from backend.models import EmailTemplate as _EmailTemplate
+            tpl = session.get(_EmailTemplate, decline_template_id)
+            if tpl:
+                config["decline_template_key"] = tpl.key
+                config["decline_template_id"] = decline_template_id
+                config["uses_custom_decline_template_id"] = True
+        except Exception as e:
+            print(f"Warning: Could not resolve decline_template_id {decline_template_id}: {e}")
+    else:
+        decline_template_key = getattr(event, "decline_template_key", None)
+        if decline_template_key and decline_template_key != "global" and decline_template_key != "":
+            config["decline_template_key"] = decline_template_key
     # Fetch attendeePassBgColor and engagementDetailsColor from event's registration form template if it exists
     attendee_pass_bg_color = "#000000"
     engagement_details_color = None

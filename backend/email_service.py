@@ -235,7 +235,7 @@ def send_confirmation_email(
     if profile_update_link:
         t_key = "partner_pending"
     elif not is_attending:
-        t_key = "registration_declined"
+        t_key = config.get("decline_template_key", "registration_declined") if config else "registration_declined"
     elif config:
         t_key = config.get("confirmation_template_key", "registration_confirmed")
 
@@ -279,6 +279,8 @@ def send_confirmation_email(
     # inject any banner from the event config. The template HTML is the sole
     # authority for its own banner. This prevents the double-banner bug.
     uses_custom_template_id = config.get("uses_custom_template_id", False) if config else False
+    if not is_attending:
+        uses_custom_template_id = config.get("uses_custom_decline_template_id", False) if config else False
     if uses_custom_template_id and meta and meta.get("banner_image_url") and meta.get("show_banner") == "true":
         show_banner = True
         banner_url = meta.get("banner_image_url")

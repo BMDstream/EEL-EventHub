@@ -50,6 +50,8 @@ class Event(SQLModel, table=True):
     background_url: Optional[str] = Field(default=None)
     confirmation_template_key: Optional[str] = Field(default="global")
     confirmation_template_id: Optional[int] = Field(default=None, foreign_key="emailtemplate.id", index=True)
+    decline_template_key: Optional[str] = Field(default="global")
+    decline_template_id: Optional[int] = Field(default=None, foreign_key="emailtemplate.id", index=True)
     registration_form_template_id: Optional[int] = Field(default=None, foreign_key="registrationformtemplate.id", index=True)
     duration_days: int = Field(default=1)
     

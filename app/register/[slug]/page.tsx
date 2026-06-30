@@ -225,12 +225,24 @@ function PublicRegistrationPageContent() {
   };
 
   const getPostSubmitTitle = () => {
+    if (isAttending && (event as any)?.confirmation_template_meta?.onscreen_title) {
+      return formatSuccessText((event as any).confirmation_template_meta.onscreen_title);
+    }
+    if (!isAttending && (event as any)?.decline_template_meta?.onscreen_title) {
+      return formatSuccessText((event as any).decline_template_meta.onscreen_title);
+    }
     const customTitle = event?.registration_form_template?.post_submit_config?.onscreen_title;
     if (customTitle) return formatSuccessText(customTitle);
     return statusMessage || (isAttending ? "Access Granted." : "Response Recorded.");
   };
 
   const getPostSubmitDesc = () => {
+    if (isAttending && (event as any)?.confirmation_template_meta?.onscreen_description) {
+      return formatSuccessText((event as any).confirmation_template_meta.onscreen_description);
+    }
+    if (!isAttending && (event as any)?.decline_template_meta?.onscreen_description) {
+      return formatSuccessText((event as any).decline_template_meta.onscreen_description);
+    }
     const customDesc = event?.registration_form_template?.post_submit_config?.onscreen_description;
     if (customDesc) return formatSuccessText(customDesc);
     return (

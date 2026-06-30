@@ -77,6 +77,42 @@ def create_event(
     session.refresh(event)
     return event
 
+def resolve_event_template_metas(event, session, event_dict):
+    from backend.models import EmailTemplate
+    from backend.email_service import parse_template_meta
+    
+    # 1. Resolve confirmation template meta
+    conf_tpl_meta = {}
+    conf_tpl_id = getattr(event, "confirmation_template_id", None)
+    if conf_tpl_id:
+        tpl = session.get(EmailTemplate, conf_tpl_id)
+        if tpl:
+            conf_tpl_meta = parse_template_meta(tpl.body_html)
+    else:
+        conf_tpl_key = getattr(event, "confirmation_template_key", None)
+        if conf_tpl_key and conf_tpl_key != "global":
+            tpl = session.exec(select(EmailTemplate).where(EmailTemplate.key == conf_tpl_key)).first()
+            if tpl:
+                conf_tpl_meta = parse_template_meta(tpl.body_html)
+                
+    # 2. Resolve decline template meta
+    decline_tpl_meta = {}
+    decline_tpl_id = getattr(event, "decline_template_id", None)
+    if decline_tpl_id:
+        tpl = session.get(EmailTemplate, decline_tpl_id)
+        if tpl:
+            decline_tpl_meta = parse_template_meta(tpl.body_html)
+    else:
+        decline_tpl_key = getattr(event, "decline_template_key", None)
+        if decline_tpl_key and decline_tpl_key != "global":
+            tpl = session.exec(select(EmailTemplate).where(EmailTemplate.key == decline_tpl_key)).first()
+            if tpl:
+                decline_tpl_meta = parse_template_meta(tpl.body_html)
+                
+    event_dict["confirmation_template_meta"] = conf_tpl_meta
+    event_dict["decline_template_meta"] = decline_tpl_meta
+
+
 @router.get("/{slug}")
 def read_event(slug: str, session: Session = Depends(get_session)):
     event = session.exec(select(Event).where(Event.slug == slug)).first()
@@ -85,6 +121,8 @@ def read_event(slug: str, session: Session = Depends(get_session)):
     client = session.get(Client, event.client_id) if event.client_id else None
     event_dict = event.dict()
     event_dict["client"] = client.dict() if client else None
+    
+    resolve_event_template_metas(event, session, event_dict)
     
     # Resolve registration form template relation
     reg_tpl = None
@@ -138,6 +176,7 @@ def read_event_by_id(
             
     event_dict = event.dict()
     event_dict["client"] = client.dict() if client else None
+    resolve_event_template_metas(event, session, event_dict)
     
     # Resolve registration form template relation
     reg_tpl = None
@@ -701,6 +740,8 @@ def duplicate_event(
         background_url=db_event.background_url,
         confirmation_template_key=db_event.confirmation_template_key,
         confirmation_template_id=getattr(db_event, "confirmation_template_id", None),
+        decline_template_key=getattr(db_event, "decline_template_key", "global"),
+        decline_template_id=getattr(db_event, "decline_template_id", None),
         registration_form_template_id=getattr(db_event, "registration_form_template_id", None),
         duration_days=db_event.duration_days,
         registration_active=db_event.registration_active,
@@ -752,6 +793,8 @@ def duplicate_event(
         "background_url": duplicate.background_url,
         "confirmation_template_key": duplicate.confirmation_template_key,
         "confirmation_template_id": getattr(duplicate, "confirmation_template_id", None),
+        "decline_template_key": getattr(duplicate, "decline_template_key", "global"),
+        "decline_template_id": getattr(duplicate, "decline_template_id", None),
         "registration_form_template_id": getattr(duplicate, "registration_form_template_id", None),
         "duration_days": duplicate.duration_days,
         "registration_active": duplicate.registration_active,

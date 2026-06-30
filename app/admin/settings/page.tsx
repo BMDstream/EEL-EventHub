@@ -305,6 +305,8 @@ const DEFAULT_FORM_FIELDS: Record<string, Record<string, string>> = {
     engagement_title: "Engagement Details",
     sender_name: "",
     footer_text: "Excellence Logistics & Entertainment\nAutomated Event Hub System",
+    onscreen_title: "YOUR REGISTRATION HAS BEEN CONFIRMED.",
+    onscreen_description: "Your registration for [Event Name] is complete. A formal confirmation email with your itinerary, travel coordinates, and unique access ID QR code has been sent to [Email Address]",
   },
   registration_declined: {
     primary_color: "#0f172a",
@@ -319,6 +321,8 @@ const DEFAULT_FORM_FIELDS: Record<string, Record<string, string>> = {
     body_text: "We have recorded your response that you are unable to attend the event. Thank you for letting us know, and we hope to connect with you at future events.",
     sender_name: "",
     footer_text: "Excellence Logistics & Entertainment\nAutomated Event Hub System",
+    onscreen_title: "RESPONSE RECORDED.",
+    onscreen_description: "We've noted that you are unable to attend. Thank you for letting us know.",
   },
   partner_pending: {
     primary_color: "#0f172a",
@@ -2491,6 +2495,33 @@ export default function SettingsPage() {
                               <Layout size={12} className="text-green-500" />
                               Message Wording
                             </h4>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="space-y-1.5">
+                                <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
+                                  On-screen Post-Reg Title
+                                </label>
+                                <input
+                                  type="text"
+                                  value={formValues.onscreen_title || ""}
+                                  onChange={(e) => handleFormChange("onscreen_title", e.target.value)}
+                                  placeholder="e.g. YOUR REGISTRATION HAS BEEN CONFIRMED."
+                                  className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 focus:border-yellow-400 outline-none font-bold text-xs text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                                />
+                              </div>
+                              <div className="space-y-1.5">
+                                <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
+                                  On-screen Post-Reg Description
+                                </label>
+                                <textarea
+                                  rows={1}
+                                  value={formValues.onscreen_description || ""}
+                                  onChange={(e) => handleFormChange("onscreen_description", e.target.value)}
+                                  placeholder="e.g. Your registration is complete."
+                                  className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 focus:border-yellow-400 outline-none font-medium text-xs text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white resize-none"
+                                />
+                              </div>
+                            </div>
 
                             <div className="space-y-1.5">
                               <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">

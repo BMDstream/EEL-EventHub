@@ -442,6 +442,8 @@ export default function EditEventPage() {
     disclaimer_checkbox_label: "",
     confirmation_template_key: "global",
     confirmation_template_id: null as number | null,
+    decline_template_key: "global",
+    decline_template_id: null as number | null,
     registration_form_template_id: null as number | null,
   });
 
@@ -511,6 +513,8 @@ export default function EditEventPage() {
           disclaimer_checkbox_label: data.banner_settings?.disclaimer_checkbox_label || "",
           confirmation_template_key: data.confirmation_template_key || "global",
           confirmation_template_id: data.confirmation_template_id || null,
+          decline_template_key: data.decline_template_key || "global",
+          decline_template_id: data.decline_template_id || null,
           registration_form_template_id: data.registration_form_template_id || null,
         });
         setOriginalBanner(data.banner_url || "");
@@ -605,8 +609,9 @@ export default function EditEventPage() {
       if (formData.banner_url !== originalBanner) payload.banner_url = formData.banner_url;
       if (formData.logo_url !== originalLogo) payload.logo_url = formData.logo_url;
       if (formData.background_url !== originalBg) payload.background_url = formData.background_url;
-      // Always send confirmation_template_id so it can be cleared back to null
+      // Always send confirmation/decline template IDs so they can be cleared back to null
       payload.confirmation_template_id = formData.confirmation_template_id || null;
+      payload.decline_template_id = formData.decline_template_id || null;
       payload.registration_form_template_id = formData.registration_form_template_id || null;
 
       const response = await fetch(`/api/py/events/${id}`, {
@@ -1192,82 +1197,155 @@ export default function EditEventPage() {
                 </div>
               </div>
 
-              {/* Template Selector */}
-              <div className="space-y-5">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-[#1e293b] rounded-xl flex items-center justify-center">
-                      <Eye size={16} className="text-white" />
+              {/* Template Selectors */}
+              <div className="space-y-8">
+                {/* Confirmation Email Template */}
+                <div className="space-y-5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-[#1e293b] rounded-xl flex items-center justify-center">
+                        <Eye size={16} className="text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-black text-[#1e293b] uppercase tracking-widest">Confirmation Email Template</h3>
+                        <p className="text-[10px] text-slate-400 font-medium mt-0.5">Choose the design used when sending confirmation emails for this event</p>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="text-sm font-black text-[#1e293b] uppercase tracking-widest">Confirmation Email Template</h3>
-                      <p className="text-[10px] text-slate-400 font-medium mt-0.5">Choose the design used when sending confirmation emails for this event</p>
-                    </div>
+                    <Link
+                      href="/admin/settings"
+                      target="_blank"
+                      className="flex items-center gap-1.5 text-[10px] font-black text-slate-400 hover:text-[#1e293b] uppercase tracking-widest transition-colors"
+                    >
+                      <ExternalLink size={12} />
+                      Customise Templates
+                    </Link>
                   </div>
-                  <Link
-                    href="/admin/settings"
-                    target="_blank"
-                    className="flex items-center gap-1.5 text-[10px] font-black text-slate-400 hover:text-[#1e293b] uppercase tracking-widest transition-colors"
-                  >
-                    <ExternalLink size={12} />
-                    Customise Templates
-                  </Link>
+
+                  {loadingTemplates ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="animate-spin text-slate-400" size={24} />
+                      <span className="ml-3 text-sm text-slate-400 font-medium">Loading templates...</span>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {/* Global (default) option */}
+                      {[
+                        { id: 0, key: "global", name: "Use Global Default", subject: "Inherits global email settings", body_html: "" },
+                        ...templates,
+                      ].map((tpl) => {
+                        const isSelected = tpl.key === "global"
+                          ? !formData.confirmation_template_id
+                          : formData.confirmation_template_id === tpl.id;
+                        const Icon = tpl.key === "global" ? Sparkles : (TEMPLATE_ICONS[tpl.key] || Mail);
+                        const label = tpl.key === "global" ? "Global Default" : (TEMPLATE_LABELS[tpl.key] || tpl.name);
+                        const desc = tpl.key === "global"
+                          ? "Inherits global email settings"
+                          : `Subject: ${(tpl as EmailTemplate).subject || "—"}`;
+                        return (
+                          <button
+                            key={tpl.key === "global" ? "global" : tpl.id}
+                            type="button"
+                            onClick={() => {
+                              if (tpl.key === "global") {
+                                setFormData(prev => ({ ...prev, confirmation_template_id: null, confirmation_template_key: "global" }));
+                              } else {
+                                setFormData(prev => ({ ...prev, confirmation_template_id: tpl.id!, confirmation_template_key: tpl.key }));
+                              }
+                            }}
+                            className={`flex items-start gap-4 p-4 rounded-2xl border-2 text-left transition-all ${
+                              isSelected
+                                ? "border-[#1e293b] bg-[#1e293b]/5 shadow-sm"
+                                : "border-slate-100 bg-slate-50/50 hover:border-slate-300 hover:bg-slate-50"
+                            }`}
+                          >
+                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${isSelected ? "bg-[#1e293b]" : "bg-slate-200"}`}>
+                              <Icon size={18} className={isSelected ? "text-white" : "text-slate-500"} />
+                            </div>
+                            <div className="min-w-0">
+                              <p className={`text-xs font-black uppercase tracking-tight ${isSelected ? "text-[#1e293b]" : "text-slate-600"}`}>{label}</p>
+                              <p className="text-[10px] text-slate-400 mt-0.5 truncate">{desc}</p>
+                            </div>
+                            {isSelected && (
+                              <div className="ml-auto shrink-0">
+                                <CheckCircle2 size={18} className="text-[#1e293b]" />
+                              </div>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
 
-                {loadingTemplates ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="animate-spin text-slate-400" size={24} />
-                    <span className="ml-3 text-sm text-slate-400 font-medium">Loading templates...</span>
+                {/* Decline Registrant Email Template */}
+                <div className="space-y-5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-[#1e293b] rounded-xl flex items-center justify-center">
+                        <AlertCircle size={16} className="text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-black text-[#1e293b] uppercase tracking-widest">Decline Registrant Email Template</h3>
+                        <p className="text-[10px] text-slate-400 font-medium mt-0.5">Choose the design used when a guest declines to attend this event</p>
+                      </div>
+                    </div>
                   </div>
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {/* Global (default) option */}
-                    {[
-                      { id: 0, key: "global", name: "Use Global Default", subject: "Inherits global email settings", body_html: "" },
-                      ...templates,
-                    ].map((tpl) => {
-                      const isSelected = tpl.key === "global"
-                        ? !formData.confirmation_template_id
-                        : formData.confirmation_template_id === tpl.id;
-                      const Icon = tpl.key === "global" ? Sparkles : (TEMPLATE_ICONS[tpl.key] || Mail);
-                      const label = tpl.key === "global" ? "Global Default" : (TEMPLATE_LABELS[tpl.key] || tpl.name);
-                      const desc = tpl.key === "global"
-                        ? "Inherits global email settings"
-                        : `Subject: ${(tpl as EmailTemplate).subject || "—"}`;
-                      return (
-                        <button
-                          key={tpl.key === "global" ? "global" : tpl.id}
-                          type="button"
-                          onClick={() => {
-                            if (tpl.key === "global") {
-                              setFormData(prev => ({ ...prev, confirmation_template_id: null, confirmation_template_key: "global" }));
-                            } else {
-                              setFormData(prev => ({ ...prev, confirmation_template_id: tpl.id!, confirmation_template_key: tpl.key }));
-                            }
-                          }}
-                          className={`flex items-start gap-4 p-4 rounded-2xl border-2 text-left transition-all ${
-                            isSelected
-                              ? "border-[#1e293b] bg-[#1e293b]/5 shadow-sm"
-                              : "border-slate-100 bg-slate-50/50 hover:border-slate-300 hover:bg-slate-50"
-                          }`}
-                        >
-                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${isSelected ? "bg-[#1e293b]" : "bg-slate-200"}`}>
-                            <Icon size={18} className={isSelected ? "text-white" : "text-slate-500"} />
-                          </div>
-                          <div className="min-w-0">
-                            <p className={`text-xs font-black uppercase tracking-tight ${isSelected ? "text-[#1e293b]" : "text-slate-600"}`}>{label}</p>
-                            <p className="text-[10px] text-slate-400 mt-0.5 truncate">{desc}</p>
-                          </div>
-                          {isSelected && (
-                            <div className="ml-auto shrink-0">
-                              <CheckCircle2 size={18} className="text-[#1e293b]" />
+
+                  {loadingTemplates ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="animate-spin text-slate-400" size={24} />
+                      <span className="ml-3 text-sm text-slate-400 font-medium">Loading templates...</span>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {/* Global (default) option */}
+                      {[
+                        { id: 0, key: "global", name: "Use Global Default", subject: "Inherits global decline settings", body_html: "" },
+                        ...templates,
+                      ].map((tpl) => {
+                        const isSelected = tpl.key === "global"
+                          ? !formData.decline_template_id
+                          : formData.decline_template_id === tpl.id;
+                        const Icon = tpl.key === "global" ? AlertCircle : (TEMPLATE_ICONS[tpl.key] || Mail);
+                        const label = tpl.key === "global" ? "Global Decline Default" : (TEMPLATE_LABELS[tpl.key] || tpl.name);
+                        const desc = tpl.key === "global"
+                          ? "Inherits global decline settings"
+                          : `Subject: ${(tpl as EmailTemplate).subject || "—"}`;
+                        return (
+                          <button
+                            key={tpl.key === "global" ? "global-decline" : `decline-${tpl.id}`}
+                            type="button"
+                            onClick={() => {
+                              if (tpl.key === "global") {
+                                setFormData(prev => ({ ...prev, decline_template_id: null, decline_template_key: "global" }));
+                              } else {
+                                setFormData(prev => ({ ...prev, decline_template_id: tpl.id!, decline_template_key: tpl.key }));
+                              }
+                            }}
+                            className={`flex items-start gap-4 p-4 rounded-2xl border-2 text-left transition-all ${
+                              isSelected
+                                ? "border-[#1e293b] bg-[#1e293b]/5 shadow-sm"
+                                : "border-slate-100 bg-slate-50/50 hover:border-slate-300 hover:bg-slate-50"
+                            }`}
+                          >
+                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${isSelected ? "bg-[#1e293b]" : "bg-slate-200"}`}>
+                              <Icon size={18} className={isSelected ? "text-white" : "text-slate-500"} />
                             </div>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
+                            <div className="min-w-0">
+                              <p className={`text-xs font-black uppercase tracking-tight ${isSelected ? "text-[#1e293b]" : "text-slate-600"}`}>{label}</p>
+                              <p className="text-[10px] text-slate-400 mt-0.5 truncate">{desc}</p>
+                            </div>
+                            {isSelected && (
+                              <div className="ml-auto shrink-0">
+                                <CheckCircle2 size={18} className="text-[#1e293b]" />
+                              </div>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Live Email Preview */}

@@ -284,7 +284,7 @@ def delete_template(
     # Detach any events referencing this template by ID
     try:
         session.execute(
-            text('UPDATE "event" SET confirmation_template_id = NULL WHERE confirmation_template_id = :tid'),
+            text('UPDATE "event" SET confirmation_template_id = NULL, decline_template_id = NULL WHERE confirmation_template_id = :tid OR decline_template_id = :tid'),
             {"tid": template.id}
         )
         session.commit()

@@ -87,6 +87,8 @@ def run_migrations():
                 ("background_url", "TEXT"),
                 ("confirmation_template_key", "TEXT DEFAULT 'global'"),
                 ("confirmation_template_id", "INTEGER"),
+                ("decline_template_key", "TEXT DEFAULT 'global'"),
+                ("decline_template_id", "INTEGER"),
                 ("registration_form_template_id", "INTEGER")
             ]:
                 if col_name not in event_columns:
