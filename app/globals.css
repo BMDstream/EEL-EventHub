@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Carlito:ital,wght@0,400;0,700;1,400;1,700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Carlito:ital,wght@0,400;0,700;1,400;1,700&family=Open+Sans:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&display=swap');
 
 @layer base {
 
@@ -408,13 +408,33 @@
 }
 
 /* ==========================================================================
-   Unlayered Font Overrides (Forces Calibri/Carlito globally on all themes)
+   Unlayered Font Overrides (Forces Calibri/Carlito stack with specific weights)
    ========================================================================== */
-*, *::before, *::after, html, body, input, textarea, select, button, span, div, p, label, h1, h2, h3, h4, h5, h6,
+/* 1. Base Default Fallback (Calibri Regular) */
+*, *::before, *::after, html, body, button, span, div, p, a,
 .font-bricolage, .font-outfit, .font-serif, .font-mono, .font-sans {
-  font-family: 'Carlito', Calibri, Candara, Segoe, "Segoe UI", Optima, Arial, sans-serif !important;
+  font-family: 'Carlito', 'Open Sans', Calibri, Candara, Segoe, "Segoe UI", Optima, Arial, sans-serif !important;
+  font-weight: 400 !important;
+  font-style: normal !important;
 }
 
-input::placeholder, textarea::placeholder {
-  font-family: 'Carlito', Calibri, Candara, Segoe, "Segoe UI", Optima, Arial, sans-serif !important;
+/* 2. Event Heading (Calibri Bold) */
+h1, h2, h3, h4, h5, h6, .client-event-heading {
+  font-family: 'Carlito', 'Open Sans', Calibri, Candara, Segoe, "Segoe UI", Optima, Arial, sans-serif !important;
+  font-weight: 700 !important;
+  font-style: normal !important;
+}
+
+/* 3. Form Questions Wording (Calibri Regular Italic) */
+label, .client-question-label {
+  font-family: 'Carlito', 'Open Sans', Calibri, Candara, Segoe, "Segoe UI", Optima, Arial, sans-serif !important;
+  font-weight: 400 !important;
+  font-style: italic !important;
+}
+
+/* 4. Question Answers, Inputs & Select Options (Calibri Light) */
+input, textarea, select, option, input::placeholder, textarea::placeholder {
+  font-family: 'Carlito', 'Open Sans', 'Calibri Light', Calibri, Candara, Segoe, "Segoe UI", Optima, Arial, sans-serif !important;
+  font-weight: 300 !important;
+  font-style: normal !important;
 }

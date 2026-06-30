@@ -270,10 +270,17 @@ function PublicRegistrationPageContent() {
     return res;
   };
 
-  const renderCustomFields = () => {
+  const renderCustomFields = (showBefore?: boolean) => {
     if (!event || !event.custom_fields_schema || event.custom_fields_schema.length === 0) return null;
 
     const isSectioned = "fields" in event.custom_fields_schema[0];
+
+    const filterFields = (fieldsList: any[]) => {
+      return fieldsList.filter(f => {
+        const matchesBefore = showBefore === true ? !!f.showBeforeAttendance : !f.showBeforeAttendance;
+        return matchesBefore;
+      });
+    };
 
     const renderField = (field: any) => {
       if (field.inactive) return null;
@@ -300,7 +307,7 @@ function PublicRegistrationPageContent() {
 
       return (
         <div key={field.id} className="space-y-3">
-          <label className={style.label}>
+          <label className={`${style.label} client-question-label`}>
             {formatLabel(field.label)} {field.required && <span className={`${isLightTheme ? "client-text-primary" : "client-text-accent"} ml-0.5 font-bold`}>*</span>}
           </label>
           
@@ -388,44 +395,46 @@ function PublicRegistrationPageContent() {
               <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider leading-relaxed">
                 Provide your corporate partner's details to automatically link your registrations.
               </p>
-              <div className="grid grid-cols-2 gap-4">
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold text-slate-500">First Name {field.required && "*"}</label>
                   <input
-                    type="text"
                     required={field.required}
+                    type="text"
+                    placeholder="Partner's first name"
                     onChange={(e) => {
                       const prev = customAnswers[field.id] || {};
                       handleCustomChange(field.id, { ...prev, first_name: e.target.value });
                     }}
-                    placeholder="Partner name"
                     className={style.input}
                   />
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold text-slate-500">Last Name {field.required && "*"}</label>
                   <input
-                    type="text"
                     required={field.required}
+                    type="text"
+                    placeholder="Partner's last name"
                     onChange={(e) => {
                       const prev = customAnswers[field.id] || {};
                       handleCustomChange(field.id, { ...prev, last_name: e.target.value });
                     }}
-                    placeholder="Partner surname"
                     className={style.input}
                   />
                 </div>
               </div>
+
               <div className="space-y-2">
                 <label className="text-[10px] font-bold text-slate-500">Corporate Email {field.required && "*"}</label>
                 <input
-                  type="email"
                   required={field.required}
+                  type="email"
+                  placeholder="partner@company.com"
                   onChange={(e) => {
                     const prev = customAnswers[field.id] || {};
                     handleCustomChange(field.id, { ...prev, email: e.target.value });
                   }}
-                  placeholder="partner@company.com"
                   className={style.input}
                 />
               </div>
@@ -436,9 +445,20 @@ function PublicRegistrationPageContent() {
     };
 
     if (isSectioned) {
+      const filteredSections = (event.custom_fields_schema as any[]).map(sec => {
+        const secFields = filterFields(sec.fields || []);
+        if (secFields.length === 0) return null;
+        return {
+          ...sec,
+          fields: secFields
+        };
+      }).filter(Boolean);
+
+      if (filteredSections.length === 0) return null;
+
       return (
         <div className="space-y-10">
-          {(event.custom_fields_schema as any).map((sec: any) => (
+          {filteredSections.map((sec: any) => (
             <div key={sec.id} className="space-y-6">
               <div className="pt-6 border-t border-slate-100/10">
                 <p className={`text-[10px] font-black uppercase tracking-[0.3em] ${isLightTheme ? "client-text-primary" : "client-text-accent"}`}>
@@ -454,12 +474,17 @@ function PublicRegistrationPageContent() {
       );
     }
 
+    const filteredFlatFields = filterFields(event.custom_fields_schema);
+    if (filteredFlatFields.length === 0) return null;
+
     return (
       <div className="space-y-8">
-        <div className="pt-6">
-          <p className={`text-[10px] font-black uppercase tracking-[0.3em] ${isLightTheme ? "client-text-primary" : "client-text-accent"}`}>Additional Details</p>
-        </div>
-        {event.custom_fields_schema.map((f: any) => renderField(f))}
+        {!showBefore && (
+          <div className="pt-6">
+            <p className={`text-[10px] font-black uppercase tracking-[0.3em] ${isLightTheme ? "client-text-primary" : "client-text-accent"}`}>Additional Details</p>
+          </div>
+        )}
+        {filteredFlatFields.map((f: any) => renderField(f))}
       </div>
     );
   };
@@ -1624,7 +1649,7 @@ function PublicRegistrationPageContent() {
         </div>
       )}
       <div className="mb-12">
-        <h2 className={style.heading}>
+        <h2 className={`${style.heading} client-event-heading`}>
           {event?.registration_form_template 
             ? (event.registration_form_template.theme_config?.form_heading !== undefined && event.registration_form_template.theme_config?.form_heading !== null
                 ? formatLabel(event.registration_form_template.theme_config.form_heading)
@@ -1643,7 +1668,7 @@ function PublicRegistrationPageContent() {
       <form onSubmit={handleSubmit} className="space-y-8">
         <div className="space-y-6">
           <div className="space-y-2">
-            <label className={style.label}>
+            <label className={`${style.label} client-question-label`}>
               First Name <span className={`${isLightTheme ? "client-text-primary" : "client-text-accent"} ml-0.5 font-bold`}>*</span>
             </label>
             <input
@@ -1658,7 +1683,7 @@ function PublicRegistrationPageContent() {
           </div>
 
           <div className="space-y-2">
-            <label className={style.label}>
+            <label className={`${style.label} client-question-label`}>
               Last Name <span className={`${isLightTheme ? "client-text-primary" : "client-text-accent"} ml-0.5 font-bold`}>*</span>
             </label>
             <input
@@ -1673,7 +1698,7 @@ function PublicRegistrationPageContent() {
           </div>
 
           <div className="space-y-2">
-            <label className={style.label}>
+            <label className={`${style.label} client-question-label`}>
               Secure Email Address <span className={`${isLightTheme ? "client-text-primary" : "client-text-accent"} ml-0.5 font-bold`}>*</span>
             </label>
             <input
@@ -1689,7 +1714,7 @@ function PublicRegistrationPageContent() {
 
           {event.collect_company !== false && (
             <div className="space-y-2">
-              <label className={style.label}>
+              <label className={`${style.label} client-question-label`}>
                 Organization / Company {event.company_required && <span className={`${isLightTheme ? "client-text-primary" : "client-text-accent"} ml-0.5 font-bold`}>*</span>}
               </label>
               <input
@@ -1704,8 +1729,10 @@ function PublicRegistrationPageContent() {
             </div>
           )}
 
+          {renderCustomFields(true)}
+
           <div className={style.rsvpBorder}>
-            <label className={style.label}>
+            <label className={`${style.label} client-question-label`}>
               {event?.registration_form_template?.theme_config?.attendance_label 
                 ? formatLabel(event.registration_form_template.theme_config.attendance_label) 
                 : "Attendance Status"} <span className={`${isLightTheme ? "client-text-primary" : "client-text-accent"} ml-0.5 font-bold`}>*</span>

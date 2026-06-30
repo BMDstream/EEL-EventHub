@@ -18,6 +18,7 @@ interface FormField {
   description?: string;
   image_url?: string;
   inactive?: boolean;
+  showBeforeAttendance?: boolean;
 }
 
 export default function FormBuilder({ eventId, initialSchema, onSave }: { eventId: string, initialSchema: FormField[], onSave: (schema: FormField[]) => void }) {
@@ -482,6 +483,15 @@ export default function FormBuilder({ eventId, initialSchema, onSave }: { eventI
                                         className="w-5 h-5 rounded-lg border-2 border-slate-200 checked:bg-yellow-400 checked:border-yellow-400 transition-all outline-none" 
                                       />
                                       <span className="text-xs font-black text-slate-400 uppercase tracking-widest group-hover:text-[#0f172a] transition-colors">Hide from Form (Keep Answers)</span>
+                                   </label>
+                                   <label className="flex items-center gap-3 cursor-pointer group">
+                                      <input 
+                                        type="checkbox" 
+                                        checked={!!field.showBeforeAttendance}
+                                        onChange={(e) => updateField(field.id, { showBeforeAttendance: e.target.checked })}
+                                        className="w-5 h-5 rounded-lg border-2 border-slate-200 checked:bg-yellow-400 checked:border-yellow-400 transition-all outline-none" 
+                                      />
+                                      <span className="text-xs font-black text-slate-400 uppercase tracking-widest group-hover:text-[#0f172a] transition-colors">Show before Attendance Status</span>
                                    </label>
                                 </div>
                                 <button 
