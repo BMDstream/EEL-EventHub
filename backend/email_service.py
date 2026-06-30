@@ -215,7 +215,11 @@ def send_confirmation_email(
     elif config:
         t_key = config.get("confirmation_template_key", "registration_confirmed")
 
-    db_template = get_template_from_db(t_key)
+    if t_key == "registration_confirmed":
+        db_template = None
+    else:
+        db_template = get_template_from_db(t_key)
+        
     meta = parse_template_meta(db_template.body_html) if db_template else {}
     if meta:
         attendee_pass_bg_color = meta.get("attendeePassBgColor", attendee_pass_bg_color)
@@ -319,12 +323,18 @@ def send_confirmation_email(
                 heading_text = "Action Required."
                 body_text_raw = "Your partner has registered you for **{event_title}**. Please complete your ticket details to finalize your registration."
             else:
-                heading_text = config.get("heading_text", "Registration Confirmed.")
-                if "Access Granted" in heading_text:
-                    heading_text = "Registration Confirmed."
-                body_text_raw = config.get("body_text", "")
-                if not body_text_raw or "credentials" in body_text_raw or "terminal verification" in body_text_raw:
-                    body_text_raw = "Your registration for **{event_title}** has been successfully confirmed. We look forward to seeing you at the event!"
+                heading_text = "Registration Confirmed."
+                body_text_raw = (
+                    "Thank you. Your registration for the 2026 Maziv Group Invitational at Highland Gate is officially confirmed.<br>"
+                    "Below is your unique entry details and access pass.<br>"
+                    "Please keep this email handy (or save the QR code to your phone) for seamless check-in at the venue registration desk.<br><br>"
+                    "<strong>Next Steps</strong><br>"
+                    "A detailed itinerary, travel guidelines, and your check-in coordinates for the retreat houses will be shared with you closer to the date.<br>"
+                    "If you need to make any changes to your registration details or dietary requirements in the meantime, please contact us at <a href=\"mailto:events@maziv.com\" style=\"color: #7c1c91; text-decoration: underline;\">events@maziv.com</a>.<br><br>"
+                    "We look forward to hosting you for an unforgettable experience in Dullstroom.<br><br>"
+                    "Warm regards,<br>"
+                    "The Maziv Group"
+                )
         else:
             heading_text = config.get("decline_heading_text", "Response Recorded.")
             body_text_raw = config.get(
@@ -420,7 +430,7 @@ def send_confirmation_email(
         warning_block_html = f"""
         <div style="background: #fffbeb; padding: 28px; border-radius: 24px; border: 1px solid #fef3c7; margin-bottom: 40px; text-align: center; font-family: {font_family};">
             <p style="color: #b45309; font-size: 14px; font-weight: 700; margin: 0; line-height: 1.5; text-transform: uppercase; letter-spacing: 0.05em; font-family: {font_family};">
-                Please present this QR code or code at the check-in desk.
+                Please present this QR code OR number at the registration desk.
             </p>
         </div>
         """
@@ -491,7 +501,7 @@ def send_confirmation_email(
                 {urgent_banner_html}
                 
                 <p style="font-size: {font_size}; line-height: 1.7; margin-bottom: 40px; color: #475569;">
-                    Hello <strong>{first_name}</strong>,<br><br>
+                    Hello <strong>{first_name}</strong><br><br>
                     {body_html}
                 </p>
                 

@@ -187,7 +187,7 @@ const compileTemplatePreview = (
   </div>
   `;
 
-  const warningText = meta.warning_text || "Please present this QR code at the check-in desk.";
+  const warningText = meta.warning_text || "Please present this QR code OR number at the registration desk.";
   const warningBlockHtml = `
   <div style="background: #fffbeb; padding: 28px; border-radius: 24px; border: 1px solid #fef3c7; margin-bottom: 40px; text-align: center; font-family: ${fontFamily};">
       <p style="color: #b45309; font-size: 14px; font-weight: 700; margin: 0; line-height: 1.5; text-transform: uppercase; letter-spacing: 0.05em; font-family: ${fontFamily};">

@@ -82,123 +82,123 @@
 }
 
 @layer utilities {
-  /* Override Tailwind's default yellow classes for the brand main color #25678e (blue) */
+  /* Override Tailwind's default yellow classes for corporate Purple #7c1c91 */
   .bg-yellow-400 {
-    background-color: #25678e;
+    background-color: #7c1c91;
   }
   .bg-yellow-500 {
-    background-color: #1d5373;
+    background-color: #620f75;
   }
   .bg-yellow-50 {
-    background-color: #f0f7fa;
+    background-color: #faf5fc;
   }
   .bg-yellow-100 {
-    background-color: #e1eef4;
+    background-color: #f3e5f7;
   }
   .bg-yellow-400\/10 {
-    background-color: rgba(37, 103, 142, 0.1);
+    background-color: rgba(124, 28, 145, 0.1);
   }
   .bg-yellow-400\/5 {
-    background-color: rgba(37, 103, 142, 0.05);
+    background-color: rgba(124, 28, 145, 0.05);
   }
   .bg-yellow-500\/10 {
-    background-color: rgba(37, 103, 142, 0.1);
+    background-color: rgba(98, 15, 117, 0.1);
   }
   .bg-yellow-500\/30 {
-    background-color: rgba(37, 103, 142, 0.3);
+    background-color: rgba(98, 15, 117, 0.3);
   }
   .hover\:bg-yellow-500:hover {
-    background-color: #1d5373;
+    background-color: #620f75;
   }
   .hover\:bg-yellow-400:hover {
-    background-color: #25678e;
+    background-color: #7c1c91;
   }
   .text-yellow-400 {
-    color: #25678e;
+    color: #7c1c91;
   }
   .text-yellow-500 {
-    color: #25678e;
+    color: #7c1c91;
   }
   .text-yellow-600 {
-    color: #153e57;
+    color: #530d63;
   }
   .text-yellow-600\/70 {
-    color: rgba(21, 62, 87, 0.7);
+    color: rgba(83, 13, 99, 0.7);
   }
   .border-yellow-400 {
-    border-color: #25678e;
+    border-color: #7c1c91;
   }
   .border-yellow-400\/20 {
-    border-color: rgba(37, 103, 142, 0.2);
+    border-color: rgba(124, 28, 145, 0.2);
   }
   .border-yellow-400\/10 {
-    border-color: rgba(37, 103, 142, 0.1);
+    border-color: rgba(124, 28, 145, 0.1);
   }
   .focus\:ring-yellow-400\/20:focus {
-    --tw-ring-color: rgba(37, 103, 142, 0.2);
+    --tw-ring-color: rgba(124, 28, 145, 0.2);
   }
   .focus\:ring-2:focus {
-    --tw-ring-color: #25678e;
+    --tw-ring-color: #7c1c91;
   }
   .dark\:bg-yellow-400:is(.dark *) {
-    background-color: #25678e;
+    background-color: #7c1c91;
   }
   .dark\:text-yellow-500:is(.dark *) {
-    color: #25678e;
+    color: #7c1c91;
   }
   .group-hover\:text-yellow-500:hover {
-    color: #25678e;
+    color: #7c1c91;
   }
   .dark\:text-yellow-400:is(.dark *) {
-    color: #25678e;
+    color: #7c1c91;
   }
   .dark\:shadow-yellow-400\/20:is(.dark *) {
-    --tw-shadow-color: rgba(37, 103, 142, 0.2);
+    --tw-shadow-color: rgba(124, 28, 145, 0.2);
   }
   .selection\:bg-yellow-500\/30 *::selection,
   .selection\:bg-yellow-500\/30::selection {
-    background-color: rgba(37, 103, 142, 0.3);
+    background-color: rgba(98, 15, 117, 0.3);
   }
 
-  /* Override hardcoded #0f172a (slate-900) classes for the brand secondary #1d2a33 (dark slate) */
+  /* Override hardcoded #0f172a (slate-900) classes for corporate Purple #7c1c91 */
   .bg-\[\#0f172a\] {
-    background-color: #1d2a33;
+    background-color: #7c1c91;
   }
   .text-\[\#0f172a\] {
-    color: #1d2a33;
+    color: #7c1c91;
   }
   .border-\[\#0f172a\] {
-    border-color: #1d2a33;
+    border-color: #7c1c91;
   }
   .ring-\[\#0f172a\] {
-    --tw-ring-color: #1d2a33;
+    --tw-ring-color: #7c1c91;
   }
   .hover\:bg-\[\#0f172a\]:hover {
-    background-color: #121c22;
+    background-color: #620f75;
   }
   .hover\:text-\[\#0f172a\]:hover {
-    color: #1d2a33;
+    color: #7c1c91;
   }
   .dark\:bg-\[\#0f172a\]:is(.dark *) {
-    background-color: #1d2a33;
+    background-color: #7c1c91;
   }
   .dark\:border-\[\#0f172a\]:is(.dark *) {
-    border-color: #1d2a33;
+    border-color: #7c1c91;
   }
   .dark\:text-\[\#0f172a\]:is(.dark *) {
-    color: #1d2a33;
+    color: #7c1c91;
   }
   .hover\:bg-black:hover {
-    background-color: #121c22;
+    background-color: #620f75;
   }
   .border-slate-900 {
-    border-color: #1d2a33;
+    border-color: #7c1c91;
   }
   .bg-slate-900 {
-    background-color: #1d2a33;
+    background-color: #7c1c91;
   }
   .text-slate-900 {
-    color: #1d2a33;
+    color: #7c1c91;
   }
 }
 
@@ -457,8 +457,8 @@
 /* Tab button visibility fixes */
 .bmd-admin-layout button[class*="border-yellow-400"] {
   border-bottom-width: 3px !important;
-  border-bottom-color: #25678e !important;
-  color: #25678e !important;
+  border-bottom-color: #7c1c91 !important;
+  color: #7c1c91 !important;
 }
 .dark.bmd-admin-layout button[class*="border-yellow-400"],
 .dark .bmd-admin-layout button[class*="border-yellow-400"] {
@@ -470,18 +470,55 @@
    ========================================================================== */
 /* 1. Global / Registration form container rules (adheres to dynamically injected CSS variables) */
 .registration-form-container, .registration-form-container * {
-  font-family: var(--selected-font-family, 'Carlito', 'Open Sans', Calibri, sans-serif) !important;
+  font-family: 'Fluent Calibri', Calibri, 'Carlito', sans-serif !important;
+}
+
+/* Base font sizes - allow heading sizes to scale naturally relative to the base */
+.registration-form-container p,
+.registration-form-container span,
+.registration-form-container div,
+.registration-form-container label,
+.registration-form-container select,
+.registration-form-container textarea,
+.registration-form-container input {
   font-size: var(--base-font-size, 16px) !important;
+}
+
+/* Headings text sizes should scale up relative to base font size */
+.registration-form-container h1,
+.registration-form-container .client-event-heading {
+  font-size: calc(var(--base-font-size, 16px) * 2.25) !important;
+  color: #7c1c91 !important;
+}
+.registration-form-container h2 {
+  font-size: calc(var(--base-font-size, 16px) * 1.75) !important;
+  color: #7c1c91 !important;
+}
+.registration-form-container h3 {
+  font-size: calc(var(--base-font-size, 16px) * 1.5) !important;
+  color: #7c1c91 !important;
+}
+.registration-form-container h4 {
+  font-size: calc(var(--base-font-size, 16px) * 1.25) !important;
+  color: #7c1c91 !important;
 }
 
 /* Base body/other text fallback styling inside form */
 .registration-form-container p,
 .registration-form-container span,
 .registration-form-container div,
-.registration-form-container a,
-.registration-form-container button {
+.registration-form-container a {
   font-weight: var(--selected-font-weight, 400) !important;
   font-style: var(--selected-font-style, normal) !important;
+  color: #000000 !important;
+}
+
+/* Form Submission / Action buttons style */
+.registration-form-container button[type="submit"],
+.registration-form-container .client-btn-submit-override {
+  background-color: #7c1c91 !important;
+  color: #ffffff !important;
+  font-size: calc(var(--base-font-size, 16px) * 0.85) !important;
 }
 
 /* Headings styling inside form */
@@ -494,6 +531,7 @@
 .registration-form-container .client-event-heading {
   font-weight: var(--heading-font-weight, 700) !important;
   font-style: var(--heading-font-style, normal) !important;
+  color: #7c1c91 !important;
 }
 
 /* Form Questions / Labels styling */
@@ -501,6 +539,7 @@
 .registration-form-container .client-question-label {
   font-weight: var(--question-font-weight, 400) !important;
   font-style: var(--question-font-style, italic) !important;
+  color: #000000 !important;
 }
 
 /* Form inputs & options styling */
@@ -512,10 +551,31 @@
 .registration-form-container textarea::placeholder {
   font-weight: var(--input-font-weight, 300) !important;
   font-style: var(--input-font-style, normal) !important;
+  color: #000000 !important;
+}
+
+/* Mobile viewport typography scaling boost */
+@media (max-width: 640px) {
+  .registration-form-container {
+    --base-font-size: 17px !important;
+  }
+  .registration-form-container label,
+  .registration-form-container .client-question-label {
+    font-size: 16px !important;
+  }
+  .registration-form-container input,
+  .registration-form-container select,
+  .registration-form-container textarea {
+    font-size: 17px !important;
+  }
+  .registration-form-container p,
+  .registration-form-container span {
+    font-size: 15px !important;
+  }
 }
 
 /* 2. Global defaults outside registration-form-container (Forces Calibri/Carlito stack generally) */
 html, body, button, span, div, p, a, label, input, textarea, select, option,
 .font-bricolage, .font-outfit, .font-serif, .font-mono, .font-sans {
-  font-family: 'Carlito', 'Open Sans', Calibri, Candara, Segoe, "Segoe UI", Optima, Arial, sans-serif;
+  font-family: 'Fluent Calibri', Calibri, 'Carlito', sans-serif !important;
 }

@@ -111,7 +111,7 @@ const MOCK_PREVIEW_DATA: Record<string, Record<string, string>> = {
       </div>
     </div>`,
     warning_block_html: `<div style="background: #fffbeb; padding: 28px; border-radius: 24px; border: 1px solid #fef3c7; margin-bottom: 40px; text-align: center; font-family: sans-serif;">
-      <p style="color: #b45309; font-size: 14px; font-weight: 700; margin: 0; line-height: 1.5; text-transform: uppercase; letter-spacing: 0.05em;">Please present this QR code or code at the check-in desk.</p>
+      <p style="color: #b45309; font-size: 14px; font-weight: 700; margin: 0; line-height: 1.5; text-transform: uppercase; letter-spacing: 0.05em;">Please present this QR code OR number at the registration desk.</p>
     </div>`,
     button_block_html: "",
     footer_text: "Automated Event Management System • Security Tier 4",
@@ -300,7 +300,7 @@ const DEFAULT_FORM_FIELDS: Record<string, Record<string, string>> = {
     heading_title: "Registration",
     heading_subtitle: "Confirmed",
     body_text: "Your registration has been successfully confirmed. Below are your secure credentials for terminal verification.",
-    warning_text: "Please present this QR code or code at the check-in desk.",
+    warning_text: "Please present this QR code OR number at the registration desk.",
     details_title: "Matchup Details",
     engagement_title: "Engagement Details",
     sender_name: "",

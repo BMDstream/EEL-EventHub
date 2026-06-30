@@ -27,7 +27,7 @@ DEFAULT_TEMPLATES = {
                 {heading_title} <span style="color: {accent_color};">{heading_subtitle}</span>
             </h2>
             <p style="font-size: {font_size}; line-height: 1.7; margin-bottom: 40px; color: #475569;">
-                Hello <strong>{first_name}</strong>,<br><br>
+                Hello <strong>{first_name}</strong><br><br>
                 {body_html}
             </p>
             {details_html}

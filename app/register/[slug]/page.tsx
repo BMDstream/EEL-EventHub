@@ -1627,13 +1627,9 @@ function PublicRegistrationPageContent() {
   const clientBadge = (
     <div className="relative z-10 mt-12 lg:mt-0">
       <div className={style.badge}>
-        {client?.logo_url ? (
-          <img src={client.logo_url} alt={client.name} className="h-6 object-contain animate-in zoom-in duration-300" />
-        ) : (
-          <span className={`w-2 h-2 rounded-full animate-pulse ${theme === "minimal_light" ? "client-bg-primary" : "client-bg-accent"}`}></span>
-        )}
+        <span className={`w-2 h-2 rounded-full animate-pulse ${theme === "minimal_light" ? "client-bg-primary" : "client-bg-accent"}`}></span>
         <span className={style.badgeText}>
-          {client?.name || "Excellence Entertainment Logistics"}
+          {client?.name || "Maziv Group"}
         </span>
       </div>
     </div>
@@ -1899,26 +1895,35 @@ function PublicRegistrationPageContent() {
               {getPostSubmitDesc()}
             </p>
             {isAttending && (
-              <div className={style.successQR}>
-                <div className="flex justify-center mb-4">
-                  <div className="bg-white p-2 rounded-xl">
-                    <QRCodeSVG 
-                      value={registeredPin || registeredId || ""} 
-                      size={160}
-                      level="M"
-                    />
+              <>
+                <div className={style.successQR}>
+                  <div className="flex justify-center mb-4">
+                    <div className="bg-white p-2 rounded-xl">
+                      <QRCodeSVG 
+                        value={registeredPin || registeredId || ""} 
+                        size={160}
+                        level="M"
+                      />
+                    </div>
                   </div>
+                  <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 mb-1">{getClearanceLabel()}</p>
+                  <p className={`text-3xl font-black ${isLightTheme ? "client-text-primary" : "client-text-accent"} tracking-tighter italic font-bricolage`}>
+                    {registeredPin || (registeredId ? registeredId.substring(0, 8) : "")}
+                  </p>
                 </div>
-                <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 mb-1">{getClearanceLabel()}</p>
-                <p className={`text-3xl font-black ${isLightTheme ? "client-text-primary" : "client-text-accent"} tracking-tighter italic font-bricolage`}>
-                  {registeredPin || (registeredId ? registeredId.substring(0, 8) : "")}
+                <p className="text-xs font-bold text-slate-500 mt-4 uppercase tracking-widest text-center">
+                  Please present this QR code OR number at the registration desk.
                 </p>
-              </div>
+              </>
             )}
           </div>
         </div>
       ) : (
         <div className={style.wrapper}>
+          {/* Absolute top corporate header banner */}
+          <div className="w-full bg-[#7c1c91] text-white py-4 px-6 text-center font-bold tracking-widest uppercase text-xs sm:text-sm border-b border-[#7c1c91]/10 relative z-50">
+            Maziv Invitation banner
+          </div>
           {/* Background Images / Overlay rendering */}
           {style.leftBgImage}
           <div className={style.leftOverlay}></div>
