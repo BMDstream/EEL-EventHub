@@ -1920,10 +1920,6 @@ function PublicRegistrationPageContent() {
         </div>
       ) : (
         <div className={style.wrapper}>
-          {/* Absolute top corporate header banner */}
-          <div className="w-full bg-[#7c1c91] text-white py-4 px-6 text-center font-bold tracking-widest uppercase text-xs sm:text-sm border-b border-[#7c1c91]/10 relative z-50">
-            Maziv Invitation banner
-          </div>
           {/* Background Images / Overlay rendering */}
           {style.leftBgImage}
           <div className={style.leftOverlay}></div>

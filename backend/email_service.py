@@ -221,6 +221,26 @@ def send_confirmation_email(
         db_template = get_template_from_db(t_key)
         
     meta = parse_template_meta(db_template.body_html) if db_template else {}
+    sections = meta.get("sections", {}) if meta else {}
+    if isinstance(sections, str):
+        try:
+            import json
+            sections = json.loads(sections)
+        except:
+            sections = {}
+            
+    main_body_config = sections.get("mainBodyMessage", {})
+    main_body_font_family = main_body_config.get("fontFamily", font_family)
+    main_body_font_size = main_body_config.get("fontSize", font_size)
+
+    details_config = sections.get("engagementDetails", {})
+    details_font_family = details_config.get("fontFamily", font_family)
+    details_font_size = details_config.get("fontSize", "14px")
+
+    alert_config = sections.get("alertNote", {})
+    alert_font_family = alert_config.get("fontFamily", font_family)
+    alert_font_size = alert_config.get("fontSize", "14px")
+
     if meta:
         attendee_pass_bg_color = meta.get("attendeePassBgColor", attendee_pass_bg_color)
         engagement_details_color = meta.get("engagementDetailsColor", engagement_details_color)
@@ -381,30 +401,30 @@ def send_confirmation_email(
         if matchup:
             details_title = meta.get("details_title", "Partnered With")
             matchup_html = f"""
-            <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #f1f5f9; font-family: {font_family};">
-                <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.15em; color: {engagement_details_color}; margin: 0 0 4px 0; font-family: {font_family};">{details_title}</p>
-                <p style="font-size: 18px; font-weight: 800; color: {engagement_details_color}; margin: 0; font-family: {font_family};">{matchup}</p>
-                <p style="font-size: 11px; color: #64748b; margin: 2px 0 0 0; font-family: {font_family};">Sports Tournament Series</p>
+            <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #f1f5f9; font-family: {details_font_family};">
+                <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.15em; color: {engagement_details_color}; margin: 0 0 4px 0; font-family: {details_font_family};">{details_title}</p>
+                <p style="font-size: 18px; font-weight: 800; color: {engagement_details_color}; margin: 0; font-family: {details_font_family};">{matchup}</p>
+                <p style="font-size: 11px; color: #64748b; margin: 2px 0 0 0; font-family: {details_font_family};">Sports Tournament Series</p>
             </div>
             """
 
         details_html = f"""
-        <div style="background: #ffffff; padding: 32px; border: 1px solid #f1f5f9; border-radius: 32px; margin-bottom: 40px; font-family: {font_family};">
-            <p style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.3em; color: {engagement_details_color}; margin-bottom: 24px; font-family: {font_family};">{meta.get('engagement_title', 'Engagement Details')}</p>
+        <div style="background: #ffffff; padding: 32px; border: 1px solid #f1f5f9; border-radius: 32px; margin-bottom: 40px; font-family: {details_font_family};">
+            <p style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.3em; color: {engagement_details_color}; margin-bottom: 24px; font-family: {details_font_family};">{meta.get('engagement_title', 'Engagement Details')}</p>
             
-            <div style="margin-bottom: 20px; font-family: {font_family};">
-                <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: {engagement_details_color}; opacity: 0.8; margin: 0 0 4px 0; font-family: {font_family};">Event</p>
-                <p style="font-size: 18px; font-weight: 800; color: {engagement_details_color}; margin: 0; font-family: {font_family};">{event_title}</p>
+            <div style="margin-bottom: 20px; font-family: {details_font_family};">
+                <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: {engagement_details_color}; opacity: 0.8; margin: 0 0 4px 0; font-family: {details_font_family};">Event</p>
+                <p style="font-size: 18px; font-weight: 800; color: {engagement_details_color}; margin: 0; font-family: {details_font_family};">{event_title}</p>
             </div>
 
-            <div style="margin-bottom: 20px; font-family: {font_family};">
-                <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: {engagement_details_color}; opacity: 0.8; margin: 0 0 4px 0; font-family: {font_family};">Date & Time</p>
-                <p style="font-size: 16px; font-weight: 700; color: {engagement_details_color}; margin: 0; font-family: {font_family};">{date_str} @ {time_str}</p>
+            <div style="margin-bottom: 20px; font-family: {details_font_family};">
+                <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: {engagement_details_color}; opacity: 0.8; margin: 0 0 4px 0; font-family: {details_font_family};">Date & Time</p>
+                <p style="font-size: 16px; font-weight: 700; color: {engagement_details_color}; margin: 0; font-family: {details_font_family};">{date_str} @ {time_str}</p>
             </div>
 
-            <div style="margin-bottom: 20px; font-family: {font_family};">
-                <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: {engagement_details_color}; opacity: 0.8; margin: 0 0 4px 0; font-family: {font_family};">Venue</p>
-                <p style="font-size: 16px; font-weight: 700; color: {engagement_details_color}; margin: 0; font-family: {font_family};">{event_details.get('location', 'TBA')}</p>
+            <div style="margin-bottom: 20px; font-family: {details_font_family};">
+                <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: {engagement_details_color}; opacity: 0.8; margin: 0 0 4px 0; font-family: {details_font_family};">Venue</p>
+                <p style="font-size: 16px; font-weight: 700; color: {engagement_details_color}; margin: 0; font-family: {details_font_family};">{event_details.get('location', 'TBA')}</p>
             </div>
             {address_html}
             {matchup_html}
@@ -427,10 +447,13 @@ def send_confirmation_email(
             </div>
         </div>
         """
+        
+        # Determine warning block text from meta configuration
+        warning_text = meta.get("warning_text", "Please present this QR code OR number at the registration desk.")
         warning_block_html = f"""
-        <div style="background: #fffbeb; padding: 28px; border-radius: 24px; border: 1px solid #fef3c7; margin-bottom: 40px; text-align: center; font-family: {font_family};">
-            <p style="color: #b45309; font-size: 14px; font-weight: 700; margin: 0; line-height: 1.5; text-transform: uppercase; letter-spacing: 0.05em; font-family: {font_family};">
-                Please present this QR code OR number at the registration desk.
+        <div style="background: #fffbeb; padding: 28px; border-radius: 24px; border: 1px solid #fef3c7; margin-bottom: 40px; text-align: center; font-family: {alert_font_family};">
+            <p style="color: #b45309; font-size: {alert_font_size}; font-weight: 700; margin: 0; line-height: 1.5; text-transform: uppercase; letter-spacing: 0.05em; font-family: {alert_font_family};">
+                {warning_text}
             </p>
         </div>
         """
@@ -500,7 +523,7 @@ def send_confirmation_email(
                 
                 {urgent_banner_html}
                 
-                <p style="font-size: {font_size}; line-height: 1.7; margin-bottom: 40px; color: #475569;">
+                <p style="font-family: {main_body_font_family}; font-size: {main_body_font_size}; line-height: 1.7; margin-bottom: 40px; color: #475569;">
                     Hello <strong>{first_name}</strong><br><br>
                     {body_html}
                 </p>
@@ -679,6 +702,26 @@ def send_broadcast_email(
     
     db_template = get_template_from_db("broadcast")
     meta = parse_template_meta(db_template.body_html) if db_template else {}
+    sections = meta.get("sections", {}) if meta else {}
+    if isinstance(sections, str):
+        try:
+            import json
+            sections = json.loads(sections)
+        except:
+            sections = {}
+            
+    main_body_config = sections.get("mainBodyMessage", {})
+    main_body_font_family = main_body_config.get("fontFamily", font_family)
+    main_body_font_size = main_body_config.get("fontSize", font_size)
+
+    details_config = sections.get("engagementDetails", {})
+    details_font_family = details_config.get("fontFamily", font_family)
+    details_font_size = details_config.get("fontSize", "14px")
+
+    alert_config = sections.get("alertNote", {})
+    alert_font_family = alert_config.get("fontFamily", font_family)
+    alert_font_size = alert_config.get("fontSize", "14px")
+
     if meta:
         attendee_pass_bg_color = meta.get("attendeePassBgColor", attendee_pass_bg_color)
         engagement_details_color = meta.get("engagementDetailsColor", engagement_details_color)
@@ -761,8 +804,8 @@ def send_broadcast_email(
             "broadcast_body": body.replace("{first_name}", first_name).replace("{last_name}", last_name).replace("{pin}", pin).replace("{event_title}", event_title).replace("\n", "<br>"),
             "broadcast_signature": signature.replace("\n", "<br>") if signature else "",
             "footer_text": "Automated Event Management System • Security Tier 4",
-            "font_family": font_family,
-            "font_size": font_size,
+            "font_family": main_body_font_family,
+            "font_size": main_body_font_size,
             "banner_html": banner_html
         }
 
@@ -771,10 +814,10 @@ def send_broadcast_email(
         if (db_template and "{qr_code}" in db_template.body_html) or (not db_template and "{qr_code}" in body):
             qr_base64 = generate_qr_base64(pin)
             qr_code_html = f"""
-            <div style="background: #f8fafc; padding: 32px; border-radius: 24px; text-align: center; border: 1px solid #e2e8f0; margin: 24px auto; max-width: 240px; box-shadow: 0 10px 25px rgba(0,0,0,0.03);">
+            <div style="background: #f8fafc; padding: 32px; border-radius: 24px; text-align: center; border: 1px solid #e2e8f0; margin: 24px auto; max-width: 240px; box-shadow: 0 10px 25px rgba(0,0,0,0.03); font-family: {details_font_family};">
                 <img src="data:image/png;base64,{qr_base64}" width="160" height="160" alt="Clearance QR Code" style="border-radius: 12px; display: block; margin: 0 auto 16px auto;" />
-                <p style="font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.25em; color: #64748b; margin: 0 0 6px 0;">Clearance ID</p>
-                <div style="display: inline-block; background: #ffffff; padding: 8px 18px; border-radius: 12px; border: 1.5px solid {primary_color};">
+                <p style="font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.25em; color: #64748b; margin: 0 0 6px 0; font-family: {details_font_family};">Clearance ID</p>
+                <div style="display: inline-block; background: #ffffff; padding: 8px 18px; border-radius: 12px; border: 1.5px solid {primary_color}; font-family: {details_font_family};">
                     <code style="font-size: 20px; font-weight: 900; color: {primary_color}; letter-spacing: 0.15em;">{pin}</code>
                 </div>
             </div>
@@ -782,18 +825,18 @@ def send_broadcast_email(
         variables["qr_code"] = qr_code_html
 
         details_html = f"""
-        <div style="background: #ffffff; padding: 24px; border: 1px solid #f1f5f9; border-radius: 24px; margin-bottom: 24px; margin-top: 24px;">
-            <div style="margin-bottom: 12px;">
-                <p style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin: 0 0 2px 0;">Event</p>
-                <p style="font-size: 15px; font-weight: 800; color: {engagement_details_color}; margin: 0;">{event_title}</p>
+        <div style="background: #ffffff; padding: 24px; border: 1px solid #f1f5f9; border-radius: 24px; margin-bottom: 24px; margin-top: 24px; font-family: {details_font_family};">
+            <div style="margin-bottom: 12px; font-family: {details_font_family};">
+                <p style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin: 0 0 2px 0; font-family: {details_font_family};">Event</p>
+                <p style="font-size: 15px; font-weight: 800; color: {engagement_details_color}; margin: 0; font-family: {details_font_family};">{event_title}</p>
             </div>
-            <div style="margin-bottom: 12px;">
-                <p style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin: 0 0 2px 0;">Date & Time</p>
-                <p style="font-size: 15px; font-weight: 800; color: {engagement_details_color}; margin: 0;">{date_str} @ {time_str}</p>
+            <div style="margin-bottom: 12px; font-family: {details_font_family};">
+                <p style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin: 0 0 2px 0; font-family: {details_font_family};">Date & Time</p>
+                <p style="font-size: 15px; font-weight: 800; color: {engagement_details_color}; margin: 0; font-family: {details_font_family};">{date_str} @ {time_str}</p>
             </div>
-            <div style="margin-bottom: 12px;">
-                <p style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin: 0 0 2px 0;">Venue</p>
-                <p style="font-size: 15px; font-weight: 800; color: {engagement_details_color}; margin: 0;">{location_str}</p>
+            <div style="margin-bottom: 12px; font-family: {details_font_family};">
+                <p style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin: 0 0 2px 0; font-family: {details_font_family};">Venue</p>
+                <p style="font-size: 15px; font-weight: 800; color: {engagement_details_color}; margin: 0; font-family: {details_font_family};">{location_str}</p>
             </div>
         </div>
         """

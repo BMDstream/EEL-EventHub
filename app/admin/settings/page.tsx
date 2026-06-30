@@ -448,13 +448,30 @@ const resolveBaseTemplateKey = (key: string, templates: EmailTemplate[] = []): s
   return "registration_confirmed";
 };
 
-const parseTemplateMeta = (html: string): Record<string, string> | null => {
-
+const parseTemplateMeta = (html: string): Record<string, any> | null => {
   if (!html || typeof html !== "string") return null;
   const match = html.match(/<!-- TEMPLATE_META: ({.*?}) -->/);
   if (match) {
     try {
-      return JSON.parse(match[1]);
+      const meta = JSON.parse(match[1]);
+      if (!meta.sections) {
+        meta.sections = {
+          mainBodyMessage: {
+            text: meta.body_text || "",
+            fontFamily: meta.font_family || "Calibri, sans-serif",
+            fontSize: meta.font_size || "16px"
+          },
+          engagementDetails: {
+            fontFamily: meta.engagement_details_font_family || "Calibri, sans-serif",
+            fontSize: meta.engagement_details_font_size || "14px"
+          },
+          alertNote: {
+            fontFamily: meta.alert_note_font_family || "Calibri, sans-serif",
+            fontSize: meta.alert_note_font_size || "14px"
+          }
+        };
+      }
+      return meta;
     } catch (e) {
       console.error("Failed to parse template meta", e);
     }
@@ -462,11 +479,42 @@ const parseTemplateMeta = (html: string): Record<string, string> | null => {
   return null;
 };
 
-const compileTemplateHtml = (key: string, values: Record<string, string> = {}, fontFamily = "Calibri, sans-serif", fontSize = "16px", config?: Record<string, any>) => {
+const normalizeFormValues = (meta: Record<string, any> | null, baseKey: string) => {
+  const defaults = DEFAULT_FORM_FIELDS[baseKey] || {};
+  const merged = { ...defaults, ...meta };
+  if (!merged.sections) {
+    merged.sections = {
+      mainBodyMessage: {
+        text: merged.body_text || "",
+        fontFamily: merged.font_family || "Calibri, sans-serif",
+        fontSize: merged.font_size || "16px"
+      },
+      engagementDetails: {
+        fontFamily: "Calibri, sans-serif",
+        fontSize: "14px"
+      },
+      alertNote: {
+        fontFamily: "Calibri, sans-serif",
+        fontSize: "14px"
+      }
+    };
+  }
+  return merged;
+};
+
+const compileTemplateHtml = (key: string, values: Record<string, any> = {}, fontFamily = "Calibri, sans-serif", fontSize = "16px", config?: Record<string, any>) => {
   const baseKey = resolveBaseTemplateKey(key);
   const metaComment = `<!-- TEMPLATE_META: ${JSON.stringify(values)} -->`;
   let html = "";
   
+  const sections = values.sections || {};
+  const mainBodyFontFamily = sections.mainBodyMessage?.fontFamily || fontFamily;
+  const mainBodyFontSize = sections.mainBodyMessage?.fontSize || fontSize;
+  const detailsFontFamily = sections.engagementDetails?.fontFamily || fontFamily;
+  const detailsFontSize = sections.engagementDetails?.fontSize || "14px";
+  const alertFontFamily = sections.alertNote?.fontFamily || fontFamily;
+  const alertFontSize = sections.alertNote?.fontSize || "14px";
+
   const showBanner = values.show_banner === "true" || (baseKey === "banner_email" && values.show_banner !== "false");
   const bannerUrl = values.banner_image_url || config?.banner_url || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800";
   const bannerHtml = showBanner ? `
@@ -480,7 +528,7 @@ const compileTemplateHtml = (key: string, values: Record<string, string> = {}, f
   if (baseKey === "registration_confirmed") {
     const warningHtml = values.warning_text ? `
             <div style="background: #fffbeb; padding: 28px; border-radius: 24px; border: 1px solid #fef3c7; margin-bottom: 40px; text-align: center;">
-                <p style="color: #b45309; font-size: 14px; font-weight: 700; margin: 0; line-height: 1.5; text-transform: uppercase; letter-spacing: 0.05em; font-family: ${fontFamily};">
+                <p style="color: #b45309; font-size: ${alertFontSize}; font-weight: 700; margin: 0; line-height: 1.5; text-transform: uppercase; letter-spacing: 0.05em; font-family: ${alertFontFamily};">
                     ${values.warning_text}
                 </p>
             </div>
@@ -511,7 +559,7 @@ const compileTemplateHtml = (key: string, values: Record<string, string> = {}, f
             <h2 style="font-size: 38px; font-weight: 900; color: ${values.primary_color || ""}; margin-bottom: 28px; text-transform: uppercase; font-style: italic; letter-spacing: -0.04em; line-height: 1; margin-top: 0;">
                 ${values.heading_title || ""} <span style="color: ${values.accent_color || ""};">${values.heading_subtitle || ""}</span>
             </h2>
-            <p style="font-size: ${fontSize}; line-height: 1.7; margin-bottom: 40px; color: #475569;">
+            <p style="font-family: ${mainBodyFontFamily}; font-size: ${mainBodyFontSize}; line-height: 1.7; margin-bottom: 40px; color: #475569;">
                 Hello <strong>{first_name}</strong>,<br><br>
                 ${(values.body_text || "").replace(/\n/g, "<br>")}
             </p>
@@ -564,7 +612,7 @@ const compileTemplateHtml = (key: string, values: Record<string, string> = {}, f
             <h2 style="font-size: 38px; font-weight: 900; color: ${values.primary_color || ""}; margin-bottom: 28px; text-transform: uppercase; font-style: italic; letter-spacing: -0.04em; line-height: 1; margin-top: 0;">
                 ${values.heading_title || ""} <span style="color: ${values.accent_color || ""};">${values.heading_subtitle || ""}</span>
             </h2>
-            <p style="font-size: ${fontSize}; line-height: 1.7; margin-bottom: 40px; color: #475569;">
+            <p style="font-family: ${mainBodyFontFamily}; font-size: ${mainBodyFontSize}; line-height: 1.7; margin-bottom: 40px; color: #475569;">
                 Hello <strong>{first_name}</strong>,<br><br>
                 ${(values.body_text || "").replace(/\n/g, "<br>")}
             </p>
@@ -626,7 +674,7 @@ const compileTemplateHtml = (key: string, values: Record<string, string> = {}, f
                 </p>
             </div>
             
-            <p style="font-size: ${fontSize}; line-height: 1.7; margin-bottom: 40px; color: #475569;">
+            <p style="font-family: ${mainBodyFontFamily}; font-size: ${mainBodyFontSize}; line-height: 1.7; margin-bottom: 40px; color: #475569;">
                 Hello <strong>{first_name}</strong>,<br><br>
                 ${(values.body_text || "").replace(/\n/g, "<br>")}
             </p>
@@ -682,7 +730,7 @@ const compileTemplateHtml = (key: string, values: Record<string, string> = {}, f
                 {logo_html}
               </tr>
             </table>
-            <p style="font-size: ${fontSize}; line-height: 1.7; margin-bottom: 40px; color: #475569;">
+            <p style="font-family: ${mainBodyFontFamily}; font-size: ${mainBodyFontSize}; line-height: 1.7; margin-bottom: 40px; color: #475569;">
                 Hello <strong>{first_name}</strong>,<br><br>
                 ${(values.body_text || "").replace(/\n/g, "<br>")}
             </p>
@@ -720,14 +768,14 @@ const compileTemplateHtml = (key: string, values: Record<string, string> = {}, f
         ${values.heading_title || ""} <span style="color: ${values.accent_color || ""};">${values.heading_subtitle || ""}</span>
     </h2>
     
-    <p style="font-size: ${fontSize}; color: #9ca3af; text-align: center; margin-bottom: 30px; font-weight: 500; font-family: ${fontFamily};">
+    <p style="font-family: ${mainBodyFontFamily}; font-size: ${mainBodyFontSize}; color: #9ca3af; text-align: center; margin-bottom: 30px; font-weight: 500;">
         ${(values.body_text || "").replace(/\n/g, "<br>")}
     </p>
  
     <div style="background-color: #090d16; border: 1px solid #1e293b; border-radius: 20px; padding: 24px; margin-bottom: 30px; text-align: center;">
-        <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.15em; color: ${values.accent_color || ""}; margin: 0 0 10px 0; font-family: ${fontFamily};">${values.details_title || ""}</p>
-        <p style="font-size: 18px; font-weight: 800; color: #ffffff; margin: 0; font-family: ${fontFamily};">{name} vs {opponent_name}</p>
-        <p style="font-size: 13px; color: #64748b; margin: 5px 0 0 0; font-family: ${fontFamily};">Sports Tournament Series</p>
+        <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.15em; color: ${values.accent_color || ""}; margin: 0 0 10px 0; font-family: ${detailsFontFamily};">${values.details_title || ""}</p>
+        <p style="font-size: 18px; font-weight: 800; color: #ffffff; margin: 0; font-family: ${detailsFontFamily};">{name} vs {opponent_name}</p>
+        <p style="font-size: 13px; color: #64748b; margin: 5px 0 0 0; font-family: ${detailsFontFamily};">Sports Tournament Series</p>
     </div>
  
     <div style="background-color: #ffffff; padding: 32px; border-radius: 20px; text-align: center; margin-bottom: 30px; box-shadow: 0 10px 25px rgba(0,0,0,0.3);">
@@ -751,25 +799,25 @@ const compileTemplateHtml = (key: string, values: Record<string, string> = {}, f
     </div>
 </div>`;
   } else if (baseKey === "banner_email") {
-    const itineraryHtml = (values.itinerary_body || "")
+    const itineraryHtml = ((values.itinerary_body as string) || "")
       .split("\n")
-      .map(line => {
+      .map((line: string) => {
         const parts = line.split(":");
         if (parts.length > 1) {
-          return `<div style="margin-bottom: 6px; font-family: ${fontFamily};"><strong>${parts[0].trim()}:</strong> ${parts.slice(1).join(":").trim()}</div>`;
+          return `<div style="margin-bottom: 6px; font-family: ${detailsFontFamily};"><strong>${parts[0].trim()}:</strong> ${parts.slice(1).join(":").trim()}</div>`;
         }
-        return `<div style="margin-bottom: 6px; font-family: ${fontFamily};">${line.trim()}</div>`;
+        return `<div style="margin-bottom: 6px; font-family: ${detailsFontFamily};">${line.trim()}</div>`;
       })
       .join("");
 
-    const bringAlongHtml = (values.bring_along_body || "")
+    const bringAlongHtml = ((values.bring_along_body as string) || "")
       .split("\n")
-      .map(line => `<div style="margin-bottom: 4px; font-family: ${fontFamily};">${line.trim()}</div>`)
+      .map((line: string) => `<div style="margin-bottom: 4px; font-family: ${detailsFontFamily};">${line.trim()}</div>`)
       .join("");
 
-    const includedHtml = (values.included_body || "")
+    const includedHtml = ((values.included_body as string) || "")
       .split("\n")
-      .map(line => `<li style="margin-bottom: 4px; font-family: ${fontFamily};">${line.trim()}</li>`)
+      .map((line: string) => `<li style="margin-bottom: 4px; font-family: ${detailsFontFamily};">${line.trim()}</li>`)
       .join("");
 
     html = `
@@ -780,10 +828,10 @@ const compileTemplateHtml = (key: string, values: Record<string, string> = {}, f
         ${bannerHtml}
         <tr>
           <td style="padding: 40px; font-family: ${fontFamily}; font-size: ${fontSize};">
-            <p style="font-size: ${fontSize}; line-height: 1.7; margin-bottom: 24px; color: #e7e5e4; font-family: ${fontFamily};">
+            <p style="font-family: ${mainBodyFontFamily}; font-size: ${mainBodyFontSize}; line-height: 1.7; margin-bottom: 24px; color: #e7e5e4;">
                 Dear <strong>{first_name}</strong>,
             </p>
-            <p style="font-size: ${fontSize}; line-height: 1.7; margin-bottom: 32px; color: #d6d3d1; font-family: ${fontFamily};">
+            <p style="font-family: ${mainBodyFontFamily}; font-size: ${mainBodyFontSize}; line-height: 1.7; margin-bottom: 32px; color: #d6d3d1;">
                 ${(values.body_text || "").replace(/\n/g, "<br>")}
             </p>
             
@@ -875,7 +923,7 @@ export default function SettingsPage() {
   const [duplicateBodyHtml, setDuplicateBodyHtml] = useState("");
 
   const [editorMode, setEditorMode] = useState<"visual" | "html">("visual");
-  const [formValues, setFormValues] = useState<Record<string, string>>({});
+  const [formValues, setFormValues] = useState<Record<string, any>>({});
 
   const previewFrameRef = useRef<HTMLIFrameElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -1018,10 +1066,8 @@ export default function SettingsPage() {
             setSubject(current.subject);
             setBodyHtml(current.body_html);
             
-            // Sync Form values
             const meta = parseTemplateMeta(current.body_html);
-            const defaults = DEFAULT_FORM_FIELDS[baseKey] || {};
-            setFormValues({ ...defaults, ...meta });
+            setFormValues(normalizeFormValues(meta, baseKey));
           }
         }
       } catch (err) {
@@ -1121,8 +1167,7 @@ export default function SettingsPage() {
       }
       triggerEditorChange();
     } else {
-      setConfig(prev => ({ ...prev, font_family: fontFamily }));
-      setHasUnsavedChanges(true);
+      handleSectionStyleChange("mainBodyMessage", "fontFamily", fontFamily);
     }
   };
 
@@ -1142,14 +1187,18 @@ export default function SettingsPage() {
       }
       triggerEditorChange();
     } else {
-      setConfig(prev => ({ ...prev, font_size: size }));
-      setHasUnsavedChanges(true);
+      handleSectionStyleChange("mainBodyMessage", "fontSize", size);
     }
   };
 
   // Compile preview HTML locally
   const getPreviewHtml = () => {
     const activeFont = config.font_family || "Calibri, sans-serif";
+    const sections = formValues.sections || {};
+    const detailsFont = sections.engagementDetails?.fontFamily || activeFont;
+    const alertFont = sections.alertNote?.fontFamily || activeFont;
+    const alertFontSize = sections.alertNote?.fontSize || "14px";
+    
     let html = bodyHtml;
     const baseKey = resolveBaseTemplateKey(selectedKey, templates);
     const mockVars = { ...(MOCK_PREVIEW_DATA[baseKey] || {}) };
@@ -1181,8 +1230,8 @@ export default function SettingsPage() {
         .replaceAll("#ENG_COLOR#", engCol)
         .replaceAll("#0f172a", primaryCol)
         .replaceAll("#eab308", accentCol)
-        .replaceAll("font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;", `font-family: ${activeFont};`)
-        .replaceAll("font-family: sans-serif;", `font-family: ${activeFont};`)
+        .replaceAll("font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;", `font-family: ${detailsFont};`)
+        .replaceAll("font-family: sans-serif;", `font-family: ${detailsFont};`)
         .replace("Matchup Details", detailsTitle)
         .replace("Engagement Details", engagementTitle);
     }
@@ -1305,13 +1354,34 @@ export default function SettingsPage() {
       setHasUnsavedChanges(false);
       
       const meta = parseTemplateMeta(target.body_html);
-      const defaults = DEFAULT_FORM_FIELDS[resolveBaseTemplateKey(key, templates)] || {};
-      setFormValues({ ...defaults, ...meta });
+      setFormValues(normalizeFormValues(meta, resolveBaseTemplateKey(key, templates)));
     }
   };
 
   const handleFormChange = (field: string, val: string) => {
     const nextValues = { ...formValues, [field]: val };
+    // sync text value back to mainBodyMessage.text if body_text changes
+    if (field === "body_text" && nextValues.sections?.mainBodyMessage) {
+      nextValues.sections.mainBodyMessage.text = val;
+    }
+    setFormValues(nextValues);
+    const compiled = compileTemplateHtml(baseKey, nextValues, config.font_family, config.font_size, config);
+    setBodyHtml(compiled);
+    setHasUnsavedChanges(true);
+  };
+
+  const handleSectionStyleChange = (section: string, property: string, value: string) => {
+    const nextSections = {
+      ...(formValues.sections || {}),
+      [section]: {
+        ...(formValues.sections?.[section] || {}),
+        [property]: value
+      }
+    };
+    const nextValues = {
+      ...formValues,
+      sections: nextSections
+    };
     setFormValues(nextValues);
     const compiled = compileTemplateHtml(baseKey, nextValues, config.font_family, config.font_size, config);
     setBodyHtml(compiled);
@@ -1368,10 +1438,8 @@ export default function SettingsPage() {
         setTemplates(prev => prev.map(t => t.key === selectedKey ? resetTemplate : t));
         setHasUnsavedChanges(false);
         
-        // Reset Visual Form Fields
         const meta = parseTemplateMeta(resetTemplate.body_html);
-        const defaults = DEFAULT_FORM_FIELDS[baseKey] || {};
-        setFormValues({ ...defaults, ...meta });
+        setFormValues(normalizeFormValues(meta, baseKey));
         
         setTemplateNotification({ type: "success", text: "Template restored to default layout successfully!" });
       } else {
@@ -1424,7 +1492,7 @@ export default function SettingsPage() {
       const meta = parseTemplateMeta(bodyHtml);
       const defaults = DEFAULT_FORM_FIELDS[selectedKey] || {};
       if (meta) {
-        setFormValues({ ...defaults, ...meta });
+        setFormValues(normalizeFormValues(meta, selectedKey));
       }
     }
     setEditorMode(mode);
@@ -2385,7 +2453,7 @@ export default function SettingsPage() {
                               {/* Rich Text Toolbar */}
                               <div className="flex flex-wrap items-center gap-1 p-1.5 bg-slate-50 dark:bg-slate-800 rounded-t-2xl border-t border-x border-slate-200 dark:border-slate-700">
                                 <select
-                                  value={config.font_family || "Calibri, sans-serif"}
+                                  value={formValues.sections?.mainBodyMessage?.fontFamily || "Calibri, sans-serif"}
                                   onChange={(e) => {
                                     if (e.target.value) {
                                       applyFontFamily(e.target.value);
@@ -2406,7 +2474,7 @@ export default function SettingsPage() {
                                 </select>
 
                                 <select
-                                  value={config.font_size || "16px"}
+                                  value={formValues.sections?.mainBodyMessage?.fontSize || "16px"}
                                   onChange={(e) => {
                                     if (e.target.value) {
                                       applyFontSize(e.target.value);
@@ -2467,8 +2535,20 @@ export default function SettingsPage() {
                                 onKeyUp={saveSelection}
                                 onInput={(e) => {
                                   const html = e.currentTarget.innerHTML;
-                                  setFormValues(prev => ({ ...prev, body_text: html }));
-                                  const compiled = compileTemplateHtml(baseKey, { ...formValues, body_text: html }, config.font_family, config.font_size, config);
+                                  const nextSections = {
+                                    ...(formValues.sections || {}),
+                                    mainBodyMessage: {
+                                      ...(formValues.sections?.mainBodyMessage || {}),
+                                      text: html
+                                    }
+                                  };
+                                  const nextValues = {
+                                    ...formValues,
+                                    body_text: html,
+                                    sections: nextSections
+                                  };
+                                  setFormValues(nextValues);
+                                  const compiled = compileTemplateHtml(baseKey, nextValues, config.font_family, config.font_size, config);
                                   setBodyHtml(compiled);
                                   setHasUnsavedChanges(true);
                                   saveSelection();
@@ -2477,8 +2557,8 @@ export default function SettingsPage() {
                                   handleFormChange("body_text", e.currentTarget.innerHTML);
                                 }}
                                 style={{
-                                  fontFamily: config.font_family || "Calibri, sans-serif",
-                                  fontSize: config.font_size || "16px"
+                                  fontFamily: formValues.sections?.mainBodyMessage?.fontFamily || "Calibri, sans-serif",
+                                  fontSize: formValues.sections?.mainBodyMessage?.fontSize || "16px"
                                 }}
                                 className="w-full min-h-[220px] max-h-[400px] overflow-y-auto p-4 rounded-b-2xl bg-white border border-t-0 border-slate-200 focus:border-yellow-400 outline-none text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white"
                               />
@@ -2488,20 +2568,57 @@ export default function SettingsPage() {
                             </div>
 
                             {/* Warning copy for Confirmation Template */}
-                            {baseKey === "registration_confirmed" && (
-                              <div className="space-y-1.5">
-                                <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
-                                  Alert Note (QR check-in instructions)
-                                </label>
-                                <input 
-                                  type="text"
-                                  value={formValues.warning_text || ""}
-                                  onChange={(e) => handleFormChange("warning_text", e.target.value)}
-                                  placeholder="e.g. Please present this QR code at the check-in desk."
-                                  className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 focus:border-yellow-400 outline-none font-medium text-sm text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white"
-                                />
-                              </div>
-                            )}
+                             {baseKey === "registration_confirmed" && (
+                               <div className="space-y-3">
+                                 <div className="space-y-1.5">
+                                   <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
+                                     Alert Note (QR check-in instructions)
+                                   </label>
+                                   <input 
+                                     type="text"
+                                     value={formValues.warning_text || ""}
+                                     onChange={(e) => handleFormChange("warning_text", e.target.value)}
+                                     placeholder="e.g. Please present this QR code at the check-in desk."
+                                     className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 focus:border-yellow-400 outline-none font-medium text-sm text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                                   />
+                                 </div>
+                                 <div className="grid grid-cols-2 gap-4">
+                                   <div className="space-y-1.5">
+                                     <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
+                                       Alert Font Family
+                                     </label>
+                                     <select
+                                       value={formValues.sections?.alertNote?.fontFamily || "Calibri, sans-serif"}
+                                       onChange={(e) => handleSectionStyleChange("alertNote", "fontFamily", e.target.value)}
+                                       className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 outline-none text-xs font-bold text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                                     >
+                                       <option value="Calibri, sans-serif">Calibri</option>
+                                       <option value="'Helvetica Neue', Helvetica, Arial, sans-serif">Helvetica Neue</option>
+                                       <option value="'Inter', sans-serif">Inter</option>
+                                       <option value="'Outfit', sans-serif">Outfit</option>
+                                       <option value="'Bricolage Grotesque', sans-serif">Bricolage</option>
+                                       <option value="Georgia, serif">Georgia</option>
+                                     </select>
+                                   </div>
+                                   <div className="space-y-1.5">
+                                     <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
+                                       Alert Font Size
+                                     </label>
+                                     <select
+                                       value={formValues.sections?.alertNote?.fontSize || "14px"}
+                                       onChange={(e) => handleSectionStyleChange("alertNote", "fontSize", e.target.value)}
+                                       className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 outline-none text-xs font-bold text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                                     >
+                                       <option value="12px">12px</option>
+                                       <option value="13px">13px</option>
+                                       <option value="14px">14px</option>
+                                       <option value="15px">15px</option>
+                                       <option value="16px">16px</option>
+                                     </select>
+                                   </div>
+                                 </div>
+                               </div>
+                             )}
 
                             {/* Button text config */}
                             {["partner_pending", "tournament_matchup"].includes(baseKey) && (
@@ -2577,6 +2694,44 @@ export default function SettingsPage() {
                                     />
                                   </div>
                                 )}
+                              </div>
+                            )}
+
+                            {["registration_confirmed", "partner_pending", "tournament_matchup", "banner_email"].includes(baseKey) && (
+                              <div className="grid grid-cols-2 gap-4 mt-3 pt-3 border-t border-slate-100 dark:border-slate-800/40">
+                                <div className="space-y-1.5">
+                                  <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
+                                    Engagement Font Family
+                                  </label>
+                                  <select
+                                    value={formValues.sections?.engagementDetails?.fontFamily || "Calibri, sans-serif"}
+                                    onChange={(e) => handleSectionStyleChange("engagementDetails", "fontFamily", e.target.value)}
+                                    className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 outline-none text-xs font-bold text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                                  >
+                                    <option value="Calibri, sans-serif">Calibri</option>
+                                    <option value="'Helvetica Neue', Helvetica, Arial, sans-serif">Helvetica Neue</option>
+                                    <option value="'Inter', sans-serif">Inter</option>
+                                    <option value="'Outfit', sans-serif">Outfit</option>
+                                    <option value="'Bricolage Grotesque', sans-serif">Bricolage</option>
+                                    <option value="Georgia, serif">Georgia</option>
+                                  </select>
+                                </div>
+                                <div className="space-y-1.5">
+                                  <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
+                                    Engagement Font Size
+                                  </label>
+                                  <select
+                                    value={formValues.sections?.engagementDetails?.fontSize || "14px"}
+                                    onChange={(e) => handleSectionStyleChange("engagementDetails", "fontSize", e.target.value)}
+                                    className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 outline-none text-xs font-bold text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                                  >
+                                    <option value="12px">12px</option>
+                                    <option value="13px">13px</option>
+                                    <option value="14px">14px</option>
+                                    <option value="15px">15px</option>
+                                    <option value="16px">16px</option>
+                                  </select>
+                                </div>
                               </div>
                             )}
 
