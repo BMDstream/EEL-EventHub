@@ -951,19 +951,24 @@ export default function SettingsPage() {
   };
 
   // Synchronize contentEditable editor when template or tab changes
+  // Synchronize contentEditable editor when template, tab, mode or values change
   useEffect(() => {
-    if (activeTab === "templates" && editorRef.current) {
+    if (activeTab === "templates" && editorRef.current && editorMode === "visual") {
       const current = templates.find((t) => t.key === selectedKey);
-      if (current) {
-        const meta = parseTemplateMeta(current.body_html);
-        const defaults = DEFAULT_FORM_FIELDS[baseKey] || {};
-        const bodyVal = meta?.body_text || defaults.body_text || "";
-        if (editorRef.current.innerHTML !== bodyVal) {
-          editorRef.current.innerHTML = bodyVal;
-        }
+      const defaults = DEFAULT_FORM_FIELDS[baseKey] || {};
+      
+      // Get the current source of truth for body text
+      // If we have unsaved changes, use the current formValues.body_text
+      // Otherwise, load from the saved template meta
+      const bodyVal = hasUnsavedChanges 
+        ? (formValues.body_text || "")
+        : (current ? (parseTemplateMeta(current.body_html)?.body_text || defaults.body_text || "") : "");
+        
+      if (document.activeElement !== editorRef.current && editorRef.current.innerHTML !== bodyVal) {
+        editorRef.current.innerHTML = bodyVal;
       }
     }
-  }, [selectedKey, baseKey, activeTab, templates]);
+  }, [selectedKey, baseKey, activeTab, templates, editorMode, hasUnsavedChanges, formValues.body_text]);
 
   // ==========================================
   // GLOBAL SETTINGS STATES
@@ -1045,7 +1050,7 @@ export default function SettingsPage() {
     } else if (session === null) {
       setLoadingSettings(false);
     }
-  }, [session, userRole]);
+  }, [session?.user?.email, userRole]);
 
   // Load Email Templates
   useEffect(() => {
@@ -1083,7 +1088,7 @@ export default function SettingsPage() {
     } else if (sessionStatus === "unauthenticated" || (sessionStatus === "authenticated" && userRole !== "admin")) {
       setLoadingTemplates(false);
     }
-  }, [session, sessionStatus, selectedKey, baseKey, userRole]);
+  }, [session?.user?.email, sessionStatus, selectedKey, baseKey, userRole]);
 
   // Write compiled content directly into iframe (Templates visual preview)
   useEffect(() => {
@@ -2533,6 +2538,11 @@ export default function SettingsPage() {
                                 suppressContentEditableWarning
                                 onMouseUp={saveSelection}
                                 onKeyUp={saveSelection}
+                                onPaste={(e) => {
+                                  e.preventDefault();
+                                  const text = e.clipboardData.getData("text/plain");
+                                  document.execCommand("insertText", false, text);
+                                }}
                                 onInput={(e) => {
                                   const html = e.currentTarget.innerHTML;
                                   const nextSections = {
