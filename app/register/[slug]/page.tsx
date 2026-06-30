@@ -1794,6 +1794,7 @@ function PublicRegistrationPageContent() {
   ) : null;
 
    const customFont = event?.registration_form_template?.theme_config?.typography_font;
+   const questionFontSize = event?.registration_form_template?.theme_config?.question_font_size;
 
   return (
     <div style={customFont ? { fontFamily: customFont } : undefined} className="w-full">
@@ -1806,6 +1807,14 @@ function PublicRegistrationPageContent() {
         .animate-aurora {
           background-size: 200% 200%;
           animation: aurora 15s ease infinite;
+        }
+        .client-question-label {
+          font-size: ${questionFontSize ? `${questionFontSize}px` : '14px'} !important;
+        }
+        @media (max-width: 640px) {
+          .client-question-label {
+            font-size: ${questionFontSize ? `${Math.max(16, Number(questionFontSize))}px` : '16px'} !important;
+          }
         }
         .client-text-accent { color: ${eventAccentColor} !important; }
         .client-bg-accent { background-color: ${eventAccentColor} !important; }

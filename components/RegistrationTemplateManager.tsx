@@ -52,6 +52,7 @@ interface RegistrationFormTemplate {
     heading_weight?: string;
     body_weight?: string;
     disclaimerCheckboxLabel?: string;
+    question_font_size?: string | number;
   };
   layout_schema: FormSection[];
   post_submit_config: {
@@ -656,7 +657,7 @@ export default function RegistrationTemplateManager() {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 border-t border-slate-100/50 dark:border-slate-800/30">
+                      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 pt-4 border-t border-slate-100/50 dark:border-slate-800/30">
                         <div className="space-y-2">
                           <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-1">
                             Base Font Size: {selectedTemplate.theme_config.base_font_size || 16}px
@@ -671,6 +672,22 @@ export default function RegistrationTemplateManager() {
                               className="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-[#0f172a] dark:accent-white"
                             />
                             <span className="text-xs font-black text-slate-500 w-8 text-right shrink-0">{selectedTemplate.theme_config.base_font_size || 16}px</span>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-1">
+                            Question Font Size: {selectedTemplate.theme_config.question_font_size || 14}px
+                          </label>
+                          <div className="flex items-center gap-3">
+                            <input 
+                              type="range" 
+                              min="10" 
+                              max="24" 
+                              value={selectedTemplate.theme_config.question_font_size || 14}
+                              onChange={(e) => updateThemeConfig("question_font_size", parseInt(e.target.value))}
+                              className="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-[#0f172a] dark:accent-white"
+                            />
+                            <span className="text-xs font-black text-slate-500 w-8 text-right shrink-0">{selectedTemplate.theme_config.question_font_size || 14}px</span>
                           </div>
                         </div>
                         <div className="space-y-2">
@@ -1266,8 +1283,8 @@ export default function RegistrationTemplateManager() {
               }}
               className="rounded-[2.5rem] border border-slate-150 p-8 shadow-lg transition-all min-h-[480px] relative overflow-hidden flex flex-col justify-between preview-form-text-custom"
             >
-              {selectedTemplate.theme_config.form_text_color && (
-                <style dangerouslySetInnerHTML={{ __html: `
+              <style dangerouslySetInnerHTML={{ __html: `
+                ${selectedTemplate.theme_config.form_text_color ? `
                   .preview-form-text-custom h1,
                   .preview-form-text-custom h2,
                   .preview-form-text-custom h3,
@@ -1280,8 +1297,11 @@ export default function RegistrationTemplateManager() {
                   .preview-form-text-custom select {
                     color: ${selectedTemplate.theme_config.form_text_color} !important;
                   }
-                `}} />
-              )}
+                ` : ""}
+                .preview-form-text-custom label {
+                  font-size: ${selectedTemplate.theme_config.question_font_size ? `${selectedTemplate.theme_config.question_font_size}px` : '10px'} !important;
+                }
+              `}} />
               {/* Force theme config values onto the container styles */}
               <div 
                 className="absolute inset-0 z-0 opacity-10 pointer-events-none"
