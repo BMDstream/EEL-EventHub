@@ -148,7 +148,7 @@ const compileTemplatePreview = (
   const addressHtml = address ? `
   <div style="margin-top: 20px; font-family: ${fontFamily};">
       <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin: 0 0 4px 0; font-family: ${fontFamily};">Address</p>
-      <p style="font-size: 16px; font-weight: 700; color: #0f172a; margin: 0 0 10px 0; font-family: ${fontFamily};">${address}</p>
+      <p style="font-size: 16px; font-weight: 700; color: ${engagementDetailsColor}; margin: 0 0 10px 0; font-family: ${fontFamily};">${address}</p>
       <a href="#" style="display: inline-block; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.05em; color: #ffffff; background-color: ${engagementDetailsColor}; text-decoration: none; padding: 10px 20px; border-radius: 12px; margin-top: 4px; font-family: ${fontFamily};">
           🗺️ Open in Google Maps
       </a>
@@ -166,12 +166,12 @@ const compileTemplatePreview = (
 
       <div style="margin-bottom: 20px; font-family: ${fontFamily};">
           <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin: 0 0 4px 0; font-family: ${fontFamily};">Date & Time</p>
-          <p style="font-size: 16px; font-weight: 700; color: #0f172a; margin: 0; font-family: ${fontFamily};">${dateStr} @ ${timeStr}</p>
+          <p style="font-size: 16px; font-weight: 700; color: ${engagementDetailsColor}; margin: 0; font-family: ${fontFamily};">${dateStr} @ ${timeStr}</p>
       </div>
 
       <div style="margin-bottom: 20px; font-family: ${fontFamily};">
           <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin: 0 0 4px 0; font-family: ${fontFamily};">Venue</p>
-          <p style="font-size: 16px; font-weight: 700; color: #0f172a; margin: 0; font-family: ${fontFamily};">${venue}</p>
+          <p style="font-size: 16px; font-weight: 700; color: ${engagementDetailsColor}; margin: 0; font-family: ${fontFamily};">${venue}</p>
       </div>
       ${addressHtml}
   </div>
@@ -435,6 +435,7 @@ export default function EditEventPage() {
     registration_end: "",
     disclaimer_enabled: false,
     disclaimer_text: "",
+    disclaimer_checkbox_label: "",
     confirmation_template_key: "global",
     confirmation_template_id: null as number | null,
     registration_form_template_id: null as number | null,
@@ -503,6 +504,7 @@ export default function EditEventPage() {
           registration_end: data.registration_end ? data.registration_end.slice(0, 16) : "",
           disclaimer_enabled: !!data.disclaimer_enabled,
           disclaimer_text: data.disclaimer_text || "",
+          disclaimer_checkbox_label: data.banner_settings?.disclaimer_checkbox_label || "",
           confirmation_template_key: data.confirmation_template_key || "global",
           confirmation_template_id: data.confirmation_template_id || null,
           registration_form_template_id: data.registration_form_template_id || null,
@@ -573,7 +575,7 @@ export default function EditEventPage() {
     e.preventDefault();
     setSaving(true);
     try {
-      const { banner_size, banner_position, banner_theme, banner_primary_color, banner_accent_color, banner_layout, banner_text_color, banner_url, logo_url, background_url, ...submitData } = formData;
+      const { banner_size, banner_position, banner_theme, banner_primary_color, banner_accent_color, banner_layout, banner_text_color, banner_url, logo_url, background_url, disclaimer_checkbox_label, ...submitData } = formData;
       const payload: any = {
         ...submitData,
         client_id: formData.client_id ? parseInt(formData.client_id) : null,
@@ -591,6 +593,7 @@ export default function EditEventPage() {
           accent_color: formData.banner_accent_color || "",
           layout: formData.banner_layout || "",
           text_color: formData.banner_text_color || "",
+          disclaimer_checkbox_label: formData.disclaimer_checkbox_label || "",
         },
         registration_start: formData.registration_start || null,
         registration_end: formData.registration_end || null,
@@ -1106,6 +1109,14 @@ export default function EditEventPage() {
                         <p className="text-[10px] text-slate-400 mt-0.5">Show a custom terms/indemnity agreement that guests must accept to register.</p>
                       </div>
                     </label>
+                    {formData.disclaimer_enabled && (
+                      <div className="space-y-2 mt-3">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Custom Checkbox Phrasing Text</label>
+                        <input type="text" name="disclaimer_checkbox_label" value={formData.disclaimer_checkbox_label} onChange={handleChange}
+                          placeholder="I have read and accept the Disclaimer and Indemnity"
+                          className="w-full px-5 py-4 rounded-2xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-slate-700 bg-slate-50/50" />
+                      </div>
+                    )}
                   </div>
                   {formData.disclaimer_enabled && (
                     <div className="space-y-3 md:col-span-2">

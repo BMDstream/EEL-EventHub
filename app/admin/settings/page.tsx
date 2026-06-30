@@ -81,17 +81,17 @@ const MOCK_PREVIEW_DATA: Record<string, Record<string, string>> = {
 
       <div style="margin-bottom: 20px;">
         <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin: 0 0 4px 0;">Date & Time</p>
-        <p style="font-size: 16px; font-weight: 700; color: #0f172a; margin: 0;">Thursday, June 25, 2026 @ 10:00 AM</p>
+        <p style="font-size: 16px; font-weight: 700; color: #ENG_COLOR#; margin: 0;">Thursday, June 25, 2026 @ 10:00 AM</p>
       </div>
 
       <div style="margin-bottom: 20px;">
         <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin: 0 0 4px 0;">Venue</p>
-        <p style="font-size: 16px; font-weight: 700; color: #0f172a; margin: 0;">Arena Center</p>
+        <p style="font-size: 16px; font-weight: 700; color: #ENG_COLOR#; margin: 0;">Arena Center</p>
       </div>
 
       <div style="margin-bottom: 20px;">
         <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin: 0 0 4px 0;">Address</p>
-        <p style="font-size: 16px; font-weight: 700; color: #0f172a; margin: 0 0 10px 0;">123 Padel Court Way</p>
+        <p style="font-size: 16px; font-weight: 700; color: #ENG_COLOR#; margin: 0 0 10px 0;">123 Padel Court Way</p>
         <a href="#" style="display: inline-block; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.05em; color: #ffffff; background-color: #ENG_COLOR#; text-decoration: none; padding: 10px 20px; border-radius: 12px; margin-top: 4px;">
           🗺️ Open in Google Maps
         </a>
@@ -1941,9 +1941,8 @@ export default function SettingsPage() {
                               <Palette size={12} className="text-yellow-500" />
                               Theme & Color Palette
                             </h4>
-                            
-                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-1">
-                              <div className="space-y-2">
+                               <div className="flex flex-wrap gap-[1.5rem] pt-1">
+                              <div className="space-y-2 flex-1 min-w-[200px] max-w-[280px]">
                                 <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
                                   Primary Color
                                 </label>
@@ -1952,20 +1951,20 @@ export default function SettingsPage() {
                                     type="color"
                                     value={formValues.primary_color || "#0f172a"}
                                     onChange={(e) => handleFormChange("primary_color", e.target.value)}
-                                    className="w-12 h-12 rounded-xl cursor-pointer border border-slate-200 dark:border-slate-700 bg-transparent p-0"
+                                    className="w-12 h-12 rounded-xl cursor-pointer border border-slate-200 dark:border-slate-700 bg-transparent p-0 shrink-0"
                                   />
                                   <input 
                                     type="text"
                                     value={formValues.primary_color || ""}
                                     onChange={(e) => handleFormChange("primary_color", e.target.value)}
                                     placeholder="#000000"
-                                    className="flex-1 px-4 py-2.5 rounded-xl bg-white border border-slate-200 focus:border-yellow-400 outline-none font-bold text-sm text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white font-mono"
+                                    className="w-28 px-4 py-2.5 rounded-xl bg-white border border-slate-200 focus:border-yellow-400 outline-none font-bold text-sm text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white font-mono"
                                   />
                                 </div>
                               </div>
 
                               {baseKey !== "broadcast" && (
-                                <div className="space-y-2">
+                                <div className="space-y-2 flex-1 min-w-[200px] max-w-[280px]">
                                   <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
                                     Accent Color
                                   </label>
@@ -1974,20 +1973,20 @@ export default function SettingsPage() {
                                       type="color"
                                       value={formValues.accent_color || "#eab308"}
                                       onChange={(e) => handleFormChange("accent_color", e.target.value)}
-                                      className="w-12 h-12 rounded-xl cursor-pointer border border-slate-200 dark:border-slate-700 bg-transparent p-0"
+                                      className="w-12 h-12 rounded-xl cursor-pointer border border-slate-200 dark:border-slate-700 bg-transparent p-0 shrink-0"
                                     />
                                     <input 
                                       type="text"
                                       value={formValues.accent_color || ""}
                                       onChange={(e) => handleFormChange("accent_color", e.target.value)}
                                       placeholder="#000000"
-                                      className="flex-1 px-4 py-2.5 rounded-xl bg-white border border-slate-200 focus:border-yellow-400 outline-none font-bold text-sm text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white font-mono"
+                                      className="w-28 px-4 py-2.5 rounded-xl bg-white border border-slate-200 focus:border-yellow-400 outline-none font-bold text-sm text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white font-mono"
                                     />
                                   </div>
                                 </div>
                               )}
 
-                              <div className="space-y-2">
+                              <div className="space-y-2 flex-1 min-w-[200px] max-w-[280px]">
                                 <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
                                   Engagement Details Color
                                 </label>
@@ -1996,19 +1995,19 @@ export default function SettingsPage() {
                                     type="color"
                                     value={formValues.engagementDetailsColor || formValues.primary_color || "#0f172a"}
                                     onChange={(e) => handleFormChange("engagementDetailsColor", e.target.value)}
-                                    className="w-12 h-12 rounded-xl cursor-pointer border border-slate-200 dark:border-slate-700 bg-transparent p-0"
+                                    className="w-12 h-12 rounded-xl cursor-pointer border border-slate-200 dark:border-slate-700 bg-transparent p-0 shrink-0"
                                   />
                                   <input 
                                     type="text"
                                     value={formValues.engagementDetailsColor || ""}
                                     onChange={(e) => handleFormChange("engagementDetailsColor", e.target.value)}
                                     placeholder="#000000"
-                                    className="flex-1 px-4 py-2.5 rounded-xl bg-white border border-slate-200 focus:border-yellow-400 outline-none font-bold text-sm text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white font-mono"
+                                    className="w-28 px-4 py-2.5 rounded-xl bg-white border border-slate-200 focus:border-yellow-400 outline-none font-bold text-sm text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white font-mono"
                                   />
                                 </div>
                               </div>
 
-                              <div className="space-y-2">
+                              <div className="space-y-2 flex-1 min-w-[200px] max-w-[280px]">
                                 <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
                                   Attendee Pass Color
                                 </label>
@@ -2017,14 +2016,14 @@ export default function SettingsPage() {
                                     type="color"
                                     value={formValues.attendeePassBgColor || "#000000"}
                                     onChange={(e) => handleFormChange("attendeePassBgColor", e.target.value)}
-                                    className="w-12 h-12 rounded-xl cursor-pointer border border-slate-200 dark:border-slate-700 bg-transparent p-0"
+                                    className="w-12 h-12 rounded-xl cursor-pointer border border-slate-200 dark:border-slate-700 bg-transparent p-0 shrink-0"
                                   />
                                   <input 
                                     type="text"
                                     value={formValues.attendeePassBgColor || ""}
                                     onChange={(e) => handleFormChange("attendeePassBgColor", e.target.value)}
                                     placeholder="#000000"
-                                    className="flex-1 px-4 py-2.5 rounded-xl bg-white border border-slate-200 focus:border-yellow-400 outline-none font-bold text-sm text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white font-mono"
+                                    className="w-28 px-4 py-2.5 rounded-xl bg-white border border-slate-200 focus:border-yellow-400 outline-none font-bold text-sm text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white font-mono"
                                   />
                                 </div>
                               </div>

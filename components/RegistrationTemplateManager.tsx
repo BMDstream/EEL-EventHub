@@ -738,10 +738,10 @@ export default function RegistrationTemplateManager() {
                         </div>
                       </div>
 
-                      <div className="space-y-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+                      <div className="space-y-6 pt-8 pb-4 border-t border-slate-100 dark:border-slate-800">
                         <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Public Form Header Config</h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-1">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="space-y-2.5">
                             <label className="text-[8px] font-black uppercase tracking-widest text-slate-400 ml-1">Form Title Heading</label>
                             <input 
                               type="text" 
@@ -751,7 +751,7 @@ export default function RegistrationTemplateManager() {
                               className="w-full px-4 py-2.5 rounded-xl border border-slate-100 font-bold text-xs bg-slate-50 dark:bg-slate-800 dark:border-slate-700 text-[#0f172a] dark:text-white" 
                             />
                           </div>
-                          <div className="space-y-1">
+                          <div className="space-y-2.5">
                             <label className="text-[8px] font-black uppercase tracking-widest text-slate-400 ml-1">Form Subheading / Description</label>
                             <input 
                               type="text" 
@@ -764,10 +764,10 @@ export default function RegistrationTemplateManager() {
                         </div>
                       </div>
 
-                      <div className="space-y-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+                      <div className="space-y-6 pt-8 pb-4 border-t border-slate-100 dark:border-slate-800">
                         <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Attendance Selector Config</h4>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          <div className="space-y-1">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                          <div className="space-y-2.5">
                             <label className="text-[8px] font-black uppercase tracking-widest text-slate-400 ml-1">Question Label</label>
                             <input 
                               type="text" 
@@ -777,7 +777,7 @@ export default function RegistrationTemplateManager() {
                               className="w-full px-4 py-2.5 rounded-xl border border-slate-100 font-bold text-xs bg-slate-50 dark:bg-slate-800 dark:border-slate-700 text-[#0f172a] dark:text-white" 
                             />
                           </div>
-                          <div className="space-y-1">
+                          <div className="space-y-2.5">
                             <label className="text-[8px] font-black uppercase tracking-widest text-slate-400 ml-1">"Attending" Option</label>
                             <input 
                               type="text" 
@@ -787,7 +787,7 @@ export default function RegistrationTemplateManager() {
                               className="w-full px-4 py-2.5 rounded-xl border border-slate-100 font-bold text-xs bg-slate-50 dark:bg-slate-800 dark:border-slate-700 text-[#0f172a] dark:text-white" 
                             />
                           </div>
-                          <div className="space-y-1">
+                          <div className="space-y-2.5">
                             <label className="text-[8px] font-black uppercase tracking-widest text-slate-400 ml-1">"Not Attending" Option</label>
                             <input 
                               type="text" 
@@ -800,10 +800,10 @@ export default function RegistrationTemplateManager() {
                         </div>
                       </div>
 
-                      <div className="space-y-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+                      <div className="space-y-6 pt-8 pb-4 border-t border-slate-100 dark:border-slate-800">
                         <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Typography & Accessibility Rules</h4>
                         
-                        <div className="space-y-3">
+                        <div className="space-y-5">
                           <label className="flex items-center gap-3 cursor-pointer">
                             <input 
                               type="checkbox" 
@@ -1369,7 +1369,7 @@ export default function RegistrationTemplateManager() {
                           {selectedTemplate.post_submit_config.onscreen_title || "YOUR REGISTRATION HAS BEEN CONFIRMED."}
                         </h1>
 
-                        <p className="text-slate-500 text-xs font-medium leading-relaxed whitespace-pre-line">
+                        <p className="text-slate-500 text-xs font-medium leading-relaxed whitespace-pre-line" style={{ whiteSpace: 'pre-line' }}>
                           {formatPostSubmit(selectedTemplate.post_submit_config.onscreen_description || "Your registration is confirmed.")}
                         </p>
 

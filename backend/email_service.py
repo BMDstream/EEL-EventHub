@@ -154,9 +154,9 @@ def get_logo_html(config: Optional[dict], meta: dict, primary_color: str) -> str
             """
         logo_text = meta.get("logo_text", "BMD")
         logo_bg = primary_color or meta.get("primary_color", "#0f172a")
-        font_family = "Calibri, sans-serif"
+        font_family = "'Fluent Calibri', Calibri, Candara, sans-serif"
         if config and isinstance(config, dict):
-            font_family = config.get("font_family", "Calibri, sans-serif")
+            font_family = config.get("font_family", "'Fluent Calibri', Calibri, Candara, sans-serif")
         return f"""
         <td align="right" valign="middle">
             <div style="background-color:{logo_bg};padding:8px 16px;border-radius:8px;color:#fff;font-weight:bold;font-size:14px;display:inline-block;font-family:{font_family};">
@@ -198,7 +198,7 @@ def send_confirmation_email(
     accent_color = config.get("accent_color", "#94a3b8")
     attendee_pass_bg_color = config.get("attendee_pass_bg_color", "#000000")
     engagement_details_color = config.get("engagement_details_color", primary_color)
-    font_family = config.get("font_family", "Calibri, sans-serif")
+    font_family = config.get("font_family", "'Fluent Calibri', Calibri, Candara, sans-serif")
     font_size = config.get("font_size", "16px")
     
     footer_text_raw = config.get("footer_text", "")
@@ -360,7 +360,7 @@ def send_confirmation_email(
             address_html = f"""
             <div style="margin-top: 20px; font-family: {font_family};">
                 <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin: 0 0 4px 0; font-family: {font_family};">Address</p>
-                <p style="font-size: 16px; font-weight: 700; color: #0f172a; margin: 0 0 10px 0; font-family: {font_family};">{event_details.get('address')}</p>
+                <p style="font-size: 16px; font-weight: 700; color: {engagement_details_color}; margin: 0 0 10px 0; font-family: {font_family};">{event_details.get('address')}</p>
                 <a href="{maps_url}" target="_blank" style="display: inline-block; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.05em; color: #ffffff; background-color: {engagement_details_color}; text-decoration: none; padding: 10px 20px; border-radius: 12px; margin-top: 4px; font-family: {font_family};">
                     🗺️ Open in Google Maps
                 </a>
@@ -389,12 +389,12 @@ def send_confirmation_email(
 
             <div style="margin-bottom: 20px; font-family: {font_family};">
                 <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin: 0 0 4px 0; font-family: {font_family};">Date & Time</p>
-                <p style="font-size: 16px; font-weight: 700; color: #0f172a; margin: 0; font-family: {font_family};">{date_str} @ {time_str}</p>
+                <p style="font-size: 16px; font-weight: 700; color: {engagement_details_color}; margin: 0; font-family: {font_family};">{date_str} @ {time_str}</p>
             </div>
 
             <div style="margin-bottom: 20px; font-family: {font_family};">
                 <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin: 0 0 4px 0; font-family: {font_family};">Venue</p>
-                <p style="font-size: 16px; font-weight: 700; color: #0f172a; margin: 0; font-family: {font_family};">{event_details.get('location', 'TBA')}</p>
+                <p style="font-size: 16px; font-weight: 700; color: {engagement_details_color}; margin: 0; font-family: {font_family};">{event_details.get('location', 'TBA')}</p>
             </div>
             {address_html}
             {matchup_html}
@@ -645,7 +645,7 @@ def send_broadcast_email(
     accent_color = config.get("accent_color", "#94a3b8")
     attendee_pass_bg_color = config.get("attendee_pass_bg_color", "#000000")
     engagement_details_color = config.get("engagement_details_color", primary_color)
-    font_family = config.get("font_family", "Calibri, sans-serif")
+    font_family = config.get("font_family", "'Fluent Calibri', Calibri, Candara, sans-serif")
     font_size = config.get("font_size", "16px")
     
     db_template = get_template_from_db("broadcast")
@@ -745,15 +745,15 @@ def send_broadcast_email(
         <div style="background: #ffffff; padding: 24px; border: 1px solid #f1f5f9; border-radius: 24px; margin-bottom: 24px; margin-top: 24px;">
             <div style="margin-bottom: 12px;">
                 <p style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin: 0 0 2px 0;">Event</p>
-                <p style="font-size: 15px; font-weight: 800; color: {primary_color}; margin: 0;">{event_title}</p>
+                <p style="font-size: 15px; font-weight: 800; color: {engagement_details_color}; margin: 0;">{event_title}</p>
             </div>
             <div style="margin-bottom: 12px;">
                 <p style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin: 0 0 2px 0;">Date & Time</p>
-                <p style="font-size: 15px; font-weight: 800; color: {primary_color}; margin: 0;">{date_str} @ {time_str}</p>
+                <p style="font-size: 15px; font-weight: 800; color: {engagement_details_color}; margin: 0;">{date_str} @ {time_str}</p>
             </div>
             <div style="margin-bottom: 12px;">
                 <p style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin: 0 0 2px 0;">Venue</p>
-                <p style="font-size: 15px; font-weight: 800; color: {primary_color}; margin: 0;">{location_str}</p>
+                <p style="font-size: 15px; font-weight: 800; color: {engagement_details_color}; margin: 0;">{location_str}</p>
             </div>
         </div>
         """

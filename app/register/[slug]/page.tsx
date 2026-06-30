@@ -1559,6 +1559,13 @@ function PublicRegistrationPageContent() {
     logistics_glass: "split"
   } as const;
 
+  const config = {
+    theme: event?.registration_form_template?.theme_config || {},
+    legal: {
+      disclaimerCheckboxLabel: (event?.banner_settings as any)?.disclaimer_checkbox_label || (event?.registration_form_template?.theme_config as any)?.disclaimerCheckboxLabel || ""
+    }
+  };
+
   const layout = event?.banner_settings?.layout || themeLayouts[theme as keyof typeof themeLayouts] || "split";
 
   // Sub-render blocks for dynamic layouts
@@ -1741,7 +1748,7 @@ function PublicRegistrationPageContent() {
                 className={style.checkboxInput || "w-6 h-6 rounded-lg bg-zinc-900 border-white/10 client-checkbox transition-all"}
               />
               <span className="text-xs font-bold opacity-80 group-hover:opacity-100 transition-opacity">
-                I read and accept the Disclaimer and Indemnity <span className="text-red-500 font-bold">*</span>
+                {config.legal.disclaimerCheckboxLabel || "I have read and accept the Disclaimer and Indemnity"} <span className="text-red-500 font-bold">*</span>
               </span>
             </label>
           </div>
@@ -1861,7 +1868,7 @@ function PublicRegistrationPageContent() {
             <h1 className={`text-4xl font-black mb-6 font-bricolage italic uppercase tracking-tight ${style.textMain}`}>
               {getPostSubmitTitle()}
             </h1>
-            <p className={`${style.textMuted} mb-12 font-medium leading-relaxed whitespace-pre-line`}>
+            <p className={`${style.textMuted} mb-12 font-medium leading-relaxed whitespace-pre-line`} style={{ whiteSpace: 'pre-line' }}>
               {getPostSubmitDesc()}
             </p>
             {isAttending && (
