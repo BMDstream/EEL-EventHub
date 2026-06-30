@@ -333,6 +333,7 @@ function PublicRegistrationPageContent() {
               required={isAttending !== false && field.required}
               type="text"
               placeholder="Enter your answer"
+              value={customAnswers[field.id] || ""}
               onChange={(e) => handleCustomChange(field.id, e.target.value)}
               className={style.input}
             />
@@ -357,6 +358,7 @@ function PublicRegistrationPageContent() {
             <div className="relative">
               <select
                 required={isAttending !== false && field.required}
+                value={customAnswers[field.id] || ""}
                 onChange={(e) => handleCustomChange(field.id, e.target.value)}
                 className={style.select}
               >
@@ -375,6 +377,7 @@ function PublicRegistrationPageContent() {
             <label className={`${style.checkbox} ${event.registration_form_template?.theme_config?.force_text_visibility ? "text-black" : ""}`}>
                <input 
                  type="checkbox" 
+                 checked={!!customAnswers[field.id]}
                  onChange={(e) => handleCustomChange(field.id, e.target.checked)}
                  className={style.checkboxInput || "w-6 h-6 rounded-lg bg-zinc-900 border-white/10 client-checkbox transition-all"} 
                />
@@ -403,6 +406,7 @@ function PublicRegistrationPageContent() {
                     required={isAttending !== false && field.required}
                     type="text"
                     placeholder="Partner's first name"
+                    value={customAnswers[field.id]?.first_name || ""}
                     onChange={(e) => {
                       const prev = customAnswers[field.id] || {};
                       handleCustomChange(field.id, { ...prev, first_name: e.target.value });
@@ -416,6 +420,7 @@ function PublicRegistrationPageContent() {
                     required={isAttending !== false && field.required}
                     type="text"
                     placeholder="Partner's last name"
+                    value={customAnswers[field.id]?.last_name || ""}
                     onChange={(e) => {
                       const prev = customAnswers[field.id] || {};
                       handleCustomChange(field.id, { ...prev, last_name: e.target.value });
@@ -431,6 +436,7 @@ function PublicRegistrationPageContent() {
                   required={isAttending !== false && field.required}
                   type="email"
                   placeholder="partner@company.com"
+                  value={customAnswers[field.id]?.email || ""}
                   onChange={(e) => {
                     const prev = customAnswers[field.id] || {};
                     handleCustomChange(field.id, { ...prev, email: e.target.value });
@@ -631,6 +637,20 @@ function PublicRegistrationPageContent() {
     setRegistering(true);
     setSubmitError(null);
 
+    // Prune answers for non-attending status
+    const finalCustomAnswers = { ...customAnswers };
+    if (isAttending === false) {
+      for (const field of flatFields) {
+        if (!field.showBeforeAttendance) {
+          if (field.type === "checkbox") {
+            finalCustomAnswers[field.id] = false;
+          } else {
+            finalCustomAnswers[field.id] = null;
+          }
+        }
+      }
+    }
+
     try {
       const response = await fetch(`/api/py/register`, {
         method: "POST",
@@ -638,7 +658,7 @@ function PublicRegistrationPageContent() {
         body: JSON.stringify({
           event_id: event.id,
           ...formData,
-          custom_answers: customAnswers,
+          custom_answers: finalCustomAnswers,
           is_attending: isAttending,
           is_partner_update: isUpdateFlow
         })
