@@ -2326,41 +2326,39 @@ export default function SettingsPage() {
                             </div>
                           </div>
 
-                          {/* Modular Confirmation Email Builder Section (only for registration_confirmed template) */}
-                          {selectedKey === "registration_confirmed" && (
-                            <div className="space-y-4 bg-slate-50/50 dark:bg-slate-800/20 p-5 rounded-2xl border border-slate-100/50 dark:border-slate-800/50">
-                              <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#0f172a] dark:text-white flex items-center gap-2">
-                                <Sparkles size={12} className="text-yellow-500" />
-                                Modular Confirmation Email Builder
-                              </h4>
-                              
-                              <div className="space-y-3">
-                                <div className="flex items-center justify-between">
-                                  <label className="text-[9px] font-black uppercase tracking-wider text-slate-400">
-                                    Show QR Code in Confirmation Email
-                                  </label>
-                                  <input
-                                    type="checkbox"
-                                    checked={formValues.show_qr_code !== "false"}
-                                    onChange={(e) => handleFormChange("show_qr_code", e.target.checked ? "true" : "false")}
-                                    className="w-4 h-4 text-yellow-500 bg-slate-100 border-slate-300 rounded focus:ring-yellow-500 focus:ring-2 dark:bg-slate-800"
-                                  />
-                                </div>
+                          {/* Modular Confirmation Email Builder Section (rendered unconditionally) */}
+                          <div className="space-y-4 bg-slate-50/50 dark:bg-slate-800/20 p-5 rounded-2xl border border-slate-100/50 dark:border-slate-800/50">
+                            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#0f172a] dark:text-white flex items-center gap-2">
+                              <Sparkles size={12} className="text-yellow-500" />
+                              Modular Ticket Elements
+                            </h4>
+                            
+                            <div className="space-y-3">
+                              <div className="flex items-center justify-between">
+                                <label className="text-[9px] font-black uppercase tracking-wider text-slate-400">
+                                  Show QR Code in Email
+                                </label>
+                                <input
+                                  type="checkbox"
+                                  checked={formValues.show_qr_code !== "false"}
+                                  onChange={(e) => handleFormChange("show_qr_code", e.target.checked ? "true" : "false")}
+                                  className="w-4 h-4 text-yellow-500 bg-slate-100 border-slate-300 rounded focus:ring-yellow-500 focus:ring-2 dark:bg-slate-800"
+                                />
+                              </div>
 
-                                <div className="flex items-center justify-between">
-                                  <label className="text-[9px] font-black uppercase tracking-wider text-slate-400">
-                                    Show Unique PIN in Confirmation Email
-                                  </label>
-                                  <input
-                                    type="checkbox"
-                                    checked={formValues.show_pin !== "false"}
-                                    onChange={(e) => handleFormChange("show_pin", e.target.checked ? "true" : "false")}
-                                    className="w-4 h-4 text-yellow-500 bg-slate-100 border-slate-300 rounded focus:ring-yellow-500 focus:ring-2 dark:bg-slate-800"
-                                  />
-                                </div>
+                              <div className="flex items-center justify-between">
+                                <label className="text-[9px] font-black uppercase tracking-wider text-slate-400">
+                                  Show Unique Pass PIN in Email
+                                </label>
+                                <input
+                                  type="checkbox"
+                                  checked={formValues.show_pin !== "false"}
+                                  onChange={(e) => handleFormChange("show_pin", e.target.checked ? "true" : "false")}
+                                  className="w-4 h-4 text-yellow-500 bg-slate-100 border-slate-300 rounded focus:ring-yellow-500 focus:ring-2 dark:bg-slate-800"
+                                />
                               </div>
                             </div>
-                          )}
+                          </div>
 
                           {/* Email Banner Section */}
                           <div className="space-y-4 bg-slate-50/50 dark:bg-slate-800/20 p-5 rounded-2xl border border-slate-100/50 dark:border-slate-800/50">
