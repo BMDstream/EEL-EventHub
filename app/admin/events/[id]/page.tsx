@@ -93,6 +93,7 @@ export default function EventDetailsPage() {
   const [event, setEvent] = useState<Event | null>(null);
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [selectedReg, setSelectedReg] = useState<Registration | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -546,10 +547,14 @@ export default function EventDetailsPage() {
     if (!session?.user?.email) return;
     const fetchData = async () => {
       try {
+        setError(null);
         const eventRes = await fetch(`/api/py/events/id/${id}`, {
           headers: { "x-user-email": session.user.email || "" }
         });
-        if (!eventRes.ok) throw new Error("Event not found");
+        if (!eventRes.ok) {
+          const detail = await eventRes.text();
+          throw new Error(`Failed to fetch Event Details: HTTP ${eventRes.status} - ${detail}`);
+        }
         const eventData = await eventRes.json();
         setEvent(eventData);
         setEventUserRole(eventData.user_role_for_client || "staff");
@@ -557,10 +562,15 @@ export default function EventDetailsPage() {
         const regRes = await fetch(`/api/py/events/${id}/registrations`, {
           headers: { "x-user-email": session.user.email || "" }
         });
+        if (!regRes.ok) {
+          const detail = await regRes.text();
+          throw new Error(`Failed to fetch Event Registrations: HTTP ${regRes.status} - ${detail}`);
+        }
         const regData = await regRes.json();
         setRegistrations(regData);
-      } catch (err) {
+      } catch (err: any) {
         console.error("Failed to fetch event details", err);
+        setError(err.message || String(err));
       } finally {
         setLoading(false);
       }
@@ -710,8 +720,13 @@ export default function EventDetailsPage() {
   if (!event) {
     return (
       <AdminLayout>
-        <div className="text-center py-20">
+        <div className="text-center py-20 max-w-xl mx-auto">
           <h1 className="text-2xl font-bold text-slate-900 mb-2">Event not found</h1>
+          {error && (
+            <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 text-red-700 dark:text-red-400 p-4 rounded-xl font-mono text-xs text-left mb-6 whitespace-pre-wrap break-all">
+              {error}
+            </div>
+          )}
           <Link href="/admin/events" className="text-blue-600 hover:underline">Return to Catalog</Link>
         </div>
       </AdminLayout>
