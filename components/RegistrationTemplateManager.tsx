@@ -39,6 +39,10 @@ interface RegistrationFormTemplate {
   name: string;
   description?: string;
   theme_config: {
+    primary_color?: string;
+    accent_color?: string;
+    logo_url?: string;
+    banner_url?: string;
     background_pattern?: string;
     form_bg_color?: string;
     feedback_bg_color?: string;
