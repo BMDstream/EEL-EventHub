@@ -135,5 +135,7 @@ class RegistrationFormTemplate(SQLModel, table=True):
     theme_config: Optional[Dict[str, Any]] = Field(default={}, sa_column=Column(JSON))
     layout_schema: Optional[List[Dict[str, Any]]] = Field(default=[], sa_column=Column(JSON))
     post_submit_config: Optional[Dict[str, Any]] = Field(default={}, sa_column=Column(JSON))
+    email_config: Optional[Dict[str, Any]] = Field(default={}, sa_column=Column(JSON))
+    operator_config: Optional[Dict[str, Any]] = Field(default={}, sa_column=Column(JSON))
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)

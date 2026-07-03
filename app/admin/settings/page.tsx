@@ -39,6 +39,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { useSession } from "next-auth/react";
 import RegistrationTemplateManager from "@/components/RegistrationTemplateManager";
+import RichTextEditor from "@/components/RichTextEditor";
 
 interface EmailTemplate {
   id?: number;
@@ -105,7 +106,7 @@ const MOCK_PREVIEW_DATA: Record<string, Record<string, string>> = {
     </div>`,
     qr_block_html: `<div style="background: #f8fafc; padding: 48px; border-radius: 32px; text-align: center; border: 1px solid #f1f5f9; margin-bottom: 40px; position: relative; overflow: hidden; font-family: sans-serif;">
       <div style="width: 200px; height: 200px; background-color: #0f172a; margin: 0 auto 32px auto; border-radius: 20px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 11px; font-weight: bold; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.15);">[QR CODE PREVIEW]</div>
-      <p style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.3em; color: #64748b; margin-bottom: 16px; font-family: sans-serif;">Ticket Reference ID</p>
+      <p style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.3em; color: #64748b; margin-bottom: 16px; font-family: sans-serif;">unique access pass number</p>
       <div style="display: inline-block; background: #ffffff; padding: 16px 32px; border-radius: 20px; border: 2px solid #0f172a;">
         <code style="font-size: 32px; font-weight: 900; color: #0f172a; letter-spacing: 0.25em; font-family: monospace;">ABCDEF</code>
       </div>
@@ -2522,151 +2523,35 @@ export default function SettingsPage() {
                                 />
                               </div>
                             </div>
-
-                            <div className="space-y-1.5">
+                            
+                            <div className="space-y-2">
                               <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
                                 Main Body Message
                               </label>
-                              
-                              {/* Rich Text Toolbar */}
-                              <div className="flex flex-wrap items-center gap-1 p-1.5 bg-slate-50 dark:bg-slate-800 rounded-t-2xl border-t border-x border-slate-200 dark:border-slate-700">
-                                <select
-                                  value={formValues.sections?.mainBodyMessage?.fontFamily || "Calibri, sans-serif"}
-                                  onChange={(e) => {
-                                    if (e.target.value) {
-                                      applyFontFamily(e.target.value);
-                                    }
-                                  }}
-                                  className="px-2 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 outline-none cursor-pointer"
-                                >
-                                  <option value="Calibri, sans-serif">Calibri</option>
-                                  <option value="'Helvetica Neue', Helvetica, Arial, sans-serif">Helvetica Neue</option>
-                                  <option value="'Inter', sans-serif">Inter</option>
-                                  <option value="'Outfit', sans-serif">Outfit</option>
-                                  <option value="'Bricolage Grotesque', sans-serif">Bricolage</option>
-                                  <option value="Georgia, serif">Georgia</option>
-                                  <option value="'Courier New', Courier, monospace">Courier</option>
-                                  <option value="'Times New Roman', Times, serif">Times New Roman</option>
-                                  <option value="Arial, sans-serif">Arial</option>
-                                  <option value="sans-serif">System Sans-Serif</option>
-                                </select>
-
-                                <select
-                                  value={formValues.sections?.mainBodyMessage?.fontSize || "16px"}
-                                  onChange={(e) => {
-                                    if (e.target.value) {
-                                      applyFontSize(e.target.value);
-                                    }
-                                  }}
-                                  className="px-2 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 outline-none cursor-pointer"
-                                >
-                                  <option value="12px">12px</option>
-                                  <option value="14px">14px</option>
-                                  <option value="15px">15px</option>
-                                  <option value="16px">16px</option>
-                                  <option value="17px">17px</option>
-                                  <option value="18px">18px</option>
-                                  <option value="20px">20px</option>
-                                  <option value="24px">24px</option>
-                                  <option value="32px">32px</option>
-                                </select>
-
-                                <select
-                                  value={formValues.sections?.mainBodyMessage?.fontStyleWeight || "Regular"}
-                                  onChange={(e) => handleSectionStyleChange("mainBodyMessage", "fontStyleWeight", e.target.value)}
-                                  className="px-2 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 outline-none cursor-pointer"
-                                >
-                                  <option value="Light">Light</option>
-                                  <option value="Light Italic">Light Italic</option>
-                                  <option value="Regular">Regular</option>
-                                  <option value="Regular Italic">Regular Italic</option>
-                                  <option value="Bold">Bold</option>
-                                  <option value="Bold Italic">Bold Italic</option>
-                                  <option value="Black">Black</option>
-                                  <option value="Black Italic">Black Italic</option>
-                                </select>
-
-                                <div className="w-px h-5 bg-slate-300 dark:bg-slate-600 mx-1.5" />
-
-                                <button
-                                  type="button"
-                                  onClick={applyBold}
-                                  onMouseDown={(e) => e.preventDefault()}
-                                  className="p-2 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors"
-                                  title="Bold"
-                                >
-                                  <Bold size={14} />
-                                </button>
-
-                                <button
-                                  type="button"
-                                  onClick={applyItalic}
-                                  onMouseDown={(e) => e.preventDefault()}
-                                  className="p-2 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors"
-                                  title="Italic"
-                                >
-                                  <Italic size={14} />
-                                </button>
-
-                                <button
-                                  type="button"
-                                  onClick={applyUnderline}
-                                  onMouseDown={(e) => e.preventDefault()}
-                                  className="p-2 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors"
-                                  title="Underline"
-                                >
-                                  <Underline size={14} />
-                                </button>
-                              </div>
-
-                              <div
-                                id="body-text-editor"
-                                ref={editorRef}
-                                contentEditable
-                                suppressContentEditableWarning
-                                onMouseUp={saveSelection}
-                                onKeyUp={saveSelection}
-                                onPaste={(e) => {
-                                  e.preventDefault();
-                                  const text = e.clipboardData.getData("text/plain");
-                                  document.execCommand("insertText", false, text);
-                                }}
-                                onInput={(e) => {
-                                  const html = e.currentTarget.innerHTML;
+                              <RichTextEditor 
+                                value={formValues.body_text || ""}
+                                onChange={(val) => {
                                   const nextSections = {
                                     ...(formValues.sections || {}),
                                     mainBodyMessage: {
                                       ...(formValues.sections?.mainBodyMessage || {}),
-                                      text: html
+                                      text: val
                                     }
                                   };
                                   const nextValues = {
                                     ...formValues,
-                                    body_text: html,
+                                    body_text: val,
                                     sections: nextSections
                                   };
                                   setFormValues(nextValues);
                                   const compiled = compileTemplateHtml(baseKey, nextValues, config.font_family, config.font_size, config);
                                   setBodyHtml(compiled);
                                   setHasUnsavedChanges(true);
-                                  saveSelection();
                                 }}
-                                onBlur={(e) => {
-                                  handleFormChange("body_text", e.currentTarget.innerHTML);
-                                }}
-                                style={{
-                                  fontFamily: formValues.sections?.mainBodyMessage?.fontFamily || "Calibri, sans-serif",
-                                  fontSize: formValues.sections?.mainBodyMessage?.fontSize || "16px",
-                                  fontWeight: (formValues.sections?.mainBodyMessage?.fontStyleWeight?.toLowerCase().includes("light") ? "300" :
-                                               formValues.sections?.mainBodyMessage?.fontStyleWeight?.toLowerCase().includes("bold") ? "700" :
-                                               formValues.sections?.mainBodyMessage?.fontStyleWeight?.toLowerCase().includes("black") ? "900" : "400"),
-                                  fontStyle: (formValues.sections?.mainBodyMessage?.fontStyleWeight?.toLowerCase().includes("italic") ? "italic" : "normal")
-                                }}
-                                className="w-full min-h-[220px] max-h-[400px] overflow-y-auto p-4 rounded-b-2xl bg-white border border-t-0 border-slate-200 focus:border-yellow-400 outline-none text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                                placeholder="Type the main body of the email..."
+                                minHeight="250px"
+                                availableTokens={["{first_name}", "{event_title}", "{to_email}", "{pin}"]}
                               />
-                              <p className="text-[10px] text-slate-400 leading-normal pt-0.5">
-                                Supports dynamic variables like <code>{`{first_name}`}</code> and <code>{`{event_title}`}</code>.
-                              </p>
                             </div>
 
                             {/* Warning copy for Confirmation Template */}

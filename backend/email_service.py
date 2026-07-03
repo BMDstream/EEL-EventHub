@@ -190,6 +190,40 @@ def get_font_weight_style_css(font_style_weight_str, default_weight="400", defau
         
     return f"font-weight: {weight}; font-style: {style};"
 
+def interpolate_email_tokens(text: str, attendee: Any, event: Any, registration: Any) -> str:
+    if not text:
+        return ""
+    
+    from datetime import datetime
+    start_date_str = "TBA"
+    if event and getattr(event, "start_date", None):
+        try:
+            dt = event.start_date
+            if isinstance(dt, str):
+                dt = datetime.fromisoformat(dt.replace('Z', '+00:00'))
+            else:
+                dt = dt
+            start_date_str = dt.strftime("%A, %B %d, %Y @ %I:%M %p")
+        except:
+            start_date_str = str(event.start_date)
+
+    tokens = {
+        "registrant.first_name": getattr(attendee, "first_name", "") if attendee else "",
+        "registrant.last_name": getattr(attendee, "last_name", "") if attendee else "",
+        "registrant.email": getattr(attendee, "email", "") if attendee else "",
+        "registrant.company": getattr(attendee, "company", "") if attendee else "",
+        "event.name": getattr(event, "title", "") if event else "",
+        "event.title": getattr(event, "title", "") if event else "",
+        "event.location": getattr(event, "location", "") if event else "",
+        "event.start_date": start_date_str,
+        "registration.pin": getattr(registration, "pin", "") if registration else "",
+        "registrant.pin": getattr(registration, "pin", "") if registration else "",
+    }
+    
+    for key, val in tokens.items():
+        text = text.replace(f"{{{{{key}}}}}", str(val))
+    return text
+
 def send_confirmation_email(
     to_email: str, 
     first_name: str, 
@@ -204,6 +238,62 @@ def send_confirmation_email(
     registration_id: Optional[str] = None
 ):
     """Sends a registration confirmation email with an embedded QR code and event details."""
+    event_title = ' '.join(w.capitalize() for w in re.sub(r'<[^>]*>', '', event_title).split())
+
+    # Resolve database records to support custom templates and token interpolation
+    from uuid import UUID
+    from sqlmodel import Session, select
+    from backend.models import Registration, Attendee, Event, RegistrationFormTemplate
+    
+    db_registration = None
+    db_attendee = None
+    db_event = None
+    db_form_template = None
+    
+    with Session(engine) as session:
+        if registration_id:
+            try:
+                db_registration = session.get(Registration, UUID(registration_id) if isinstance(registration_id, str) else registration_id)
+                if db_registration:
+                    db_attendee = session.get(Attendee, db_registration.attendee_id)
+                    db_event = session.get(Event, db_registration.event_id)
+            except Exception as e:
+                print(f"Error fetching registration for email: {e}")
+        
+        if not db_event:
+            db_event = session.exec(select(Event).where(Event.title == event_title)).first()
+            
+        if db_event and db_event.registration_form_template_id:
+            db_form_template = session.get(RegistrationFormTemplate, db_event.registration_form_template_id)
+            
+    if not db_attendee:
+        class TempAttendee:
+            first_name = first_name
+            last_name = ""
+            email = to_email
+            company = ""
+        db_attendee = TempAttendee()
+    if not db_event:
+        class TempEvent:
+            title = event_title
+            location = event_details.get("location", "TBA") if event_details else "TBA"
+            start_date = event_details.get("start_date") if event_details else None
+        db_event = TempEvent()
+    if not db_registration:
+        class TempRegistration:
+            pin = clearance_id
+        db_registration = TempRegistration()
+
+    body_template = None
+    subject_template = None
+    show_qr_code = True
+    show_pin = True
+    if db_form_template and db_form_template.email_config:
+        body_template = db_form_template.email_config.get("body_template")
+        subject_template = db_form_template.email_config.get("subject_template")
+        show_qr_code = db_form_template.email_config.get("show_qr_code", True)
+        show_pin = db_form_template.email_config.get("show_pin", True)
+
     if not resend.api_key or MOCK_EMAIL_SERVICE:
         print(f"MOCK CONFIRMATION to {to_email} (attending={is_attending}): Welcome to {event_title}! Your ID is {clearance_id}. Matchup: {matchup}. Link: {profile_update_link}")
         return {"id": "mock-confirmation-id"}
@@ -391,8 +481,11 @@ def send_confirmation_email(
                 "We have recorded your response that you are unable to attend **{event_title}**. Thank you for letting us know, and we hope to connect with you at future events."
             )
 
-        body_html = body_text_raw.replace("**{event_title}**", f"<strong>{event_title}</strong>").replace("{event_title}", event_title).replace("\n", "<br>")
-        body_html = re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', body_html)
+        if body_template:
+            body_html = interpolate_email_tokens(body_template, db_attendee, db_event, db_registration)
+        else:
+            body_html = body_text_raw.replace("**{event_title}**", f"<strong>{event_title}</strong>").replace("{event_title}", event_title).replace("\n", "<br>")
+            body_html = re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', body_html)
 
     # Format event details if provided (only if they are attending)
     details_html = ""
@@ -471,15 +564,27 @@ def send_confirmation_email(
     if is_attending:
         qr_data = registration_id or clearance_id
         qr_url = f"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={quote(qr_data)}"
-        qr_block_html = f"""
-        <div style="background: #f8fafc; padding: 48px; border-radius: 32px; text-align: center; border: 1px solid #f1f5f9; margin-bottom: 40px; position: relative; overflow: hidden; font-family: {font_family};">
-            <img src="{qr_url}" width="200" height="200" alt="Registration QR Code" style="margin-bottom: 32px; border-radius: 20px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.15);" />
-            <p style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.3em; color: #64748b; margin-bottom: 16px; font-family: {font_family};">Ticket Reference ID</p>
+        
+        qr_img_snippet = ""
+        if show_qr_code:
+            qr_img_snippet = f'<img src="{qr_url}" width="200" height="200" alt="Registration QR Code" style="margin-bottom: 32px; border-radius: 20px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.15);" />'
+            
+        pin_snippet = ""
+        if show_pin:
+            pin_snippet = f"""
+            <p style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.3em; color: #64748b; margin-bottom: 16px; font-family: {font_family};">unique access pass number</p>
             <div style="display: inline-block; background: #ffffff; padding: 16px 32px; border-radius: 20px; border: 2px solid {primary_color}; font-family: {font_family};">
                 <code style="font-size: 32px; font-weight: 900; color: {primary_color}; letter-spacing: 0.25em; font-family: monospace;">{clearance_id}</code>
             </div>
-        </div>
-        """
+            """
+            
+        if show_qr_code or show_pin:
+            qr_block_html = f"""
+            <div style="background: #f8fafc; padding: 48px; border-radius: 32px; text-align: center; border: 1px solid #f1f5f9; margin-bottom: 40px; position: relative; overflow: hidden; font-family: {font_family};">
+                {qr_img_snippet}
+                {pin_snippet}
+            </div>
+            """
         
         # Determine warning block text from meta configuration
         warning_text = meta.get("warning_text", "Please present this QR code OR number at the registration desk.")
@@ -666,7 +771,9 @@ def send_confirmation_email(
             subject = db_subject
             html_content = db_html
         else:
-            if profile_update_link:
+            if subject_template:
+                subject = interpolate_email_tokens(subject_template, db_attendee, db_event, db_registration)
+            elif profile_update_link:
                 subject = f"Action Required: Complete your details for {event_title}"
             else:
                 subject = f"Registration Confirmed: {event_title}" if is_attending else f"RSVP Recorded: {event_title}"
@@ -717,6 +824,7 @@ def send_broadcast_email(
     event_details: Dict[str, Any] = None
 ):
     """Sends a personalized broadcast email to multiple attendees with premium styling and optional attachments."""
+    event_title = ' '.join(w.capitalize() for w in re.sub(r'<[^>]*>', '', event_title).split())
     if not resend.api_key or MOCK_EMAIL_SERVICE:
         print(f"MOCK BROADCAST to {len(registrations_data)} users: {subject}")
         for reg in registrations_data:

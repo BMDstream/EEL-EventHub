@@ -3,23 +3,28 @@
 import { useState, useEffect } from "react";
 import { 
   Plus, Trash2, Copy, Save, Loader2, Edit3, Type, CheckSquare, 
-  List, Palette, FileText, CheckCircle2, AlertCircle, ChevronRight,
-  ArrowUp, ArrowDown, Layout, HelpCircle
+  List, Palette, FileText, CheckCircle2, AlertCircle, ChevronRight, XCircle,
+  ArrowUp, ArrowDown, Layout, HelpCircle, Mail, Award, Eye, EyeOff
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSession } from "next-auth/react";
+import RichTextEditor from "./RichTextEditor";
 
 interface FormField {
   id: string;
+  key: string;
   label: string;
-  type: "text" | "select" | "checkbox" | "partner_card" | "numeric";
+  type: "text" | "select" | "checkbox" | "partner_card" | "numeric" | "email" | "section_header";
   required: boolean;
+  visible: boolean;
+  placeholder?: string;
   options?: string[]; // For select type
   dependsOn?: {
     fieldId: string;
     value: string;
   };
   image_url?: string;
+  inactive?: boolean;
 }
 
 interface FormSection {
@@ -57,11 +62,30 @@ interface RegistrationFormTemplate {
     disclaimerCheckboxLabel?: string;
     question_font_size?: string | number;
   };
-  layout_schema: FormSection[];
+  layout_schema: FormField[];
   post_submit_config: {
     onscreen_title?: string;
     onscreen_description?: string;
+    onscreen_decline_title?: string;
+    onscreen_decline_description?: string;
     clearance_label?: string;
+    success_icon_url?: string;
+    decline_icon_url?: string;
+    success_icon_style?: string;
+    decline_icon_style?: string;
+    onscreen_capacity_title?: string;
+    onscreen_capacity_description?: string;
+    capacity_icon_url?: string;
+    capacity_icon_style?: string;
+  };
+  email_config?: {
+    subject_template?: string;
+    body_template?: string;
+    show_qr_code?: boolean;
+    show_pin?: boolean;
+  };
+  operator_config?: {
+    display_fields?: string[];
   };
   created_at?: string;
   updated_at?: string;
@@ -76,16 +100,35 @@ export default function RegistrationTemplateManager() {
   const [selectedTemplate, setSelectedTemplate] = useState<RegistrationFormTemplate | null>(null);
   const [dragOverFieldId, setDragOverFieldId] = useState<string | null>(null);
 
-  const handleTemplateImageUpload = (secId: string, fieldId: string, file: File) => {
+  const uploadImageFile = async (file: File): Promise<string> => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const res = await fetch("/api/py/media/upload", {
+      method: "POST",
+      body: formData,
+    });
+    if (!res.ok) {
+      throw new Error(`Upload failed: ${res.statusText}`);
+    }
+    const data = await res.json();
+    return data.url;
+  };
+
+  const handleTemplateImageUpload = async (secId: string, fieldId: string, file: File) => {
     if (!file.type.startsWith("image/")) {
       alert("Please select an image file.");
       return;
     }
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      updateFieldProperty(secId, fieldId, "image_url", reader.result as string);
-    };
-    reader.readAsDataURL(file);
+    try {
+      const url = await uploadImageFile(file);
+      updateFieldProperty(secId, fieldId, "image_url", url);
+    } catch (e) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        updateFieldProperty(secId, fieldId, "image_url", reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
   };
   
   const [loading, setLoading] = useState(true);
@@ -96,8 +139,8 @@ export default function RegistrationTemplateManager() {
   // Tabs within editor: theme, layout, postSubmit
   const [editorTab, setEditorTab] = useState<"theme" | "layout" | "postSubmit">("theme");
   
-  // Real-time Preview Mode: "form" or "confirmation"
-  const [previewMode, setPreviewMode] = useState<"form" | "confirmation">("form");
+  // Real-time Preview Mode: "form", "confirmation", or "decline"
+  const [previewMode, setPreviewMode] = useState<"form" | "confirmation" | "decline">("form");
 
   // Create Modal State
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -197,7 +240,9 @@ export default function RegistrationTemplateManager() {
           post_submit_config: {
             onscreen_title: "YOUR REGISTRATION HAS BEEN CONFIRMED.",
             onscreen_description: "Your registration for [Event Name] is confirmed. Verification has been dispatched to [Email Address]",
-            clearance_label: "UNIQUE CLEARANCE ID"
+            onscreen_decline_title: "RSVP RESPONSE RECORDED.",
+            onscreen_decline_description: "We have recorded that you are unable to attend [Event Name]. Thank you for letting us know.",
+            clearance_label: "unique access pass number"
           }
         })
       });
@@ -316,7 +361,31 @@ export default function RegistrationTemplateManager() {
     setHasUnsavedChanges(true);
   };
 
-  const updateLayoutSchema = (newSchema: FormSection[]) => {
+  const updateEmailConfig = (key: string, value: any) => {
+    if (!selectedTemplate) return;
+    setSelectedTemplate({
+      ...selectedTemplate,
+      email_config: {
+        ...selectedTemplate.email_config,
+        [key]: value
+      }
+    });
+    setHasUnsavedChanges(true);
+  };
+
+  const updateOperatorConfig = (key: string, value: any) => {
+    if (!selectedTemplate) return;
+    setSelectedTemplate({
+      ...selectedTemplate,
+      operator_config: {
+        ...selectedTemplate.operator_config,
+        [key]: value
+      }
+    });
+    setHasUnsavedChanges(true);
+  };
+
+  const updateLayoutSchema = (newSchema: FormField[]) => {
     if (!selectedTemplate) return;
     setSelectedTemplate({
       ...selectedTemplate,
@@ -325,69 +394,45 @@ export default function RegistrationTemplateManager() {
     setHasUnsavedChanges(true);
   };
 
-  // Layout editor helpers
-  const addSection = () => {
-    if (!selectedTemplate) return;
-    const newId = `section_${Date.now()}`;
-    const newSection: FormSection = {
-      id: newId,
-      title: "New Section",
-      fields: []
-    };
-    updateLayoutSchema([...selectedTemplate.layout_schema, newSection]);
-  };
-
-  const removeSection = (secId: string) => {
-    if (!selectedTemplate) return;
-    updateLayoutSchema(selectedTemplate.layout_schema.filter(s => s.id !== secId));
-  };
-
-  const updateSectionTitle = (secId: string, title: string) => {
-    if (!selectedTemplate) return;
-    const newSchema = selectedTemplate.layout_schema.map(s => 
-      s.id === secId ? { ...s, title } : s
-    );
-    updateLayoutSchema(newSchema);
-  };
-
-  const addFieldToSection = (secId: string) => {
+  // Layout editor helpers for a flat array of fields
+  const addField = (type: "text" | "select" | "checkbox" | "partner_card" | "numeric" | "email" | "section_header") => {
     if (!selectedTemplate) return;
     const newId = `field_${Date.now()}`;
     const newField: FormField = {
       id: newId,
-      label: "New Question",
-      type: "text",
-      required: false
+      key: type === "section_header" ? `section_${Date.now()}` : `custom_${Date.now()}`,
+      label: type === "section_header" ? "New Section Divider" : "New Question",
+      type: type,
+      required: false,
+      visible: true,
+      placeholder: ""
     };
-    const newSchema = selectedTemplate.layout_schema.map(s => 
-      s.id === secId ? { ...s, fields: [...s.fields, newField] } : s
+    updateLayoutSchema([...selectedTemplate.layout_schema, newField]);
+  };
+
+  const removeField = (fieldId: string) => {
+    if (!selectedTemplate) return;
+    const newSchema = selectedTemplate.layout_schema
+      .filter(f => f.id !== fieldId)
+      .map(f => {
+        if (f.dependsOn?.fieldId === fieldId) {
+          const { dependsOn, ...rest } = f;
+          return rest;
+        }
+        return f;
+      });
+    updateLayoutSchema(newSchema);
+  };
+
+  const updateFieldProperty = (fieldId: string, property: keyof FormField, value: any) => {
+    if (!selectedTemplate) return;
+    const newSchema = selectedTemplate.layout_schema.map(f => 
+      f.id === fieldId ? { ...f, [property]: value } : f
     );
     updateLayoutSchema(newSchema);
   };
 
-  const removeFieldFromSection = (secId: string, fieldId: string) => {
-    if (!selectedTemplate) return;
-    const newSchema = selectedTemplate.layout_schema.map(s => {
-      if (s.id !== secId) return s;
-      return { ...s, fields: s.fields.filter(f => f.id !== fieldId) };
-    });
-    updateLayoutSchema(newSchema);
-  };
-
-  const updateFieldProperty = (secId: string, fieldId: string, property: keyof FormField, value: any) => {
-    if (!selectedTemplate) return;
-    const newSchema = selectedTemplate.layout_schema.map(s => {
-      if (s.id !== secId) return s;
-      return {
-        ...s,
-        fields: s.fields.map(f => f.id === fieldId ? { ...f, [property]: value } : f)
-      };
-    });
-    updateLayoutSchema(newSchema);
-  };
-
-  // Move section or field
-  const moveSectionOrder = (index: number, direction: "up" | "down") => {
+  const moveFieldOrder = (index: number, direction: "up" | "down") => {
     if (!selectedTemplate) return;
     const targetIndex = direction === "up" ? index - 1 : index + 1;
     if (targetIndex < 0 || targetIndex >= selectedTemplate.layout_schema.length) return;
@@ -398,35 +443,15 @@ export default function RegistrationTemplateManager() {
     updateLayoutSchema(reordered);
   };
 
-  const moveFieldOrder = (secId: string, index: number, direction: "up" | "down") => {
-    if (!selectedTemplate) return;
-    const targetSec = selectedTemplate.layout_schema.find(s => s.id === secId);
-    if (!targetSec) return;
-    const targetIndex = direction === "up" ? index - 1 : index + 1;
-    if (targetIndex < 0 || targetIndex >= targetSec.fields.length) return;
-
-    const newSchema = selectedTemplate.layout_schema.map(s => {
-      if (s.id !== secId) return s;
-      const reorderedFields = [...s.fields];
-      const [item] = reorderedFields.splice(index, 1);
-      reorderedFields.splice(targetIndex, 0, item);
-      return { ...s, fields: reorderedFields };
-    });
-    updateLayoutSchema(newSchema);
-  };
-
-  // Get list of all preceding fields to set conditional dependencies on
   const getAllPrecedingFields = (fieldId: string) => {
     if (!selectedTemplate) return [];
     const fieldsList: { id: string; label: string }[] = [];
-    for (const section of selectedTemplate.layout_schema) {
-      for (const field of section.fields) {
-        if (field.id === fieldId) {
-          return fieldsList;
-        }
-        if (field.type === "select") {
-          fieldsList.push({ id: field.id, label: field.label });
-        }
+    for (const field of selectedTemplate.layout_schema) {
+      if (field.id === fieldId) {
+        return fieldsList;
+      }
+      if (field.type === "select") {
+        fieldsList.push({ id: field.id, label: field.label });
       }
     }
     return fieldsList;
@@ -576,7 +601,7 @@ export default function RegistrationTemplateManager() {
             {/* Config details editor */}
             <div className="md:col-span-2 space-y-6">
               {selectedTemplate ? (
-                <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-100 dark:bg-[#0f172a] dark:border-slate-800 space-y-8">
+                <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-100 dark:bg-[#0f172a] dark:border-slate-800 space-y-8 max-h-[750px] overflow-y-auto pr-4">
                   {/* Title & description editing */}
                   <div className="space-y-4">
                     <div className="space-y-1">
@@ -600,11 +625,13 @@ export default function RegistrationTemplateManager() {
                   </div>
 
                   {/* Settings tabs */}
-                  <div className="flex border-b border-slate-100 dark:border-slate-800">
+                  <div className="flex border-b border-slate-100 dark:border-slate-800 overflow-x-auto">
                     {[
-                      { id: "theme", label: "Theme & Typography", icon: Palette },
-                      { id: "layout", label: "Layout & Branching", icon: Layout },
-                      { id: "postSubmit", label: "Post-Submit Confirmation", icon: FileText }
+                      { id: "theme", label: "Theme", icon: Palette },
+                      { id: "layout", label: "Form Fields", icon: Layout },
+                      { id: "postSubmit", label: "Post-Submit Screens", icon: FileText },
+                      { id: "email", label: "Confirmation Email", icon: Mail },
+                      { id: "operator", label: "Operator check-in", icon: Award }
                     ].map((tab) => {
                       const Icon = tab.icon;
                       const active = editorTab === tab.id;
@@ -612,7 +639,7 @@ export default function RegistrationTemplateManager() {
                         <button
                           key={tab.id}
                           onClick={() => setEditorTab(tab.id as any)}
-                          className={`flex items-center gap-2 px-4 py-3 text-[10px] font-black uppercase tracking-wider border-b-2 transition-all ${
+                          className={`flex items-center gap-2 px-4 py-3 text-[10px] font-black uppercase tracking-wider border-b-2 transition-all shrink-0 ${
                             active
                               ? "border-[#1e293b] text-[#1e293b] dark:border-yellow-400 dark:text-white"
                               : "border-transparent text-slate-400 hover:text-slate-600"
@@ -876,22 +903,20 @@ export default function RegistrationTemplateManager() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                           <div className="space-y-2.5">
                             <label className="text-[8px] font-black uppercase tracking-widest text-slate-400 ml-1">Form Title Heading</label>
-                            <input 
-                              type="text" 
+                            <RichTextEditor 
                               value={selectedTemplate.theme_config.form_heading || ""} 
-                              onChange={(e) => updateThemeConfig("form_heading", e.target.value)}
+                              onChange={(val) => updateThemeConfig("form_heading", val)}
                               placeholder="e.g. Register."
-                              className="w-full px-4 py-2.5 rounded-xl border border-slate-100 font-bold text-xs bg-slate-50 dark:bg-slate-800 dark:border-slate-700 text-[#0f172a] dark:text-white" 
+                              minHeight="80px"
                             />
                           </div>
                           <div className="space-y-2.5">
                             <label className="text-[8px] font-black uppercase tracking-widest text-slate-400 ml-1">Form Subheading / Description</label>
-                            <input 
-                              type="text" 
+                            <RichTextEditor 
                               value={selectedTemplate.theme_config.form_subheading || ""} 
-                              onChange={(e) => updateThemeConfig("form_subheading", e.target.value)}
+                              onChange={(val) => updateThemeConfig("form_subheading", val)}
                               placeholder="e.g. Secure your credentials for this exclusive engagement."
-                              className="w-full px-4 py-2.5 rounded-xl border border-slate-100 font-bold text-xs bg-slate-50 dark:bg-slate-800 dark:border-slate-700 text-[#0f172a] dark:text-white" 
+                              minHeight="80px"
                             />
                           </div>
                         </div>
@@ -996,262 +1021,269 @@ export default function RegistrationTemplateManager() {
                   {/* ================================================= */}
                   {editorTab === "layout" && (
                     <div className="space-y-6">
-                      <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-                        <h4 className="text-xs font-black uppercase text-slate-400">Sections & Field Branching Schema</h4>
-                        <button
-                          onClick={addSection}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#0f172a] hover:bg-black text-white text-[10px] font-black uppercase tracking-wider transition-all"
-                        >
-                          <Plus size={11} />
-                          Add Section
-                        </button>
+                      <div className="flex flex-wrap items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3 gap-4">
+                        <div>
+                          <h4 className="text-xs font-black uppercase text-slate-400">Unified Form Fields Layout Schema</h4>
+                          <p className="text-[10px] text-slate-500 mt-1">Reorder standard and custom fields, and customize their labels or placeholders.</p>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            onClick={() => addField("text")}
+                            className="px-2.5 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 dark:border-slate-700 text-[9px] font-black uppercase tracking-wider text-slate-700 dark:text-white transition-all"
+                          >
+                            + Text Field
+                          </button>
+                          <button
+                            onClick={() => addField("email")}
+                            className="px-2.5 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 dark:border-slate-700 text-[9px] font-black uppercase tracking-wider text-slate-700 dark:text-white transition-all"
+                          >
+                            + Email Field
+                          </button>
+                          <button
+                            onClick={() => addField("numeric")}
+                            className="px-2.5 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 dark:border-slate-700 text-[9px] font-black uppercase tracking-wider text-slate-700 dark:text-white transition-all"
+                          >
+                            + Phone Field
+                          </button>
+                          <button
+                            onClick={() => addField("select")}
+                            className="px-2.5 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 dark:border-slate-700 text-[9px] font-black uppercase tracking-wider text-slate-700 dark:text-white transition-all"
+                          >
+                            + Select Dropdown
+                          </button>
+                          <button
+                            onClick={() => addField("checkbox")}
+                            className="px-2.5 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 dark:border-slate-700 text-[9px] font-black uppercase tracking-wider text-slate-700 dark:text-white transition-all"
+                          >
+                            + Checkbox
+                          </button>
+                          <button
+                            onClick={() => addField("partner_card")}
+                            className="px-2.5 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 dark:border-slate-700 text-[9px] font-black uppercase tracking-wider text-slate-700 dark:text-white transition-all"
+                          >
+                            + Partner Card
+                          </button>
+                          <button
+                            onClick={() => addField("section_header")}
+                            className="px-2.5 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 text-indigo-700 dark:bg-indigo-950/20 dark:hover:bg-indigo-950/40 dark:border-indigo-900/30 dark:text-indigo-400 text-[9px] font-black uppercase tracking-wider transition-all"
+                          >
+                            + Section Header
+                          </button>
+                        </div>
                       </div>
 
-                      <div className="space-y-6">
-                        {selectedTemplate.layout_schema.map((section, secIdx) => (
-                          <div key={section.id} className="bg-slate-50/50 rounded-2xl p-6 border border-slate-100 dark:bg-slate-900/20 dark:border-slate-800 space-y-4">
-                            <div className="flex items-center justify-between gap-4">
-                              <div className="flex items-center gap-2 flex-1">
-                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest shrink-0">Section {secIdx + 1}:</span>
-                                <input 
-                                  type="text" 
-                                  value={section.title}
-                                  onChange={(e) => updateSectionTitle(section.id, e.target.value)}
-                                  className="font-bold text-xs bg-transparent border-b border-transparent hover:border-slate-300 focus:border-[#1e293b] outline-none text-[#0f172a] dark:text-white px-1 py-0.5 w-full max-w-[240px]"
-                                />
+                      <div className="space-y-4">
+                        {selectedTemplate.layout_schema.map((field, index) => {
+                          const precedingFields = getAllPrecedingFields(field.id);
+                          const isStandardField = ["first_name", "last_name", "email", "company"].includes(field.key);
+                          
+                          return (
+                            <div key={field.id} className={`rounded-2xl p-5 border shadow-sm space-y-4 transition-all ${
+                              field.type === "section_header"
+                                ? "bg-indigo-50/10 border-indigo-100 dark:bg-indigo-950/5 dark:border-indigo-900/30"
+                                : "bg-white border-slate-100 dark:bg-slate-900/20 dark:border-slate-800"
+                            }`}>
+                              <div className="flex items-center justify-between gap-4">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest shrink-0">#{index + 1}</span>
+                                  <span className={`text-[9px] px-2 py-0.5 rounded-lg font-black uppercase tracking-wide ${
+                                    field.type === "section_header"
+                                      ? "bg-indigo-150 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300"
+                                      : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
+                                  }`}>
+                                    {field.type}
+                                  </span>
+                                  {isStandardField && (
+                                    <span className="text-[8px] bg-amber-50 border border-amber-250 text-amber-600 dark:bg-amber-950/20 dark:border-amber-900/30 dark:text-amber-400 px-1.5 py-0.5 rounded font-black uppercase tracking-wider">
+                                      System Field
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  <button
+                                    onClick={() => moveFieldOrder(index, "up")}
+                                    disabled={index === 0}
+                                    className="p-1 text-slate-400 hover:text-[#0f172a] disabled:opacity-30"
+                                    title="Move Up"
+                                  >
+                                    <ArrowUp size={14} />
+                                  </button>
+                                  <button
+                                    onClick={() => moveFieldOrder(index, "down")}
+                                    disabled={index === selectedTemplate.layout_schema.length - 1}
+                                    className="p-1 text-slate-400 hover:text-[#0f172a] disabled:opacity-30"
+                                    title="Move Down"
+                                  >
+                                    <ArrowDown size={14} />
+                                  </button>
+                                  <button
+                                    onClick={() => updateFieldProperty(field.id, "visible", !field.visible)}
+                                    className={`p-1 ${field.visible ? "text-blue-500" : "text-slate-400"}`}
+                                    title={field.visible ? "Visible on form" : "Hidden on form"}
+                                  >
+                                    {field.visible ? <Eye size={14} /> : <EyeOff size={14} />}
+                                  </button>
+                                  <button
+                                    onClick={() => removeField(field.id)}
+                                    className="p-1 text-slate-400 hover:text-red-500"
+                                    title="Delete Field"
+                                  >
+                                    <Trash2 size={14} />
+                                  </button>
+                                </div>
                               </div>
-                              <div className="flex items-center gap-1.5">
-                                <button
-                                  onClick={() => moveSectionOrder(secIdx, "up")}
-                                  disabled={secIdx === 0}
-                                  className="p-1 text-slate-400 hover:text-[#0f172a] disabled:opacity-30"
-                                >
-                                  <ArrowUp size={14} />
-                                </button>
-                                <button
-                                  onClick={() => moveSectionOrder(secIdx, "down")}
-                                  disabled={secIdx === selectedTemplate.layout_schema.length - 1}
-                                  className="p-1 text-slate-400 hover:text-[#0f172a] disabled:opacity-30"
-                                >
-                                  <ArrowDown size={14} />
-                                </button>
-                                <button
-                                  onClick={() => removeSection(section.id)}
-                                  className="p-1 text-slate-400 hover:text-red-500"
-                                >
-                                  <Trash2 size={14} />
-                                </button>
-                              </div>
-                            </div>
 
-                            {/* Section Fields list */}
-                            <div className="space-y-3">
-                              {section.fields.map((field, fieldIdx) => {
-                                const precedingFields = getAllPrecedingFields(field.id);
-                                return (
-                                  <div key={field.id} className="bg-white rounded-xl p-4 border border-slate-100/60 dark:bg-[#0f172a] dark:border-slate-800 space-y-3 shadow-sm">
-                                    <div className="flex items-center justify-between gap-4">
-                                      <div className="flex items-center gap-2 flex-1">
-                                        {field.type === "text" && <Type size={13} className="text-slate-400" />}
-                                        {field.type === "select" && <List size={13} className="text-slate-400" />}
-                                        {field.type === "checkbox" && <CheckSquare size={13} className="text-slate-400" />}
-                                        
-                                        <input 
-                                          type="text" 
-                                          value={field.label}
-                                          onChange={(e) => updateFieldProperty(section.id, field.id, "label", e.target.value)}
-                                          className="font-bold text-xs bg-transparent border-b border-transparent hover:border-slate-200 focus:border-[#1e293b] outline-none text-[#0f172a] dark:text-white w-full max-w-[200px]"
-                                        />
-                                      </div>
-                                      <div className="flex items-center gap-2 text-[10px] font-bold">
-                                        <button
-                                          onClick={() => moveFieldOrder(section.id, fieldIdx, "up")}
-                                          disabled={fieldIdx === 0}
-                                          className="p-1 text-slate-400 hover:text-[#0f172a] disabled:opacity-30"
-                                        >
-                                          <ArrowUp size={12} />
-                                        </button>
-                                        <button
-                                          onClick={() => moveFieldOrder(section.id, fieldIdx, "down")}
-                                          disabled={fieldIdx === section.fields.length - 1}
-                                          className="p-1 text-slate-400 hover:text-[#0f172a] disabled:opacity-30"
-                                        >
-                                          <ArrowDown size={12} />
-                                        </button>
-                                        
-                                        <label className="flex items-center gap-1 cursor-pointer select-none">
-                                          <input 
-                                            type="checkbox"
-                                            checked={field.required}
-                                            onChange={(e) => updateFieldProperty(section.id, field.id, "required", e.target.checked)}
-                                            className="w-3 h-3 text-[#0f172a] rounded"
-                                          />
-                                          Required
-                                        </label>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-3">
+                                  <div className="space-y-1">
+                                    <label className="text-[8px] font-black uppercase tracking-widest text-slate-400 ml-0.5">Field ID / Key (JSON output key)</label>
+                                    <input 
+                                      type="text"
+                                      disabled={isStandardField}
+                                      value={field.key}
+                                      onChange={(e) => updateFieldProperty(field.id, "key", e.target.value)}
+                                      placeholder="e.g. ticket_type"
+                                      className="w-full px-3 py-2 rounded-lg border border-slate-100 font-bold text-xs bg-slate-50 dark:bg-slate-800 text-[#0f172a] dark:text-white"
+                                    />
+                                  </div>
 
-                                        <button
-                                          onClick={() => removeFieldFromSection(section.id, field.id)}
-                                          className="p-1 text-slate-400 hover:text-red-500"
-                                        >
-                                          <Trash2 size={12} />
-                                        </button>
-                                      </div>
-                                    </div>
+                                  <div className="space-y-1">
+                                    <label className="text-[8px] font-black uppercase tracking-widest text-slate-400 ml-0.5">Field Label Phrasing / Section Title</label>
+                                    <RichTextEditor 
+                                      value={field.label || ""}
+                                      onChange={(val) => updateFieldProperty(field.id, "label", val)}
+                                      placeholder="e.g. What is your t-shirt size?"
+                                      minHeight="60px"
+                                    />
+                                  </div>
+                                </div>
 
-                                    {/* Edit details */}
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-50 dark:border-slate-800">
-                                      <div>
-                                        <label className="text-[8px] font-black uppercase tracking-widest text-slate-400 ml-0.5">Input Type</label>
-                                        <select 
-                                          value={field.type}
-                                          onChange={(e) => updateFieldProperty(section.id, field.id, "type", e.target.value)}
-                                          className="w-full text-[10px] font-bold text-slate-650 bg-slate-50 dark:bg-slate-800 rounded-lg p-1.5 border border-slate-100"
-                                        >
-                                          <option value="text">Text Input</option>
-                                          <option value="numeric">Phone / Numeric Input</option>
-                                          <option value="select">Dropdown Select</option>
-                                          <option value="checkbox">Single Checkbox</option>
-                                          <option value="partner_card">Corporate Partner Validation Card</option>
-                                        </select>
-                                      </div>
-
-                                      {/* Dropdown Options list */}
-                                      {field.type === "select" && (
-                                        <div>
-                                          <label className="text-[8px] font-black uppercase tracking-widest text-slate-400 ml-0.5">Options (comma separated)</label>
-                                          <input 
-                                            type="text" 
-                                            placeholder="e.g. Yes, No, Maybe"
-                                            value={field.options?.join(", ") || ""}
-                                            onChange={(e) => updateFieldProperty(
-                                              section.id, 
-                                              field.id, 
-                                              "options", 
-                                              e.target.value.split(",").map(o => o.trim()).filter(Boolean)
-                                            )}
-                                            className="w-full text-[10px] font-bold text-slate-650 bg-slate-50 dark:bg-slate-800 rounded-lg p-1.5 border border-slate-100"
-                                          />
-                                        </div>
-                                      )}
-                                    </div>
-
-                                    {/* Reference Image input */}
-                                    <div className="pt-2 border-t border-slate-50 dark:border-slate-800">
-                                      <label className="text-[8px] font-black uppercase tracking-widest text-slate-400 ml-0.5">Attach Reference Image (Optional)</label>
-                                      
-                                      <div 
-                                        onDragOver={(e) => { e.preventDefault(); setDragOverFieldId(field.id); }}
-                                        onDragLeave={() => setDragOverFieldId(null)}
-                                        onDrop={(e) => { e.preventDefault(); setDragOverFieldId(null); if (e.dataTransfer.files?.[0]) handleTemplateImageUpload(section.id, field.id, e.dataTransfer.files[0]); }}
-                                        className={`relative group h-20 rounded-xl border border-dashed transition-all flex flex-col items-center justify-center p-2 bg-slate-50 dark:bg-slate-800 cursor-pointer overflow-hidden ${
-                                          dragOverFieldId === field.id ? "border-yellow-400 bg-yellow-50/10" : "border-slate-200 hover:border-yellow-400 dark:border-slate-700"
-                                        }`}
-                                      >
-                                        <input 
-                                          type="file" 
-                                          accept="image/*" 
-                                          onChange={(e) => { if (e.target.files?.[0]) handleTemplateImageUpload(section.id, field.id, e.target.files[0]); }}
-                                          className="absolute inset-0 opacity-0 cursor-pointer z-10" 
-                                        />
-                                        
-                                        {field.image_url ? (
-                                          <div className="absolute inset-0 flex items-center justify-between p-2 bg-slate-50/95 dark:bg-[#0f172a]/95 z-20">
-                                            <img src={field.image_url} alt="Preview" className="h-full w-12 object-contain rounded border border-slate-200 dark:border-slate-750" />
-                                            <button 
-                                              type="button" 
-                                              onClick={(e) => { e.stopPropagation(); updateFieldProperty(section.id, field.id, "image_url", ""); }}
-                                              className="text-red-500 hover:underline text-[8px] uppercase font-bold tracking-widest"
-                                            >
-                                              Remove
-                                            </button>
-                                          </div>
-                                        ) : (
-                                          <div className="flex flex-col items-center text-center">
-                                            <p className="text-[8px] font-black text-slate-400 uppercase">Drag &amp; drop image, or click</p>
-                                            <p className="text-[6px] text-slate-300 uppercase mt-0.5">PNG, JPG, WEBP</p>
-                                          </div>
-                                        )}
-                                      </div>
-
+                                <div className="space-y-3">
+                                  {field.type !== "section_header" && field.type !== "checkbox" && field.type !== "partner_card" && (
+                                    <div className="space-y-1">
+                                      <label className="text-[8px] font-black uppercase tracking-widest text-slate-400 ml-0.5">Placeholder Text</label>
                                       <input 
-                                        type="text" 
-                                        placeholder="Or paste an image URL directly..."
-                                        value={field.image_url || ""}
-                                        onChange={(e) => updateFieldProperty(section.id, field.id, "image_url", e.target.value)}
-                                        className="w-full text-[10px] font-bold text-slate-650 bg-slate-50 dark:bg-slate-800 rounded-lg p-1.5 border border-slate-100 mt-1.5"
+                                        type="text"
+                                        value={field.placeholder || ""}
+                                        onChange={(e) => updateFieldProperty(field.id, "placeholder", e.target.value)}
+                                        placeholder="e.g. Select size..."
+                                        className="w-full px-3 py-2 rounded-lg border border-slate-100 font-bold text-xs bg-slate-50 dark:bg-slate-800 text-[#0f172a] dark:text-white"
                                       />
                                     </div>
+                                  )}
 
-                                    {/* Conditional branch trigger */}
-                                    <div className="pt-2">
-                                      <label className="text-[8px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-1">
-                                        Conditional Visibility Rule
-                                        <span title="Only show this question if a previous dropdown has a specific value"><HelpCircle size={10} /></span>
+                                  <div className="flex flex-wrap gap-4 pt-2">
+                                    {field.type !== "section_header" && (
+                                      <label className="flex items-center gap-2 cursor-pointer select-none text-[10px] font-bold">
+                                        <input 
+                                          type="checkbox"
+                                          checked={field.required}
+                                          onChange={(e) => updateFieldProperty(field.id, "required", e.target.checked)}
+                                          className="w-3.5 h-3.5 text-[#0f172a] rounded"
+                                        />
+                                        Required Field
                                       </label>
-                                      {field.dependsOn ? (
-                                        <div className="flex flex-wrap items-center gap-2 mt-1">
-                                          <select 
-                                            value={field.dependsOn.fieldId}
-                                            onChange={(e) => updateFieldProperty(section.id, field.id, "dependsOn", {
-                                              ...field.dependsOn,
-                                              fieldId: e.target.value
-                                            })}
-                                            className="text-[10px] font-bold text-slate-600 bg-slate-50 dark:bg-slate-800 rounded p-1 border border-slate-100"
-                                          >
-                                            {precedingFields.map(pf => (
-                                              <option key={pf.id} value={pf.id}>{pf.label}</option>
-                                            ))}
-                                          </select>
-                                          <span className="text-[10px] text-slate-400 font-bold uppercase">equals</span>
-                                          <input 
-                                            type="text" 
-                                            value={field.dependsOn.value}
-                                            onChange={(e) => updateFieldProperty(section.id, field.id, "dependsOn", {
-                                              ...field.dependsOn,
-                                              value: e.target.value
-                                            })}
-                                            className="text-[10px] font-bold text-slate-600 bg-slate-50 dark:bg-slate-800 rounded p-1 border border-slate-100 w-24"
-                                            placeholder="Value..."
-                                          />
-                                          <button
-                                            onClick={() => updateFieldProperty(section.id, field.id, "dependsOn", undefined)}
-                                            className="text-[9px] font-black text-red-500 hover:underline uppercase shrink-0"
-                                          >
-                                            Remove Rule
-                                          </button>
-                                        </div>
-                                      ) : (
-                                        <button
-                                          onClick={() => {
-                                            if (precedingFields.length === 0) {
-                                              alert("No preceding dropdown fields found to create rules on. Add a select field above this one first.");
-                                              return;
-                                            }
-                                            updateFieldProperty(section.id, field.id, "dependsOn", {
-                                              fieldId: precedingFields[0].id,
-                                              value: ""
-                                            });
-                                          }}
-                                          className="text-[9px] font-black text-blue-500 hover:underline uppercase block mt-1"
-                                        >
-                                          + Add Visibility Rule
-                                        </button>
-                                      )}
-                                    </div>
+                                    )}
+                                    <label className="flex items-center gap-2 cursor-pointer select-none text-[10px] font-bold">
+                                      <input 
+                                        type="checkbox"
+                                        checked={field.visible}
+                                        onChange={(e) => updateFieldProperty(field.id, "visible", e.target.checked)}
+                                        className="w-3.5 h-3.5 text-[#0f172a] rounded"
+                                      />
+                                      Visible on Form
+                                    </label>
+                                    <label className="flex items-center gap-2 cursor-pointer select-none text-[10px] font-bold" title="Renders this field before the attending/not attending selection">
+                                      <input 
+                                        type="checkbox"
+                                        checked={!!(field as any).showBeforeAttendance}
+                                        onChange={(e) => updateFieldProperty(field.id, "showBeforeAttendance", e.target.checked)}
+                                        className="w-3.5 h-3.5 text-[#0f172a] rounded"
+                                      />
+                                      Render before RSVP Selector
+                                    </label>
                                   </div>
-                                );
-                              })}
-                            </div>
 
-                            <button
-                              onClick={() => addFieldToSection(section.id)}
-                              className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-dashed border-slate-200 hover:border-slate-350 hover:bg-white text-slate-400 hover:text-slate-600 text-[10px] font-bold uppercase tracking-wider transition-all w-full justify-center"
-                            >
-                              <Plus size={11} />
-                              Add Field to Section
-                            </button>
-                          </div>
-                        ))}
+                                  {field.type === "select" && (
+                                    <div className="space-y-1">
+                                      <label className="text-[8px] font-black uppercase tracking-widest text-slate-400 ml-0.5">Dropdown Options (Comma separated)</label>
+                                      <input 
+                                        type="text" 
+                                        placeholder="e.g. Small, Medium, Large"
+                                        value={field.options?.join(", ") || ""}
+                                        onChange={(e) => updateFieldProperty(
+                                          field.id, 
+                                          "options", 
+                                          e.target.value.split(",").map(o => o.trim()).filter(Boolean)
+                                        )}
+                                        className="w-full text-xs font-bold text-slate-700 bg-slate-50 dark:bg-slate-800 rounded-lg p-2 border border-slate-100"
+                                      />
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Conditional Branching visibility */}
+                              {field.type !== "section_header" && (
+                                <div className="pt-2 border-t border-slate-50 dark:border-slate-800">
+                                  <label className="text-[8px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-1">
+                                    Conditional Branching Rule
+                                    <span title="Only show this field if a preceding dropdown selection matches a specific value."><HelpCircle size={10} /></span>
+                                  </label>
+                                  {field.dependsOn ? (
+                                    <div className="flex flex-wrap items-center gap-2 mt-1">
+                                      <select 
+                                        value={field.dependsOn.fieldId}
+                                        onChange={(e) => updateFieldProperty(field.id, "dependsOn", {
+                                          ...field.dependsOn,
+                                          fieldId: e.target.value
+                                        })}
+                                        className="text-[10px] font-bold text-slate-650 bg-slate-50 dark:bg-slate-800 rounded p-1.5 border border-slate-100"
+                                      >
+                                        {precedingFields.map(pf => (
+                                          <option key={pf.id} value={pf.id}>{pf.label}</option>
+                                        ))}
+                                      </select>
+                                      <span className="text-[10px] text-slate-400 font-bold uppercase">equals</span>
+                                      <input 
+                                        type="text" 
+                                        value={field.dependsOn.value}
+                                        onChange={(e) => updateFieldProperty(field.id, "dependsOn", {
+                                          ...field.dependsOn,
+                                          value: e.target.value
+                                        })}
+                                        className="text-[10px] font-bold text-slate-650 bg-slate-50 dark:bg-slate-800 rounded p-1.5 border border-slate-100 w-32"
+                                        placeholder="Match value..."
+                                      />
+                                      <button
+                                        onClick={() => updateFieldProperty(field.id, "dependsOn", undefined)}
+                                        className="text-[9px] font-black text-red-500 hover:underline uppercase shrink-0"
+                                      >
+                                        Remove Rule
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <button
+                                      onClick={() => {
+                                        if (precedingFields.length === 0) {
+                                          alert("No preceding select dropdown fields found to branch on. Add a select dropdown above this field first.");
+                                          return;
+                                        }
+                                        updateFieldProperty(field.id, "dependsOn", {
+                                          fieldId: precedingFields[0].id,
+                                          value: ""
+                                        });
+                                      }}
+                                      className="text-[9px] font-black text-blue-500 hover:underline uppercase block mt-1"
+                                    >
+                                      + Add Visibility Rule
+                                    </button>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
@@ -1262,44 +1294,383 @@ export default function RegistrationTemplateManager() {
                   {editorTab === "postSubmit" && (
                     <div className="space-y-6">
                       <h4 className="text-xs font-black uppercase text-slate-400 pb-2 border-b border-slate-100 dark:border-slate-800">
-                        Custom Onscreen Success Screen variables
+                        Custom Onscreen Success & Decline Screen variables
                       </h4>
 
-                      <div className="space-y-4">
-                        <div className="space-y-1">
-                          <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-1">Onscreen Confirmation Header</label>
-                          <input 
-                            type="text" 
-                            value={selectedTemplate.post_submit_config.onscreen_title || "YOUR REGISTRATION HAS BEEN CONFIRMED."}
-                            onChange={(e) => updatePostSubmitConfig("onscreen_title", e.target.value)}
-                            placeholder="e.g. YOUR REGISTRATION HAS BEEN CONFIRMED."
-                            className="w-full px-5 py-3 rounded-2xl bg-slate-50 border border-slate-100 focus:border-[#1e293b] outline-none font-bold text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white"
-                          />
+                      <div className="space-y-6">
+                        {/* SUCCESS SCREEN SECTION */}
+                        <div className="space-y-4 bg-slate-50/30 dark:bg-slate-800/10 p-5 rounded-2xl border border-slate-100 dark:border-slate-800/50">
+                          <h5 className="text-[10px] font-black uppercase tracking-[0.2em] text-green-500">Onscreen Confirmation (Success) View</h5>
+                          
+                          <div className="space-y-2">
+                            <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 ml-1">Confirmation Header</label>
+                            <RichTextEditor 
+                              value={selectedTemplate.post_submit_config.onscreen_title || ""}
+                              onChange={(val) => updatePostSubmitConfig("onscreen_title", val)}
+                              placeholder="e.g. YOUR REGISTRATION HAS BEEN CONFIRMED."
+                              minHeight="80px"
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 ml-1">Confirmation Description template</label>
+                            <RichTextEditor 
+                              value={selectedTemplate.post_submit_config.onscreen_description || ""}
+                              onChange={(val) => updatePostSubmitConfig("onscreen_description", val)}
+                              placeholder="e.g. Your registration for [Event Name] is confirmed."
+                              minHeight="100px"
+                              availableTokens={["[Name]", "[Event Name]", "[Email Address]", "[Clearance ID]"]}
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 ml-1 block">Custom Success Logo/Icon</label>
+                            <div className="flex items-center gap-3">
+                              <input 
+                                type="file" 
+                                accept="image/*"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) {
+                                    uploadImageFile(file)
+                                      .then((url) => updatePostSubmitConfig("success_icon_url", url))
+                                      .catch(() => {
+                                        const reader = new FileReader();
+                                        reader.onloadend = () => {
+                                          updatePostSubmitConfig("success_icon_url", reader.result as string);
+                                        };
+                                        reader.readAsDataURL(file);
+                                      });
+                                  }
+                                }}
+                                className="hidden"
+                                id="success-icon-upload"
+                              />
+                              <label 
+                                htmlFor="success-icon-upload"
+                                className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 font-bold text-[10px] uppercase tracking-wider hover:bg-slate-50 cursor-pointer dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800"
+                              >
+                                Upload Image
+                              </label>
+                              {selectedTemplate.post_submit_config.success_icon_url && (
+                                <div className="flex items-center gap-2">
+                                  <img 
+                                    src={selectedTemplate.post_submit_config.success_icon_url} 
+                                    alt="Success icon" 
+                                    className="w-10 h-10 object-contain rounded border border-slate-200 p-0.5 bg-white" 
+                                  />
+                                  <button 
+                                    type="button" 
+                                    onClick={() => updatePostSubmitConfig("success_icon_url", "")}
+                                    className="text-[9px] text-red-500 font-bold hover:underline"
+                                  >
+                                    Remove
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 ml-1">Success Logo Fitting</label>
+                            <select 
+                              value={selectedTemplate.post_submit_config.success_icon_style || "contain"}
+                              onChange={(e) => updatePostSubmitConfig("success_icon_style", e.target.value)}
+                              className="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-100 focus:border-[#1e293b] outline-none font-bold text-xs text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                            >
+                              <option value="contain">Fit Inside (Contain)</option>
+                              <option value="cover">Fill Shape (Cover)</option>
+                              <option value="fill">Stretch to Shape (Fill)</option>
+                            </select>
+                          </div>
                         </div>
 
-                        <div className="space-y-1">
-                          <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-1">Onscreen Description template</label>
-                          <textarea 
-                            rows={4}
-                            value={selectedTemplate.post_submit_config.onscreen_description || ""}
-                            onChange={(e) => updatePostSubmitConfig("onscreen_description", e.target.value)}
-                            placeholder="e.g. Your registration for [Event Name] is confirmed. Verification has been dispatched to [Email Address]."
-                            className="w-full px-5 py-4 rounded-2xl bg-slate-50 border border-slate-100 focus:border-[#1e293b] outline-none font-medium text-slate-750 dark:bg-slate-800 dark:border-slate-700 dark:text-white resize-none"
-                          />
-                          <p className="text-[8px] text-slate-400 uppercase tracking-wider font-bold ml-1">
-                            Available Tokens: <span className="text-blue-500 font-mono">[Name]</span>, <span className="text-blue-500 font-mono">[Event Name]</span>, <span className="text-blue-500 font-mono">[Email Address]</span>, <span className="text-blue-500 font-mono">[Clearance ID]</span>. Replaced at runtime.
-                          </p>
+                        {/* DECLINE SCREEN SECTION */}
+                        <div className="space-y-4 bg-slate-50/30 dark:bg-slate-800/10 p-5 rounded-2xl border border-slate-100 dark:border-slate-800/50">
+                          <h5 className="text-[10px] font-black uppercase tracking-[0.2em] text-red-500">Onscreen RSVP Decline View</h5>
+                          
+                          <div className="space-y-2">
+                            <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 ml-1">Decline Header</label>
+                            <RichTextEditor 
+                              value={selectedTemplate.post_submit_config.onscreen_decline_title || ""}
+                              onChange={(val) => updatePostSubmitConfig("onscreen_decline_title", val)}
+                              placeholder="e.g. RSVP Response Recorded."
+                              minHeight="80px"
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 ml-1">Decline Description template</label>
+                            <RichTextEditor 
+                              value={selectedTemplate.post_submit_config.onscreen_decline_description || ""}
+                              onChange={(val) => updatePostSubmitConfig("onscreen_decline_description", val)}
+                              placeholder="e.g. We have recorded your decline RSVP response for [Event Name]."
+                              minHeight="100px"
+                              availableTokens={["[Name]", "[Event Name]", "[Email Address]"]}
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 ml-1 block">Custom Decline Logo/Icon</label>
+                            <div className="flex items-center gap-3">
+                              <input 
+                                type="file" 
+                                accept="image/*"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) {
+                                    uploadImageFile(file)
+                                      .then((url) => updatePostSubmitConfig("decline_icon_url", url))
+                                      .catch(() => {
+                                        const reader = new FileReader();
+                                        reader.onloadend = () => {
+                                          updatePostSubmitConfig("decline_icon_url", reader.result as string);
+                                        };
+                                        reader.readAsDataURL(file);
+                                      });
+                                  }
+                                }}
+                                className="hidden"
+                                id="decline-icon-upload"
+                              />
+                              <label 
+                                htmlFor="decline-icon-upload"
+                                className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 font-bold text-[10px] uppercase tracking-wider hover:bg-slate-50 cursor-pointer dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800"
+                              >
+                                Upload Image
+                              </label>
+                              {selectedTemplate.post_submit_config.decline_icon_url && (
+                                <div className="flex items-center gap-2">
+                                  <img 
+                                    src={selectedTemplate.post_submit_config.decline_icon_url} 
+                                    alt="Decline icon" 
+                                    className="w-10 h-10 object-contain rounded border border-slate-200 p-0.5 bg-white" 
+                                  />
+                                  <button 
+                                    type="button" 
+                                    onClick={() => updatePostSubmitConfig("decline_icon_url", "")}
+                                    className="text-[9px] text-red-500 font-bold hover:underline"
+                                  >
+                                    Remove
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 ml-1">Decline Logo Fitting</label>
+                            <select 
+                              value={selectedTemplate.post_submit_config.decline_icon_style || "contain"}
+                              onChange={(e) => updatePostSubmitConfig("decline_icon_style", e.target.value)}
+                              className="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-100 focus:border-[#1e293b] outline-none font-bold text-xs text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                            >
+                              <option value="contain">Fit Inside (Contain)</option>
+                              <option value="cover">Fill Shape (Cover)</option>
+                              <option value="fill">Stretch to Shape (Fill)</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        {/* CAPACITY FULL SCREEN SECTION */}
+                        <div className="space-y-4 bg-slate-50/30 dark:bg-slate-800/10 p-5 rounded-2xl border border-slate-100 dark:border-slate-800/50">
+                          <h5 className="text-[10px] font-black uppercase tracking-[0.2em] text-rose-500">Onscreen Waitlist / Capacity Full View</h5>
+                          
+                          <div className="space-y-2">
+                            <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 ml-1">Waitlist Header</label>
+                            <RichTextEditor 
+                              value={selectedTemplate.post_submit_config.onscreen_capacity_title || ""}
+                              onChange={(val) => updatePostSubmitConfig("onscreen_capacity_title", val)}
+                              placeholder="e.g. EVENT IS FULL / WAITLISTED."
+                              minHeight="80px"
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 ml-1">Waitlist Description template</label>
+                            <RichTextEditor 
+                              value={selectedTemplate.post_submit_config.onscreen_capacity_description || ""}
+                              onChange={(val) => updatePostSubmitConfig("onscreen_capacity_description", val)}
+                              placeholder="e.g. We are sorry, this event is currently at maximum capacity. We have added you to our waitlist."
+                              minHeight="100px"
+                              availableTokens={["[Name]", "[Event Name]", "[Email Address]"]}
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 ml-1 block">Custom Capacity Logo/Icon</label>
+                            <div className="flex items-center gap-3">
+                              <input 
+                                type="file" 
+                                accept="image/*"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) {
+                                    uploadImageFile(file)
+                                      .then((url) => updatePostSubmitConfig("capacity_icon_url", url))
+                                      .catch(() => {
+                                        const reader = new FileReader();
+                                        reader.onloadend = () => {
+                                          updatePostSubmitConfig("capacity_icon_url", reader.result as string);
+                                        };
+                                        reader.readAsDataURL(file);
+                                      });
+                                  }
+                                }}
+                                className="hidden"
+                                id="capacity-icon-upload"
+                              />
+                              <label 
+                                htmlFor="capacity-icon-upload"
+                                className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 font-bold text-[10px] uppercase tracking-wider hover:bg-slate-50 cursor-pointer dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800"
+                              >
+                                Upload Image
+                              </label>
+                              {selectedTemplate.post_submit_config.capacity_icon_url && (
+                                <div className="flex items-center gap-2">
+                                  <img 
+                                    src={selectedTemplate.post_submit_config.capacity_icon_url} 
+                                    alt="Capacity icon" 
+                                    className="w-10 h-10 object-contain rounded border border-slate-200 p-0.5 bg-white" 
+                                  />
+                                  <button 
+                                    type="button" 
+                                    onClick={() => updatePostSubmitConfig("capacity_icon_url", "")}
+                                    className="text-[9px] text-red-500 font-bold hover:underline"
+                                  >
+                                    Remove
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 ml-1">Capacity Logo Fitting</label>
+                            <select 
+                              value={selectedTemplate.post_submit_config.capacity_icon_style || "contain"}
+                              onChange={(e) => updatePostSubmitConfig("capacity_icon_style", e.target.value)}
+                              className="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-100 focus:border-[#1e293b] outline-none font-bold text-xs text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                            >
+                              <option value="contain">Fit Inside (Contain)</option>
+                              <option value="cover">Fill Shape (Cover)</option>
+                              <option value="fill">Stretch to Shape (Fill)</option>
+                            </select>
+                          </div>
                         </div>
 
                         <div className="space-y-1">
                           <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-1">Clearance Code Box Label</label>
                           <input 
                             type="text" 
-                            value={selectedTemplate.post_submit_config.clearance_label || "UNIQUE CLEARANCE ID"}
+                            value={selectedTemplate.post_submit_config.clearance_label || "unique access pass number"}
                             onChange={(e) => updatePostSubmitConfig("clearance_label", e.target.value)}
-                            placeholder="e.g. UNIQUE CLEARANCE ID"
+                            placeholder="e.g. unique access pass number"
                             className="w-full px-5 py-3 rounded-2xl bg-slate-50 border border-slate-100 focus:border-[#1e293b] outline-none font-bold text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white"
                           />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {editorTab === "email" && (
+                    <div className="space-y-6">
+                      <h4 className="text-xs font-black uppercase text-slate-400 pb-2 border-b border-slate-100 dark:border-slate-800">
+                        Modular Confirmation Email Builder
+                      </h4>
+
+                      <div className="space-y-4">
+                        <div className="flex flex-wrap gap-6">
+                          <label className="flex items-center gap-2 cursor-pointer select-none text-[10px] font-bold">
+                            <input 
+                              type="checkbox"
+                              checked={selectedTemplate.email_config?.show_qr_code !== false}
+                              onChange={(e) => updateEmailConfig("show_qr_code", e.target.checked)}
+                              className="w-3.5 h-3.5 text-[#0f172a] rounded"
+                            />
+                            Show QR Code in Confirmation Email
+                          </label>
+                          <label className="flex items-center gap-2 cursor-pointer select-none text-[10px] font-bold">
+                            <input 
+                              type="checkbox"
+                              checked={selectedTemplate.email_config?.show_pin !== false}
+                              onChange={(e) => updateEmailConfig("show_pin", e.target.checked)}
+                              className="w-3.5 h-3.5 text-[#0f172a] rounded"
+                            />
+                            Show Unique PIN in Confirmation Email
+                          </label>
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 ml-1">Email Subject Template</label>
+                          <input 
+                            type="text" 
+                            value={selectedTemplate.email_config?.subject_template || ""}
+                            onChange={(e) => updateEmailConfig("subject_template", e.target.value)}
+                            placeholder="e.g. Your credentials for {{event.title}}"
+                            className="w-full px-4 py-2.5 rounded-xl border border-slate-100 font-bold text-xs bg-slate-50 dark:bg-slate-800 dark:border-slate-700 text-[#0f172a] dark:text-white"
+                          />
+                          <p className="text-[8px] text-slate-400 font-bold uppercase tracking-wide">
+                            Available tokens: {"{{registrant.first_name}}"}, {"{{event.title}}"}, {"{{event.location}}"}
+                          </p>
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 ml-1">Email Rich-Text Body Template</label>
+                          <RichTextEditor 
+                            value={selectedTemplate.email_config?.body_template || ""}
+                            onChange={(val) => updateEmailConfig("body_template", val)}
+                            placeholder="Type confirmation body..."
+                            minHeight="180px"
+                            availableTokens={["{{registrant.first_name}}", "{{registrant.last_name}}", "{{registrant.company}}", "{{event.title}}", "{{event.location}}", "{{event.start_date}}", "{{registration.pin}}"]}
+                          />
+                          <p className="text-[8px] text-slate-400 font-bold uppercase tracking-wide">
+                            Supports standard html tags and brace replacement tokens.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {editorTab === "operator" && (
+                    <div className="space-y-6">
+                      <h4 className="text-xs font-black uppercase text-slate-400 pb-2 border-b border-slate-100 dark:border-slate-800">
+                        Custom Operator Check-In Screen Builder
+                      </h4>
+
+                      <div className="space-y-4">
+                        <p className="text-[10px] text-slate-500">
+                          Select which fields from the registration form should be rendered in high-visibility cards on the operator desk when scanning passes.
+                        </p>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                          {selectedTemplate.layout_schema
+                            .filter(f => f.type !== "section_header")
+                            .map(field => {
+                              const fieldKey = field.key;
+                              const displayFields = selectedTemplate.operator_config?.display_fields || [];
+                              const isChecked = displayFields.includes(fieldKey);
+                              
+                              return (
+                                <label key={field.id} className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-slate-50 cursor-pointer text-xs font-bold text-slate-700 dark:border-slate-800 dark:bg-slate-900/10 dark:text-slate-300 dark:hover:bg-slate-900/30">
+                                  <input 
+                                    type="checkbox"
+                                    checked={isChecked}
+                                    onChange={(e) => {
+                                      const nextFields = e.target.checked 
+                                        ? [...displayFields, fieldKey] 
+                                        : displayFields.filter(k => k !== fieldKey);
+                                      updateOperatorConfig("display_fields", nextFields);
+                                    }}
+                                    className="w-4 h-4 text-[#0f172a] rounded focus:ring-0"
+                                  />
+                                  <div>
+                                    <span dangerouslySetInnerHTML={{ __html: field.label }} />
+                                    <span className="text-[8px] text-slate-400 font-mono block mt-0.5">key: {field.key}</span>
+                                  </div>
+                                </label>
+                              );
+                            })}
                         </div>
                       </div>
                     </div>
@@ -1333,6 +1704,12 @@ export default function RegistrationTemplateManager() {
                 className={`px-3 py-1.5 rounded-lg transition-all ${previewMode === "confirmation" ? "bg-white text-[#0f172a] shadow-sm font-black dark:bg-[#0f172a] dark:text-white" : "hover:text-slate-600"}`}
               >
                 Success Screen
+              </button>
+              <button
+                onClick={() => setPreviewMode("decline")}
+                className={`px-3 py-1.5 rounded-lg transition-all ${previewMode === "decline" ? "bg-white text-[#0f172a] shadow-sm font-black dark:bg-[#0f172a] dark:text-white" : "hover:text-slate-600"}`}
+              >
+                Decline Screen
               </button>
             </div>
           </div>
@@ -1370,16 +1747,16 @@ export default function RegistrationTemplateManager() {
               >
                 <style dangerouslySetInnerHTML={{ __html: `
                   ${selectedTemplate.theme_config.form_text_color ? `
-                    .preview-form-text-custom h1,
-                    .preview-form-text-custom h2,
-                    .preview-form-text-custom h3,
-                    .preview-form-text-custom h4,
-                    .preview-form-text-custom p,
-                    .preview-form-text-custom span,
-                    .preview-form-text-custom label,
-                    .preview-form-text-custom li,
-                    .preview-form-text-custom legend,
-                    .preview-form-text-custom select {
+                    .preview-form-text-custom h1:not([style*="color"]),
+                    .preview-form-text-custom h2:not([style*="color"]),
+                    .preview-form-text-custom h3:not([style*="color"]),
+                    .preview-form-text-custom h4:not([style*="color"]),
+                    .preview-form-text-custom p:not([style*="color"]),
+                    .preview-form-text-custom span:not([style*="color"]),
+                    .preview-form-text-custom label:not([style*="color"]),
+                    .preview-form-text-custom li:not([style*="color"]),
+                    .preview-form-text-custom legend:not([style*="color"]),
+                    .preview-form-text-custom select:not([style*="color"]) {
                       color: ${selectedTemplate.theme_config.form_text_color} !important;
                     }
                   ` : ""}
@@ -1401,7 +1778,19 @@ export default function RegistrationTemplateManager() {
                     font-weight: ${headingStyle.weight} !important;
                     font-style: ${headingStyle.style} !important;
                   }
-                  .preview-form-text-custom label {
+                  .preview-form-text-custom h1 strong,
+                  .preview-form-text-custom h1 b,
+                  .preview-form-text-custom h2 strong,
+                  .preview-form-text-custom h2 b,
+                  .preview-form-text-custom h3 strong,
+                  .preview-form-text-custom h3 b,
+                  .preview-form-text-custom h1 *[style*="font-weight"] {
+                    font-weight: 900 !important;
+                  }
+                  .preview-form-text-custom label,
+                  .preview-form-text-custom label *,
+                  .preview-form-text-custom .client-question-label,
+                  .preview-form-text-custom .client-question-label * {
                     font-size: ${selectedTemplate.theme_config.question_font_size ? `${selectedTemplate.theme_config.question_font_size}px` : '10px'} !important;
                     font-weight: ${questionStyle.weight} !important;
                     font-style: ${questionStyle.style} !important;
@@ -1447,32 +1836,41 @@ export default function RegistrationTemplateManager() {
                           ? formatHeading(selectedTemplate.theme_config.form_heading)
                           : formatHeading(selectedTemplate.name)}
                       </h3>
-                      <p 
-                        className="text-slate-400 text-[10px] font-medium uppercase tracking-wider mt-1"
+                      <div 
+                        className={`text-slate-400 text-[10px] font-medium mt-1 ${
+                          selectedTemplate.theme_config.form_subheading && /<[a-z][\s\S]*>/i.test(selectedTemplate.theme_config.form_subheading)
+                            ? ""
+                            : "uppercase tracking-wider"
+                        }`}
                         style={{ color: selectedTemplate.theme_config.form_text_color || undefined }}
-                      >
-                        {selectedTemplate.theme_config.form_subheading !== undefined && selectedTemplate.theme_config.form_subheading !== null
-                          ? selectedTemplate.theme_config.form_subheading
-                          : selectedTemplate.description || "Public Registration Form"}
-                      </p>
+                        dangerouslySetInnerHTML={{
+                          __html: selectedTemplate.theme_config.form_subheading !== undefined && selectedTemplate.theme_config.form_subheading !== null && selectedTemplate.theme_config.form_subheading !== ""
+                            ? selectedTemplate.theme_config.form_subheading
+                            : selectedTemplate.description || "Public Registration Form"
+                        }}
+                      />
                     </div>
 
                     {/* Standard Fields (Always Present in system) */}
                     <div className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1">
-                          <label className="text-[10px] font-bold text-slate-500 block">First Name *</label>
-                          <input type="text" disabled placeholder="e.g. John" className="w-full px-4 py-2.5 rounded-xl border border-slate-100 bg-slate-50/50 text-xs font-semibold" />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-[10px] font-bold text-slate-500 block">Last Name *</label>
-                          <input type="text" disabled placeholder="e.g. Doe" className="w-full px-4 py-2.5 rounded-xl border border-slate-100 bg-slate-50/50 text-xs font-semibold" />
-                        </div>
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-slate-500 block">Email Address *</label>
-                        <input type="email" disabled placeholder="john.doe@company.com" className="w-full px-4 py-2.5 rounded-xl border border-slate-100 bg-slate-50/50 text-xs font-semibold" />
-                      </div>
+                      {/* Render fields designated to appear BEFORE attendance status */}
+                      {selectedTemplate.layout_schema
+                        .filter(field => field.visible && field.type !== "section_header" && (field as any).showBeforeAttendance)
+                        .map((field) => (
+                          <div key={field.id} className="space-y-1.5">
+                            <label className="text-[10px] font-semibold text-slate-650 dark:text-slate-350 block flex items-center flex-wrap gap-1 client-question-label">
+                              <span dangerouslySetInnerHTML={{ __html: field.label || "" }} />
+                              {field.required && <span className="text-red-500 ml-0.5 font-bold">*</span>}
+                            </label>
+                            <input 
+                              type="text" 
+                              disabled 
+                              placeholder={field.placeholder || "Enter answer..."} 
+                              className="w-full px-4 py-2.5 rounded-xl border border-slate-100 bg-slate-50/50 text-xs font-semibold dark:bg-slate-800 dark:border-slate-855" 
+                            />
+                          </div>
+                        ))
+                      }
 
                       {/* Attendance Status preview */}
                       <div className="space-y-2 pt-2">
@@ -1490,31 +1888,39 @@ export default function RegistrationTemplateManager() {
                       </div>
                     </div>
 
-                    {/* Custom Schema Sections & Fields */}
-                    {selectedTemplate.layout_schema.map((section) => (
-                      <div key={section.id} className="space-y-3 pt-3 border-t border-slate-50 dark:border-slate-800">
-                        <h4 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider">
-                          {formatHeading(section.title)}
-                        </h4>
-                        
-                        <div className="space-y-4">
-                          {section.fields.map((field) => (
+                    {/* Render fields designated to appear AFTER attendance status */}
+                    <div className="space-y-4 mt-4">
+                      {selectedTemplate.layout_schema
+                        .filter(field => field.visible && (field.type === "section_header" || !(field as any).showBeforeAttendance))
+                        .map((field) => {
+                          if (field.type === "section_header") {
+                            return (
+                              <div key={field.id} className="pt-3 border-t border-slate-100 dark:border-slate-800">
+                                <h4 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider">
+                                  {formatHeading(field.label)}
+                                </h4>
+                              </div>
+                            );
+                          }
+                          
+                          return (
                             <div key={field.id} className="space-y-1.5">
-                              <label className="text-[10px] font-semibold text-slate-600 dark:text-slate-300 block">
-                                {field.label} {field.required ? "*" : ""}
+                              <label className="text-[10px] font-semibold text-slate-650 dark:text-slate-350 block flex items-center flex-wrap gap-1 client-question-label">
+                                <span dangerouslySetInnerHTML={{ __html: field.label || "" }} />
+                                {field.required && <span className="text-red-500 ml-0.5 font-bold">*</span>}
                               </label>
 
-                              {field.type === "text" && (
-                                <input type="text" disabled placeholder="Enter answer..." className="w-full px-4 py-2.5 rounded-xl border border-slate-100 bg-slate-50/50 text-xs font-semibold" />
+                              {(field.type === "text" || field.type === "email") && (
+                                <input type="text" disabled placeholder={field.placeholder || "Enter answer..."} className="w-full px-4 py-2.5 rounded-xl border border-slate-100 bg-slate-50/50 text-xs font-semibold dark:bg-slate-800 dark:border-slate-855" />
                               )}
 
                               {field.type === "numeric" && (
-                                <input type="text" disabled placeholder="Numeric/Phone answer (Numbers only)..." className="w-full px-4 py-2.5 rounded-xl border border-slate-100 bg-slate-50/50 text-xs font-semibold cursor-not-allowed" />
+                                <input type="text" disabled placeholder={field.placeholder || "Numeric answer..."} className="w-full px-4 py-2.5 rounded-xl border border-slate-100 bg-slate-50/50 text-xs font-semibold dark:bg-slate-800 dark:border-slate-855" />
                               )}
 
                               {field.type === "select" && (
-                                <select disabled className="w-full px-4 py-2.5 rounded-xl border border-slate-100 bg-slate-50/50 text-xs font-semibold cursor-not-allowed">
-                                  <option value="">Select option...</option>
+                                <select disabled className="w-full px-4 py-2.5 rounded-xl border border-slate-100 bg-slate-50/50 text-xs font-semibold dark:bg-slate-800 dark:border-slate-855">
+                                  <option value="">{field.placeholder || "Select option..."}</option>
                                   {field.options?.map(opt => (
                                     <option key={opt} value={opt}>{opt}</option>
                                   ))}
@@ -1529,21 +1935,20 @@ export default function RegistrationTemplateManager() {
                               )}
 
                               {field.type === "partner_card" && (
-                                <div className="p-4 rounded-xl border border-slate-200 border-dashed bg-slate-50/30 text-center text-xs font-bold text-slate-400">
+                                <div className="p-4 rounded-xl border border-slate-200 border-dashed bg-slate-50/30 text-center text-xs font-bold text-slate-400 dark:border-slate-800">
                                   Corporate Partner Details Block
                                 </div>
                               )}
                             </div>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
+                          );
+                        })}
+                    </div>
                     
                     <button type="button" disabled className="w-full py-4 bg-[#0f172a] text-white rounded-2xl font-black uppercase text-xs tracking-widest opacity-80 cursor-not-allowed mt-4">
                       Submit Registration
                     </button>
                   </>
-                ) : (
+                ) : previewMode === "confirmation" ? (
                   // Success Screen View
                   (() => {
                     const config = {
@@ -1554,37 +1959,86 @@ export default function RegistrationTemplateManager() {
                         className="p-6 rounded-2xl text-center space-y-6 shadow-sm border border-slate-100/50"
                         style={{ backgroundColor: selectedTemplate.theme_config.feedback_bg_color || "#f1f5f9" }}
                       >
-                        <div className="w-16 h-16 rounded-2xl bg-green-500 flex items-center justify-center mx-auto shadow-md">
-                          <CheckCircle2 size={36} className="text-white animate-bounce" />
-                        </div>
-
-                        <div className="flex justify-center">
-                          <div 
-                            className="px-5 py-1.5 rounded-full inline-flex items-center justify-center"
-                            style={{ backgroundColor: config.theme.attendeePassBgColor || '#000000' }}
-                          >
-                            <span className="text-[9px] font-black uppercase tracking-[0.4em] text-white">
-                              Attendee Pass
-                            </span>
+                        {selectedTemplate.post_submit_config.success_icon_url ? (
+                          <div className={`w-16 h-16 rounded-2xl overflow-hidden mx-auto shadow-md flex items-center justify-center ${selectedTemplate.post_submit_config.success_icon_style === "cover" ? "p-0" : "p-2"}`}>
+                            <img 
+                              src={selectedTemplate.post_submit_config.success_icon_url} 
+                              alt="Logo" 
+                              className={`w-full h-full ${
+                                selectedTemplate.post_submit_config.success_icon_style === "cover" 
+                                  ? "object-cover" 
+                                  : selectedTemplate.post_submit_config.success_icon_style === "fill" 
+                                    ? "object-fill" 
+                                    : "object-contain"
+                              }`} 
+                            />
                           </div>
-                        </div>
+                        ) : (
+                          <div className="w-16 h-16 rounded-2xl bg-green-500 flex items-center justify-center mx-auto shadow-md">
+                            <CheckCircle2 size={36} className="text-white animate-bounce" />
+                          </div>
+                        )}
 
-                        <h1 className="text-2xl font-bold text-[#0f172a] tracking-tight preview-success-title">
-                          {selectedTemplate.post_submit_config.onscreen_title || "YOUR REGISTRATION HAS BEEN CONFIRMED."}
-                        </h1>
+                        <h1 
+                          className="text-2xl font-bold text-[#0f172a] tracking-tight preview-success-title"
+                          dangerouslySetInnerHTML={{ __html: selectedTemplate.post_submit_config.onscreen_title || "YOUR REGISTRATION HAS BEEN CONFIRMED." }}
+                        />
 
-                        <p className="text-slate-500 text-xs font-medium leading-relaxed whitespace-pre-line preview-success-desc" style={{ whiteSpace: 'pre-line' }}>
-                          {formatPostSubmit(selectedTemplate.post_submit_config.onscreen_description || "Your registration is confirmed.")}
-                        </p>
+                        <div 
+                          className="text-slate-500 text-xs font-medium leading-relaxed whitespace-pre-line preview-success-desc" 
+                          style={{ whiteSpace: 'pre-line' }}
+                          dangerouslySetInnerHTML={{ __html: formatPostSubmit(selectedTemplate.post_submit_config.onscreen_description || "Your registration is confirmed.") }}
+                        />
 
                         <div className="pt-4 border-t border-slate-200/50 space-y-1">
                           <p className="text-[8px] uppercase tracking-[0.25em] text-slate-400 font-bold">
-                            {selectedTemplate.post_submit_config.clearance_label || "UNIQUE CLEARANCE ID"}
+                            {selectedTemplate.post_submit_config.clearance_label || "unique access pass number"}
                           </p>
                           <p className="text-2xl font-black text-slate-800 italic tracking-tighter">
                             EEL-987A
                           </p>
                         </div>
+                      </div>
+                    );
+                  })()
+                ) : (
+                  // Decline Screen View
+                  (() => {
+                    return (
+                      <div 
+                        className="p-6 rounded-2xl text-center space-y-6 shadow-sm border border-slate-100/50"
+                        style={{ backgroundColor: selectedTemplate.theme_config.feedback_bg_color || "#f1f5f9" }}
+                      >
+                        {selectedTemplate.post_submit_config.decline_icon_url ? (
+                          <div className={`w-16 h-16 rounded-2xl overflow-hidden mx-auto shadow-md flex items-center justify-center ${selectedTemplate.post_submit_config.decline_icon_style === "cover" ? "p-0" : "p-2"}`}>
+                            <img 
+                              src={selectedTemplate.post_submit_config.decline_icon_url} 
+                              alt="Logo" 
+                              className={`w-full h-full ${
+                                selectedTemplate.post_submit_config.decline_icon_style === "cover" 
+                                  ? "object-cover" 
+                                  : selectedTemplate.post_submit_config.decline_icon_style === "fill" 
+                                    ? "object-fill" 
+                                    : "object-contain"
+                              }`} 
+                            />
+                          </div>
+                        ) : (
+                          <div className="w-16 h-16 rounded-2xl bg-red-500 flex items-center justify-center mx-auto shadow-md">
+                            <XCircle size={36} className="text-white animate-pulse" />
+                          </div>
+                        )}
+
+                        <h1 
+                          className="text-2xl font-bold text-[#0f172a] tracking-tight preview-success-title"
+                          dangerouslySetInnerHTML={{ __html: selectedTemplate.post_submit_config.onscreen_decline_title || "RSVP RESPONSE RECORDED." }}
+                        />
+
+                        <div 
+                          className="text-slate-500 text-xs font-medium leading-relaxed whitespace-pre-line preview-success-desc" 
+                          style={{ whiteSpace: 'pre-line' }}
+                          dangerouslySetInnerHTML={{ __html: formatPostSubmit(selectedTemplate.post_submit_config.onscreen_decline_description || "We have recorded your decline RSVP response.") }}
+                        />
                       </div>
                     );
                   })()

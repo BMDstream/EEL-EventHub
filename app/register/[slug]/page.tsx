@@ -2,7 +2,7 @@
 
 import { useEffect, useState, Suspense } from "react";
 import { useParams, useSearchParams } from "next/navigation";
-import { Calendar, MapPin, CheckCircle2, Loader2, AlertCircle, ChevronDown, Users } from "lucide-react";
+import { Calendar, MapPin, CheckCircle2, Loader2, AlertCircle, ChevronDown, Users, XCircle } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 
 const THEME_DEFAULTS = {
@@ -201,6 +201,7 @@ function PublicRegistrationPageContent() {
   const [registeredPin, setRegisteredPin] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [capacityFull, setCapacityFull] = useState(false);
 
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
@@ -225,47 +226,76 @@ function PublicRegistrationPageContent() {
   };
 
   const getPostSubmitTitle = () => {
+    if (isAttending) {
+      const customTitle = event?.registration_form_template?.post_submit_config?.onscreen_title;
+      if (customTitle) return formatSuccessText(customTitle);
+    } else {
+      const customDeclineTitle = event?.registration_form_template?.post_submit_config?.onscreen_decline_title;
+      if (customDeclineTitle) return formatSuccessText(customDeclineTitle);
+    }
+
     if (isAttending && (event as any)?.confirmation_template_meta?.onscreen_title) {
       return formatSuccessText((event as any).confirmation_template_meta.onscreen_title);
     }
     if (!isAttending && (event as any)?.decline_template_meta?.onscreen_title) {
       return formatSuccessText((event as any).decline_template_meta.onscreen_title);
     }
-    const customTitle = event?.registration_form_template?.post_submit_config?.onscreen_title;
-    if (customTitle) return formatSuccessText(customTitle);
-    return statusMessage || (isAttending ? "Access Granted." : "Response Recorded.");
+    
+    return isAttending ? "YOUR REGISTRATION HAS BEEN CONFIRMED." : "RSVP RESPONSE RECORDED.";
   };
 
   const getPostSubmitDesc = () => {
+    if (capacityFull) {
+      const customDesc = event?.registration_form_template?.post_submit_config?.onscreen_capacity_description;
+      if (customDesc) return formatSuccessText(customDesc);
+      
+      const toTitleCase = (str: string) => {
+        return str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substring(1).toLowerCase());
+      };
+      const cleanEventTitle = toTitleCase((event?.title || "").replace(/<[^>]*>/g, ""));
+      return `We are sorry, the event <span class="${style.textMain} font-bold">${cleanEventTitle}</span> is currently at maximum capacity. We have recorded your email <span class="${isLightTheme ? 'client-text-primary' : 'client-text-accent'} font-bold">${formData.email || ""}</span> for waitlist priority.`;
+    }
+
+    if (isAttending) {
+      const customDesc = event?.registration_form_template?.post_submit_config?.onscreen_description;
+      if (customDesc) return formatSuccessText(customDesc);
+    } else {
+      const customDeclineDesc = event?.registration_form_template?.post_submit_config?.onscreen_decline_description;
+      if (customDeclineDesc) return formatSuccessText(customDeclineDesc);
+    }
+
     if (isAttending && (event as any)?.confirmation_template_meta?.onscreen_description) {
       return formatSuccessText((event as any).confirmation_template_meta.onscreen_description);
     }
     if (!isAttending && (event as any)?.decline_template_meta?.onscreen_description) {
       return formatSuccessText((event as any).decline_template_meta.onscreen_description);
     }
-    const customDesc = event?.registration_form_template?.post_submit_config?.onscreen_description;
-    if (customDesc) return formatSuccessText(customDesc);
-    return (
-      <>
-        Your registration for <span className={`${style.textMain} font-bold`}>{event?.title}</span> is {isAttending ? 'confirmed' : 'submitted'}.  
-        {isAttending 
-          ? ` Verification has been dispatched to `
-          : ` We've noted that you are unable to attend. Thank you for letting us know. `}
-        {isAttending && <span className={`${isLightTheme ? "client-text-primary" : "client-text-accent"} font-bold`}>{formData.email}</span>}
-      </>
-    );
+
+    const toTitleCase = (str: string) => {
+      return str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substring(1).toLowerCase());
+    };
+    const cleanEventTitle = toTitleCase((event?.title || "").replace(/<[^>]*>/g, ""));
+
+    const defaultText = isAttending
+      ? `Your registration for <span class="${style.textMain} font-bold">${cleanEventTitle}</span> is confirmed. Verification has been dispatched to <span class="${isLightTheme ? 'client-text-primary' : 'client-text-accent'} font-bold">${formData.email || ""}</span>.`
+      : `We've noted that you are unable to attend <span class="${style.textMain} font-bold">${cleanEventTitle}</span>. Thank you for letting us know.`;
+    return defaultText;
   };
 
   const getClearanceLabel = () => {
-    return event?.registration_form_template?.post_submit_config?.clearance_label || "Unique Clearance ID";
+    return event?.registration_form_template?.post_submit_config?.clearance_label || "unique access pass number";
   };
 
   const formatSuccessText = (templateText: string) => {
     if (!templateText) return "";
+    const toTitleCase = (str: string) => {
+      return str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substring(1).toLowerCase());
+    };
+    const cleanEventTitle = toTitleCase((event?.title || "").replace(/<[^>]*>/g, ""));
     const clearanceCode = registeredPin || (registeredId ? registeredId.substring(0, 8) : "");
     return templateText
       .replace(/\[Name\]/g, `${formData.first_name || ""} ${formData.last_name || ""}`.trim())
-      .replace(/\[Event Name\]/g, event?.title || "")
+      .replace(/\[Event Name\]/g, cleanEventTitle)
       .replace(/\[Email Address\]/g, formData.email || "")
       .replace(/\[Clearance ID\]/g, clearanceCode);
   };
@@ -282,24 +312,45 @@ function PublicRegistrationPageContent() {
     return res;
   };
 
-  const renderCustomFields = (showBefore?: boolean) => {
-    if (!event || !event.custom_fields_schema || event.custom_fields_schema.length === 0) return null;
+  const renderFormFields = (showBefore?: boolean) => {
+    const template = event?.registration_form_template;
+    let activeSchema = template?.layout_schema || event?.custom_fields_schema || [];
+    if (activeSchema.length === 0) {
+      activeSchema = [
+        { id: "field_first_name", key: "first_name", label: "First Name", placeholder: "e.g. Alan", type: "text", required: true, visible: true, showBeforeAttendance: true },
+        { id: "field_last_name", key: "last_name", label: "Last Name", placeholder: "e.g. Turing", type: "text", required: true, visible: true, showBeforeAttendance: true },
+        { id: "field_email", key: "email", label: "Secure Email Address", placeholder: "e.g. turing@bletchleypark.org.uk", type: "email", required: true, visible: true, showBeforeAttendance: true },
+        { id: "field_company", key: "company", label: "Organization / Company", placeholder: "e.g. GC&CS", type: "text", required: false, visible: event?.collect_company !== false, showBeforeAttendance: true }
+      ];
+    }
 
-    const isSectioned = "fields" in event.custom_fields_schema[0];
+    let flatFields: any[] = [];
+    const firstItem = activeSchema[0];
+    if (firstItem && "fields" in firstItem) {
+      for (const section of activeSchema) {
+        flatFields.push({
+          id: section.id,
+          key: section.id,
+          label: section.title,
+          type: "section_header",
+          visible: true
+        });
+        flatFields.push(...section.fields);
+      }
+    } else {
+      flatFields = activeSchema;
+    }
 
-    const filterFields = (fieldsList: any[]) => {
-      return fieldsList.filter(f => {
-        const matchesBefore = showBefore === true ? !!f.showBeforeAttendance : !f.showBeforeAttendance;
-        return matchesBefore;
-      });
-    };
+    const filtered = flatFields.filter(f => {
+      if (f.inactive || f.visible === false) return false;
+      const matchesBefore = showBefore === true ? !!f.showBeforeAttendance : !f.showBeforeAttendance;
+      return matchesBefore;
+    });
 
-    const renderField = (field: any) => {
-      if (field.inactive) return null;
-
+    return filtered.map((field) => {
       const isPartnerRelated = field.type === "partner_card" || 
-                               field.label?.toLowerCase().includes("partner") || 
-                               field.description?.toLowerCase().includes("partner");
+                              field.label?.toLowerCase().includes("partner") || 
+                              field.description?.toLowerCase().includes("partner");
       if (isUpdateFlow && isPartnerRelated) {
         return null;
       }
@@ -313,14 +364,32 @@ function PublicRegistrationPageContent() {
         }
       }
 
-      const optionColorClass = event.registration_form_template?.theme_config?.force_text_visibility 
-        ? "text-black bg-white" 
-        : isLightTheme ? "text-black" : "text-white";
+      if (field.type === "section_header") {
+        return (
+          <div key={field.id} className="pt-6 border-t border-white/5">
+            <h4 className={`${style.label} text-[#0f172a] dark:text-white uppercase tracking-wider font-black`}>
+              {formatLabel(field.label)}
+            </h4>
+          </div>
+        );
+      }
+
+      const isStandardField = ["first_name", "last_name", "email", "company"].includes(field.key);
+      const value = isStandardField ? formData[field.key as keyof typeof formData] : (customAnswers[field.key || field.id] || "");
+
+      const handleFieldChange = (val: any) => {
+        if (isStandardField) {
+          setFormData(prev => ({ ...prev, [field.key]: val }));
+        } else {
+          handleCustomChange(field.key || field.id, val);
+        }
+      };
 
       return (
         <div key={field.id} className="space-y-3">
-          <label className={`${style.label} client-question-label`}>
-            {formatLabel(field.label)} {field.required && <span className={`${isLightTheme ? "client-text-primary" : "client-text-accent"} ml-0.5 font-bold`}>*</span>}
+          <label className={`${style.label} client-question-label flex items-center flex-wrap gap-1`}>
+            <span dangerouslySetInnerHTML={{ __html: formatLabel(field.label) }} />
+            {field.required && <span className={`${isLightTheme ? "client-text-primary" : "client-text-accent"} ml-0.5 font-bold`}>*</span>}
           </label>
           
           {field.description && (
@@ -340,13 +409,13 @@ function PublicRegistrationPageContent() {
             </div>
           )}
           
-          {field.type === "text" && (
+          {(field.type === "text" || field.type === "email") && (
             <input
               required={isAttending !== false && field.required}
-              type="text"
-              placeholder="Enter your answer"
-              value={customAnswers[field.id] || ""}
-              onChange={(e) => handleCustomChange(field.id, e.target.value)}
+              type={field.type === "email" ? "email" : "text"}
+              placeholder={field.placeholder || "Enter your answer"}
+              value={value as string}
+              onChange={(e) => handleFieldChange(e.target.value)}
               className={style.input}
             />
           )}
@@ -356,11 +425,11 @@ function PublicRegistrationPageContent() {
               required={isAttending !== false && field.required}
               type="tel"
               inputMode="numeric"
-              placeholder="Numbers only"
-              value={customAnswers[field.id] || ""}
+              placeholder={field.placeholder || "Numbers only"}
+              value={value as string}
               onChange={(e) => {
                 const cleaned = e.target.value.replace(/[^0-9]/g, '');
-                handleCustomChange(field.id, cleaned);
+                handleFieldChange(cleaned);
               }}
               className={style.input}
             />
@@ -370,11 +439,11 @@ function PublicRegistrationPageContent() {
             <div className="relative">
               <select
                 required={isAttending !== false && field.required}
-                value={customAnswers[field.id] || ""}
-                onChange={(e) => handleCustomChange(field.id, e.target.value)}
+                value={value as string}
+                onChange={(e) => handleFieldChange(e.target.value)}
                 className={style.select}
               >
-                <option value="">Select Option</option>
+                <option value="">{field.placeholder || "Select Option"}</option>
                 {field.options?.map((opt: string) => (
                   <option key={opt} value={opt}>
                     {opt}
@@ -389,11 +458,11 @@ function PublicRegistrationPageContent() {
             <label className={`${style.checkbox} ${event.registration_form_template?.theme_config?.force_text_visibility ? "text-black" : ""}`}>
                <input 
                  type="checkbox" 
-                 checked={!!customAnswers[field.id]}
-                 onChange={(e) => handleCustomChange(field.id, e.target.checked)}
+                 checked={!!value}
+                 onChange={(e) => handleFieldChange(e.target.checked)}
                  className={style.checkboxInput || "w-6 h-6 rounded-lg bg-zinc-900 border-white/10 client-checkbox transition-all"} 
                />
-               <span className="select-none font-bold ml-3">{formatLabel(field.label)}</span>
+               <span className="select-none font-bold ml-3" dangerouslySetInnerHTML={{ __html: formatLabel(field.label) }} />
             </label>
           )}
 
@@ -418,10 +487,10 @@ function PublicRegistrationPageContent() {
                     required={isAttending !== false && field.required}
                     type="text"
                     placeholder="Partner's first name"
-                    value={customAnswers[field.id]?.first_name || ""}
+                    value={(value as any)?.first_name || ""}
                     onChange={(e) => {
-                      const prev = customAnswers[field.id] || {};
-                      handleCustomChange(field.id, { ...prev, first_name: e.target.value });
+                      const prev = (value as any) || {};
+                      handleFieldChange({ ...prev, first_name: e.target.value });
                     }}
                     className={style.input}
                   />
@@ -432,10 +501,10 @@ function PublicRegistrationPageContent() {
                     required={isAttending !== false && field.required}
                     type="text"
                     placeholder="Partner's last name"
-                    value={customAnswers[field.id]?.last_name || ""}
+                    value={(value as any)?.last_name || ""}
                     onChange={(e) => {
-                      const prev = customAnswers[field.id] || {};
-                      handleCustomChange(field.id, { ...prev, last_name: e.target.value });
+                      const prev = (value as any) || {};
+                      handleFieldChange({ ...prev, last_name: e.target.value });
                     }}
                     className={style.input}
                   />
@@ -448,10 +517,10 @@ function PublicRegistrationPageContent() {
                   required={isAttending !== false && field.required}
                   type="email"
                   placeholder="partner@company.com"
-                  value={customAnswers[field.id]?.email || ""}
+                  value={(value as any)?.email || ""}
                   onChange={(e) => {
-                    const prev = customAnswers[field.id] || {};
-                    handleCustomChange(field.id, { ...prev, email: e.target.value });
+                    const prev = (value as any) || {};
+                    handleFieldChange({ ...prev, email: e.target.value });
                   }}
                   className={style.input}
                 />
@@ -460,51 +529,7 @@ function PublicRegistrationPageContent() {
           )}
         </div>
       );
-    };
-
-    if (isSectioned) {
-      const filteredSections = (event.custom_fields_schema as any[]).map(sec => {
-        const secFields = filterFields(sec.fields || []);
-        if (secFields.length === 0) return null;
-        return {
-          ...sec,
-          fields: secFields
-        };
-      }).filter(Boolean);
-
-      if (filteredSections.length === 0) return null;
-
-      return (
-        <div className="space-y-10">
-          {filteredSections.map((sec: any) => (
-            <div key={sec.id} className="space-y-6">
-              <div className="pt-6 border-t border-slate-100/10">
-                <p className={`text-[10px] font-black uppercase tracking-[0.3em] ${isLightTheme ? "client-text-primary" : "client-text-accent"}`}>
-                  {formatLabel(sec.title)}
-                </p>
-              </div>
-              <div className="space-y-6">
-                {(sec.fields || []).map((f: any) => renderField(f))}
-              </div>
-            </div>
-          ))}
-        </div>
-      );
-    }
-
-    const filteredFlatFields = filterFields(event.custom_fields_schema);
-    if (filteredFlatFields.length === 0) return null;
-
-    return (
-      <div className="space-y-8">
-        {!showBefore && (
-          <div className="pt-6">
-            <p className={`text-[10px] font-black uppercase tracking-[0.3em] ${isLightTheme ? "client-text-primary" : "client-text-accent"}`}>Additional Details</p>
-          </div>
-        )}
-        {filteredFlatFields.map((f: any) => renderField(f))}
-      </div>
-    );
+    });
   };
 
   // Pre-fill fields from search params (staged partner completion)
@@ -586,6 +611,12 @@ function PublicRegistrationPageContent() {
       })
       .then((data) => {
         setEvent(data);
+        if (data.capacity && data.registrations_count !== undefined && data.registrations_count >= data.capacity) {
+          if (!isUpdateFlow) {
+            setCapacityFull(true);
+            setRegisteredId("capacity-full-waitlist");
+          }
+        }
         setLoading(false);
       })
       .catch((err) => {
@@ -593,7 +624,7 @@ function PublicRegistrationPageContent() {
         setError("Event not found or has expired.");
         setLoading(false);
       });
-  }, [slug]);
+  }, [slug, isUpdateFlow]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -683,7 +714,12 @@ function PublicRegistrationPageContent() {
         setStatusMessage(data.message);
       } else {
         const errData = await response.json().catch(() => ({}));
-        setSubmitError(errData.detail || "Registration failed. Please check your details and try again.");
+        if (errData.detail === "capacity_full") {
+          setCapacityFull(true);
+          setRegisteredId("capacity-full-waitlist");
+        } else {
+          setSubmitError(errData.detail || "Registration failed. Please check your details and try again.");
+        }
       }
     } catch (err) {
       console.error(err);
@@ -776,9 +812,9 @@ function PublicRegistrationPageContent() {
       successQR: "bg-white/5 border border-white/10 rounded-2xl p-6 mb-8",
       textMain: "text-white",
       textMuted: "text-zinc-400",
-      centeredCard: "bg-zinc-900/60 border border-white/5 rounded-[3rem] p-8 sm:p-12 md:p-16 max-w-2xl w-full backdrop-blur-md shadow-2xl text-white relative z-10 my-12",
+      centeredCard: "bg-zinc-900/60 border border-white/5 rounded-[3rem] p-8 sm:p-12 md:p-16 max-w-3xl w-full backdrop-blur-md shadow-2xl text-white relative z-10 my-12",
       headerBlock: "bg-zinc-950 text-white p-8 sm:p-12 md:p-16 border-b border-white/10 relative overflow-hidden",
-      bodyBlock: "flex-1 py-16 px-6 max-w-xl mx-auto w-full",
+      bodyBlock: "flex-1 py-16 px-6 max-w-3xl mx-auto w-full",
       disclaimerContainer: "space-y-4 p-6 rounded-[1.5rem] border bg-black/30 border-white/10 text-white mt-6",
       disclaimerAcceptLabel: "flex items-center gap-4 cursor-pointer group p-4 rounded-xl border border-white/5 hover:border-white/10 transition-all bg-black/20 text-white"
     },
@@ -824,8 +860,8 @@ function PublicRegistrationPageContent() {
       rsvpBorder: "py-6 border-y border-slate-200/60 space-y-4",
       divider: "border-t border-slate-200/60",
       btnSubmit: "w-full client-bg-primary hover:opacity-90 disabled:bg-slate-200 text-white font-black py-6 rounded-[2rem] shadow-xl transition-all flex items-center justify-center gap-4 uppercase tracking-[0.3em] text-xs",
-      btnAttending: (active: boolean) => `px-6 py-4 rounded-[1.2rem] font-bold transition-all border-2 \${active ? 'client-border-accent client-bg-accent text-black' : 'border-slate-200 bg-white text-slate-400 hover:border-slate-300'}`,
-      btnNotAttending: (active: boolean) => `px-6 py-4 rounded-[1.2rem] font-bold transition-all border-2 \${active ? 'border-red-500 bg-red-500 text-white' : 'border-slate-200 bg-white text-slate-400 hover:border-slate-300'}`,
+      btnAttending: (active: boolean) => `px-6 py-4 rounded-[1.2rem] font-bold transition-all border-2 ${active ? 'client-border-accent client-bg-accent text-black' : 'border-slate-200 bg-white text-slate-400 hover:border-slate-300'}`,
+      btnNotAttending: (active: boolean) => `px-6 py-4 rounded-[1.2rem] font-bold transition-all border-2 ${active ? 'border-red-500 bg-red-500 text-white' : 'border-slate-200 bg-white text-slate-400 hover:border-slate-300'}`,
       loader: "animate-spin text-slate-800",
       loadingBg: "min-h-screen flex items-center justify-center bg-slate-50",
       errorBg: "min-h-screen flex flex-col items-center justify-center bg-slate-50 p-6",
@@ -834,9 +870,9 @@ function PublicRegistrationPageContent() {
       successQR: "bg-slate-50 border border-slate-100 rounded-2xl p-6 mb-8",
       textMain: "text-slate-900",
       textMuted: "text-slate-500",
-      centeredCard: "bg-white border border-slate-200/80 rounded-[3rem] p-8 sm:p-12 md:p-16 max-w-2xl w-full shadow-2xl text-slate-900 relative z-10 my-12",
+      centeredCard: "bg-white border border-slate-200/80 rounded-[3rem] p-8 sm:p-12 md:p-16 max-w-3xl w-full shadow-2xl text-slate-900 relative z-10 my-12",
       headerBlock: "bg-white border-b border-slate-200 p-8 sm:p-12 md:p-16 relative overflow-hidden",
-      bodyBlock: "flex-1 py-16 px-6 max-w-xl mx-auto w-full",
+      bodyBlock: "flex-1 py-16 px-6 max-w-3xl mx-auto w-full",
       disclaimerContainer: "space-y-4 p-6 rounded-[1.5rem] border bg-slate-100 border-slate-200 text-slate-900 mt-6",
       disclaimerAcceptLabel: "flex items-center gap-4 cursor-pointer group p-4 rounded-xl border border-slate-200 hover:border-slate-400 bg-white text-slate-800"
     },
@@ -882,8 +918,8 @@ function PublicRegistrationPageContent() {
       rsvpBorder: "py-6 border-y border-white/10 space-y-4",
       divider: "border-t border-white/10",
       btnSubmit: "w-full bg-gradient-to-r from-indigo-500 to-indigo-600 hover:brightness-110 disabled:bg-zinc-800 text-white font-black py-6 rounded-[2rem] shadow-lg shadow-indigo-500/10 transition-all flex items-center justify-center gap-4 uppercase tracking-[0.3em] text-xs",
-      btnAttending: (active: boolean) => `px-6 py-4 rounded-[1.2rem] font-bold transition-all border-2 \${active ? 'border-indigo-400 bg-indigo-500/30 text-white shadow-inner' : 'border-white/10 bg-transparent text-indigo-200/50 hover:border-white/20'}`,
-      btnNotAttending: (active: boolean) => `px-6 py-4 rounded-[1.2rem] font-bold transition-all border-2 \${active ? 'border-red-500/80 bg-red-500/30 text-white' : 'border-white/10 bg-transparent text-indigo-200/50 hover:border-white/20'}`,
+      btnAttending: (active: boolean) => `px-6 py-4 rounded-[1.2rem] font-bold transition-all border-2 ${active ? 'border-indigo-400 bg-indigo-500/30 text-white shadow-inner' : 'border-white/10 bg-transparent text-indigo-200/50 hover:border-white/20'}`,
+      btnNotAttending: (active: boolean) => `px-6 py-4 rounded-[1.2rem] font-bold transition-all border-2 ${active ? 'border-red-500/80 bg-red-500/30 text-white' : 'border-white/10 bg-transparent text-indigo-200/50 hover:border-white/20'}`,
       loader: "animate-spin text-indigo-400",
       loadingBg: "min-h-screen flex items-center justify-center bg-slate-950",
       errorBg: "min-h-screen flex flex-col items-center justify-center bg-slate-950 p-6",
@@ -892,9 +928,9 @@ function PublicRegistrationPageContent() {
       successQR: "bg-white/5 border border-white/10 rounded-2xl p-6 mb-8",
       textMain: "text-white",
       textMuted: "text-indigo-200/50",
-      centeredCard: "bg-white/5 border border-white/10 rounded-[3rem] p-8 sm:p-12 md:p-16 max-w-2xl w-full backdrop-blur-md shadow-2xl text-white relative z-10 my-12",
+      centeredCard: "bg-white/5 border border-white/10 rounded-[3rem] p-8 sm:p-12 md:p-16 max-w-3xl w-full backdrop-blur-md shadow-2xl text-white relative z-10 my-12",
       headerBlock: "bg-indigo-950 p-8 sm:p-12 md:p-16 border-b border-white/10 relative overflow-hidden",
-      bodyBlock: "flex-1 py-16 px-6 max-w-xl mx-auto w-full",
+      bodyBlock: "flex-1 py-16 px-6 max-w-3xl mx-auto w-full",
       disclaimerContainer: "space-y-4 p-6 rounded-[1.5rem] border bg-white/5 backdrop-blur-sm border-white/10 text-white mt-6",
       disclaimerAcceptLabel: "flex items-center gap-4 cursor-pointer group p-4 rounded-xl border border-white/10 hover:border-white/25 bg-white/5 backdrop-blur-sm text-white"
     },
@@ -940,8 +976,8 @@ function PublicRegistrationPageContent() {
       rsvpBorder: "py-6 border-y-[3px] border-black space-y-4 font-mono",
       divider: "border-t-[3px] border-black",
       btnSubmit: "w-full bg-[#facc15] hover:bg-[#eab308] disabled:bg-zinc-300 text-black font-black py-6 border-[3px] border-black rounded-none shadow-[5px_5px_0px_rgba(0,0,0,1)] active:translate-x-1 active:translate-y-1 active:shadow-[1px_1px_0px_rgba(0,0,0,1)] transition-all flex items-center justify-center gap-4 uppercase tracking-[0.3em] text-xs font-mono",
-      btnAttending: (active: boolean) => `px-6 py-4 rounded-none font-black border-[3px] border-black transition-all font-mono \${active ? 'bg-[#facc15] text-black shadow-[2px_2px_0px_rgba(0,0,0,1)] translate-x-0.5 translate-y-0.5' : 'bg-white text-zinc-500 hover:bg-slate-50 shadow-[4px_4px_0px_rgba(0,0,0,1)]'}`,
-      btnNotAttending: (active: boolean) => `px-6 py-4 rounded-none font-black border-[3px] border-black transition-all font-mono \${active ? 'bg-red-500 text-white shadow-[2px_2px_0px_rgba(0,0,0,1)] translate-x-0.5 translate-y-0.5' : 'bg-white text-zinc-500 hover:bg-slate-50 shadow-[4px_4px_0px_rgba(0,0,0,1)]'}`,
+      btnAttending: (active: boolean) => `px-6 py-4 rounded-none font-black border-[3px] border-black transition-all font-mono ${active ? 'bg-[#facc15] text-black shadow-[2px_2px_0px_rgba(0,0,0,1)] translate-x-0.5 translate-y-0.5' : 'bg-white text-zinc-500 hover:bg-slate-50 shadow-[4px_4px_0px_rgba(0,0,0,1)]'}`,
+      btnNotAttending: (active: boolean) => `px-6 py-4 rounded-none font-black border-[3px] border-black transition-all font-mono ${active ? 'bg-red-500 text-white shadow-[2px_2px_0px_rgba(0,0,0,1)] translate-x-0.5 translate-y-0.5' : 'bg-white text-zinc-500 hover:bg-slate-50 shadow-[4px_4px_0px_rgba(0,0,0,1)]'}`,
       loader: "animate-spin text-black",
       loadingBg: "min-h-screen flex items-center justify-center bg-[#f8f4eb]",
       errorBg: "min-h-screen flex flex-col items-center justify-center bg-[#f8f4eb] p-6 border-[6px] border-black",
@@ -950,9 +986,9 @@ function PublicRegistrationPageContent() {
       successQR: "bg-white border-[3px] border-black rounded-none p-6 mb-8 shadow-[4px_4px_0px_rgba(0,0,0,1)]",
       textMain: "text-black",
       textMuted: "text-black/70 font-mono",
-      centeredCard: "bg-[#fffbf0]/95 border-[3px] border-black rounded-none p-8 sm:p-12 md:p-16 max-w-2xl w-full shadow-[8px_8px_0px_rgba(0,0,0,1)] text-black relative z-10 my-12 font-mono",
+      centeredCard: "bg-[#fffbf0]/95 border-[3px] border-black rounded-none p-8 sm:p-12 md:p-16 max-w-3xl w-full shadow-[8px_8px_0px_rgba(0,0,0,1)] text-black relative z-10 my-12 font-mono",
       headerBlock: "bg-[#fffbf0] border-b-[3px] border-black p-8 sm:p-12 md:p-16 relative overflow-hidden font-mono",
-      bodyBlock: "flex-1 py-16 px-6 max-w-xl mx-auto w-full",
+      bodyBlock: "flex-1 py-16 px-6 max-w-3xl mx-auto w-full",
       disclaimerContainer: "space-y-4 p-6 rounded-none border-[3px] border-black bg-[#fffbf0] text-black shadow-[4px_4px_0px_rgba(0,0,0,1)] mt-6 font-mono",
       disclaimerAcceptLabel: "flex items-center gap-4 cursor-pointer group p-4 rounded-none border-[3px] border-black hover:bg-[#facc15] bg-white text-black shadow-[4px_4px_0px_rgba(0,0,0,1)] font-mono"
     },
@@ -998,8 +1034,8 @@ function PublicRegistrationPageContent() {
       rsvpBorder: "py-5 border-y border-slate-900 space-y-4 font-serif",
       divider: "border-t border-slate-900",
       btnSubmit: "w-full bg-gradient-to-r from-[#d4af37] via-[#f3e5ab] to-[#d4af37] hover:brightness-110 disabled:bg-zinc-800 text-black font-serif italic py-5 rounded-lg shadow-lg shadow-[#d4af37]/10 transition-all flex items-center justify-center gap-4 text-xs font-black",
-      btnAttending: (active: boolean) => `px-6 py-4 rounded-lg font-bold font-serif transition-all border-2 \${active ? 'border-[#d4af37] bg-[#d4af37]/10 text-white shadow-inner' : 'border-slate-900 bg-transparent text-slate-500 hover:border-slate-800'}`,
-      btnNotAttending: (active: boolean) => `px-6 py-4 rounded-lg font-bold font-serif transition-all border-2 \${active ? 'border-red-500/80 bg-red-500/10 text-white' : 'border-slate-900 bg-transparent text-slate-500 hover:border-slate-800'}`,
+      btnAttending: (active: boolean) => `px-6 py-4 rounded-lg font-bold font-serif transition-all border-2 ${active ? 'border-[#d4af37] bg-[#d4af37]/10 text-white shadow-inner' : 'border-slate-900 bg-transparent text-slate-500 hover:border-slate-800'}`,
+      btnNotAttending: (active: boolean) => `px-6 py-4 rounded-lg font-bold font-serif transition-all border-2 ${active ? 'border-red-500/80 bg-red-500/10 text-white' : 'border-slate-900 bg-transparent text-slate-500 hover:border-slate-800'}`,
       loader: "animate-spin text-[#d4af37]",
       loadingBg: "min-h-screen flex items-center justify-center bg-slate-950",
       errorBg: "min-h-screen flex flex-col items-center justify-center bg-slate-950 p-6",
@@ -1008,9 +1044,9 @@ function PublicRegistrationPageContent() {
       successQR: "bg-slate-950 border border-slate-900 rounded-xl p-5 mb-6",
       textMain: "text-white",
       textMuted: "text-slate-400 font-serif",
-      centeredCard: "bg-[#030712]/80 border border-[#d4af37]/20 rounded-[2.5rem] p-8 sm:p-12 md:p-16 max-w-2xl w-full backdrop-blur-md shadow-[0_0_50px_rgba(212,175,55,0.05)] text-white relative z-10 my-12 font-serif",
+      centeredCard: "bg-[#030712]/80 border border-[#d4af37]/20 rounded-[2.5rem] p-8 sm:p-12 md:p-16 max-w-3xl w-full backdrop-blur-md shadow-[0_0_50px_rgba(212,175,55,0.05)] text-white relative z-10 my-12 font-serif",
       headerBlock: "bg-[#030712]/90 border-b border-[#d4af37]/20 p-8 sm:p-12 md:p-16 relative overflow-hidden font-serif",
-      bodyBlock: "flex-1 py-16 px-6 max-w-xl mx-auto w-full",
+      bodyBlock: "flex-1 py-16 px-6 max-w-3xl mx-auto w-full",
       disclaimerContainer: "space-y-4 p-6 rounded-2xl border border-amber-500/20 bg-slate-950/80 text-slate-200 mt-6 font-serif",
       disclaimerAcceptLabel: "flex items-center gap-4 cursor-pointer group p-4 rounded-xl border border-slate-900 bg-slate-950/60 text-white hover:border-amber-500/20 font-serif"
     },
@@ -1056,8 +1092,8 @@ function PublicRegistrationPageContent() {
       rsvpBorder: "py-6 border-y border-[#00ffff]/10 space-y-4",
       divider: "border-t border-[#00ffff]/10",
       btnSubmit: "w-full bg-gradient-to-r from-[#ff007f] to-[#b900ff] hover:brightness-110 disabled:bg-zinc-800 text-white font-black py-6 rounded-[2rem] shadow-lg shadow-[#ff007f]/20 transition-all flex items-center justify-center gap-4 uppercase tracking-[0.3em] text-xs",
-      btnAttending: (active: boolean) => `px-6 py-4 rounded-[1.2rem] font-bold transition-all border-2 \${active ? 'border-[#00ffff] bg-[#00ffff]/10 text-[#00ffff] shadow-[0_0_10px_rgba(0,255,255,0.2)]' : 'border-white/5 bg-transparent text-[#00ffff]/40 hover:border-[#00ffff]/20'}`,
-      btnNotAttending: (active: boolean) => `px-6 py-4 rounded-[1.2rem] font-bold transition-all border-2 \${active ? 'border-red-500 bg-red-500/20 text-red-500 shadow-[0_0_10px_rgba(239,68,68,0.2)]' : 'border-white/5 bg-transparent text-[#00ffff]/40 hover:border-[#00ffff]/20'}`,
+      btnAttending: (active: boolean) => `px-6 py-4 rounded-[1.2rem] font-bold transition-all border-2 ${active ? 'border-[#00ffff] bg-[#00ffff]/10 text-[#00ffff] shadow-[0_0_10px_rgba(0,255,255,0.2)]' : 'border-white/5 bg-transparent text-[#00ffff]/40 hover:border-[#00ffff]/20'}`,
+      btnNotAttending: (active: boolean) => `px-6 py-4 rounded-[1.2rem] font-bold transition-all border-2 ${active ? 'border-red-500 bg-red-500/20 text-red-500 shadow-[0_0_10px_rgba(239,68,68,0.2)]' : 'border-white/5 bg-transparent text-[#00ffff]/40 hover:border-[#00ffff]/20'}`,
       loader: "animate-spin text-[#ff007f]",
       loadingBg: "min-h-screen flex items-center justify-center bg-black",
       errorBg: "min-h-screen flex flex-col items-center justify-center bg-black p-6",
@@ -1066,9 +1102,9 @@ function PublicRegistrationPageContent() {
       successQR: "bg-black border border-[#00ffff]/20 rounded-2xl p-6 mb-8",
       textMain: "text-white",
       textMuted: "text-[#00ffff]/60",
-      centeredCard: "bg-[#0a0518]/90 border border-[#ff007f]/30 rounded-[3rem] p-8 sm:p-12 md:p-16 max-w-2xl w-full backdrop-blur-md shadow-[0_0_30px_rgba(255,0,127,0.15)] text-white relative z-10 my-12 font-outfit",
+      centeredCard: "bg-[#0a0518]/90 border border-[#ff007f]/30 rounded-[3rem] p-8 sm:p-12 md:p-16 max-w-3xl w-full backdrop-blur-md shadow-[0_0_30px_rgba(255,0,127,0.15)] text-white relative z-10 my-12 font-outfit",
       headerBlock: "bg-[#0a0518] border-b border-[#ff007f]/30 p-8 sm:p-12 md:p-16 relative overflow-hidden font-outfit",
-      bodyBlock: "flex-1 py-16 px-6 max-w-xl mx-auto w-full",
+      bodyBlock: "flex-1 py-16 px-6 max-w-3xl mx-auto w-full",
       disclaimerContainer: "space-y-4 p-6 rounded-[1.5rem] border border-[#ff007f]/20 bg-[#070114]/60 text-white mt-6",
       disclaimerAcceptLabel: "flex items-center gap-4 cursor-pointer group p-4 rounded-xl border border-[#00ffff]/20 bg-[#0c0320]/40 text-[#00ffff] hover:border-[#ff007f]/30"
     },
@@ -1114,8 +1150,8 @@ function PublicRegistrationPageContent() {
       rsvpBorder: "py-5 border-y border-[#2d4a39]/10 space-y-4",
       divider: "border-t border-[#2d4a39]/10",
       btnSubmit: "w-full bg-[#1c2e24] hover:bg-[#2d4a39] disabled:bg-[#f2efe9] text-white font-bold py-5 rounded-[1.5rem_0.25rem_1.5rem_0.25rem] shadow-lg transition-all flex items-center justify-center gap-4 uppercase tracking-[0.25em] text-xs",
-      btnAttending: (active: boolean) => `px-6 py-3 rounded-[0.8rem_0.2rem_0.8rem_0.2rem] font-bold transition-all border-2 \${active ? 'border-[#1c2e24] bg-[#1c2e24] text-white' : 'border-[#2d4a39]/20 bg-white text-[#5c7a67] hover:border-[#2d4a39]/45'}`,
-      btnNotAttending: (active: boolean) => `px-6 py-3 rounded-[0.8rem_0.2rem_0.8rem_0.2rem] font-bold transition-all border-2 \${active ? 'border-red-600 bg-red-600 text-white' : 'border-[#2d4a39]/20 bg-white text-[#5c7a67] hover:border-[#2d4a39]/45'}`,
+      btnAttending: (active: boolean) => `px-6 py-3 rounded-[0.8rem_0.2rem_0.8rem_0.2rem] font-bold transition-all border-2 ${active ? 'border-[#1c2e24] bg-[#1c2e24] text-white' : 'border-[#2d4a39]/20 bg-white text-[#5c7a67] hover:border-[#2d4a39]/45'}`,
+      btnNotAttending: (active: boolean) => `px-6 py-3 rounded-[0.8rem_0.2rem_0.8rem_0.2rem] font-bold transition-all border-2 ${active ? 'border-red-600 bg-red-600 text-white' : 'border-[#2d4a39]/20 bg-white text-[#5c7a67] hover:border-[#2d4a39]/45'}`,
       loader: "animate-spin text-[#1c2e24]",
       loadingBg: "min-h-screen flex items-center justify-center bg-[#fcfbf9]",
       errorBg: "min-h-screen flex flex-col items-center justify-center bg-[#fcfbf9] p-6",
@@ -1124,9 +1160,9 @@ function PublicRegistrationPageContent() {
       successQR: "bg-[#fcfbf9] border border-[#2d4a39]/10 rounded-xl p-5 mb-6 shadow-sm",
       textMain: "text-[#1c2e24]",
       textMuted: "text-[#5c7a67]",
-      centeredCard: "bg-white/80 border border-[#2d4a39]/10 rounded-[2rem] p-8 sm:p-12 md:p-16 max-w-2xl w-full backdrop-blur-md shadow-2xl text-[#1c2e24] relative z-10 my-12 font-outfit",
+      centeredCard: "bg-white/80 border border-[#2d4a39]/10 rounded-[2rem] p-8 sm:p-12 md:p-16 max-w-3xl w-full backdrop-blur-md shadow-2xl text-[#1c2e24] relative z-10 my-12 font-outfit",
       headerBlock: "bg-[#1c2e24] text-[#fcfbf9] p-8 sm:p-12 md:p-16 border-b-4 border-[#2d4a39] relative overflow-hidden font-outfit",
-      bodyBlock: "flex-1 py-16 px-6 max-w-xl mx-auto w-full",
+      bodyBlock: "flex-1 py-16 px-6 max-w-3xl mx-auto w-full",
       disclaimerContainer: "space-y-4 p-6 rounded-[1.5rem_0.25rem_1.5rem_0.25rem] border border-[#2d4a39]/25 bg-[#1c2e24]/5 text-[#1c2e24] mt-6",
       disclaimerAcceptLabel: "flex items-center gap-4 cursor-pointer group p-4 rounded-[1.5rem_0.25rem_1.5rem_0.25rem] border border-[#2d4a39]/25 bg-white text-[#1c2e24] hover:border-[#1c2e24]"
     },
@@ -1172,8 +1208,8 @@ function PublicRegistrationPageContent() {
       rsvpBorder: "py-5 border-y border-white/10 space-y-4",
       divider: "border-t border-white/10",
       btnSubmit: "w-full bg-gradient-to-r from-teal-400 to-emerald-500 hover:brightness-110 disabled:bg-zinc-800 text-slate-900 font-bold py-5 rounded-xl shadow-lg shadow-teal-500/10 transition-all flex items-center justify-center gap-4 uppercase tracking-[0.25em] text-xs font-black font-outfit",
-      btnAttending: (active: boolean) => `px-6 py-4 rounded-xl font-bold transition-all border-2 \${active ? 'border-teal-400 bg-teal-500/20 text-white shadow-inner' : 'border-white/10 bg-transparent text-teal-200/50 hover:border-white/20'}`,
-      btnNotAttending: (active: boolean) => `px-6 py-4 rounded-xl font-bold transition-all border-2 \${active ? 'border-red-500/80 bg-red-500/20 text-white' : 'border-white/10 bg-transparent text-teal-200/50 hover:border-white/20'}`,
+      btnAttending: (active: boolean) => `px-6 py-4 rounded-xl font-bold transition-all border-2 ${active ? 'border-teal-400 bg-teal-500/20 text-white shadow-inner' : 'border-white/10 bg-transparent text-teal-200/50 hover:border-white/20'}`,
+      btnNotAttending: (active: boolean) => `px-6 py-4 rounded-xl font-bold transition-all border-2 ${active ? 'border-red-500/80 bg-red-500/20 text-white' : 'border-white/10 bg-transparent text-teal-200/50 hover:border-white/20'}`,
       loader: "animate-spin text-teal-400",
       loadingBg: "min-h-screen flex items-center justify-center bg-[#070b19]",
       errorBg: "min-h-screen flex flex-col items-center justify-center bg-[#070b19] p-6",
@@ -1182,9 +1218,9 @@ function PublicRegistrationPageContent() {
       successQR: "bg-white/5 border border-white/10 rounded-xl p-5 mb-6 shadow-sm",
       textMain: "text-white",
       textMuted: "text-teal-200/50",
-      centeredCard: "bg-white/5 border border-white/10 rounded-[2rem] p-8 sm:p-12 md:p-16 max-w-2xl w-full backdrop-blur-md shadow-2xl shadow-emerald-500/5 text-white relative z-10 my-12 font-outfit",
+      centeredCard: "bg-white/5 border border-white/10 rounded-[2rem] p-8 sm:p-12 md:p-16 max-w-3xl w-full backdrop-blur-md shadow-2xl shadow-emerald-500/5 text-white relative z-10 my-12 font-outfit",
       headerBlock: "bg-[#070b19]/90 p-8 sm:p-12 md:p-16 border-b border-white/10 relative overflow-hidden font-outfit",
-      bodyBlock: "flex-1 py-16 px-6 max-w-xl mx-auto w-full",
+      bodyBlock: "flex-1 py-16 px-6 max-w-3xl mx-auto w-full",
       disclaimerContainer: "space-y-4 p-6 rounded-xl border border-white/10 bg-white/5 backdrop-blur-md text-white mt-6",
       disclaimerAcceptLabel: "flex items-center gap-4 cursor-pointer group p-4 rounded-xl border border-white/5 bg-white/5 hover:border-teal-400/30 text-teal-200"
     },
@@ -1230,8 +1266,8 @@ function PublicRegistrationPageContent() {
       rsvpBorder: "py-5 border-y border-white/10 space-y-4",
       divider: "border-t border-white/10",
       btnSubmit: "w-full bg-[#f08a5d] hover:bg-[#f08a5d]/90 disabled:bg-zinc-800 text-black font-bold py-5 rounded-xl shadow-lg shadow-[#f08a5d]/10 transition-all flex items-center justify-center gap-4 uppercase tracking-[0.25em] text-xs font-black font-outfit",
-      btnAttending: (active: boolean) => `px-6 py-4 rounded-xl font-bold transition-all border-2 \${active ? 'border-[#f08a5d] bg-[#f08a5d]/20 text-white shadow-inner' : 'border-white/10 bg-transparent text-rose-200/50 hover:border-white/20'}`,
-      btnNotAttending: (active: boolean) => `px-6 py-4 rounded-xl font-bold transition-all border-2 \${active ? 'border-red-500/80 bg-red-500/20 text-white' : 'border-white/10 bg-transparent text-rose-200/50 hover:border-white/20'}`,
+      btnAttending: (active: boolean) => `px-6 py-4 rounded-xl font-bold transition-all border-2 ${active ? 'border-[#f08a5d] bg-[#f08a5d]/20 text-white shadow-inner' : 'border-white/10 bg-transparent text-rose-200/50 hover:border-white/20'}`,
+      btnNotAttending: (active: boolean) => `px-6 py-4 rounded-xl font-bold transition-all border-2 ${active ? 'border-red-500/80 bg-red-500/20 text-white' : 'border-white/10 bg-transparent text-rose-200/50 hover:border-white/20'}`,
       loader: "animate-spin text-[#f08a5d]",
       loadingBg: "min-h-screen flex items-center justify-center bg-[#3a0d1e]",
       errorBg: "min-h-screen flex flex-col items-center justify-center bg-[#3a0d1e] p-6",
@@ -1240,9 +1276,9 @@ function PublicRegistrationPageContent() {
       successQR: "bg-black/25 border border-white/10 rounded-xl p-5 mb-6 shadow-sm",
       textMain: "text-white",
       textMuted: "text-rose-200/50",
-      centeredCard: "bg-black/35 border border-white/10 rounded-[2rem] p-8 sm:p-12 md:p-16 max-w-2xl w-full backdrop-blur-md shadow-2xl text-white relative z-10 my-12 font-outfit",
+      centeredCard: "bg-black/35 border border-white/10 rounded-[2rem] p-8 sm:p-12 md:p-16 max-w-3xl w-full backdrop-blur-md shadow-2xl text-white relative z-10 my-12 font-outfit",
       headerBlock: "bg-[#3a0d1e]/85 backdrop-blur-md text-white p-8 sm:p-12 md:p-16 border-b-4 border-[#6d1a36] relative overflow-hidden font-outfit",
-      bodyBlock: "flex-1 py-16 px-6 max-w-xl mx-auto w-full",
+      bodyBlock: "flex-1 py-16 px-6 max-w-3xl mx-auto w-full",
       disclaimerContainer: "space-y-4 p-6 rounded-xl border border-white/10 bg-black/30 text-white mt-6",
       disclaimerAcceptLabel: "flex items-center gap-4 cursor-pointer group p-4 rounded-xl border border-white/5 bg-black/20 text-[#rose-200] hover:border-[#f08a5d]/30"
     },
@@ -1288,8 +1324,8 @@ function PublicRegistrationPageContent() {
       rsvpBorder: "py-6 border-y border-[#39ff14]/20 space-y-4 font-mono",
       divider: "border-t border-[#39ff14]/20",
       btnSubmit: "w-full bg-[#39ff14] hover:bg-black hover:text-[#39ff14] border-2 border-[#39ff14] disabled:bg-zinc-800 disabled:text-[#128a07] text-black font-black py-6 rounded-none shadow-[0_0_15px_rgba(57,255,20,0.2)] transition-all flex items-center justify-center gap-4 uppercase tracking-[0.3em] text-xs font-mono",
-      btnAttending: (active: boolean) => `px-6 py-4 rounded-none font-bold transition-all border-2 font-mono \${active ? 'border-[#39ff14] bg-[#39ff14]/20 text-[#39ff14] shadow-[0_0_10px_rgba(57,255,20,0.3)]' : 'border-[#39ff14]/20 bg-transparent text-[#39ff14]/40 hover:border-[#39ff14]/40'}`,
-      btnNotAttending: (active: boolean) => `px-6 py-4 rounded-none font-bold transition-all border-2 font-mono \${active ? 'border-red-500 bg-red-550/20 text-red-500 shadow-[0_0_10px_rgba(239,68,68,0.2)]' : 'border-[#39ff14]/20 bg-transparent text-[#39ff14]/40 hover:border-[#39ff14]/40'}`,
+      btnAttending: (active: boolean) => `px-6 py-4 rounded-none font-bold transition-all border-2 font-mono ${active ? 'border-[#39ff14] bg-[#39ff14]/20 text-[#39ff14] shadow-[0_0_10px_rgba(57,255,20,0.3)]' : 'border-[#39ff14]/20 bg-transparent text-[#39ff14]/40 hover:border-[#39ff14]/40'}`,
+      btnNotAttending: (active: boolean) => `px-6 py-4 rounded-none font-bold transition-all border-2 font-mono ${active ? 'border-red-500 bg-red-550/20 text-red-500 shadow-[0_0_10px_rgba(239,68,68,0.2)]' : 'border-[#39ff14]/20 bg-transparent text-[#39ff14]/40 hover:border-[#39ff14]/40'}`,
       loader: "animate-spin text-[#39ff14]",
       loadingBg: "min-h-screen flex items-center justify-center bg-black",
       errorBg: "min-h-screen flex flex-col items-center justify-center bg-black p-6 border-2 border-[#39ff14]",
@@ -1298,9 +1334,9 @@ function PublicRegistrationPageContent() {
       successQR: "bg-black border border-[#39ff14]/30 rounded-none p-6 mb-8",
       textMain: "text-[#39ff14]",
       textMuted: "text-[#39ff14]/60 font-mono",
-      centeredCard: "bg-black/90 border border-[#39ff14]/30 rounded-none p-8 sm:p-12 md:p-16 max-w-2xl w-full shadow-[0_0_20px_rgba(57,255,20,0.15)] text-[#39ff14] relative z-10 my-12 font-mono",
+      centeredCard: "bg-black/90 border border-[#39ff14]/30 rounded-none p-8 sm:p-12 md:p-16 max-w-3xl w-full shadow-[0_0_20px_rgba(57,255,20,0.15)] text-[#39ff14] relative z-10 my-12 font-mono",
       headerBlock: "bg-black border-b border-[#39ff14]/30 p-8 sm:p-12 md:p-16 relative overflow-hidden font-mono",
-      bodyBlock: "flex-1 py-16 px-6 max-w-xl mx-auto w-full",
+      bodyBlock: "flex-1 py-16 px-6 max-w-3xl mx-auto w-full",
       disclaimerContainer: "space-y-4 p-6 rounded-none border border-[#39ff14]/20 bg-[#070114]/60 text-[#39ff14] mt-6 font-mono",
       disclaimerAcceptLabel: "flex items-center gap-4 cursor-pointer group p-4 rounded-none border border-[#39ff14]/20 bg-black text-[#39ff14] hover:border-[#39ff14] font-mono"
     },
@@ -1346,8 +1382,8 @@ function PublicRegistrationPageContent() {
       rsvpBorder: "py-5 border-y border-slate-200 space-y-4",
       divider: "border-t border-slate-200",
       btnSubmit: "w-full bg-slate-900 hover:bg-black disabled:bg-slate-200 text-white font-bold py-5 rounded-none transition-all uppercase tracking-widest text-xs font-outfit",
-      btnAttending: (active: boolean) => `px-6 py-4 rounded-none font-bold border transition-all \${active ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-55'}`,
-      btnNotAttending: (active: boolean) => `px-6 py-4 rounded-none font-bold border transition-all \${active ? 'border-red-500 bg-red-500 text-white' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-55'}`,
+      btnAttending: (active: boolean) => `px-6 py-4 rounded-none font-bold border transition-all ${active ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-55'}`,
+      btnNotAttending: (active: boolean) => `px-6 py-4 rounded-none font-bold border transition-all ${active ? 'border-red-500 bg-red-500 text-white' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-55'}`,
       loader: "animate-spin text-slate-900",
       loadingBg: "min-h-screen flex items-center justify-center bg-slate-100",
       errorBg: "min-h-screen flex flex-col items-center justify-center bg-slate-100 p-6",
@@ -1356,9 +1392,9 @@ function PublicRegistrationPageContent() {
       successQR: "bg-slate-50 border border-slate-200 rounded-xl p-5 mb-6 shadow-sm",
       textMain: "text-slate-900",
       textMuted: "text-slate-500",
-      centeredCard: "bg-white border border-slate-200 rounded-none p-8 sm:p-12 md:p-16 max-w-2xl w-full shadow-2xl text-slate-900 relative z-10 my-12 font-outfit",
+      centeredCard: "bg-white border border-slate-200 rounded-none p-8 sm:p-12 md:p-16 max-w-3xl w-full shadow-2xl text-slate-900 relative z-10 my-12 font-outfit",
       headerBlock: "bg-slate-900 text-white p-8 sm:p-12 md:p-16 border-b border-slate-200 relative overflow-hidden font-outfit",
-      bodyBlock: "flex-1 py-16 px-6 max-w-xl mx-auto w-full",
+      bodyBlock: "flex-1 py-16 px-6 max-w-3xl mx-auto w-full",
       disclaimerContainer: "space-y-4 p-6 rounded-none border border-slate-200 bg-slate-50 text-slate-900 mt-6",
       disclaimerAcceptLabel: "flex items-center gap-4 cursor-pointer group p-4 rounded-none border border-slate-200 bg-white text-slate-800 hover:border-slate-400"
     },
@@ -1404,8 +1440,8 @@ function PublicRegistrationPageContent() {
       rsvpBorder: "py-5 border-y border-slate-200 space-y-4 font-sans",
       divider: "border-t border-slate-200",
       btnSubmit: "w-full bg-[#1c1917] hover:bg-black disabled:bg-slate-200 text-white font-serif italic py-5 rounded-none transition-all tracking-wide text-sm",
-      btnAttending: (active: boolean) => `px-6 py-3 border-b-2 transition-all font-serif \${active ? 'border-[#1c1917] text-slate-900 font-bold bg-[#f4f1ea]' : 'border-transparent text-slate-400 hover:text-slate-950'}`,
-      btnNotAttending: (active: boolean) => `px-6 py-3 border-b-2 transition-all font-serif \${active ? 'border-red-500 text-red-500 font-bold bg-[#f4f1ea]' : 'border-transparent text-slate-400 hover:text-slate-955'}`,
+      btnAttending: (active: boolean) => `px-6 py-3 border-b-2 transition-all font-serif ${active ? 'border-[#1c1917] text-slate-900 font-bold bg-[#f4f1ea]' : 'border-transparent text-slate-400 hover:text-slate-950'}`,
+      btnNotAttending: (active: boolean) => `px-6 py-3 border-b-2 transition-all font-serif ${active ? 'border-red-500 text-red-500 font-bold bg-[#f4f1ea]' : 'border-transparent text-slate-400 hover:text-slate-955'}`,
       loader: "animate-spin text-slate-800",
       loadingBg: "min-h-screen flex items-center justify-center bg-[#faf9f6]",
       errorBg: "min-h-screen flex flex-col items-center justify-center bg-[#faf9f6] p-6",
@@ -1414,9 +1450,9 @@ function PublicRegistrationPageContent() {
       successQR: "bg-[#f4f1ea] border border-slate-200 rounded-none p-5 mb-6",
       textMain: "text-slate-900",
       textMuted: "text-slate-500 font-sans",
-      centeredCard: "bg-[#faf9f6] border border-stone-250 rounded-none p-8 sm:p-12 md:p-16 max-w-2xl w-full shadow-sm text-stone-900 relative z-10 my-12 font-serif",
+      centeredCard: "bg-[#faf9f6] border border-stone-250 rounded-none p-8 sm:p-12 md:p-16 max-w-3xl w-full shadow-sm text-stone-900 relative z-10 my-12 font-serif",
       headerBlock: "bg-[#f4f1ea] text-[#4a3f35] p-8 sm:p-12 md:p-16 border-b border-stone-200 relative overflow-hidden font-serif",
-      bodyBlock: "flex-1 py-16 px-6 max-w-xl mx-auto w-full",
+      bodyBlock: "flex-1 py-16 px-6 max-w-3xl mx-auto w-full",
       disclaimerContainer: "space-y-4 p-6 rounded-none border border-stone-250 bg-[#f4f1ea] text-[#4a3f35] mt-6 font-serif",
       disclaimerAcceptLabel: "flex items-center gap-4 cursor-pointer group p-4 rounded-none border border-stone-200 bg-transparent text-stone-900 hover:border-stone-400 font-serif"
     },
@@ -1462,8 +1498,8 @@ function PublicRegistrationPageContent() {
       rsvpBorder: "py-6 border-y border-zinc-850 space-y-4",
       divider: "border-t border-zinc-850",
       btnSubmit: "w-full bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-800 text-white font-bold py-5 rounded-lg transition-all shadow-lg uppercase tracking-widest text-xs font-outfit",
-      btnAttending: (active: boolean) => `px-6 py-4 rounded-lg font-bold border-2 transition-all \${active ? 'border-blue-500 bg-blue-500/20 text-white shadow-inner' : 'border-zinc-800 bg-transparent text-zinc-500 hover:border-zinc-700'}`,
-      btnNotAttending: (active: boolean) => `px-6 py-4 rounded-lg font-bold border-2 transition-all \${active ? 'border-red-500 bg-red-500/10 text-red-500' : 'border-zinc-800 bg-transparent text-zinc-500 hover:border-zinc-700'}`,
+      btnAttending: (active: boolean) => `px-6 py-4 rounded-lg font-bold border-2 transition-all ${active ? 'border-blue-500 bg-blue-500/20 text-white shadow-inner' : 'border-zinc-800 bg-transparent text-zinc-500 hover:border-zinc-700'}`,
+      btnNotAttending: (active: boolean) => `px-6 py-4 rounded-lg font-bold border-2 transition-all ${active ? 'border-red-500 bg-red-500/10 text-red-500' : 'border-zinc-800 bg-transparent text-zinc-500 hover:border-zinc-700'}`,
       loader: "animate-spin text-[#2563eb]",
       loadingBg: "min-h-screen flex items-center justify-center bg-[#0d0e12]",
       errorBg: "min-h-screen flex flex-col items-center justify-center bg-[#0d0e12] p-6",
@@ -1472,9 +1508,9 @@ function PublicRegistrationPageContent() {
       successQR: "bg-slate-950 border border-zinc-800 rounded-xl p-5 mb-6",
       textMain: "text-white",
       textMuted: "text-zinc-400",
-      centeredCard: "bg-[#13151a] border border-zinc-800/80 rounded-3xl p-8 sm:p-12 md:p-16 max-w-2xl w-full shadow-2xl text-white relative z-10 my-12 font-outfit",
+      centeredCard: "bg-[#13151a] border border-zinc-800/80 rounded-3xl p-8 sm:p-12 md:p-16 max-w-3xl w-full shadow-2xl text-white relative z-10 my-12 font-outfit",
       headerBlock: "bg-[#13151a] border-b border-zinc-800/50 p-8 sm:p-12 md:p-16 relative overflow-hidden font-outfit",
-      bodyBlock: "flex-1 py-16 px-6 max-w-xl mx-auto w-full",
+      bodyBlock: "flex-1 py-16 px-6 max-w-3xl mx-auto w-full",
       disclaimerContainer: "space-y-4 p-6 rounded-xl border border-zinc-850 bg-[#13151a] text-zinc-300 mt-6",
       disclaimerAcceptLabel: "flex items-center gap-4 cursor-pointer group p-4 rounded-xl border border-zinc-800 bg-[#16181f]/40 text-white hover:border-blue-500/30"
     },
@@ -1520,8 +1556,8 @@ function PublicRegistrationPageContent() {
       rsvpBorder: "py-5 border-y border-[#e3dac9] space-y-4 font-sans",
       divider: "border-t border-[#e3dac9]",
       btnSubmit: "w-full bg-[#c5a059] hover:bg-[#b08b45] disabled:bg-[#f2efe9] text-white font-bold py-5 rounded-full shadow-lg transition-all uppercase tracking-widest text-xs font-sans",
-      btnAttending: (active: boolean) => `px-6 py-4 rounded-full font-bold font-sans transition-all border-2 \${active ? 'border-[#c5a059] bg-[#c5a059]/10 text-[#c5a059]' : 'border-[#e3dac9] bg-transparent text-stone-400 hover:border-[#c5a059]'}`,
-      btnNotAttending: (active: boolean) => `px-6 py-4 rounded-full font-bold font-sans transition-all border-2 \${active ? 'border-red-500 bg-red-500/10 text-red-550' : 'border-[#e3dac9] bg-transparent text-stone-400 hover:border-red-500'}`,
+      btnAttending: (active: boolean) => `px-6 py-4 rounded-full font-bold font-sans transition-all border-2 ${active ? 'border-[#c5a059] bg-[#c5a059]/10 text-[#c5a059]' : 'border-[#e3dac9] bg-transparent text-stone-400 hover:border-[#c5a059]'}`,
+      btnNotAttending: (active: boolean) => `px-6 py-4 rounded-full font-bold font-sans transition-all border-2 ${active ? 'border-red-500 bg-red-500/10 text-red-550' : 'border-[#e3dac9] bg-transparent text-stone-400 hover:border-red-500'}`,
       loader: "animate-spin text-[#c5a059]",
       loadingBg: "min-h-screen flex items-center justify-center bg-[#faf6f0]",
       errorBg: "min-h-screen flex flex-col items-center justify-center bg-[#faf6f0] p-6",
@@ -1530,9 +1566,9 @@ function PublicRegistrationPageContent() {
       successQR: "bg-white border border-[#e3dac9] rounded-xl p-5 mb-6 shadow-inner",
       textMain: "text-[#4a3f35]",
       textMuted: "text-stone-400 font-sans",
-      centeredCard: "bg-[#fdfbf7] border border-[#e3dac9] rounded-[2.5rem] p-8 sm:p-12 md:p-16 max-w-2xl w-full backdrop-blur-md shadow-2xl text-[#4a3f35] relative z-10 my-12 font-serif",
+      centeredCard: "bg-[#fdfbf7] border border-[#e3dac9] rounded-[2.5rem] p-8 sm:p-12 md:p-16 max-w-3xl w-full backdrop-blur-md shadow-2xl text-[#4a3f35] relative z-10 my-12 font-serif",
       headerBlock: "bg-[#faf6f0] border-b border-[#e3dac9] p-8 sm:p-12 md:p-16 relative overflow-hidden font-serif",
-      bodyBlock: "flex-1 py-16 px-6 max-w-xl mx-auto w-full",
+      bodyBlock: "flex-1 py-16 px-6 max-w-3xl mx-auto w-full",
       disclaimerContainer: "space-y-4 p-6 rounded-[2rem] border border-[#e3dac9] bg-white text-[#4a3f35] mt-6 font-serif",
       disclaimerAcceptLabel: "flex items-center gap-4 cursor-pointer group p-4 rounded-full border border-[#e3dac9] bg-white text-[#4a3f35] hover:border-[#c5a059]/40 font-serif"
     },
@@ -1578,8 +1614,8 @@ function PublicRegistrationPageContent() {
       rsvpBorder: "py-5 border-y border-slate-800 space-y-4 font-mono",
       divider: "border-t border-slate-800",
       btnSubmit: "w-full bg-slate-850 hover:bg-slate-700 disabled:bg-zinc-800 text-slate-100 font-bold py-6 rounded-none transition-all shadow-xl uppercase tracking-widest text-xs font-mono",
-      btnAttending: (active: boolean) => `px-6 py-4 rounded-none font-bold transition-all border-2 font-mono \${active ? 'border-slate-500 bg-slate-500/20 text-white' : 'border-slate-800 bg-transparent text-slate-500 hover:border-slate-700'}`,
-      btnNotAttending: (active: boolean) => `px-6 py-4 rounded-none font-bold transition-all border-2 font-mono \${active ? 'border-red-500 bg-red-500/20 text-red-500' : 'border-slate-800 bg-transparent text-slate-500 hover:border-slate-700'}`,
+      btnAttending: (active: boolean) => `px-6 py-4 rounded-none font-bold transition-all border-2 font-mono ${active ? 'border-slate-500 bg-slate-500/20 text-white' : 'border-slate-800 bg-transparent text-slate-500 hover:border-slate-700'}`,
+      btnNotAttending: (active: boolean) => `px-6 py-4 rounded-none font-bold transition-all border-2 font-mono ${active ? 'border-red-500 bg-red-500/20 text-red-500' : 'border-slate-800 bg-transparent text-slate-500 hover:border-slate-700'}`,
       loader: "animate-spin text-slate-450",
       loadingBg: "min-h-screen flex items-center justify-center bg-slate-950",
       errorBg: "min-h-screen flex flex-col items-center justify-center bg-slate-950 p-6",
@@ -1588,9 +1624,9 @@ function PublicRegistrationPageContent() {
       successQR: "bg-slate-950 border border-slate-800 rounded-xl p-5 mb-6",
       textMain: "text-white",
       textMuted: "text-slate-400 font-mono",
-      centeredCard: "bg-slate-900/30 border border-slate-800/55 rounded-none p-8 sm:p-12 md:p-16 max-w-2xl w-full backdrop-blur-md shadow-2xl text-slate-100 relative z-10 my-12 font-mono",
+      centeredCard: "bg-slate-900/30 border border-slate-800/55 rounded-none p-8 sm:p-12 md:p-16 max-w-3xl w-full backdrop-blur-md shadow-2xl text-slate-100 relative z-10 my-12 font-mono",
       headerBlock: "bg-slate-900/60 p-8 sm:p-12 md:p-16 border-b border-slate-800 relative overflow-hidden font-mono",
-      bodyBlock: "flex-1 py-16 px-6 max-w-xl mx-auto w-full",
+      bodyBlock: "flex-1 py-16 px-6 max-w-3xl mx-auto w-full",
       disclaimerContainer: "space-y-4 p-6 rounded-none border border-slate-800 bg-slate-950/40 text-slate-350 mt-6 font-mono",
       disclaimerAcceptLabel: "flex items-center gap-4 cursor-pointer group p-4 rounded-none border border-slate-800 bg-slate-950/20 text-slate-300 hover:border-slate-600 font-mono"
     }
@@ -1628,8 +1664,11 @@ function PublicRegistrationPageContent() {
   // Sub-render blocks for dynamic layouts
   const eventInfo = event ? (
     <div className="relative z-10 my-auto py-12 lg:py-24">
-      <h1 className={style.title}>{event.title}</h1>
-      <p className={`text-xl mb-10 lg:mb-20 max-w-lg leading-relaxed font-medium ${style.textMuted}`}>{event.description}</p>
+      <h1 className={style.title} dangerouslySetInnerHTML={{ __html: event.title || "" }} />
+      <div 
+        className={`text-xl mb-10 lg:mb-20 max-w-lg leading-relaxed font-medium ${style.textMuted}`}
+        dangerouslySetInnerHTML={{ __html: event.description || "" }}
+      />
       <div className="space-y-6 lg:space-y-10">
         <div className="flex items-center gap-8 group">
           <div className={style.card}>
@@ -1669,95 +1708,45 @@ function PublicRegistrationPageContent() {
 
   const customFormBg = event?.registration_form_template?.theme_config?.form_bg_color;
 
+  const rawHeading = event?.registration_form_template?.theme_config?.form_heading;
+  const formHeadingText = rawHeading !== undefined && rawHeading !== null ? rawHeading : (event?.registration_form_template?.name || "");
+  const isHeadingEmpty = !formHeadingText || formHeadingText.replace(/<[^>]*>/g, "").trim() === "";
+
   const registrationForm = event ? (
-    <div className={`${style.bodyBlock || "max-w-md w-full mx-auto relative z-10 py-12"} client-form-text-custom`} style={customFormBg ? { backgroundColor: customFormBg, padding: '2rem', borderRadius: '2.5rem' } : undefined}>
+    <div className={`${style.bodyBlock || "max-w-md w-full mx-auto relative z-10 py-12"} my-auto client-form-text-custom`} style={customFormBg ? { backgroundColor: customFormBg, padding: '2rem', borderRadius: '2.5rem' } : undefined}>
       {formBannerUrl && (
-        <div className="mb-8 rounded-2xl overflow-hidden border border-slate-200/10 dark:border-white/5 shadow-lg">
-          <img src={formBannerUrl} alt="Event Banner" className="w-full h-auto object-cover max-h-80 md:max-h-96" />
+        <div className={`rounded-2xl overflow-hidden border border-slate-200/10 dark:border-white/5 shadow-lg transition-all ${isHeadingEmpty ? "mb-6 scale-102 max-h-[32rem]" : "mb-8 max-h-80 md:max-h-96"}`}>
+          <img src={formBannerUrl} alt="Event Banner" className="w-full h-auto object-cover" />
         </div>
       )}
-      <div className="mb-12">
-        <h2 className={`${style.heading} client-event-heading`}>
-          {event?.registration_form_template 
-            ? (event.registration_form_template.theme_config?.form_heading !== undefined && event.registration_form_template.theme_config?.form_heading !== null
-                ? formatLabel(event.registration_form_template.theme_config.form_heading)
-                : formatLabel(event.registration_form_template.name))
-            : "Register."}
-        </h2>
-        <p className={style.subHeading}>
-          {event?.registration_form_template 
-            ? (event.registration_form_template.theme_config?.form_subheading !== undefined && event.registration_form_template.theme_config?.form_subheading !== null
-                ? event.registration_form_template.theme_config.form_subheading
-                : (event.registration_form_template.description || "Secure your credentials for this exclusive engagement."))
-            : "Secure your credentials for this exclusive engagement."}
-        </p>
+      <div className={isHeadingEmpty ? "mb-6" : "mb-12"}>
+        {!isHeadingEmpty && (
+          <h2 
+            className={`${style.heading} client-event-heading`} 
+            dangerouslySetInnerHTML={{
+              __html: formHeadingText
+            }}
+          />
+        )}
+        <div 
+          className={
+            event?.registration_form_template?.theme_config?.form_subheading && /<[a-z][\s\S]*>/i.test(event.registration_form_template.theme_config.form_subheading)
+              ? style.subHeading.replace(/\buppercase\b/g, "").replace(/\btracking-wide(st|r)?\b/g, "")
+              : style.subHeading
+          }
+          dangerouslySetInnerHTML={{
+            __html: event?.registration_form_template 
+              ? (event.registration_form_template.theme_config?.form_subheading !== undefined && event.registration_form_template.theme_config?.form_subheading !== null && event.registration_form_template.theme_config?.form_subheading !== ""
+                  ? event.registration_form_template.theme_config.form_subheading
+                  : (event.registration_form_template.description || "Secure your credentials for this exclusive engagement."))
+              : "Secure your credentials for this exclusive engagement."
+          }}
+        />
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-8">
         <div className="space-y-6">
-          <div className="space-y-2">
-            <label className={`${style.label} client-question-label`}>
-              First Name <span className={`${isLightTheme ? "client-text-primary" : "client-text-accent"} ml-0.5 font-bold`}>*</span>
-            </label>
-            <input
-              required
-              type="text"
-              name="first_name"
-              value={formData.first_name}
-              onChange={handleChange}
-              placeholder="e.g. Alan"
-              className={style.input}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label className={`${style.label} client-question-label`}>
-              Last Name <span className={`${isLightTheme ? "client-text-primary" : "client-text-accent"} ml-0.5 font-bold`}>*</span>
-            </label>
-            <input
-              required
-              type="text"
-              name="last_name"
-              value={formData.last_name}
-              onChange={handleChange}
-              placeholder="e.g. Turing"
-              className={style.input}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label className={`${style.label} client-question-label`}>
-              Secure Email Address <span className={`${isLightTheme ? "client-text-primary" : "client-text-accent"} ml-0.5 font-bold`}>*</span>
-            </label>
-            <input
-              required
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              placeholder="e.g. turing@bletchleypark.org.uk"
-              className={style.input}
-            />
-          </div>
-
-          {event.collect_company !== false && (
-            <div className="space-y-2">
-              <label className={`${style.label} client-question-label`}>
-                Organization / Company {event.company_required && <span className={`${isLightTheme ? "client-text-primary" : "client-text-accent"} ml-0.5 font-bold`}>*</span>}
-              </label>
-              <input
-                required={isAttending !== false && event.company_required}
-                type="text"
-                name="company"
-                value={formData.company}
-                onChange={handleChange}
-                placeholder="e.g. Government Code & Cypher School"
-                className={style.input}
-              />
-            </div>
-          )}
-
-          {renderCustomFields(true)}
+          {renderFormFields(true)}
 
           <div className={style.rsvpBorder}>
             <label className={`${style.label} client-question-label`}>
@@ -1784,7 +1773,7 @@ function PublicRegistrationPageContent() {
           </div>
         </div>
 
-        {isAttending && renderCustomFields()}
+        {isAttending && renderFormFields(false)}
 
         {/* Disclaimer & Indemnity */}
         {isAttending && event.disclaimer_enabled && event.disclaimer_text && (
@@ -1892,7 +1881,22 @@ function PublicRegistrationPageContent() {
           font-weight: ${hStyles.weight} !important;
           font-style: ${hStyles.style} !important;
         }
-        .client-question-label {
+        .client-form-text-custom h1 strong,
+        .client-form-text-custom h1 b,
+        .client-form-text-custom h2 strong,
+        .client-form-text-custom h2 b,
+        .client-form-text-custom h3 strong,
+        .client-form-text-custom h3 b,
+        .client-event-heading strong,
+        .client-event-heading b,
+        .client-event-heading *[style*="font-weight"],
+        .client-form-text-custom h1 *[style*="font-weight"] {
+          font-weight: 900 !important;
+        }
+        .client-question-label,
+        .client-question-label *,
+        .client-form-text-custom .client-question-label,
+        .client-form-text-custom .client-question-label * {
           font-size: ${questionFontSize ? `${questionFontSize}px` : '14px'} !important;
           font-weight: ${qStyles.weight} !important;
           font-style: ${qStyles.style} !important;
@@ -1905,8 +1909,14 @@ function PublicRegistrationPageContent() {
           font-weight: ${sDescStyles.weight} !important;
           font-style: ${sDescStyles.style} !important;
         }
+        .client-form-text-custom .client-attendee-pass-text {
+          color: #ffffff !important;
+        }
         @media (max-width: 640px) {
-          .client-question-label {
+          .client-question-label,
+          .client-question-label *,
+          .client-form-text-custom .client-question-label,
+          .client-form-text-custom .client-question-label * {
             font-size: ${questionFontSize ? `${Math.max(16, Number(questionFontSize))}px` : '16px'} !important;
           }
         }
@@ -1934,8 +1944,8 @@ function PublicRegistrationPageContent() {
           border-color: ${eventAccentColor} !important;
         }
         ${eventTextColor ? `
-          .client-form-text-custom,
-          .client-form-text-custom *:not(option) {
+          .client-form-text-custom:not([style*="color"]),
+          .client-form-text-custom *:not(option):not([style*="color"]) {
             color: ${eventTextColor} !important;
           }
           .client-form-text-custom input::placeholder {
@@ -1961,68 +1971,147 @@ function PublicRegistrationPageContent() {
         </div>
       ) : registeredId ? (
         <div className={style.successBg}>
-          <div className={`${style.successCard} client-form-text-custom`} style={customFormBg ? { backgroundColor: customFormBg } : undefined}>
-            {(theme === "cyber_dark" || theme === "midnight_executive" || theme === "logistics_glass") && <div className="absolute top-0 left-0 w-full h-1 client-bg-accent"></div>}
-            <div className={`${
-              theme === "cyber_dark" || theme === "midnight_executive" || theme === "logistics_glass"
-                ? "client-bg-accent animate-bounce" 
-                : theme === "minimal_light" || theme === "corporate_mono" || theme === "nordic_alabaster" || theme === "champagne_lounge"
-                  ? "client-bg-primary animate-pulse" 
-                  : theme === "brutalist_retro" 
-                    ? "bg-[#facc15] border-[3px] border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]" 
-                    : "bg-gradient-to-r from-yellow-500 to-indigo-500"
-            } w-24 h-24 rounded-[2rem] flex items-center justify-center mx-auto mb-10 shadow-2xl`}>
-              <CheckCircle2 className={isLightTheme && theme !== "brutalist_retro" ? "text-white" : "text-black"} size={56} />
-            </div>
-            {(() => {
-              const config = {
-                theme: event?.registration_form_template?.theme_config || {}
-              };
-              return isAttending ? (
-                <div className="flex justify-center mb-6">
-                  <div 
-                    className="px-6 py-2 rounded-full inline-flex items-center justify-center animate-in fade-in duration-500"
-                    style={{ backgroundColor: config.theme.attendeePassBgColor || '#000000' }}
-                  >
-                    <span className="text-[11px] font-black uppercase tracking-[0.4em] text-white">
-                      Attendee Pass
-                    </span>
-                  </div>
-                </div>
-              ) : null;
-            })()}
-            <h1 className={`text-4xl mb-6 tracking-tight client-success-title ${style.textMain}`}>
-              {getPostSubmitTitle()}
-            </h1>
-            <p className={`${style.textMuted} mb-12 leading-relaxed whitespace-pre-line client-success-desc`} style={{ whiteSpace: 'pre-line' }}>
-              {getPostSubmitDesc()}
-            </p>
-            {isAttending && (
+          <div 
+                className="p-8 sm:p-12 rounded-[2.5rem] text-center space-y-6 shadow-2xl border border-slate-100/50 max-w-xl w-full client-form-text-custom relative overflow-hidden"
+            style={{ backgroundColor: event?.registration_form_template?.theme_config?.feedback_bg_color || "#f1f5f9" }}
+          >
+            {capacityFull ? (
               <>
-                <div className={style.successQR}>
-                  <div className="flex justify-center mb-4">
-                    <div className="bg-white p-2 rounded-xl">
+                {/* Capacity Icon */}
+                {event?.registration_form_template?.post_submit_config?.capacity_icon_url ? (
+                  <div className={`w-16 h-16 rounded-2xl overflow-hidden mx-auto shadow-md flex items-center justify-center ${event.registration_form_template.post_submit_config.capacity_icon_style === "cover" ? "p-0" : "p-2"}`}>
+                    <img 
+                      src={event.registration_form_template.post_submit_config.capacity_icon_url} 
+                      alt="Logo" 
+                      className={`w-full h-full ${
+                        event.registration_form_template.post_submit_config.capacity_icon_style === "cover" 
+                          ? "object-cover" 
+                          : event.registration_form_template.post_submit_config.capacity_icon_style === "fill" 
+                            ? "object-fill" 
+                            : "object-contain"
+                      }`} 
+                    />
+                  </div>
+                ) : (
+                  <div className="w-16 h-16 rounded-2xl bg-rose-500 flex items-center justify-center mx-auto shadow-md">
+                    <AlertCircle size={36} className="text-white animate-pulse" />
+                  </div>
+                )}
+
+                {/* Title */}
+                <h1 
+                  className={`text-2xl font-bold text-[#0f172a] tracking-tight client-success-title`}
+                  dangerouslySetInnerHTML={{ __html: getPostSubmitTitle() }}
+                />
+
+                {/* Description */}
+                <div 
+                  className="text-slate-500 text-xs font-medium leading-relaxed whitespace-pre-line client-success-desc"
+                  style={{ whiteSpace: 'pre-line' }}
+                  dangerouslySetInnerHTML={{ __html: getPostSubmitDesc() }}
+                />
+              </>
+            ) : isAttending ? (
+              <>
+                {/* Success Icon */}
+                {event?.registration_form_template?.post_submit_config?.success_icon_url ? (
+                  <div className={`w-16 h-16 rounded-2xl overflow-hidden mx-auto shadow-md flex items-center justify-center ${event.registration_form_template.post_submit_config.success_icon_style === "cover" ? "p-0" : "p-2"}`}>
+                    <img 
+                      src={event.registration_form_template.post_submit_config.success_icon_url} 
+                      alt="Logo" 
+                      className={`w-full h-full ${
+                        event.registration_form_template.post_submit_config.success_icon_style === "cover" 
+                          ? "object-cover" 
+                          : event.registration_form_template.post_submit_config.success_icon_style === "fill" 
+                            ? "object-fill" 
+                            : "object-contain"
+                      }`} 
+                    />
+                  </div>
+                ) : (
+                  <div className="w-16 h-16 rounded-2xl bg-green-500 flex items-center justify-center mx-auto shadow-md">
+                    <CheckCircle2 size={36} className="text-white animate-bounce" />
+                  </div>
+                )}
+
+                {/* Title */}
+                <h1 
+                  className={`text-2xl font-bold text-[#0f172a] tracking-tight client-success-title`}
+                  dangerouslySetInnerHTML={{ __html: getPostSubmitTitle() }}
+                />
+
+                {/* Description */}
+                <div 
+                  className="text-slate-500 text-xs font-medium leading-relaxed whitespace-pre-line client-success-desc"
+                  style={{ whiteSpace: 'pre-line' }}
+                  dangerouslySetInnerHTML={{ __html: getPostSubmitDesc() }}
+                />
+
+                {/* QR Code and Clearance section */}
+                <div className="pt-6 border-t border-slate-200/50 space-y-4">
+                  <div className="flex justify-center my-4">
+                    <div className="bg-white p-2.5 rounded-xl border border-slate-200/50 shadow-sm">
                       <QRCodeSVG 
                         value={registeredPin || registeredId || ""} 
-                        size={160}
+                        size={150}
                         level="M"
                       />
                     </div>
                   </div>
-                  <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 mb-1">{getClearanceLabel()}</p>
-                  <p className={`text-3xl font-black ${isLightTheme ? "client-text-primary" : "client-text-accent"} tracking-tighter italic font-bricolage`}>
-                    {registeredPin || (registeredId ? registeredId.substring(0, 8) : "")}
-                  </p>
+                  <div className="space-y-1">
+                    <p className="text-[8px] uppercase tracking-[0.25em] text-slate-400 font-bold">
+                      {getClearanceLabel()}
+                    </p>
+                    <p className="text-2xl font-black text-slate-800 italic tracking-tighter">
+                      {registeredPin || (registeredId ? registeredId.substring(0, 8) : "")}
+                    </p>
+                  </div>
                 </div>
-                <p className="text-xs font-bold text-slate-500 mt-4 uppercase tracking-widest text-center">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">
                   Please present this QR code OR number at the registration desk.
                 </p>
+              </>
+            ) : (
+              <>
+                {/* Decline Icon */}
+                {event?.registration_form_template?.post_submit_config?.decline_icon_url ? (
+                  <div className={`w-16 h-16 rounded-2xl overflow-hidden mx-auto shadow-md flex items-center justify-center ${event.registration_form_template.post_submit_config.decline_icon_style === "cover" ? "p-0" : "p-2"}`}>
+                    <img 
+                      src={event.registration_form_template.post_submit_config.decline_icon_url} 
+                      alt="Logo" 
+                      className={`w-full h-full ${
+                        event.registration_form_template.post_submit_config.decline_icon_style === "cover" 
+                          ? "object-cover" 
+                          : event.registration_form_template.post_submit_config.decline_icon_style === "fill" 
+                            ? "object-fill" 
+                            : "object-contain"
+                      }`} 
+                    />
+                  </div>
+                ) : (
+                  <div className="w-16 h-16 rounded-2xl bg-red-500 flex items-center justify-center mx-auto shadow-md">
+                    <XCircle size={36} className="text-white animate-pulse" />
+                  </div>
+                )}
+
+                {/* Title */}
+                <h1 
+                  className={`text-2xl font-bold text-[#0f172a] tracking-tight client-success-title`}
+                  dangerouslySetInnerHTML={{ __html: getPostSubmitTitle() }}
+                />
+
+                {/* Description */}
+                <div 
+                  className="text-slate-500 text-xs font-medium leading-relaxed whitespace-pre-line client-success-desc"
+                  style={{ whiteSpace: 'pre-line' }}
+                  dangerouslySetInnerHTML={{ __html: getPostSubmitDesc() }}
+                />
               </>
             )}
           </div>
         </div>
       ) : (
-        <div className={style.wrapper}>
+        <div className={style.wrapper.replace(/\boverflow-hidden\b/g, "overflow-x-hidden")}>
           {/* Background Images / Overlay rendering */}
           {style.leftBgImage}
           <div className={style.leftOverlay}></div>
@@ -2035,11 +2124,15 @@ function PublicRegistrationPageContent() {
               style={{
                 background: event.registration_form_template.theme_config.background_pattern === "cyber_dark" 
                   ? "radial-gradient(circle, #facc15 1px, transparent 1px) 0 0/16px 16px" 
-                  : event.registration_form_template.theme_config.background_pattern === "midnight_executive"
-                    ? "linear-gradient(135deg, #1d4ed8 0%, #1e1b4b 100%)"
-                    : event.registration_form_template.theme_config.background_pattern === "brutalist_retro"
-                      ? "repeating-linear-gradient(45deg, #facc15, #facc15 10px, #000 10px, #000 20px)"
-                      : "none"
+                  : event.registration_form_template.theme_config.background_pattern === "minimal_light" 
+                    ? "radial-gradient(circle, #0f172a 1px, transparent 1px) 0 0/16px 16px" 
+                    : event.registration_form_template.theme_config.background_pattern === "glassmorphism" 
+                      ? "radial-gradient(circle, rgba(255,255,255,0.15) 1px, transparent 1px) 0 0/20px 20px" 
+                      : event.registration_form_template.theme_config.background_pattern === "brutalist_retro" 
+                        ? "linear-gradient(to right, rgba(0,0,0,0.1) 1px, transparent 1px) 0 0/20px 20px, linear-gradient(to bottom, rgba(0,0,0,0.1) 1px, transparent 1px) 0 0/20px 20px" 
+                        : event.registration_form_template.theme_config.background_pattern === "midnight_executive" 
+                          ? "linear-gradient(217deg, rgba(13,148,136,.1), rgba(13,148,136,0) 70.71%), linear-gradient(127deg, rgba(79,70,229,.1), rgba(79,70,229,0) 70.71%), linear-gradient(336deg, rgba(16,185,129,.1), rgba(16,185,129,0) 70.71%)" 
+                          : "none"
               }}
             />
           )}
@@ -2050,7 +2143,7 @@ function PublicRegistrationPageContent() {
                 {eventInfo}
                 {clientBadge}
               </div>
-              <div className={style.rightPanel}>
+              <div className={style.rightPanel.replace(/\bjustify-center\b/g, "").concat(" justify-start py-12 lg:py-24 overflow-y-auto max-h-screen")}>
                 {registrationForm}
               </div>
             </div>
@@ -2062,7 +2155,7 @@ function PublicRegistrationPageContent() {
                 {eventInfo}
                 {clientBadge}
               </div>
-              <div className={style.rightPanel}>
+              <div className={style.rightPanel.replace(/\bjustify-center\b/g, "").concat(" justify-start py-12 lg:py-24 overflow-y-auto max-h-screen")}>
                 {registrationForm}
               </div>
             </div>
@@ -2072,8 +2165,11 @@ function PublicRegistrationPageContent() {
             <div className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-8 lg:p-12 relative z-10">
               <div className={`${style.centeredCard} client-form-text-custom`}>
                 <div className="mb-8 border-b border-white/10 pb-8">
-                  <h1 className={style.title}>{event.title}</h1>
-                  <p className={`text-base mb-8 max-w-xl leading-relaxed mt-4 ${style.textMuted}`}>{event.description}</p>
+                  <h1 className={style.title} dangerouslySetInnerHTML={{ __html: event.title || "" }} />
+                  <div 
+                    className={`text-base mb-8 max-w-xl leading-relaxed mt-4 ${style.textMuted}`}
+                    dangerouslySetInnerHTML={{ __html: event.description || "" }}
+                  />
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="flex items-center gap-4">
@@ -2113,8 +2209,11 @@ function PublicRegistrationPageContent() {
               <div className={style.headerBlock}>
                 <div className="max-w-5xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-8">
                   <div>
-                    <h1 className={style.title}>{event.title}</h1>
-                    <p className={`text-base max-w-xl leading-relaxed mt-4 ${style.textMuted}`}>{event.description}</p>
+                    <h1 className={style.title} dangerouslySetInnerHTML={{ __html: event.title || "" }} />
+                    <div 
+                      className={`text-base max-w-xl leading-relaxed mt-4 ${style.textMuted}`}
+                      dangerouslySetInnerHTML={{ __html: event.description || "" }}
+                    />
                   </div>
                   
                   <div className="flex flex-col sm:flex-row gap-8 shrink-0">

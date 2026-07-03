@@ -13,6 +13,7 @@ export default function QRScanner({ onScan }: QRScannerProps) {
   const [status, setStatus] = useState<"idle" | "success" | "error" | "processing" | "loading" | "warning">("idle");
   const [message, setMessage] = useState("");
   const [attendeeName, setAttendeeName] = useState<string | null>(null);
+  const [scannedOperatorFields, setScannedOperatorFields] = useState<any[] | null>(null);
   const scannerRef = useRef<Html5Qrcode | null>(null);
 
   useEffect(() => {
@@ -59,10 +60,16 @@ export default function QRScanner({ onScan }: QRScannerProps) {
               } else {
                 setAttendeeName(null);
               }
+              if (res && res.operator_fields) {
+                setScannedOperatorFields(res.operator_fields);
+              } else {
+                setScannedOperatorFields(null);
+              }
               setTimeout(() => {
                 setStatus("idle");
                 setAttendeeName(null);
-              }, 4500);
+                setScannedOperatorFields(null);
+              }, 6000);
             } catch (err) {
               const errMsg = err instanceof Error ? err.message : "Invalid or already used credential";
               setAttendeeName(null);
@@ -171,13 +178,25 @@ export default function QRScanner({ onScan }: QRScannerProps) {
           <div className="text-center space-y-3">
              <p className="text-2xl font-black italic uppercase tracking-tighter font-bricolage leading-tight">{message}</p>
              {status === "success" && attendeeName && (
-               <p className="text-lg font-bold tracking-wide border-t border-white/20 pt-3 animate-in fade-in slide-in-from-top-1">
-                 {attendeeName}
-               </p>
+               <div className="space-y-4 border-t border-white/20 pt-4 w-full">
+                 <p className="text-lg font-bold tracking-wide">
+                   {attendeeName}
+                 </p>
+                 {scannedOperatorFields && scannedOperatorFields.length > 0 && (
+                   <div className="grid grid-cols-1 gap-3 text-left mt-4 w-full max-h-60 overflow-y-auto pr-1">
+                     {scannedOperatorFields.map((f: any, idx: number) => (
+                       <div key={idx} className="bg-white/10 p-3.5 rounded-xl border border-white/5 flex flex-col">
+                         <span className="text-[8px] uppercase tracking-widest text-white/60 font-black">{f.label}</span>
+                         <span className="text-xs font-bold text-white mt-0.5 break-words">{f.value}</span>
+                       </div>
+                     ))}
+                   </div>
+                 )}
+               </div>
              )}
              {status !== "processing" && (
                <button 
-                 onClick={() => setStatus("idle")}
+                 onClick={() => { setStatus("idle"); setScannedOperatorFields(null); }}
                  className={`mt-8 px-10 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border ${
                    status === "warning" ? "bg-white/20 hover:bg-white/30 border-white/10" : "bg-white/20 hover:bg-white/30 border-white/10"
                  }`}

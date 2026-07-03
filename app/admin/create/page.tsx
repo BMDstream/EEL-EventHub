@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import { ArrowLeft, Save, Loader2, Sparkles, Globe, Calendar, MapPin, Users, FileText, Lock, Building2, Mail, Type } from "lucide-react";
 import Link from "next/link";
 import AdminLayout from "@/components/AdminLayout";
+import RichTextEditor from "@/components/RichTextEditor";
 
 export default function CreateEventPage() {
   const { data: session } = useSession();
@@ -175,14 +176,11 @@ export default function CreateEventPage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
                   <div className="space-y-3">
                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Event Title</label>
-                     <input
-                       required
-                       type="text"
-                       name="title"
-                       value={formData.title}
-                       onChange={handleChange}
-                       placeholder="e.g. Excellence Gala 2026"
-                       className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a] transition-all"
+                     <RichTextEditor 
+                        value={formData.title || ""} 
+                        onChange={(val) => setFormData(prev => ({ ...prev, title: val }))} 
+                        placeholder="e.g. Excellence Gala 2026"
+                        minHeight="80px"
                      />
                   </div>
 
@@ -268,15 +266,12 @@ export default function CreateEventPage() {
 
               <div className="mt-10 space-y-3">
                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Manifesto (Description)</label>
-                 <textarea
-                    required
-                    name="description"
-                    value={formData.description}
-                    onChange={handleChange}
-                    rows={4}
-                    placeholder="Describe the vision and scope of this event..."
-                    className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a] transition-all resize-none"
-                 />
+                  <RichTextEditor 
+                     value={formData.description || ""} 
+                     onChange={(val) => setFormData(prev => ({ ...prev, description: val }))} 
+                     placeholder="Describe the vision and scope of this event..."
+                     minHeight="120px"
+                  />
               </div>
 
               <div className="mt-8 space-y-3 bg-slate-50 rounded-2xl p-5">

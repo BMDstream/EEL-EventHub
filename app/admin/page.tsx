@@ -16,7 +16,8 @@ import {
   ShieldCheck,
   Building,
   X,
-  Search
+  Search,
+  RefreshCw
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSession } from "next-auth/react";
@@ -45,6 +46,33 @@ export default function AdminDashboard() {
   const [searchQuery, setSearchQuery] = useState("");
   const { data: session } = useSession();
   const userRole = (session?.user as any)?.role || "staff";
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefreshDatabase = async () => {
+    if (!session?.user?.email) return;
+    setIsRefreshing(true);
+    try {
+      const res = await fetch("/api/py/settings/refresh-db", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-email": session.user.email
+        }
+      });
+      if (res.ok) {
+        alert("Database structure and seeds successfully reinitialized! Reloading page...");
+        window.location.reload();
+      } else {
+        const data = await res.json();
+        alert(`Failed to refresh database: ${data.detail || "Unknown error"}`);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Network error: failed to trigger database refresh.");
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   const openAuditLog = async () => {
     setIsAuditLogOpen(true);
@@ -166,15 +194,27 @@ export default function AdminDashboard() {
             <h1 className="text-3xl md:text-5xl font-black text-[#0f172a] tracking-tighter font-bricolage italic mb-2 uppercase dark:text-white">COMMAND <span className="text-slate-300 dark:text-slate-500">CENTER</span></h1>
             <p className="text-slate-500 font-medium text-base md:text-lg dark:text-slate-400">Welcome back. Here is what's happening across your events today.</p>
           </div>
-          {(userRole === "admin" || userRole === "manager") && (
-            <Link 
-              href="/admin/create"
-              className="flex items-center gap-3 bg-[#0f172a] hover:bg-black hover:scale-105 active:scale-95 text-white px-8 py-4 rounded-2xl font-black transition-all duration-300 shadow-2xl shadow-slate-200 hover:shadow-slate-300 uppercase tracking-widest text-xs group dark:bg-gradient-to-r dark:from-yellow-400 dark:to-amber-500 dark:text-slate-950 dark:shadow-yellow-400/10 dark:hover:shadow-yellow-400/20"
-            >
-              <Plus size={20} className="group-hover:rotate-90 transition-transform duration-300" />
-              Create New Event
-            </Link>
-          )}
+          <div className="flex flex-wrap items-center gap-3">
+            {userRole === "admin" && (
+              <button
+                onClick={handleRefreshDatabase}
+                disabled={isRefreshing}
+                className="flex items-center gap-3 bg-slate-100 hover:bg-slate-200 hover:scale-105 active:scale-95 disabled:opacity-50 disabled:pointer-events-none text-slate-700 px-8 py-4 rounded-2xl font-black transition-all duration-300 uppercase tracking-widest text-xs dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+              >
+                <RefreshCw size={16} className={isRefreshing ? "animate-spin" : ""} />
+                {isRefreshing ? "Refreshing..." : "Refresh DB"}
+              </button>
+            )}
+            {(userRole === "admin" || userRole === "manager") && (
+              <Link 
+                href="/admin/create"
+                className="flex items-center gap-3 bg-[#0f172a] hover:bg-black hover:scale-105 active:scale-95 text-white px-8 py-4 rounded-2xl font-black transition-all duration-300 shadow-2xl shadow-slate-200 hover:shadow-slate-300 uppercase tracking-widest text-xs group dark:bg-gradient-to-r dark:from-yellow-400 dark:to-amber-500 dark:text-slate-950 dark:shadow-yellow-400/10 dark:hover:shadow-yellow-400/20"
+              >
+                <Plus size={20} className="group-hover:rotate-90 transition-transform duration-300" />
+                Create New Event
+              </Link>
+            )}
+          </div>
         </motion.div>
 
         {/* Stats Grid */}
@@ -258,7 +298,7 @@ export default function AdminDashboard() {
                            <div className="w-7 h-7 rounded-lg border-2 border-white dark:border-slate-900 bg-slate-100 dark:bg-slate-800 text-[8px] flex items-center justify-center font-bold text-slate-600 dark:text-slate-300 shrink-0">+12</div>
                         </div>
                       </div>
-                      <h3 className="text-xl font-black text-[#0f172a] mb-4 group-hover:text-yellow-500 transition-colors dark:text-white">{event.title}</h3>
+                      <h3 className="text-xl font-black text-[#0f172a] mb-4 group-hover:text-yellow-500 transition-colors dark:text-white">{(event.title || "").replace(/<[^>]*>/g, "")}</h3>
                       <div className="space-y-3 mb-8">
                         <div className="flex items-center gap-3 text-slate-500 text-xs font-medium dark:text-slate-400">
                           <Calendar size={14} className="text-slate-400 dark:text-yellow-400/60" />

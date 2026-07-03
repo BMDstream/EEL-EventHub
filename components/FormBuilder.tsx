@@ -1,9 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Trash2, GripVertical, Type, List, CheckSquare, Save, Loader2, Sparkles, ArrowUp, ArrowDown, Users, Hash } from "lucide-react";
+import { 
+  Plus, Trash2, Type, List, CheckSquare, Save, Loader2, 
+  Sparkles, ArrowUp, ArrowDown, Users, Hash, FileText 
+} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSession } from "next-auth/react";
+import RichTextEditor from "./RichTextEditor";
 
 interface FormField {
   id: string;
@@ -21,107 +25,203 @@ interface FormField {
   showBeforeAttendance?: boolean;
 }
 
-export default function FormBuilder({ eventId, initialSchema, onSave }: { eventId: string, initialSchema: FormField[], onSave: (schema: FormField[]) => void }) {
+interface FormSection {
+  id: string;
+  title: string;
+  fields: FormField[];
+}
+
+export default function FormBuilder({ 
+  eventId, 
+  initialSchema, 
+  onSave 
+}: { 
+  eventId: string; 
+  initialSchema: any[]; 
+  onSave: (schema: any[]) => void; 
+}) {
   const { data: session } = useSession();
-  const [fields, setFields] = useState<FormField[]>(initialSchema || []);
+  const [sections, setSections] = useState<FormSection[]>([]);
   const [saving, setSaving] = useState(false);
-  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
-  const [dragAllowed, setDragAllowed] = useState(false);
   const [dragOverFieldId, setDragOverFieldId] = useState<string | null>(null);
 
-  const handleImageUpload = (fieldId: string, file: File) => {
+  // Initialize and migrate legacy schema
+  useEffect(() => {
+    if (initialSchema) {
+      const isSectioned = initialSchema.length > 0 && "fields" in initialSchema[0];
+      if (isSectioned) {
+        setSections(initialSchema as FormSection[]);
+      } else {
+        // Migrate flat array to single default section
+        setSections([
+          {
+            id: "default_section",
+            title: "Registration Details",
+            fields: initialSchema as FormField[]
+          }
+        ]);
+      }
+    }
+  }, [initialSchema]);
+
+  const uploadImageFile = async (file: File): Promise<string> => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const res = await fetch("/api/py/media/upload", {
+      method: "POST",
+      body: formData,
+    });
+    if (!res.ok) {
+      throw new Error(`Upload failed: ${res.statusText}`);
+    }
+    const data = await res.json();
+    return data.url;
+  };
+
+  // Image Upload Handling
+  const handleImageUpload = async (secId: string, fieldId: string, file: File) => {
     if (!file.type.startsWith("image/")) {
       alert("Please select an image file.");
       return;
     }
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      updateField(fieldId, { image_url: reader.result as string });
+    try {
+      const url = await uploadImageFile(file);
+      updateField(secId, fieldId, { image_url: url });
+    } catch (e) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        updateField(secId, fieldId, { image_url: reader.result as string });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Section Management
+  const addSection = () => {
+    const newSection: FormSection = {
+      id: `section_${Date.now()}`,
+      title: "New Section",
+      fields: []
     };
-    reader.readAsDataURL(file);
+    setSections([...sections, newSection]);
   };
 
-  const handleDragStart = (index: number) => {
-    setDraggedIndex(index);
+  const removeSection = (secId: string) => {
+    if (confirm("Are you sure you want to delete this section? All questions inside will be lost.")) {
+      setSections(sections.filter((s) => s.id !== secId));
+    }
   };
 
-  const handleDragOver = (e: React.DragEvent, index: number) => {
-    e.preventDefault();
-    if (draggedIndex === null || draggedIndex === index) return;
-    
-    const reorderedFields = [...fields];
-    const [draggedItem] = reorderedFields.splice(draggedIndex, 1);
-    reorderedFields.splice(index, 0, draggedItem);
-    setDraggedIndex(index);
-    setFields(reorderedFields);
+  const updateSectionTitle = (secId: string, title: string) => {
+    setSections(sections.map((s) => (s.id === secId ? { ...s, title } : s)));
   };
 
-  const handleDragEnd = () => {
-    // Validate dependencies: if a parent is now placed after a child, remove the child's dependency
-    const validatedFields = fields.map((field, idx) => {
-      if (field.dependsOn) {
-        const precedingIds = fields.slice(0, idx).map(f => f.id);
-        if (!precedingIds.includes(field.dependsOn.fieldId)) {
-          const { dependsOn, ...rest } = field;
-          return rest;
-        }
-      }
-      return field;
-    });
-    setFields(validatedFields);
-    setDraggedIndex(null);
-    setDragAllowed(false);
-  };
-
-  const moveField = (index: number, direction: "up" | "down") => {
+  const moveSectionOrder = (index: number, direction: "up" | "down") => {
     const newIndex = direction === "up" ? index - 1 : index + 1;
-    if (newIndex < 0 || newIndex >= fields.length) return;
-    
-    const reorderedFields = [...fields];
-    const [item] = reorderedFields.splice(index, 1);
-    reorderedFields.splice(newIndex, 0, item);
-    
-    // Validate dependencies
-    const validatedFields = reorderedFields.map((field, idx) => {
-      if (field.dependsOn) {
-        const precedingIds = reorderedFields.slice(0, idx).map(f => f.id);
-        if (!precedingIds.includes(field.dependsOn.fieldId)) {
-          const { dependsOn, ...rest } = field;
-          return rest;
-        }
-      }
-      return field;
-    });
-    
-    setFields(validatedFields);
+    if (newIndex < 0 || newIndex >= sections.length) return;
+    const reordered = [...sections];
+    const [item] = reordered.splice(index, 1);
+    reordered.splice(newIndex, 0, item);
+    setSections(reordered);
   };
 
-  const addField = (type: "text" | "select" | "checkbox" | "partner_card" | "numeric") => {
+  // Field Management
+  const addField = (secId: string, type: "text" | "select" | "checkbox" | "partner_card" | "numeric") => {
     const newField: FormField = {
       id: `field_${Date.now()}`,
       label: type === "partner_card" ? "Partner Details" : "New Question",
       type,
-      required: type === "partner_card" ? true : false,
+      required: type === "partner_card",
       options: type === "select" ? ["Option 1", "Option 2"] : undefined
     };
-    setFields([...fields, newField]);
+    setSections(
+      sections.map((s) => (s.id === secId ? { ...s, fields: [...s.fields, newField] } : s))
+    );
   };
 
-  const removeField = (id: string) => {
-    // Filter out the field and clean up any field dependencies pointing to it
-    setFields(fields.filter(f => f.id !== id).map(f => {
-      if (f.dependsOn?.fieldId === id) {
-        const { dependsOn, ...rest } = f;
-        return rest;
+  const addFieldToLastSection = (type: "text" | "select" | "checkbox" | "partner_card" | "numeric") => {
+    if (sections.length === 0) {
+      const newSecId = `section_${Date.now()}`;
+      const newField: FormField = {
+        id: `field_${Date.now() + 1}`,
+        label: type === "partner_card" ? "Partner Details" : "New Question",
+        type,
+        required: type === "partner_card",
+        options: type === "select" ? ["Option 1", "Option 2"] : undefined
+      };
+      setSections([
+        {
+          id: newSecId,
+          title: "Registration Details",
+          fields: [newField]
+        }
+      ]);
+    } else {
+      const lastSection = sections[sections.length - 1];
+      addField(lastSection.id, type);
+    }
+  };
+
+  const removeField = (secId: string, fieldId: string) => {
+    setSections(
+      sections.map((s) => {
+        if (s.id !== secId) return s;
+        // Also remove dependencies pointing to the deleted field
+        const updatedFields = s.fields
+          .filter((f) => f.id !== fieldId)
+          .map((f) => {
+            if (f.dependsOn?.fieldId === fieldId) {
+              const { dependsOn, ...rest } = f;
+              return rest;
+            }
+            return f;
+          });
+        return { ...s, fields: updatedFields };
+      })
+    );
+  };
+
+  const updateField = (secId: string, fieldId: string, updates: Partial<FormField>) => {
+    setSections(
+      sections.map((s) => {
+        if (s.id !== secId) return s;
+        return {
+          ...s,
+          fields: s.fields.map((f) => (f.id === fieldId ? { ...f, ...updates } : f))
+        };
+      })
+    );
+  };
+
+  const moveFieldOrder = (secId: string, index: number, direction: "up" | "down") => {
+    const newIndex = direction === "up" ? index - 1 : index + 1;
+    setSections(
+      sections.map((s) => {
+        if (s.id !== secId) return s;
+        if (newIndex < 0 || newIndex >= s.fields.length) return s;
+        const reordered = [...s.fields];
+        const [item] = reordered.splice(index, 1);
+        reordered.splice(newIndex, 0, item);
+        return { ...s, fields: reordered };
+      })
+    );
+  };
+
+  // Get list of select/checkbox fields preceding a given field (for conditions)
+  const getPrecedingFields = (currentFieldId: string) => {
+    const allFields: FormField[] = [];
+    for (const sec of sections) {
+      for (const f of sec.fields) {
+        if (f.id === currentFieldId) {
+          return allFields.filter((pf) => pf.type === "select" || pf.type === "checkbox");
+        }
+        allFields.push(f);
       }
-      return f;
-    }));
+    }
+    return [];
   };
 
-  const updateField = (id: string, updates: Partial<FormField>) => {
-    setFields(fields.map(f => f.id === id ? { ...f, ...updates } : f));
-  };
-
+  // Save Config
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -131,10 +231,10 @@ export default function FormBuilder({ eventId, initialSchema, onSave }: { eventI
           "Content-Type": "application/json",
           "x-user-email": session?.user?.email || ""
         },
-        body: JSON.stringify({ custom_fields_schema: fields })
+        body: JSON.stringify({ custom_fields_schema: sections })
       });
       if (res.ok) {
-        onSave(fields);
+        onSave(sections);
         alert("Form schema saved successfully!");
       } else {
         const errorData = await res.json().catch(() => ({}));
@@ -150,16 +250,24 @@ export default function FormBuilder({ eventId, initialSchema, onSave }: { eventI
 
   return (
     <div className="space-y-8">
+      {/* Action header */}
       <motion.div 
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6"
       >
         <div>
-           <h2 className="text-3xl font-black text-[#0f172a] font-bricolage italic uppercase tracking-tight">Form <span className="text-slate-300">Studio</span></h2>
-           <p className="text-slate-500 font-medium">Design the data capture experience for this event.</p>
+           <h2 className="text-3xl font-black text-[#0f172a] dark:text-white font-bricolage italic uppercase tracking-tight">Form <span className="text-slate-300">Studio</span></h2>
+           <p className="text-slate-500 font-medium dark:text-slate-400">Design the data capture experience for this event.</p>
         </div>
         <div className="flex gap-3">
+           <button
+             onClick={addSection}
+             className="flex items-center gap-2 bg-[#0f172a] hover:bg-black text-white px-6 py-4 rounded-2xl font-black transition-all shadow-md uppercase tracking-widest text-xs dark:bg-slate-800 dark:hover:bg-slate-700"
+           >
+             <Plus size={16} />
+             Add Section
+           </button>
            <button 
              onClick={handleSave}
              disabled={saving}
@@ -171,10 +279,10 @@ export default function FormBuilder({ eventId, initialSchema, onSave }: { eventI
         </div>
       </motion.div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-12">
-        {/* Toolbox */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-12 items-start">
+        {/* Left column: quick component box */}
         <div className="lg:col-span-1 space-y-4">
-           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-4">Add Components</p>
+           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-4">Add to Last Section</p>
            {[
              { type: "text" as const, label: "Short Answer", icon: Type },
              { type: "numeric" as const, label: "Phone / Numeric Input", icon: Hash },
@@ -186,256 +294,231 @@ export default function FormBuilder({ eventId, initialSchema, onSave }: { eventI
                whileHover={{ scale: 1.02 }}
                whileTap={{ scale: 0.98 }}
                key={tool.type}
-               onClick={() => addField(tool.type)}
-               className="w-full flex items-center gap-4 p-5 bg-white rounded-2xl border border-slate-100 hover:border-yellow-400 hover:shadow-xl transition-all group"
+               onClick={() => addFieldToLastSection(tool.type)}
+               className="w-full flex items-center gap-4 p-5 bg-white rounded-2xl border border-slate-100 hover:border-yellow-400 hover:shadow-xl transition-all group dark:bg-[#0f172a] dark:border-slate-800"
              >
-                <div className="p-3 bg-slate-50 text-[#0f172a] rounded-xl group-hover:bg-yellow-400 group-hover:text-black transition-colors">
+                <div className="p-3 bg-slate-50 text-[#0f172a] rounded-xl group-hover:bg-yellow-400 group-hover:text-black transition-colors dark:bg-slate-800 dark:text-white">
                    <tool.icon size={18} />
                 </div>
-                <span className="font-bold text-slate-600 text-sm">{tool.label}</span>
+                <span className="font-bold text-slate-600 text-sm dark:text-slate-350">{tool.label}</span>
              </motion.button>
            ))}
         </div>
 
-        {/* Builder Canvas */}
-        <div className="lg:col-span-3 space-y-6">
-           <div className="bg-slate-50/50 border-2 border-dashed border-slate-200 rounded-[3rem] p-10 min-h-[500px]">
-              <AnimatePresence mode="popLayout">
-                {fields.length === 0 ? (
-                  <motion.div 
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.9 }}
-                    key="empty"
-                    className="h-full flex flex-col items-center justify-center text-center py-20"
-                  >
-                     <div className="w-20 h-20 bg-white rounded-[2rem] flex items-center justify-center shadow-sm border border-slate-100 mb-6">
-                        <Sparkles className="text-slate-200" size={32} />
-                     </div>
-                     <h3 className="text-xl font-bold text-[#0f172a]">Your canvas is empty</h3>
-                     <p className="text-slate-400 max-w-xs mx-auto mt-2">Select a component from the left to start building your custom registration form.</p>
-                  </motion.div>
-                ) : (
-                  <motion.div 
-                    layout
-                    className="space-y-6"
-                  >
-                      {fields.map((field, index) => (
-                        <motion.div 
-                          layout
-                          initial={{ opacity: 0, x: 20 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          exit={{ opacity: 0, scale: 0.95 }}
-                          key={field.id} 
-                          draggable={dragAllowed}
-                          onDragStart={() => handleDragStart(index)}
-                          onDragOver={(e) => handleDragOver(e, index)}
-                          onDragEnd={handleDragEnd}
-                          className={`bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100 flex gap-6 transition-all duration-200 ${
-                            draggedIndex === index ? "opacity-40 border-yellow-400 border-2" : ""
-                          }`}
-                        >
-                           <div 
-                             onMouseEnter={() => setDragAllowed(true)}
-                             onMouseLeave={() => setDragAllowed(false)}
-                             className="flex flex-col items-center gap-1 text-slate-200 select-none"
+        {/* Right column: sections scroll container */}
+        <div className="lg:col-span-3">
+          <div className="bg-slate-50/50 border border-slate-150 rounded-[3rem] p-8 min-h-[550px] max-h-[750px] overflow-y-auto pr-4 space-y-8 dark:bg-slate-900/10 dark:border-slate-800">
+             <AnimatePresence mode="popLayout">
+               {sections.length === 0 ? (
+                 <motion.div 
+                   initial={{ opacity: 0, scale: 0.9 }}
+                   animate={{ opacity: 1, scale: 1 }}
+                   exit={{ opacity: 0, scale: 0.9 }}
+                   key="empty"
+                   className="h-full flex flex-col items-center justify-center text-center py-24"
+                 >
+                    <div className="w-20 h-20 bg-white rounded-[2rem] flex items-center justify-center shadow-sm border border-slate-100 mb-6 dark:bg-[#0f172a] dark:border-slate-800">
+                       <Sparkles className="text-slate-200" size={32} />
+                    </div>
+                    <h3 className="text-xl font-bold text-[#0f172a] dark:text-white">Canvas is Empty</h3>
+                    <p className="text-slate-400 max-w-xs mx-auto mt-2">Create a section or select a component to start designing your custom registration form.</p>
+                 </motion.div>
+               ) : (
+                 <motion.div layout className="space-y-8">
+                   {sections.map((section, secIdx) => (
+                     <motion.div
+                       layout
+                       initial={{ opacity: 0, y: 15 }}
+                       animate={{ opacity: 1, y: 0 }}
+                       exit={{ opacity: 0, scale: 0.98 }}
+                       key={section.id}
+                       className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 space-y-6 dark:bg-[#0f172a] dark:border-slate-800"
+                     >
+                       {/* Section header bar */}
+                       <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
+                         <div className="flex items-center gap-3 flex-1">
+                           <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Section {secIdx + 1}:</span>
+                           <input 
+                             type="text"
+                             value={section.title}
+                             onChange={(e) => updateSectionTitle(section.id, e.target.value)}
+                             className="px-4 py-2 rounded-xl bg-slate-50 border-none outline-none font-bold text-sm text-[#0f172a] focus:ring-2 focus:ring-yellow-400 dark:bg-slate-800 dark:text-white"
+                           />
+                         </div>
+                         <div className="flex items-center gap-1.5">
+                           <button 
+                             onClick={() => moveSectionOrder(secIdx, "up")}
+                             disabled={secIdx === 0}
+                             className="p-2 rounded-xl text-slate-400 hover:bg-slate-50 disabled:opacity-30 dark:hover:bg-slate-800"
+                             title="Move section up"
                            >
-                              <div className="cursor-grab active:cursor-grabbing p-1 hover:text-[#0f172a] transition-colors">
-                                 <GripVertical size={20} />
-                              </div>
-                              <button 
-                                type="button" 
-                                disabled={index === 0}
-                                onClick={() => moveField(index, "up")}
-                                className="text-slate-300 hover:text-[#0f172a] disabled:text-slate-100 disabled:hover:text-slate-100 transition-colors p-1"
-                                title="Move Up"
-                              >
-                                 <ArrowUp size={14} />
-                              </button>
-                              <button 
-                                type="button" 
-                                disabled={index === fields.length - 1}
-                                onClick={() => moveField(index, "down")}
-                                className="text-slate-300 hover:text-[#0f172a] disabled:text-slate-100 disabled:hover:text-slate-100 transition-colors p-1"
-                                title="Move Down"
-                              >
-                                 <ArrowDown size={14} />
-                              </button>
-                           </div>
-                          <div className="flex-1 space-y-6">
-                             <div className="flex flex-col md:flex-row gap-6">
-                                <div className="flex-1 space-y-2">
-                                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Field Label / Question</label>
-                                   <input 
-                                     type="text" 
-                                     value={field.label}
-                                     onChange={(e) => updateField(field.id, { label: e.target.value })}
-                                     className="w-full px-6 py-4 bg-slate-50 rounded-xl border-none outline-none font-bold text-[#0f172a] focus:ring-2 focus:ring-yellow-400"
-                                   />
-                                </div>
-                                <div className="w-full md:w-48 space-y-2">
-                                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Type</label>
-                                   <div className="px-6 py-4 bg-slate-50 rounded-xl font-bold text-slate-400 text-xs uppercase tracking-widest flex items-center gap-2">
-                                      {field.type === "text" && <Type size={14} />}
-                                      {field.type === "numeric" && <Hash size={14} />}
-                                      {field.type === "select" && <List size={14} />}
-                                      {field.type === "checkbox" && <CheckSquare size={14} />}
-                                      {field.type === "partner_card" && <Users size={14} />}
-                                      {field.type === "partner_card" ? "Partner Card" : field.type === "numeric" ? "Phone / Numeric" : field.type}
+                             <ArrowUp size={14} />
+                           </button>
+                           <button 
+                             onClick={() => moveSectionOrder(secIdx, "down")}
+                             disabled={secIdx === sections.length - 1}
+                             className="p-2 rounded-xl text-slate-400 hover:bg-slate-50 disabled:opacity-30 dark:hover:bg-slate-800"
+                             title="Move section down"
+                           >
+                             <ArrowDown size={14} />
+                           </button>
+                           <button 
+                             onClick={() => removeSection(section.id)}
+                             className="p-2 rounded-xl text-slate-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-950/20"
+                             title="Delete section"
+                           >
+                             <Trash2 size={14} />
+                           </button>
+                         </div>
+                       </div>
+
+                       {/* Fields within section */}
+                       <div className="space-y-5">
+                         {section.fields.map((field, fieldIdx) => (
+                           <div key={field.id} className="bg-slate-50/50 p-6 rounded-2xl border border-slate-100 space-y-4 dark:bg-slate-800/20 dark:border-slate-800/50">
+                             <div className="flex items-start justify-between gap-4">
+                               <div className="flex-1 space-y-4">
+                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                   <div className="md:col-span-2 space-y-1.5">
+                                     <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Field Label / Question Text</label>
+                                     <RichTextEditor 
+                                       value={field.label || ""}
+                                       onChange={(val) => updateField(section.id, field.id, { label: val })}
+                                       placeholder="Question text..."
+                                       minHeight="55px"
+                                       toolbarMode="on-focus"
+                                     />
                                    </div>
-                                </div>
-                             </div>
-
-                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                               <div className="space-y-2">
-                                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Field Description / Help Text (Optional)</label>
-                                  <input 
-                                    type="text" 
-                                    value={field.description || ""}
-                                    onChange={(e) => updateField(field.id, { description: e.target.value })}
-                                    placeholder="e.g. Only include requirements based on medical, religious, or ethical needs."
-                                    className="w-full px-6 py-4 bg-slate-50 rounded-xl border-none outline-none font-bold text-[#0f172a] focus:ring-2 focus:ring-yellow-400"
-                                  />
-                               </div>
-                               <div className="space-y-2">
-                                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Attach Reference Image (Optional)</label>
-                                  
-                                  <div 
-                                    onDragOver={(e) => { e.preventDefault(); setDragOverFieldId(field.id); }}
-                                    onDragLeave={() => setDragOverFieldId(null)}
-                                    onDrop={(e) => { e.preventDefault(); setDragOverFieldId(null); if (e.dataTransfer.files?.[0]) handleImageUpload(field.id, e.dataTransfer.files[0]); }}
-                                    className={`relative group h-24 rounded-2xl border-2 border-dashed transition-all flex flex-col items-center justify-center p-3 bg-slate-50 cursor-pointer overflow-hidden ${
-                                      dragOverFieldId === field.id ? "border-yellow-400 bg-yellow-50/10" : "border-slate-200 hover:border-yellow-400"
-                                    }`}
-                                  >
-                                    <input 
-                                      type="file" 
-                                      accept="image/*" 
-                                      onChange={(e) => { if (e.target.files?.[0]) handleImageUpload(field.id, e.target.files[0]); }}
-                                      className="absolute inset-0 opacity-0 cursor-pointer z-10" 
-                                    />
-                                    
-                                    {field.image_url ? (
-                                      <div className="absolute inset-0 flex items-center justify-between p-3 bg-slate-50/95 z-20">
-                                        <img src={field.image_url} alt="Preview" className="h-full w-16 object-contain rounded-lg border border-slate-200" />
-                                        <button 
-                                          type="button" 
-                                          onClick={(e) => { e.stopPropagation(); updateField(field.id, { image_url: "" }); }}
-                                          className="text-red-500 hover:underline text-[9px] uppercase font-bold tracking-widest"
-                                        >
-                                          Remove
-                                        </button>
-                                      </div>
-                                    ) : (
-                                      <div className="flex flex-col items-center text-center">
-                                        <p className="text-[9px] font-black text-slate-400 uppercase">Drag &amp; drop image here, or click to upload</p>
-                                        <p className="text-[7px] text-slate-300 uppercase mt-0.5">Accepts PNG, JPG, WEBP</p>
-                                      </div>
-                                    )}
-                                  </div>
-                                  
-                                  <input 
-                                    type="text" 
-                                    value={field.image_url || ""}
-                                    onChange={(e) => updateField(field.id, { image_url: e.target.value })}
-                                    placeholder="Or paste an image URL directly..."
-                                    className="w-full px-5 py-3 bg-slate-50 rounded-xl border-none outline-none font-bold text-[#0f172a] text-xs focus:ring-2 focus:ring-yellow-400 mt-2"
-                                  />
-                               </div>
-                             </div>
-
-                             {field.type === "partner_card" && (
-                                <div className="space-y-4 pt-4 border-t border-slate-50 bg-slate-50 p-6 rounded-2xl border border-slate-100">
-                                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Partner Card Fields Preview</p>
-                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <input disabled type="text" placeholder="Partner First Name" className="w-full px-6 py-4 bg-white rounded-xl border border-slate-200 text-slate-400 font-bold opacity-60" />
-                                    <input disabled type="text" placeholder="Partner Last Name" className="w-full px-6 py-4 bg-white rounded-xl border border-slate-200 text-slate-400 font-bold opacity-60" />
-                                  </div>
-                                  <input disabled type="text" placeholder="Partner Email Address" className="w-full px-6 py-4 bg-white rounded-xl border border-slate-200 text-slate-400 font-bold opacity-60" />
-                                  <p className="text-[10px] italic text-slate-400">Note: Frontend validation will enforce that the partner's email domain matches the registrant's email domain.</p>
-                                </div>
-                              )}
-
-                             {field.type === "select" && (
-                               <div className="space-y-4 pt-4 border-t border-slate-50">
-                                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Dropdown Options (Comma separated)</label>
-                                  <input 
-                                    type="text" 
-                                    value={field.options?.join(", ")}
-                                    onChange={(e) => updateField(field.id, { options: e.target.value.split(",").map(s => s.trim()) })}
-                                    placeholder="Option 1, Option 2, Option 3"
-                                    className="w-full px-6 py-4 bg-slate-50 rounded-xl border-none outline-none font-bold text-[#0f172a] focus:ring-2 focus:ring-yellow-400"
-                                  />
-                               </div>
-                             )}
-
-                             {(() => {
-                                const precedingFields = fields.slice(0, index).filter(
-                                  f => f.type === "select" || f.type === "checkbox"
-                                );
-                                if (precedingFields.length === 0) return null;
-
-                                return (
-                                  <div className="space-y-4 pt-4 border-t border-slate-50">
-                                     <div className="flex items-center justify-between">
-                                        <label className="flex items-center gap-3 cursor-pointer group">
-                                           <input 
-                                             type="checkbox" 
-                                             checked={!!field.dependsOn}
-                                             onChange={(e) => {
-                                               if (e.target.checked) {
-                                                 const parent = precedingFields[0];
-                                                 const defaultValue = parent.type === "checkbox" ? "true" : (parent.options?.[0] || "");
-                                                 updateField(field.id, { 
-                                                   dependsOn: { fieldId: parent.id, value: defaultValue } 
-                                                 });
-                                               } else {
-                                                 updateField(field.id, { dependsOn: undefined });
-                                               }
-                                             }}
-                                             className="w-5 h-5 rounded-lg border-2 border-slate-200 checked:bg-yellow-400 checked:border-yellow-400 transition-all outline-none" 
-                                           />
-                                           <span className="text-xs font-black text-slate-400 uppercase tracking-widest group-hover:text-[#0f172a] transition-colors">Show conditionally based on another answer</span>
-                                        </label>
+                                   <div className="space-y-1.5">
+                                     <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Type</label>
+                                     <div className="px-4 py-3 bg-white rounded-xl border border-slate-150 font-bold text-slate-400 text-[10px] uppercase tracking-widest flex items-center gap-2 dark:bg-slate-800 dark:border-slate-700">
+                                       {field.type === "partner_card" ? "Partner Card" : field.type}
                                      </div>
+                                   </div>
+                                 </div>
 
-                                     {field.dependsOn && (
-                                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50 p-6 rounded-2xl border border-slate-100 animate-in fade-in slide-in-from-top-2">
-                                          <div className="space-y-2">
-                                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Select Question</label>
+                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                   <div className="space-y-1.5">
+                                     <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Field Description / Help Text (Optional)</label>
+                                     <input 
+                                       type="text" 
+                                       value={field.description || ""}
+                                       onChange={(e) => updateField(section.id, field.id, { description: e.target.value })}
+                                       placeholder="e.g. Only include requirements based on medical needs."
+                                       className="w-full px-4 py-2.5 bg-white rounded-xl border border-slate-150 outline-none font-bold text-xs text-[#0f172a] focus:ring-2 focus:ring-yellow-400 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                                     />
+                                   </div>
+                                   <div className="space-y-1.5">
+                                     <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Attach Reference Image (Optional)</label>
+                                     <div 
+                                       onDragOver={(e) => { e.preventDefault(); setDragOverFieldId(field.id); }}
+                                       onDragLeave={() => setDragOverFieldId(null)}
+                                       onDrop={(e) => { e.preventDefault(); setDragOverFieldId(null); if (e.dataTransfer.files?.[0]) handleImageUpload(section.id, field.id, e.dataTransfer.files[0]); }}
+                                       className={`relative group h-12 rounded-xl border border-dashed flex items-center justify-between px-4 bg-white cursor-pointer dark:bg-slate-800 dark:border-slate-700 ${
+                                         dragOverFieldId === field.id ? "border-yellow-400 bg-yellow-50/10" : "border-slate-200 hover:border-yellow-400"
+                                       }`}
+                                     >
+                                       <input 
+                                         type="file" 
+                                         accept="image/*" 
+                                         onChange={(e) => { if (e.target.files?.[0]) handleImageUpload(section.id, field.id, e.target.files[0]); }}
+                                         className="absolute inset-0 opacity-0 cursor-pointer z-10" 
+                                       />
+                                       {field.image_url ? (
+                                         <div className="flex items-center justify-between w-full z-20">
+                                           <img src={field.image_url} alt="Preview" className="h-8 w-12 object-contain rounded border border-slate-200" />
+                                           <button 
+                                             type="button" 
+                                             onClick={(e) => { e.stopPropagation(); updateField(section.id, field.id, { image_url: "" }); }}
+                                             className="text-red-500 hover:underline text-[8px] uppercase font-black tracking-widest"
+                                           >
+                                             Remove
+                                           </button>
+                                         </div>
+                                       ) : (
+                                         <span className="text-[8px] font-black text-slate-400 uppercase">Drag &amp; drop or click to upload</span>
+                                       )}
+                                     </div>
+                                   </div>
+                                 </div>
+
+                                 {/* Option lists for Dropdowns */}
+                                 {field.type === "select" && (
+                                   <div className="space-y-1.5 pt-2">
+                                     <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Dropdown Options (Comma separated)</label>
+                                     <input 
+                                       type="text" 
+                                       value={field.options?.join(", ")}
+                                       onChange={(e) => updateField(section.id, field.id, { options: e.target.value.split(",").map(s => s.trim()) })}
+                                       placeholder="Option 1, Option 2, Option 3"
+                                       className="w-full px-4 py-2.5 bg-white rounded-xl border border-slate-150 outline-none font-bold text-xs text-[#0f172a] focus:ring-2 focus:ring-yellow-400 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                                     />
+                                   </div>
+                                 )}
+
+                                 {/* Conditional logic configuration */}
+                                 {(() => {
+                                   const preceding = getPrecedingFields(field.id);
+                                   if (preceding.length === 0) return null;
+
+                                   return (
+                                     <div className="space-y-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+                                       <label className="flex items-center gap-3 cursor-pointer group">
+                                         <input 
+                                           type="checkbox" 
+                                           checked={!!field.dependsOn}
+                                           onChange={(e) => {
+                                             if (e.target.checked) {
+                                               const parent = preceding[0];
+                                               const defaultValue = parent.type === "checkbox" ? "true" : (parent.options?.[0] || "");
+                                               updateField(section.id, field.id, { 
+                                                 dependsOn: { fieldId: parent.id, value: defaultValue } 
+                                               });
+                                             } else {
+                                               updateField(section.id, field.id, { dependsOn: undefined });
+                                             }
+                                           }}
+                                           className="w-4 h-4 rounded border-slate-350 text-yellow-400 focus:ring-yellow-400" 
+                                         />
+                                         <span className="text-[8px] font-black text-slate-450 uppercase tracking-wider">Show conditionally based on another answer</span>
+                                       </label>
+
+                                       {field.dependsOn && (
+                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white p-4 rounded-xl border border-slate-150 dark:bg-slate-800">
+                                           <div className="space-y-1">
+                                             <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-1">Select Question</label>
                                              <select 
                                                value={field.dependsOn.fieldId}
                                                onChange={(e) => {
-                                                 const parent = precedingFields.find(p => p.id === e.target.value);
+                                                 const parent = preceding.find(p => p.id === e.target.value);
                                                  if (parent) {
                                                    const defaultValue = parent.type === "checkbox" ? "true" : (parent.options?.[0] || "");
-                                                   updateField(field.id, {
+                                                   updateField(section.id, field.id, {
                                                      dependsOn: { fieldId: parent.id, value: defaultValue }
                                                    });
                                                  }
                                                }}
-                                               className="w-full px-6 py-4 bg-white rounded-xl border border-slate-100 outline-none font-bold text-[#0f172a] focus:ring-2 focus:ring-yellow-400"
+                                               className="w-full px-3 py-2 bg-slate-50 rounded-lg border border-slate-150 outline-none font-bold text-xs text-[#0f172a] dark:bg-slate-700 dark:text-white"
                                              >
-                                               {precedingFields.map(p => (
+                                               {preceding.map(p => (
                                                  <option key={p.id} value={p.id}>{p.label}</option>
                                                ))}
                                              </select>
-                                          </div>
-
-                                          <div className="space-y-2">
-                                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Trigger Value</label>
+                                           </div>
+                                           <div className="space-y-1">
+                                             <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-1">Trigger Value</label>
                                              {(() => {
-                                               const parent = precedingFields.find(p => p.id === field.dependsOn?.fieldId);
+                                               const parent = preceding.find(p => p.id === field.dependsOn?.fieldId);
                                                if (!parent || !field.dependsOn) return null;
                                                
                                                if (parent.type === "checkbox") {
                                                  return (
                                                    <select 
                                                      value={field.dependsOn.value}
-                                                     onChange={(e) => updateField(field.id, {
+                                                     onChange={(e) => updateField(section.id, field.id, {
                                                        dependsOn: { ...field.dependsOn!, value: e.target.value }
                                                      })}
-                                                     className="w-full px-6 py-4 bg-white rounded-xl border border-slate-100 outline-none font-bold text-[#0f172a] focus:ring-2 focus:ring-yellow-400"
+                                                     className="w-full px-3 py-2 bg-slate-50 rounded-lg border border-slate-150 outline-none font-bold text-xs text-[#0f172a] dark:bg-slate-700 dark:text-white"
                                                    >
                                                      <option value="true">Checked (Yes)</option>
                                                      <option value="false">Unchecked (No)</option>
@@ -445,10 +528,10 @@ export default function FormBuilder({ eventId, initialSchema, onSave }: { eventI
                                                  return (
                                                    <select 
                                                      value={field.dependsOn.value}
-                                                     onChange={(e) => updateField(field.id, {
+                                                     onChange={(e) => updateField(section.id, field.id, {
                                                        dependsOn: { ...field.dependsOn!, value: e.target.value }
                                                      })}
-                                                     className="w-full px-6 py-4 bg-white rounded-xl border border-slate-100 outline-none font-bold text-[#0f172a] focus:ring-2 focus:ring-yellow-400"
+                                                     className="w-full px-3 py-2 bg-slate-50 rounded-lg border border-slate-150 outline-none font-bold text-xs text-[#0f172a] dark:bg-slate-700 dark:text-white"
                                                    >
                                                      {parent.options?.map(opt => (
                                                        <option key={opt} value={opt}>{opt}</option>
@@ -457,57 +540,102 @@ export default function FormBuilder({ eventId, initialSchema, onSave }: { eventI
                                                  );
                                                }
                                              })()}
-                                          </div>
-                                       </div>
-                                     )}
-                                  </div>
-                                );
-                              })()}
+                                           </div>
+                                         </div>
+                                       )}
+                                     </div>
+                                   );
+                                 })()}
 
-                             <div className="flex items-center justify-between pt-4 border-t border-slate-50">
-                                <div className="flex items-center gap-8">
-                                   <label className="flex items-center gap-3 cursor-pointer group">
-                                      <input 
-                                        type="checkbox" 
-                                        checked={field.required}
-                                        onChange={(e) => updateField(field.id, { required: e.target.checked })}
-                                        className="w-5 h-5 rounded-lg border-2 border-slate-200 checked:bg-yellow-400 checked:border-yellow-400 transition-all outline-none" 
-                                      />
-                                      <span className="text-xs font-black text-slate-400 uppercase tracking-widest group-hover:text-[#0f172a] transition-colors">Required Field</span>
+                                 {/* Field behaviors flags */}
+                                 <div className="flex flex-wrap items-center gap-6 pt-3 border-t border-slate-100 dark:border-slate-800">
+                                   <label className="flex items-center gap-2 cursor-pointer">
+                                     <input 
+                                       type="checkbox" 
+                                       checked={field.required}
+                                       onChange={(e) => updateField(section.id, field.id, { required: e.target.checked })}
+                                       className="w-4 h-4 rounded text-yellow-400 focus:ring-yellow-400" 
+                                     />
+                                     <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Required</span>
                                    </label>
-                                   <label className="flex items-center gap-3 cursor-pointer group">
-                                      <input 
-                                        type="checkbox" 
-                                        checked={!!field.inactive}
-                                        onChange={(e) => updateField(field.id, { inactive: e.target.checked })}
-                                        className="w-5 h-5 rounded-lg border-2 border-slate-200 checked:bg-yellow-400 checked:border-yellow-400 transition-all outline-none" 
-                                      />
-                                      <span className="text-xs font-black text-slate-400 uppercase tracking-widest group-hover:text-[#0f172a] transition-colors">Hide from Form (Keep Answers)</span>
+                                   <label className="flex items-center gap-2 cursor-pointer">
+                                     <input 
+                                       type="checkbox" 
+                                       checked={!!field.inactive}
+                                       onChange={(e) => updateField(section.id, field.id, { inactive: e.target.checked })}
+                                       className="w-4 h-4 rounded text-yellow-400 focus:ring-yellow-400" 
+                                     />
+                                     <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Hide from Form</span>
                                    </label>
-                                   <label className="flex items-center gap-3 cursor-pointer group">
-                                      <input 
-                                        type="checkbox" 
-                                        checked={!!field.showBeforeAttendance}
-                                        onChange={(e) => updateField(field.id, { showBeforeAttendance: e.target.checked })}
-                                        className="w-5 h-5 rounded-lg border-2 border-slate-200 checked:bg-yellow-400 checked:border-yellow-400 transition-all outline-none" 
-                                      />
-                                      <span className="text-xs font-black text-slate-400 uppercase tracking-widest group-hover:text-[#0f172a] transition-colors">Show before Attendance Status</span>
+                                   <label className="flex items-center gap-2 cursor-pointer">
+                                     <input 
+                                       type="checkbox" 
+                                       checked={!!field.showBeforeAttendance}
+                                       onChange={(e) => updateField(section.id, field.id, { showBeforeAttendance: e.target.checked })}
+                                       className="w-4 h-4 rounded text-yellow-400 focus:ring-yellow-400" 
+                                     />
+                                     <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Show before status</span>
                                    </label>
-                                </div>
-                                <button 
-                                  onClick={() => removeField(field.id)}
-                                  className="text-slate-300 hover:text-red-500 transition-all p-2"
-                                >
-                                   <Trash2 size={20} />
-                                </button>
+                                 </div>
+                               </div>
+
+                               {/* Field actions */}
+                               <div className="flex flex-col items-center gap-1 text-slate-350">
+                                 <button 
+                                   onClick={() => moveFieldOrder(section.id, fieldIdx, "up")}
+                                   disabled={fieldIdx === 0}
+                                   className="p-1.5 hover:bg-white rounded-lg disabled:opacity-20 dark:hover:bg-slate-800"
+                                 >
+                                   <ArrowUp size={13} />
+                                 </button>
+                                 <button 
+                                   onClick={() => moveFieldOrder(section.id, fieldIdx, "down")}
+                                   disabled={fieldIdx === section.fields.length - 1}
+                                   className="p-1.5 hover:bg-white rounded-lg disabled:opacity-20 dark:hover:bg-slate-800"
+                                 >
+                                   <ArrowDown size={13} />
+                                 </button>
+                                 <button 
+                                   onClick={() => removeField(section.id, field.id)}
+                                   className="p-1.5 hover:bg-red-50 hover:text-red-500 rounded-lg dark:hover:bg-red-950/20 mt-1"
+                                 >
+                                   <Trash2 size={13} />
+                                 </button>
+                               </div>
                              </div>
-                          </div>
-                       </motion.div>
-                     ))}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-           </div>
+                           </div>
+                         ))}
+                       </div>
+
+                       {/* Inline field addition block */}
+                       <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-50/50 p-4 rounded-2xl dark:bg-slate-850">
+                         <span className="text-[9px] font-black text-slate-450 uppercase tracking-widest ml-1">
+                           + Add Question to this Section
+                         </span>
+                         <div className="flex flex-wrap gap-1.5">
+                           {[
+                             { type: "text" as const, label: "Text" },
+                             { type: "numeric" as const, label: "Numeric" },
+                             { type: "select" as const, label: "Dropdown" },
+                             { type: "checkbox" as const, label: "Toggle" },
+                             { type: "partner_card" as const, label: "Partner" },
+                           ].map((item) => (
+                             <button
+                               key={item.type}
+                               onClick={() => addField(section.id, item.type)}
+                               className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:border-yellow-400 text-[9px] font-black uppercase tracking-wider transition-all dark:bg-slate-800 dark:border-slate-700 dark:hover:border-yellow-400 dark:text-white"
+                             >
+                               {item.label}
+                             </button>
+                           ))}
+                         </div>
+                       </div>
+                     </motion.div>
+                   ))}
+                 </motion.div>
+               )}
+             </AnimatePresence>
+          </div>
         </div>
       </div>
     </div>

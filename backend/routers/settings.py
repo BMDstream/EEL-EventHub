@@ -11,6 +11,33 @@ from pydantic import BaseModel
 
 router = APIRouter()
 
+@router.post("/settings/refresh-db")
+def refresh_db(
+    session: Session = Depends(get_session),
+    current_user: Optional[User] = Depends(get_current_user_from_request)
+):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only admins can refresh the database structure")
+    
+    try:
+        from backend.database import run_db_initialization
+        run_db_initialization(session)
+        
+        # Clear redis cache to make sure everything refreshes fresh!
+        try:
+            from backend.cache_service import redis_client
+            if redis_client:
+                redis_client.flushall()
+                print("Redis cache flushed during database refresh.")
+        except Exception as cache_err:
+            print(f"Redis cache flush warning: {cache_err}")
+            
+        return {"status": "success", "message": "Database structure and seeds successfully reinitialized."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database refresh failed: {str(e)}")
+
 @router.get("/settings/sender-domains", response_model=List[str])
 def get_sender_domains(
     session: Session = Depends(get_session),
@@ -206,7 +233,7 @@ def get_all_templates(
     
     # Self-healing: Check if any default templates are missing and seed them on the fly
     from backend.default_templates import DEFAULT_TEMPLATES
-    existing_templates = session.exec(select(EmailTemplate)).all()
+    existing_templates = session.exec(select(EmailTemplate).order_by(EmailTemplate.id)).all()
     existing_keys = {t.key for t in existing_templates}
     
     added_any = False
@@ -225,7 +252,7 @@ def get_all_templates(
         try:
             session.commit()
             # Refresh list
-            existing_templates = session.exec(select(EmailTemplate)).all()
+            existing_templates = session.exec(select(EmailTemplate).order_by(EmailTemplate.id)).all()
         except Exception as e:
             session.rollback()
             print(f"Error seeding missing templates: {e}")
@@ -502,6 +529,8 @@ class RegistrationFormTemplateCreate(BaseModel):
     theme_config: Optional[Dict[str, Any]] = None
     layout_schema: Optional[List[Dict[str, Any]]] = None
     post_submit_config: Optional[Dict[str, Any]] = None
+    email_config: Optional[Dict[str, Any]] = None
+    operator_config: Optional[Dict[str, Any]] = None
 
 class RegistrationFormTemplateUpdate(BaseModel):
     name: str
@@ -509,6 +538,8 @@ class RegistrationFormTemplateUpdate(BaseModel):
     theme_config: Optional[Dict[str, Any]] = None
     layout_schema: Optional[List[Dict[str, Any]]] = None
     post_submit_config: Optional[Dict[str, Any]] = None
+    email_config: Optional[Dict[str, Any]] = None
+    operator_config: Optional[Dict[str, Any]] = None
 
 # ==========================================
 # REGISTRATION FORM TEMPLATES CRUD
@@ -557,6 +588,8 @@ def create_registration_template(
         theme_config=payload.theme_config or {},
         layout_schema=payload.layout_schema or [],
         post_submit_config=payload.post_submit_config or {},
+        email_config=payload.email_config or {},
+        operator_config=payload.operator_config or {},
         created_at=datetime.utcnow(),
         updated_at=datetime.utcnow()
     )
@@ -587,11 +620,25 @@ def update_registration_template(
         template.layout_schema = payload.layout_schema
     if payload.post_submit_config is not None:
         template.post_submit_config = payload.post_submit_config
+    if payload.email_config is not None:
+        template.email_config = payload.email_config
+    if payload.operator_config is not None:
+        template.operator_config = payload.operator_config
     template.updated_at = datetime.utcnow()
     
     session.add(template)
     session.commit()
     session.refresh(template)
+    
+    # Invalidate Redis cache for all events using this template
+    try:
+        from backend.cache_service import clear_cached_event
+        events_to_clear = session.exec(select(Event).where(Event.registration_form_template_id == tpl_id)).all()
+        for ev in events_to_clear:
+            clear_cached_event(ev.slug)
+    except Exception as e:
+        print(f"Failed to clear event cache after template update: {e}")
+        
     return template
 
 @router.delete("/settings/registration-templates/{tpl_id}")

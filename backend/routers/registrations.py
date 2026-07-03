@@ -87,14 +87,106 @@ def register_attendee(
                             detail=f"This event is restricted. Please register using your corporate email address (e.g. ending in @{', @'.join(allowed)})."
                         )
             
-            # Enforce required company check if enabled
-            if getattr(event, "collect_company", True) and getattr(event, "company_required", False):
-                company_val = data.get("company", "").strip()
-                if not company_val:
-                    raise HTTPException(
-                        status_code=400,
-                        detail="Organization / Company name is required for this event."
-                    )
+            # Load template and run validation
+            template = None
+            if getattr(event, "registration_form_template_id", None):
+                from backend.models import RegistrationFormTemplate
+                template = session.get(RegistrationFormTemplate, event.registration_form_template_id)
+            
+            # Extract fields schema
+            fields_schema = []
+            if template and template.layout_schema:
+                first_item = template.layout_schema[0] if len(template.layout_schema) > 0 else {}
+                if "fields" in first_item:
+                    for section in template.layout_schema:
+                        fields_schema.extend(section.get("fields", []))
+                else:
+                    fields_schema = template.layout_schema
+            elif event.custom_fields_schema:
+                first_item = event.custom_fields_schema[0] if len(event.custom_fields_schema) > 0 else {}
+                if "fields" in first_item:
+                    for section in event.custom_fields_schema:
+                        fields_schema.extend(section.get("fields", []))
+                else:
+                    fields_schema = event.custom_fields_schema
+
+            if not fields_schema:
+                fields_schema = [
+                    { "key": "first_name", "label": "First Name", "required": True, "visible": True },
+                    { "key": "last_name", "label": "Last Name", "required": True, "visible": True },
+                    { "key": "email", "label": "Secure Email Address", "required": True, "visible": True },
+                    { "key": "company", "label": "Organization / Company", "required": getattr(event, "company_required", False), "visible": getattr(event, "collect_company", True) }
+                ]
+
+            # Validate each field in fields_schema
+            is_attending = data.get("is_attending", True)
+            if is_attending:
+                for field in fields_schema:
+                    if field.get("inactive"):
+                        continue
+                    field_key = field.get("key") or field.get("id")
+                    if not field_key:
+                        continue
+                    
+                    val = None
+                    if field_key in ["first_name", "last_name", "email", "company"]:
+                        val = data.get(field_key)
+                    else:
+                        val = data.get("custom_answers", {}).get(field_key)
+                    
+                    depends_on = field.get("dependsOn")
+                    if depends_on and isinstance(depends_on, dict):
+                        parent_id = depends_on.get("fieldId")
+                        expected_val = depends_on.get("value")
+                        parent_val = data.get("custom_answers", {}).get(parent_id)
+                        parent_val_str = str(parent_val).lower() if parent_val is not None else ""
+                        if parent_val_str != str(expected_val).lower():
+                            continue
+
+                    if field.get("visible", True) and field.get("required"):
+                        if val is None or (isinstance(val, str) and not val.strip()):
+                            if field.get("type") == "partner_card":
+                                if not isinstance(val, dict) or not val.get("first_name") or not val.get("last_name") or not val.get("email"):
+                                    raise HTTPException(
+                                        status_code=400,
+                                        detail=f"Please fill out all partner details for '{field.get('label')}'."
+                                    )
+                            else:
+                                raise HTTPException(
+                                    status_code=400,
+                                    detail=f"'{field.get('label')}' is required."
+                                )
+
+                # Enforce capacity check
+                existing_reg = None
+                try:
+                    attendee_lookup = session.exec(
+                        select(Attendee)
+                        .where(func.lower(Attendee.email) == email)
+                        .where(func.lower(Attendee.first_name) == data.get("first_name", "").strip().lower())
+                        .where(func.lower(Attendee.last_name) == data.get("last_name", "").strip().lower())
+                    ).first()
+                    if attendee_lookup:
+                        existing_reg = session.exec(
+                            select(Registration)
+                            .where(Registration.event_id == event_id)
+                            .where(Registration.attendee_id == attendee_lookup.id)
+                        ).first()
+                except Exception:
+                    pass
+                
+                if not existing_reg or existing_reg.status != "confirmed":
+                    confirmed_count = session.exec(
+                        select(func.count(Registration.id))
+                        .where(Registration.event_id == event_id)
+                        .where(Registration.status == "confirmed")
+                    ).one()
+                    
+                    if event.capacity and confirmed_count >= event.capacity:
+                        raise HTTPException(
+                            status_code=400,
+                            detail="capacity_full"
+                        )
     else:
         raise HTTPException(status_code=400, detail="Event ID is required")
         

@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import AdminLayout from "@/components/AdminLayout";
+import RichTextEditor from "@/components/RichTextEditor";
 
 // ---------------------------------------------------------------------------
 // Helpers shared with settings page
@@ -144,7 +145,10 @@ const compileTemplatePreview = (
     }
   }
 
-  const title = eventData?.title || "Padels Tournament 2026";
+  const toTitleCase = (str: string) => {
+    return str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substring(1).toLowerCase());
+  };
+  const title = toTitleCase((eventData?.title || "Padels Tournament 2026").replace(/<[^>]*>/g, ""));
   const venue = eventData?.location || "Arena Center";
   const address = eventData?.address || "123 Main St";
 
@@ -184,7 +188,7 @@ const compileTemplatePreview = (
   const qrBlockHtml = `
   <div style="background: #f8fafc; padding: 48px; border-radius: 32px; text-align: center; border: 1px solid #f1f5f9; margin-bottom: 40px; position: relative; overflow: hidden; font-family: ${fontFamily};">
       <div style="width:140px;height:140px;background:${primary};margin:0 auto 24px auto;border-radius:16px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:bold;box-shadow:0 25px 50px -12px rgba(0,0,0,0.15);">QR CODE</div>
-      <p style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.3em; color: #64748b; margin-bottom: 16px; font-family: ${fontFamily};">Ticket Reference ID</p>
+      <p style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.3em; color: #64748b; margin-bottom: 16px; font-family: ${fontFamily};">unique access pass number</p>
       <div style="display: inline-block; background: #ffffff; padding: 16px 32px; border-radius: 20px; border: 2px solid ${primary}; font-family: ${fontFamily};">
           <code style="font-size: 32px; font-weight: 900; color: ${primary}; letter-spacing: 0.25em; font-family: monospace;">1234</code>
       </div>
@@ -353,6 +357,20 @@ const compileTemplatePreview = (
   return finalHtml;
 };
 
+const uploadImageFile = async (file: File): Promise<string> => {
+  const formData = new FormData();
+  formData.append("file", file);
+  const res = await fetch("/api/py/media/upload", {
+    method: "POST",
+    body: formData,
+  });
+  if (!res.ok) {
+    throw new Error(`Upload failed: ${res.statusText}`);
+  }
+  const data = await res.json();
+  return data.url;
+};
+
 const compressImage = (file: File, maxWidth = 1200, maxHeight = 630, quality = 0.8): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -403,10 +421,12 @@ export default function EditEventPage() {
 
   // Email tab states
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
-   const [loadingTemplates, setLoadingTemplates] = useState(false);
+  const [loadingTemplates, setLoadingTemplates] = useState(false);
   const [previewHtml, setPreviewHtml] = useState("");
+  const [declinePreviewHtml, setDeclinePreviewHtml] = useState("");
   const [saveEmailNotification, setSaveEmailNotification] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const previewFrameRef = useRef<HTMLIFrameElement>(null);
+  const declinePreviewFrameRef = useRef<HTMLIFrameElement>(null);
   const [regTemplates, setRegTemplates] = useState<any[]>([]);
 
   const [formData, setFormData] = useState({
@@ -563,6 +583,31 @@ export default function EditEventPage() {
     setPreviewHtml(html);
   }, [activeTab, formData.confirmation_template_id, formData.confirmation_template_key, formData.banner_url, formData.logo_url, formData.banner_primary_color, formData.banner_accent_color, formData.title, formData.start_date, formData.location, formData.address, templates]);
 
+  // Rebuild decline preview whenever the selected decline template ID/key or event branding changes
+  useEffect(() => {
+    if (activeTab !== "email") return;
+    let tpl: EmailTemplate | undefined;
+    if (formData.decline_template_id) {
+      tpl = templates.find((t) => t.id === formData.decline_template_id);
+    }
+    if (!tpl) {
+      const activeKey = formData.decline_template_key === "global"
+        ? "registration_declined"
+        : formData.decline_template_key;
+      tpl = templates.find((t) => t.key === activeKey);
+    }
+    const html = compileTemplatePreview(
+      tpl?.key || "registration_declined",
+      tpl?.body_html || "",
+      formData.banner_url,
+      formData.logo_url,
+      formData.banner_primary_color,
+      formData.banner_accent_color,
+      formData,
+    );
+    setDeclinePreviewHtml(html);
+  }, [activeTab, formData.decline_template_id, formData.decline_template_key, formData.banner_url, formData.logo_url, formData.banner_primary_color, formData.banner_accent_color, formData.title, formData.start_date, formData.location, formData.address, templates]);
+
   // Write preview into iframe
   useEffect(() => {
     if (!previewFrameRef.current || !previewHtml) return;
@@ -573,6 +618,17 @@ export default function EditEventPage() {
       doc.close();
     }
   }, [previewHtml]);
+
+  // Write decline preview into iframe
+  useEffect(() => {
+    if (!declinePreviewFrameRef.current || !declinePreviewHtml) return;
+    const doc = declinePreviewFrameRef.current.contentDocument;
+    if (doc) {
+      doc.open();
+      doc.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><style>*{box-sizing:border-box;}body{margin:0;padding:0;background:#f8fafc;}</style></head><body>${declinePreviewHtml}</body></html>`);
+      doc.close();
+    }
+  }, [declinePreviewHtml]);
 
   // ---------------------------------------------------------------------------
   // Handlers
@@ -680,12 +736,19 @@ export default function EditEventPage() {
   }
 
   // Resolve which template is active for display purposes
-  const activeTemplate = formData.confirmation_template_id
+  const activeConfTemplate = formData.confirmation_template_id
     ? templates.find((t) => t.id === formData.confirmation_template_id)
     : (formData.confirmation_template_key === "global"
         ? templates.find((t) => t.key === "registration_confirmed")
         : templates.find((t) => t.key === formData.confirmation_template_key));
-  const activeTemplateKey = activeTemplate?.key || "registration_confirmed";
+  const activeConfTemplateName = activeConfTemplate ? activeConfTemplate.name : (formData.confirmation_template_key === "global" ? "Global Default" : formData.confirmation_template_key);
+
+  const activeDeclineTemplate = formData.decline_template_id
+    ? templates.find((t) => t.id === formData.decline_template_id)
+    : (formData.decline_template_key === "global"
+        ? templates.find((t) => t.key === "registration_declined")
+        : templates.find((t) => t.key === formData.decline_template_key));
+  const activeDeclineTemplateName = activeDeclineTemplate ? activeDeclineTemplate.name : (formData.decline_template_key === "global" ? "Global Decline Default" : formData.decline_template_key);
 
   // ---------------------------------------------------------------------------
   // Render
@@ -714,7 +777,7 @@ export default function EditEventPage() {
           {/* Header */}
           <div className="bg-[#1e293b] px-10 py-10">
             <h1 className="text-3xl font-black text-white italic tracking-tight">Edit Event Settings</h1>
-            <p className="text-slate-400 font-medium mt-2">Updating the parameters for "{formData.title}"</p>
+            <p className="text-slate-400 font-medium mt-2">Configure event details, email templates, and registration preferences.</p>
           </div>
 
           {/* Tab Bar */}
@@ -756,8 +819,12 @@ export default function EditEventPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-3">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Event Title</label>
-                    <input required type="text" name="title" value={formData.title} onChange={handleChange}
-                      className="w-full px-5 py-4 rounded-2xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-slate-700 bg-slate-50/50" />
+                    <RichTextEditor 
+                      value={formData.title || ""} 
+                      onChange={(val) => setFormData(prev => ({ ...prev, title: val }))} 
+                      placeholder="e.g. Excellence Gala 2026"
+                      minHeight="80px"
+                    />
                   </div>
 
                   <div className="space-y-3">
@@ -827,8 +894,13 @@ export default function EditEventPage() {
                       <input type="file" accept="image/*" onChange={async (e) => {
                         const file = e.target.files?.[0];
                         if (file) {
-                          try { const compressed = await compressImage(file, 1600, 1600, 0.85); setFormData(prev => ({ ...prev, banner_url: compressed })); }
-                          catch { const reader = new FileReader(); reader.onloadend = () => setFormData(prev => ({ ...prev, banner_url: reader.result as string })); reader.readAsDataURL(file); }
+                          try {
+                            const url = await uploadImageFile(file);
+                            setFormData(prev => ({ ...prev, banner_url: url }));
+                          } catch {
+                            try { const compressed = await compressImage(file, 1600, 1600, 0.85); setFormData(prev => ({ ...prev, banner_url: compressed })); }
+                            catch { const reader = new FileReader(); reader.onloadend = () => setFormData(prev => ({ ...prev, banner_url: reader.result as string })); reader.readAsDataURL(file); }
+                          }
                         }
                       }} className="absolute inset-0 opacity-0 cursor-pointer z-10" />
                       <div className={`w-full h-24 rounded-2xl border-2 border-dashed ${formData.banner_url ? "border-green-500/30 bg-green-50/50" : "border-slate-200 bg-slate-50/50"} relative transition-all overflow-hidden`}>
@@ -855,8 +927,13 @@ export default function EditEventPage() {
                       <input type="file" accept="image/*" onChange={async (e) => {
                         const file = e.target.files?.[0];
                         if (file) {
-                          try { const compressed = await compressImage(file, 1600, 1600, 0.85); setFormData(prev => ({ ...prev, background_url: compressed })); }
-                          catch { const reader = new FileReader(); reader.onloadend = () => setFormData(prev => ({ ...prev, background_url: reader.result as string })); reader.readAsDataURL(file); }
+                          try {
+                            const url = await uploadImageFile(file);
+                            setFormData(prev => ({ ...prev, background_url: url }));
+                          } catch {
+                            try { const compressed = await compressImage(file, 1600, 1600, 0.85); setFormData(prev => ({ ...prev, background_url: compressed })); }
+                            catch { const reader = new FileReader(); reader.onloadend = () => setFormData(prev => ({ ...prev, background_url: reader.result as string })); reader.readAsDataURL(file); }
+                          }
                         }
                       }} className="absolute inset-0 opacity-0 cursor-pointer z-10" />
                       <div className={`w-full h-24 rounded-2xl border-2 border-dashed ${formData.background_url ? "border-green-500/30 bg-green-50/50" : "border-slate-200 bg-slate-50/50"} relative transition-all overflow-hidden`}>
@@ -924,8 +1001,13 @@ export default function EditEventPage() {
                       <input type="file" accept="image/*" onChange={async (e) => {
                         const file = e.target.files?.[0];
                         if (file) {
-                          try { const compressed = await compressImage(file, 800, 800, 0.85); setFormData(prev => ({ ...prev, logo_url: compressed })); }
-                          catch { const reader = new FileReader(); reader.onloadend = () => setFormData(prev => ({ ...prev, logo_url: reader.result as string })); reader.readAsDataURL(file); }
+                          try {
+                            const url = await uploadImageFile(file);
+                            setFormData(prev => ({ ...prev, logo_url: url }));
+                          } catch {
+                            try { const compressed = await compressImage(file, 800, 800, 0.85); setFormData(prev => ({ ...prev, logo_url: compressed })); }
+                            catch { const reader = new FileReader(); reader.onloadend = () => setFormData(prev => ({ ...prev, logo_url: reader.result as string })); reader.readAsDataURL(file); }
+                          }
                         }
                       }} className="absolute inset-0 opacity-0 cursor-pointer z-10" />
                       <div className={`w-full h-24 rounded-2xl border-2 border-dashed ${formData.logo_url ? "border-green-500/30 bg-green-50/50" : "border-slate-200 bg-slate-50/50"} relative transition-all overflow-hidden`}>
@@ -1037,8 +1119,12 @@ export default function EditEventPage() {
 
                   <div className="space-y-3 md:col-span-2">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Intelligence / Description</label>
-                    <textarea required name="description" value={formData.description} onChange={handleChange} rows={4}
-                      className="w-full px-5 py-4 rounded-2xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-slate-700 bg-slate-50/50 resize-none" />
+                    <RichTextEditor 
+                      value={formData.description || ""} 
+                      onChange={(val) => setFormData(prev => ({ ...prev, description: val }))} 
+                      placeholder="Type event description here..."
+                      minHeight="120px"
+                    />
                   </div>
                 </div>
               </div>
@@ -1237,7 +1323,7 @@ export default function EditEventPage() {
                           ? !formData.confirmation_template_id
                           : formData.confirmation_template_id === tpl.id;
                         const Icon = tpl.key === "global" ? Sparkles : (TEMPLATE_ICONS[tpl.key] || Mail);
-                        const label = tpl.key === "global" ? "Global Default" : (TEMPLATE_LABELS[tpl.key] || tpl.name);
+                        const label = tpl.key === "global" ? "Global Default" : tpl.name;
                         const desc = tpl.key === "global"
                           ? "Inherits global email settings"
                           : `Subject: ${(tpl as EmailTemplate).subject || "—"}`;
@@ -1307,7 +1393,7 @@ export default function EditEventPage() {
                           ? !formData.decline_template_id
                           : formData.decline_template_id === tpl.id;
                         const Icon = tpl.key === "global" ? AlertCircle : (TEMPLATE_ICONS[tpl.key] || Mail);
-                        const label = tpl.key === "global" ? "Global Decline Default" : (TEMPLATE_LABELS[tpl.key] || tpl.name);
+                        const label = tpl.key === "global" ? "Global Decline Default" : tpl.name;
                         const desc = tpl.key === "global"
                           ? "Inherits global decline settings"
                           : `Subject: ${(tpl as EmailTemplate).subject || "—"}`;
@@ -1348,38 +1434,69 @@ export default function EditEventPage() {
                 </div>
               </div>
 
-              {/* Live Email Preview */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Live Email Preview</h3>
-                    <p className="text-[9px] text-slate-300 font-medium mt-0.5">Rendered with this event's branding — banner, logo and colours</p>
-                  </div>
-                  <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest bg-slate-100 px-3 py-1.5 rounded-full">
-                    {TEMPLATE_LABELS[activeTemplateKey] || activeTemplateKey}
-                  </span>
-                </div>
-                <div className="rounded-2xl border border-slate-100 overflow-hidden bg-slate-50" style={{ height: "500px" }}>
-                  {previewHtml ? (
-                    <iframe
-                      ref={previewFrameRef}
-                      title="Email Preview"
-                      className="w-full h-full border-0"
-                      sandbox="allow-same-origin"
-                    />
-                  ) : (
-                    <div className="flex items-center justify-center h-full">
-                      <Loader2 className="animate-spin text-slate-300" size={28} />
+              {/* Live Email Previews */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {/* Confirmation Preview */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-[10px] font-black text-[#1e293b] uppercase tracking-widest">Confirmation Email Preview</h3>
+                      <p className="text-[9px] text-slate-400 font-medium mt-0.5">Rendered with this event's branding — banner, logo and colours</p>
                     </div>
-                  )}
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest bg-slate-100 px-3 py-1.5 rounded-full">
+                      {activeConfTemplateName}
+                    </span>
+                  </div>
+                  <div className="rounded-2xl border border-slate-100 overflow-hidden bg-slate-50" style={{ height: "500px" }}>
+                    {previewHtml ? (
+                      <iframe
+                        ref={previewFrameRef}
+                        title="Confirmation Email Preview"
+                        className="w-full h-full border-0"
+                        sandbox="allow-same-origin"
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center h-full">
+                        <Loader2 className="animate-spin text-slate-300" size={28} />
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <p className="text-[9px] text-slate-300 text-center font-medium">
-                  To edit the template content and subject line, use{" "}
-                  <Link href="/admin/settings" target="_blank" className="underline hover:text-slate-400 transition-colors">
-                    Settings → Email Templates
-                  </Link>
-                </p>
+
+                {/* Decline Preview */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-[10px] font-black text-[#1e293b] uppercase tracking-widest">Decline Email Preview</h3>
+                      <p className="text-[9px] text-slate-400 font-medium mt-0.5">Rendered with this event's branding — banner, logo and colours</p>
+                    </div>
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest bg-slate-100 px-3 py-1.5 rounded-full">
+                      {activeDeclineTemplateName}
+                    </span>
+                  </div>
+                  <div className="rounded-2xl border border-slate-100 overflow-hidden bg-slate-50" style={{ height: "500px" }}>
+                    {declinePreviewHtml ? (
+                      <iframe
+                        ref={declinePreviewFrameRef}
+                        title="Decline Email Preview"
+                        className="w-full h-full border-0"
+                        sandbox="allow-same-origin"
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center h-full">
+                        <Loader2 className="animate-spin text-slate-300" size={28} />
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
+
+              <p className="text-[9px] text-slate-300 text-center font-medium mt-4">
+                To edit the template content and subject line, use{" "}
+                <Link href="/admin/settings" target="_blank" className="underline hover:text-slate-400 transition-colors">
+                  Settings → Email Templates
+                </Link>
+              </p>
 
               {/* Save button */}
               <div className="pt-2">

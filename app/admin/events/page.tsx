@@ -1,10 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Calendar, MapPin, Users, Search, MoreHorizontal, ArrowUpRight, Loader2, Plus } from "lucide-react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import AdminLayout from "@/components/AdminLayout";
+import useSWR from "swr";
+
+const fetcher = (url: string, email: string): Promise<Event[]> =>
+  fetch(url, { headers: { "x-user-email": email } }).then((res) => res.json());
 
 interface Event {
   id: number;
@@ -19,27 +23,17 @@ interface Event {
 }
 
 export default function EventsListPage() {
-  const [events, setEvents] = useState<Event[]>([]);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const { data: session } = useSession();
   const userRole = (session?.user as any)?.role || "staff";
 
-  useEffect(() => {
-    if (!session?.user?.email) return;
-    fetch("/api/py/events", {
-      headers: { "x-user-email": session.user.email }
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        setEvents(data);
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error(err);
-        setLoading(false);
-      });
-  }, [session]);
+  const { data: eventsData, error } = useSWR<Event[]>(
+    session?.user?.email ? ["/api/py/events", session.user.email] : null,
+    ([url, email]: [string, string]) => fetcher(url, email)
+  );
+
+  const events = eventsData || [];
+  const loading = !eventsData && !error;
 
   const filteredEvents = events.filter(e => {
     const matchesSearch = e.title.toLowerCase().includes(search.toLowerCase()) || 
@@ -120,7 +114,7 @@ export default function EventsListPage() {
                    <tr key={event.id} className="hover:bg-slate-50/50 transition-colors group dark:hover:bg-slate-800/50">
                       <td className="px-10 py-8">
                          <div>
-                            <p className="text-lg font-black text-[#0f172a] dark:text-white group-hover:text-yellow-500 transition-colors">{event.title}</p>
+                            <p className="text-lg font-black text-[#0f172a] dark:text-white group-hover:text-yellow-500 transition-colors">{(event.title || "").replace(/<[^>]*>/g, "")}</p>
                             <div className="flex items-center gap-2 mt-1">
                               <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest dark:text-slate-500">Slug: {event.slug}</span>
                               {event.client && (
@@ -174,7 +168,7 @@ export default function EventsListPage() {
                          {userRole !== "staff" && (
                            <button 
                              onClick={async () => {
-                               if (confirm(`Are you sure you want to duplicate the event "${event.title}"?`)) {
+                               if (confirm(`Are you sure you want to duplicate the event "${(event.title || "").replace(/<[^>]*>/g, "")}"?`)) {
                                  try {
                                    const res = await fetch(`/api/py/events/${event.id}/duplicate`, {
                                      method: "POST",

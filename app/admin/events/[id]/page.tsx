@@ -104,6 +104,7 @@ export default function EventDetailsPage() {
   const [pinLoading, setPinLoading] = useState(false);
   const [pinStatus, setPinStatus] = useState<"idle" | "success" | "error" | "processing" | "warning">("idle");
   const [pinMessage, setPinMessage] = useState("");
+  const [checkedInReg, setCheckedInReg] = useState<any | null>(null);
   const [resendingRegId, setResendingRegId] = useState<string | null>(null);
   const [bulkResending, setBulkResending] = useState(false);
   const [selectedScanDay, setSelectedScanDay] = useState<number | "auto">("auto");
@@ -118,6 +119,65 @@ export default function EventDetailsPage() {
   const [isCaching, setIsCaching] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastCachedAt, setLastCachedAt] = useState<string | null>(null);
+
+  const formatOperatorFields = (reg: any): Array<{ label: string, value: string }> => {
+    if (!reg || !event) return [];
+    const template = event?.registration_form_template;
+    const opConfig = template?.operator_config;
+    
+    // Fallback standard fields
+    const displayFields = opConfig?.display_fields && opConfig.display_fields.length > 0 
+      ? opConfig.display_fields 
+      : ["first_name", "last_name", "email", "company"];
+
+    const activeSchema = template?.layout_schema || event?.custom_fields_schema || [];
+    let flatFields: any[] = [];
+    if (activeSchema.length > 0 && "fields" in activeSchema[0]) {
+      for (const section of activeSchema) {
+        flatFields.push(...(section.fields || []));
+      }
+    } else {
+      flatFields = activeSchema;
+    }
+
+    const fieldMap = new Map<string, any>();
+    for (const f of flatFields) {
+      fieldMap.set(f.key || f.id, f);
+    }
+
+    const standardLabels: Record<string, string> = {
+      first_name: "First Name",
+      last_name: "Last Name",
+      email: "Email Address",
+      company: "Organization / Company"
+    };
+
+    const results: Array<{ label: string, value: string }> = [];
+
+    for (const fieldKey of displayFields) {
+      const fieldDef = fieldMap.get(fieldKey);
+      const label = fieldDef?.label || standardLabels[fieldKey] || fieldKey;
+      
+      let val = "";
+      if (["first_name", "last_name", "email", "company"].includes(fieldKey)) {
+        val = reg.attendee?.[fieldKey] || "";
+      } else {
+        val = reg.custom_answers?.[fieldKey] || reg.custom_answers?.[fieldDef?.id] || "";
+        if (typeof val === "boolean") {
+          val = val ? "Yes" : "No";
+        } else if (typeof val === "object" && val !== null) {
+          val = `${val.first_name || ""} ${val.last_name || ""}`.trim();
+        }
+      }
+
+      if (val) {
+        const cleanLabel = label.replace(/<[^>]*>/g, "").trim();
+        results.push({ label: cleanLabel, value: String(val) });
+      }
+    }
+
+    return results;
+  };
 
   const downloadRegistrantTemplate = () => {
     import("xlsx").then((XLSX) => {
@@ -714,7 +774,11 @@ export default function EventDetailsPage() {
                       );
                     })()}
                  </div>
-                <h1 className={`text-3xl sm:text-4xl md:text-5xl font-black text-[#0f172a] tracking-tighter italic font-bricolage leading-[1.1] ${(userRole === "admin" || userRole === "manager") ? "mb-6" : "mb-10"}`}>{event.title}</h1>
+                <h1 
+                  className={`text-3xl sm:text-4xl md:text-5xl font-black text-[#0f172a] tracking-tighter italic font-bricolage leading-[1.1] ${(userRole === "admin" || userRole === "manager") ? "mb-6" : "mb-10"}`}
+                >
+                  {(event.title || "").replace(/<[^>]*>/g, "")}
+                </h1>
                 {(userRole === "admin" || userRole === "manager") && (
                   <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mb-10 bg-slate-50 p-4 rounded-2xl border border-slate-100 group min-w-0">
                      <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest ml-1 shrink-0">Public Link:</p>
@@ -1284,11 +1348,15 @@ export default function EventDetailsPage() {
                          await dbOffline.addOfflineScan(scanObj);
                          await updateOfflineStats();
                          
-                         return {
+                         const resultObj = {
                            id: localReg.id,
                            attendee: localReg.attendee,
                            checked_in: true,
                            checked_in_days: [...checkedInDays, targetDay]
+                         };
+                         return {
+                           ...resultObj,
+                           operator_fields: formatOperatorFields(resultObj)
                          };
                        }
                        
@@ -1309,7 +1377,10 @@ export default function EventDetailsPage() {
                          tx.objectStore("registrations").put(updated);
                        }).catch(() => {});
                        
-                       return updated;
+                       return {
+                         ...updated,
+                         operator_fields: formatOperatorFields(updated)
+                       };
                      }} 
                    />
                  </div>
@@ -1371,8 +1442,9 @@ export default function EventDetailsPage() {
                                
                                setPinStatus("success");
                                setPinMessage(`Check-in Successful: ${localReg.attendee?.first_name || 'Guest'}`);
+                               setCheckedInReg(localReg);
                                setPin("");
-                               setTimeout(() => setPinStatus("idle"), 3000);
+                               setTimeout(() => { setPinStatus("idle"); setCheckedInReg(null); }, 6000);
                              } catch (err) {
                                setPinStatus("error");
                                setPinMessage("Local verification error");
@@ -1399,8 +1471,9 @@ export default function EventDetailsPage() {
                                setRegistrations(prev => prev.map(r => r.id === updated.id ? { ...r, checked_in: updated.checked_in, checked_in_days: updated.checked_in_days ?? [] } : r));
                                setPinStatus("success");
                                setPinMessage(`Check-in Successful: ${updated.attendee?.first_name || 'Guest'}`);
+                               setCheckedInReg(updated);
                                setPin("");
-                               setTimeout(() => setPinStatus("idle"), 3000);
+                               setTimeout(() => { setPinStatus("idle"); setCheckedInReg(null); }, 6000);
                                
                                dbOffline.initDb().then(async (db) => {
                                  const tx = db.transaction(["registrations"], "readwrite");
@@ -1442,11 +1515,21 @@ export default function EventDetailsPage() {
                        {pinStatus === "error" && <XCircle size={48} />}
                        {pinStatus === "warning" && <AlertCircle size={48} />}
                        
-                       <div className="text-center">
+                       <div className="text-center w-full">
                           <p className="text-xl font-black italic uppercase tracking-tighter font-bricolage leading-tight">{pinMessage}</p>
+                          {pinStatus === "success" && checkedInReg && (
+                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-left mt-6 w-full max-h-60 overflow-y-auto pr-1">
+                               {formatOperatorFields(checkedInReg).map((f: any, idx: number) => (
+                                 <div key={idx} className="bg-white/10 p-3.5 rounded-xl border border-white/5 flex flex-col justify-between animate-in fade-in slide-in-from-top-1">
+                                   <span className="text-[8px] uppercase tracking-widest text-white/60 font-black">{f.label}</span>
+                                   <span className="text-xs font-bold text-white mt-0.5 break-words">{f.value}</span>
+                                 </div>
+                               ))}
+                             </div>
+                           )}
                           {pinStatus !== "processing" && (
                             <button 
-                              onClick={() => setPinStatus("idle")}
+                              onClick={() => { setPinStatus("idle"); setCheckedInReg(null); }}
                               className={`mt-6 px-8 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border ${
                                 pinStatus === "warning" ? "bg-white/20 hover:bg-white/30 border-white/10" : "bg-white/20 hover:bg-white/30 border-white/10"
                               }`}
@@ -1550,7 +1633,7 @@ export default function EventDetailsPage() {
 
                    <div className="space-y-3">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Subject Line</label>
-                      <input required name="subject" placeholder={`Update for ${event.title}`} className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a]" />
+                      <input required name="subject" placeholder={`Update for ${(event.title || "").replace(/<[^>]*>/g, "")}`} className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a]" />
                    </div>
                    <div className="space-y-3">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Message Body</label>

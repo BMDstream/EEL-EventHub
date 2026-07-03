@@ -115,6 +115,24 @@ def resolve_event_template_metas(event, session, event_dict):
 
 @router.get("/{slug}")
 def read_event(slug: str, session: Session = Depends(get_session)):
+    from backend.cache_service import get_cached_event, set_cached_event
+    
+    # Check Redis cache first
+    cached_event = get_cached_event(slug)
+    if cached_event:
+        from backend.models import Registration
+        from sqlmodel import func
+        try:
+            registrations_count = session.exec(
+                select(func.count(Registration.id))
+                .where(Registration.event_id == cached_event["id"])
+                .where(Registration.status == "confirmed")
+            ).one()
+            cached_event["registrations_count"] = registrations_count
+        except Exception:
+            cached_event["registrations_count"] = 0
+        return cached_event
+        
     event = session.exec(select(Event).where(Event.slug == slug)).first()
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
@@ -136,7 +154,22 @@ def read_event(slug: str, session: Session = Depends(get_session)):
             event_dict["custom_fields_schema"] = reg_tpl.layout_schema
     else:
         event_dict["registration_form_template"] = None
+
+    # Dynamic count of confirmed registrations
+    from backend.models import Registration
+    from sqlmodel import func
+    try:
+        registrations_count = session.exec(
+            select(func.count(Registration.id))
+            .where(Registration.event_id == event.id)
+            .where(Registration.status == "confirmed")
+        ).one()
+        event_dict["registrations_count"] = registrations_count
+    except Exception:
+        event_dict["registrations_count"] = 0
         
+    # Cache resolved layout in Redis
+    set_cached_event(slug, event_dict)
     return event_dict
 
 @router.get("/id/{event_id}")
@@ -209,6 +242,11 @@ def update_event(
     session.add(db_event)
     session.commit()
     session.refresh(db_event)
+    
+    # Invalidate Redis cache
+    from backend.cache_service import clear_cached_event
+    clear_cached_event(db_event.slug)
+    
     return db_event
 
 @router.put("/{event_id}/form-schema")
@@ -229,6 +267,11 @@ def update_event_form_schema(
     session.add(db_event)
     session.commit()
     session.refresh(db_event)
+    
+    # Invalidate Redis cache
+    from backend.cache_service import clear_cached_event
+    clear_cached_event(db_event.slug)
+    
     return db_event
 
 @router.delete("/{event_id}")
@@ -247,6 +290,11 @@ def delete_event(
     
     session.delete(event)
     session.commit()
+    
+    # Invalidate Redis cache
+    from backend.cache_service import clear_cached_event
+    clear_cached_event(event.slug)
+    
     return {"ok": True}
 
 @router.get("/{slug}/public-stats")

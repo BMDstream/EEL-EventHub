@@ -1,5 +1,6 @@
 import os
 import httpx
+import time
 from fastapi import BackgroundTasks
 from backend.email_service import send_confirmation_email, send_broadcast_email
 
@@ -18,6 +19,22 @@ elif not APP_BASE_URL:
         APP_BASE_URL = f"https://{vercel_url}"
     else:
         APP_BASE_URL = "http://localhost:8000"
+
+def execute_with_retries(func, *args, **kwargs):
+    """Helper wrapper to execute email tasks with up to 3 retries and linear backoff."""
+    max_retries = 3
+    initial_delay = 2
+    for attempt in range(max_retries):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            print(f"SMTP/Resend email task failed (attempt {attempt + 1}/{max_retries}): {e}")
+            if attempt < max_retries - 1:
+                time.sleep(initial_delay * (attempt + 1))
+            else:
+                # Log final failure
+                print(f"SMTP/Resend email task completely failed after {max_retries} attempts.")
+                raise e
 
 def _post_qstash_sync(url: str, headers: dict, payload: dict, task_name: str):
     """Synchronously dispatch the QStash request during the request lifecycle to prevent serverless freezing."""
@@ -59,7 +76,8 @@ def dispatch_send_confirmation_email(
         url = f"https://qstash.upstash.io/v2/publish/{APP_BASE_URL}/api/py/tasks/worker"
         headers = {
             "Authorization": f"Bearer {QSTASH_TOKEN}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            "Upstash-Retries": "3"
         }
         payload = {
             "task": "send_confirmation_email",
@@ -67,15 +85,15 @@ def dispatch_send_confirmation_email(
         }
         _post_qstash_sync(url=url, headers=headers, payload=payload, task_name="send_confirmation_email")
         return
-
+ 
     # Fallback: Use FastAPI BackgroundTasks so the email is sent AFTER the HTTP response
     # is returned to the client. This prevents the Vercel serverless function from timing out
     # while waiting for the Resend API call to complete inline.
     if background_tasks is not None:
-        background_tasks.add_task(send_confirmation_email, **args)
+        background_tasks.add_task(execute_with_retries, send_confirmation_email, **args)
     else:
         # Last resort: synchronous call (e.g. in test/local contexts without background tasks)
-        send_confirmation_email(**args)
+        execute_with_retries(send_confirmation_email, **args)
 
 def dispatch_send_broadcast_email(
     background_tasks: BackgroundTasks,
@@ -104,7 +122,8 @@ def dispatch_send_broadcast_email(
         url = f"https://qstash.upstash.io/v2/publish/{APP_BASE_URL}/api/py/tasks/worker"
         headers = {
             "Authorization": f"Bearer {QSTASH_TOKEN}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            "Upstash-Retries": "3"
         }
         payload = {
             "task": "send_broadcast_email",
@@ -116,6 +135,6 @@ def dispatch_send_broadcast_email(
     # Fallback: Use FastAPI BackgroundTasks so the email is sent AFTER the HTTP response
     # is returned to the client, preventing Vercel serverless timeout.
     if background_tasks is not None:
-        background_tasks.add_task(send_broadcast_email, **args)
+        background_tasks.add_task(execute_with_retries, send_broadcast_email, **args)
     else:
-        send_broadcast_email(**args)
+        execute_with_retries(send_broadcast_email, **args)
