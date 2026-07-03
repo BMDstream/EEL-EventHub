@@ -92,6 +92,7 @@ interface RegistrationFormTemplate {
   operator_config?: {
     display_fields?: string[];
     card_layout_text?: string;
+    success_bg_color?: string;
   };
   created_at?: string;
   updated_at?: string;
@@ -1716,6 +1717,26 @@ export default function RegistrationTemplateManager() {
                         </p>
 
                         <div className="space-y-2">
+                          <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block ml-1">
+                            Operator Success Card Background Color
+                          </label>
+                          <div className="flex items-center gap-3">
+                            <input 
+                              type="color" 
+                              value={selectedTemplate.operator_config?.success_bg_color || "#0f172a"} 
+                              onChange={(e) => updateOperatorConfig("success_bg_color", e.target.value)}
+                              className="w-10 h-10 rounded-xl border border-slate-200 cursor-pointer p-0 bg-transparent shrink-0" 
+                            />
+                            <input 
+                              type="text" 
+                              value={selectedTemplate.operator_config?.success_bg_color || "#0f172a"} 
+                              onChange={(e) => updateOperatorConfig("success_bg_color", e.target.value)}
+                              className="w-24 shrink-0 px-3 py-2.5 rounded-xl border border-slate-100 font-mono font-bold text-xs bg-slate-50 dark:bg-slate-800" 
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
                           <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
                             Display Card Content Layout Editor
                           </label>
@@ -2238,7 +2259,7 @@ export default function RegistrationTemplateManager() {
                       </div>
 
                       <div 
-                        style={{ backgroundColor: selectedTemplate.theme_config.primary_color || "#0f172a" }}
+                        style={{ backgroundColor: selectedTemplate.operator_config?.success_bg_color || "#0f172a" }}
                         className="rounded-3xl p-5 text-center text-white space-y-4 shadow-md relative overflow-hidden"
                       >
                         <div className="w-9 h-9 rounded-full bg-green-500/20 border border-green-500/30 flex items-center justify-center mx-auto">

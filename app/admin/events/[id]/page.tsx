@@ -1680,7 +1680,7 @@ export default function EventDetailsPage() {
                      <div 
                         style={{
                           backgroundColor: pinStatus === "success"
-                            ? (event?.registration_form_template?.theme_config?.primary_color || "#22c55e")
+                            ? (event?.registration_form_template?.operator_config?.success_bg_color || "#22c55e")
                             : pinStatus === "error" || pinStatus === "warning"
                             ? "#ef4444"
                             : "#0f172a"
