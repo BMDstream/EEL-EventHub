@@ -140,8 +140,21 @@ export default function RegistrationTemplateManager() {
   // Tabs within editor: theme, layout, postSubmit, email, operator
   const [editorTab, setEditorTab] = useState<"theme" | "layout" | "postSubmit" | "email" | "operator">("theme");
   
-  // Real-time Preview Mode: "form", "confirmation", or "decline"
-  const [previewMode, setPreviewMode] = useState<"form" | "confirmation" | "decline">("form");
+  // Real-time Preview Mode: "form", "confirmation", "decline", "email", or "operator"
+  const [previewMode, setPreviewMode] = useState<"form" | "confirmation" | "decline" | "email" | "operator">("form");
+
+  // Sync previewMode with editorTab changes for optimal real-time feedback
+  useEffect(() => {
+    if (editorTab === "theme" || editorTab === "layout") {
+      setPreviewMode("form");
+    } else if (editorTab === "postSubmit") {
+      setPreviewMode("confirmation");
+    } else if (editorTab === "email") {
+      setPreviewMode("email");
+    } else if (editorTab === "operator") {
+      setPreviewMode("operator");
+    }
+  }, [editorTab]);
 
   // Create Modal State
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -1693,24 +1706,36 @@ export default function RegistrationTemplateManager() {
               Live Preview
             </h3>
             
-            <div className="bg-slate-100 rounded-xl p-1 flex gap-1 text-[9px] font-black uppercase tracking-wider text-slate-400 dark:bg-slate-800 shrink-0">
+            <div className="bg-slate-100 rounded-xl p-1 flex flex-wrap gap-1 text-[8.5px] font-black uppercase tracking-wider text-slate-400 dark:bg-slate-800 shrink-0 max-w-full">
               <button
                 onClick={() => setPreviewMode("form")}
-                className={`px-3 py-1.5 rounded-lg transition-all ${previewMode === "form" ? "bg-white text-[#0f172a] shadow-sm font-black dark:bg-[#0f172a] dark:text-white" : "hover:text-slate-600"}`}
+                className={`px-2 py-1 rounded-lg transition-all ${previewMode === "form" ? "bg-white text-[#0f172a] shadow-sm font-black dark:bg-[#0f172a] dark:text-white" : "hover:text-slate-600"}`}
               >
-                Form View
+                Form
               </button>
               <button
                 onClick={() => setPreviewMode("confirmation")}
-                className={`px-3 py-1.5 rounded-lg transition-all ${previewMode === "confirmation" ? "bg-white text-[#0f172a] shadow-sm font-black dark:bg-[#0f172a] dark:text-white" : "hover:text-slate-600"}`}
+                className={`px-2 py-1 rounded-lg transition-all ${previewMode === "confirmation" ? "bg-white text-[#0f172a] shadow-sm font-black dark:bg-[#0f172a] dark:text-white" : "hover:text-slate-600"}`}
               >
-                Success Screen
+                Success
               </button>
               <button
                 onClick={() => setPreviewMode("decline")}
-                className={`px-3 py-1.5 rounded-lg transition-all ${previewMode === "decline" ? "bg-white text-[#0f172a] shadow-sm font-black dark:bg-[#0f172a] dark:text-white" : "hover:text-slate-600"}`}
+                className={`px-2 py-1 rounded-lg transition-all ${previewMode === "decline" ? "bg-white text-[#0f172a] shadow-sm font-black dark:bg-[#0f172a] dark:text-white" : "hover:text-slate-600"}`}
               >
-                Decline Screen
+                Decline
+              </button>
+              <button
+                onClick={() => setPreviewMode("email")}
+                className={`px-2 py-1 rounded-lg transition-all ${previewMode === "email" ? "bg-white text-[#0f172a] shadow-sm font-black dark:bg-[#0f172a] dark:text-white" : "hover:text-slate-600"}`}
+              >
+                Email
+              </button>
+              <button
+                onClick={() => setPreviewMode("operator")}
+                className={`px-2 py-1 rounded-lg transition-all ${previewMode === "operator" ? "bg-white text-[#0f172a] shadow-sm font-black dark:bg-[#0f172a] dark:text-white" : "hover:text-slate-600"}`}
+              >
+                Operator
               </button>
             </div>
           </div>
@@ -2002,12 +2027,12 @@ export default function RegistrationTemplateManager() {
                       </div>
                     );
                   })()
-                ) : (
+                ) : previewMode === "decline" ? (
                   // Decline Screen View
                   (() => {
                     return (
                       <div 
-                        className="p-6 rounded-2xl text-center space-y-6 shadow-sm border border-slate-100/50"
+                        className="p-6 rounded-2xl text-center space-y-6 shadow-sm border border-slate-100/50 w-full"
                         style={{ backgroundColor: selectedTemplate.theme_config.feedback_bg_color || "#f1f5f9" }}
                       >
                         {selectedTemplate.post_submit_config.decline_icon_url ? (
@@ -2043,6 +2068,135 @@ export default function RegistrationTemplateManager() {
                       </div>
                     );
                   })()
+                ) : previewMode === "email" ? (
+                  // Real-time Modular Email Preview
+                  <div className="space-y-4 text-left w-full h-full flex flex-col">
+                    <div className="bg-slate-50 border border-slate-100 rounded-[1.5rem] p-5 space-y-5 shadow-sm max-h-[500px] overflow-y-auto w-full">
+                      {/* Header Logo */}
+                      <div className="flex justify-between items-center">
+                        <span 
+                          style={{ backgroundColor: selectedTemplate.theme_config.primary_color || "#0f172a" }}
+                          className="text-[9px] font-black text-white uppercase tracking-widest px-3 py-1.5 rounded-lg"
+                        >
+                          Attendee Pass
+                        </span>
+                        {selectedTemplate.theme_config.logo_url && (
+                          <img src={selectedTemplate.theme_config.logo_url} alt="Logo" className="max-h-6 object-contain" />
+                        )}
+                      </div>
+
+                      {/* Title */}
+                      <h2 
+                        style={{ color: selectedTemplate.theme_config.primary_color || "#0f172a" }}
+                        className="text-2xl font-black uppercase tracking-tight italic"
+                      >
+                        Access <span style={{ color: selectedTemplate.theme_config.accent_color || "#94a3b8" }}>Granted</span>
+                      </h2>
+
+                      {/* Custom confirmation email body */}
+                      <div 
+                        className="text-xs font-medium text-slate-650 leading-relaxed font-sans whitespace-pre-wrap break-words prose prose-sm max-w-none"
+                        dangerouslySetInnerHTML={{
+                          __html: (() => {
+                            let text = selectedTemplate.email_config?.body_html || "Type confirmation body...";
+                            // Replace tokens with sample data
+                            text = text.replace(/\{\{registrant\.first_name\}\}/g, "John");
+                            text = text.replace(/\{\{registrant\.last_name\}\}/g, "Doe");
+                            text = text.replace(/\{\{registrant\.company\}\}/g, "Excellence Logistics");
+                            text = text.replace(/\{\{event\.title\}\}/g, "Golf Day 2026");
+                            text = text.replace(/\{\{event\.location\}\}/g, "The Country Club");
+                            text = text.replace(/\{\{event\.start_date\}\}/g, "Thursday, Sep 11, 2026");
+                            text = text.replace(/\{\{registration\.pin\}\}/g, "1234");
+                            return text;
+                          })()
+                        }}
+                      />
+
+                      {/* Engagement Details Info block */}
+                      <div className="p-3.5 rounded-xl border border-slate-100 bg-slate-50/50 space-y-2">
+                        <span className="text-[7.5px] font-black text-slate-400 uppercase tracking-widest block">Engagement Details</span>
+                        <div className="space-y-1">
+                          <p className="text-[10px] font-black text-slate-700">Golf Day 2026</p>
+                          <p className="text-[8.5px] font-bold text-slate-500">Thursday, Sep 11, 2026 @ 10:00 AM</p>
+                          <p className="text-[8.5px] font-bold text-slate-500">The Country Club</p>
+                        </div>
+                      </div>
+
+                      {/* QR and PIN ticket blocks */}
+                      {selectedTemplate.email_config?.show_qr !== false && (
+                        <div className="bg-white border border-slate-150/60 rounded-2xl p-4 text-center space-y-3">
+                          <div 
+                            style={{ backgroundColor: selectedTemplate.theme_config.primary_color || "#0f172a" }}
+                            className="w-20 h-20 rounded-xl mx-auto flex items-center justify-center text-[7px] font-bold text-white uppercase tracking-widest shadow-sm"
+                          >
+                            [QR CODE]
+                          </div>
+                          {selectedTemplate.email_config?.show_pin !== false && (
+                            <div className="space-y-1">
+                              <span className="text-[7.5px] font-black text-slate-400 uppercase tracking-widest block">unique access pass number</span>
+                              <div className="inline-block bg-white border border-slate-200 px-3 py-1.5 rounded-lg">
+                                <code className="text-sm font-black text-slate-800 tracking-widest">EEL-1234</code>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  // Operator view
+                  <div className="space-y-4 text-left w-full h-full flex flex-col justify-between">
+                    <div className="space-y-5">
+                      <div className="text-center space-y-1">
+                        <span className="text-[8.5px] font-black text-slate-400 uppercase tracking-[0.2em]">Operator Scan Success Mockup</span>
+                      </div>
+
+                      <div 
+                        style={{ backgroundColor: selectedTemplate.theme_config.primary_color || "#0f172a" }}
+                        className="rounded-3xl p-5 text-center text-white space-y-4 shadow-md relative overflow-hidden"
+                      >
+                        <div className="w-9 h-9 rounded-full bg-green-500/20 border border-green-500/30 flex items-center justify-center mx-auto">
+                          <CheckCircle2 className="text-green-400" size={20} />
+                        </div>
+                        
+                        <div className="space-y-1">
+                          <span className="text-[8.5px] font-black uppercase tracking-[0.3em] opacity-60">
+                            {selectedTemplate.operator_config?.card_title || "VERIFIED ATTENDEE"}
+                          </span>
+                          <h2 className="text-xl font-black uppercase tracking-tight italic">
+                            {selectedTemplate.operator_config?.title || "ACCESS GRANTED"}
+                          </h2>
+                        </div>
+
+                        <div className="pt-3 border-t border-white/10 space-y-1">
+                          <p className="text-xs font-black">John Doe</p>
+                          <p className="text-[9px] opacity-60 font-semibold">john.doe@example.com</p>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <span className="text-[8.5px] font-black text-slate-400 uppercase tracking-widest block ml-1">Grid Display Fields</span>
+                        <div className="grid grid-cols-2 gap-2.5">
+                          {(selectedTemplate.operator_config?.grid_fields || ["company", "ticket_type"]).map((fieldKey: string) => {
+                            const fieldDef = selectedTemplate.layout_schema.find(f => f.key === fieldKey || f.id === fieldKey);
+                            const label = fieldDef?.label || fieldKey;
+                            const mockValue = fieldKey === "company" ? "Excellence Logistics" : fieldKey === "ticket_type" ? "VIP Pass" : "Sample Answer";
+                            
+                            return (
+                              <div key={fieldKey} className="bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl p-3 space-y-0.5">
+                                <span className="text-[7.5px] font-black text-slate-400 uppercase tracking-widest block truncate">
+                                  {label.replace(/<[^>]*>/g, "").trim()}
+                                </span>
+                                <p className="text-[10px] font-bold text-slate-700 dark:text-slate-350 truncate">
+                                  {mockValue}
+                                </p>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 )}
               </div>
             </div>
