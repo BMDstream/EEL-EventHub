@@ -2165,10 +2165,10 @@ export default function RegistrationTemplateManager() {
                         
                         <div className="space-y-1">
                           <span className="text-[8.5px] font-black uppercase tracking-[0.3em] opacity-60">
-                            {selectedTemplate.operator_config?.card_title || "VERIFIED ATTENDEE"}
+                            VERIFIED ATTENDEE
                           </span>
                           <h2 className="text-xl font-black uppercase tracking-tight italic">
-                            {selectedTemplate.operator_config?.title || "ACCESS GRANTED"}
+                            ACCESS GRANTED
                           </h2>
                         </div>
 
@@ -2181,7 +2181,7 @@ export default function RegistrationTemplateManager() {
                       <div className="space-y-2">
                         <span className="text-[8.5px] font-black text-slate-400 uppercase tracking-widest block ml-1">Grid Display Fields</span>
                         <div className="grid grid-cols-2 gap-2.5">
-                          {(selectedTemplate.operator_config?.grid_fields || ["company", "ticket_type"]).map((fieldKey: string) => {
+                          {(selectedTemplate.operator_config?.display_fields || ["company", "ticket_type"]).map((fieldKey: string) => {
                             const fieldDef = selectedTemplate.layout_schema.find(f => f.key === fieldKey || f.id === fieldKey);
                             const label = fieldDef?.label || fieldKey;
                             const mockValue = fieldKey === "company" ? "Excellence Logistics" : fieldKey === "ticket_type" ? "VIP Pass" : "Sample Answer";
