@@ -137,8 +137,8 @@ export default function RegistrationTemplateManager() {
   const [notification, setNotification] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   
-  // Tabs within editor: theme, layout, postSubmit
-  const [editorTab, setEditorTab] = useState<"theme" | "layout" | "postSubmit">("theme");
+  // Tabs within editor: theme, layout, postSubmit, email, operator
+  const [editorTab, setEditorTab] = useState<"theme" | "layout" | "postSubmit" | "email" | "operator">("theme");
   
   // Real-time Preview Mode: "form", "confirmation", or "decline"
   const [previewMode, setPreviewMode] = useState<"form" | "confirmation" | "decline">("form");
