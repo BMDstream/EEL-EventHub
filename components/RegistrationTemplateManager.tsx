@@ -2102,7 +2102,7 @@ export default function RegistrationTemplateManager() {
                         className="text-xs font-medium text-slate-650 leading-relaxed font-sans whitespace-pre-wrap break-words prose prose-sm max-w-none"
                         dangerouslySetInnerHTML={{
                           __html: (() => {
-                            let text = selectedTemplate.email_config?.body_html || "Type confirmation body...";
+                            let text = selectedTemplate.email_config?.body_template || "Type confirmation body...";
                             // Replace tokens with sample data
                             text = text.replace(/\{\{registrant\.first_name\}\}/g, "John");
                             text = text.replace(/\{\{registrant\.last_name\}\}/g, "Doe");
@@ -2127,7 +2127,7 @@ export default function RegistrationTemplateManager() {
                       </div>
 
                       {/* QR and PIN ticket blocks */}
-                      {selectedTemplate.email_config?.show_qr !== false && (
+                      {selectedTemplate.email_config?.show_qr_code !== false && (
                         <div className="bg-white border border-slate-150/60 rounded-2xl p-4 text-center space-y-3">
                           <div 
                             style={{ backgroundColor: selectedTemplate.theme_config.primary_color || "#0f172a" }}
