@@ -28,19 +28,15 @@ app.add_middleware(
 def on_startup():
     """
     On-startup initialization.
-    Structural schema updates are managed by Alembic, but we seed default
-    configuration data and clients here to ensure cold starts are always ready.
+    For serverless, we run self-healing column alterations to ensure database columns
+    exist, but skip full seeding sweeps to optimize cold start latencies.
     """
-    if IS_SERVERLESS:
-        print("Running in serverless mode. Skipping database initialization and migrations on startup.")
-        return
-
     try:
         from backend.database import run_db_initialization
         with Session(engine) as session:
-            run_db_initialization(session)
+            run_db_initialization(session, check_only_migrations=IS_SERVERLESS)
     except Exception as e:
-        print(f"Database initialization/seeding warning: {e}")
+        print(f"Database initialization warning: {e}")
 
 # Include Sub-routers with expected Vercel routes mappings
 app.include_router(auth.router, prefix="/api/py/auth", tags=["auth"])

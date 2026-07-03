@@ -23,7 +23,7 @@ def get_session():
     with Session(engine) as session:
         yield session
 
-def run_db_initialization(session: Session):
+def run_db_initialization(session: Session, check_only_migrations: bool = False):
     """
     Executes database schema setup, fallback column migrations, default seeding, indexes, and sweeps.
     Can be run during application startup or triggered on-demand via the dashboard admin panel.
@@ -135,6 +135,9 @@ def run_db_initialization(session: Session):
                     print(f"Column '{col_name}' added to registrationformtemplate table.")
                 except Exception:
                     session.rollback()
+
+    if check_only_migrations:
+        return
 
     # Seed default system settings
     default_email = session.exec(select(SystemSetting).where(SystemSetting.key == "email_config")).first()
