@@ -361,6 +361,10 @@ def send_confirmation_email(
     if meta:
         attendee_pass_bg_color = meta.get("attendeePassBgColor", attendee_pass_bg_color)
         engagement_details_color = meta.get("engagementDetailsColor", engagement_details_color)
+        if "show_qr_code" in meta:
+            show_qr_code = meta.get("show_qr_code") != "false"
+        if "show_pin" in meta:
+            show_pin = meta.get("show_pin") != "false"
 
     show_banner_meta = meta.get("show_banner", "false") if meta else "false"
     
