@@ -115,6 +115,8 @@ export default function EventDetailsPage() {
   const [importing, setImporting] = useState(false);
   const [selectedMetric, setSelectedMetric] = useState<"date" | "venue" | "enrollment" | "declined" | "checked_in" | null>(null);
   const [emailTemplates, setEmailTemplates] = useState<any[]>([]);
+  const [selectedBroadcastKey, setSelectedBroadcastKey] = useState("");
+  const [selectedSurveyKey, setSelectedSurveyKey] = useState("");
 
   // Controlled states for Broadcast Dispatch form
   const [broadcastSubject, setBroadcastSubject] = useState("");
@@ -125,6 +127,74 @@ export default function EventDetailsPage() {
   const [surveySubject, setSurveySubject] = useState("");
   const [surveyUrl, setSurveyUrl] = useState("");
   const [surveyBody, setSurveyBody] = useState("Hi {first_name},\n\nThank you for attending our event! We hope you had a great experience. We'd love to hear your feedback so we can make future events even better.");
+
+  const compileBroadcastPreview = (tmpl: any): string => {
+    if (!tmpl || !tmpl.body_html) return "";
+    let html = tmpl.body_html;
+    
+    const primaryCol = "#0f172a";
+    const accentCol = "#eab308";
+    
+    let meta: Record<string, any> = {};
+    const metaMatch = html.match(/<!--\s*TEMPLATE_META:\s*([\s\S]*?)\s*-->/);
+    if (metaMatch) {
+      try {
+        meta = JSON.parse(metaMatch[1]);
+      } catch (e) {}
+    }
+
+    const brandPrimary = meta.primary_color || primaryCol;
+    const brandAccent = meta.accent_color || accentCol;
+    
+    const showLogo = meta.show_logo !== "false";
+    let logoHtmlStr = "";
+    if (showLogo) {
+      if (meta.logo_image_url) {
+        logoHtmlStr = `<td align="right" valign="middle"><img src="${meta.logo_image_url}" style="max-height: 48px; max-width: 140px; object-fit: contain; display: block;" alt="Logo" /></td>`;
+      } else {
+        logoHtmlStr = `<td align="right" valign="middle"><div style="background-color:${brandPrimary};padding:8px 16px;border-radius:8px;color:#fff;font-weight:bold;font-size:14px;display:inline-block;font-family:sans-serif;">${meta.logo_text || "BMD"}</div></td>`;
+      }
+    }
+
+    const showBanner = meta.show_banner === "true";
+    let bannerHtmlStr = "";
+    if (showBanner && meta.banner_image_url) {
+      bannerHtmlStr = `
+      <tr>
+        <td align="center" style="padding: 0; margin: 0; line-height: 0;">
+          <img src="${meta.banner_image_url}" width="600" style="width: 100%; max-width: 600px; height: auto; display: block; border-top-left-radius: 38px; border-top-right-radius: 38px; margin: 0; padding: 0;" alt="Event Banner" />
+        </td>
+      </tr>
+      `;
+    }
+
+    const vars: Record<string, string> = {
+      first_name: "John",
+      last_name: "Doe",
+      event_title: event?.title?.replace(/<[^>]*>/g, "") || "Golf Invitational 2026",
+      location: event?.location || "Highland Gate Golf Estate",
+      start_date: event?.start_date ? new Date(event.start_date).toLocaleDateString() : "TBA",
+      primary_color: brandPrimary,
+      accent_color: brandAccent,
+      logo_html: logoHtmlStr,
+      banner_html: bannerHtmlStr,
+      details_html: `<div style="background: #ffffff; padding: 24px; border: 1px solid #f1f5f9; border-radius: 24px; margin-bottom: 24px; margin-top: 24px; font-family: sans-serif;">
+          <p style="font-size: 15px; font-weight: 800; color: ${brandPrimary}; margin: 0;">Event Details</p>
+          <p style="font-size: 13px; color: #64748b; margin-top: 4px;">Venue: ${event?.location || 'TBA'}</p>
+        </div>`,
+      broadcast_body: html.includes("broadcast_body") ? "This is a sample live preview of your broadcast announcement email body. Attending guests will see this layout." : "Thank you for registering.",
+      broadcast_signature: "The BMD Team",
+      footer_text: "Automated Event Management System",
+      qr_code: `<div style="background: #f8fafc; padding: 32px; border-radius: 24px; text-align: center; border: 1px solid #e2e8f0; margin: 24px auto; max-width: 240px;"><div style="width: 160px; height: 160px; background: #000; margin: 0 auto; display: flex; align-items: center; justify-content: center; color: white;">[QR CODE]</div></div>`
+    };
+
+    let compiled = html;
+    Object.entries(vars).forEach(([key, val]) => {
+      compiled = compiled.replaceAll(`{${key}}`, val);
+    });
+
+    return compiled;
+  };
 
   // Initialize subjects when event changes
   useEffect(() => {
@@ -1681,10 +1751,6 @@ export default function EventDetailsPage() {
                 <form 
                   onSubmit={async (e) => {
                     e.preventDefault();
-                    const target = e.target as any;
-                    const subject = target.subject.value;
-                    const body = target.body.value;
-                    const signature = target.signature.value;
                     
                     const fileInput = document.getElementById("attachments") as HTMLInputElement;
                     const files = fileInput?.files ? Array.from(fileInput.files) : [];
@@ -1711,14 +1777,32 @@ export default function EventDetailsPage() {
                         }))
                       );
                       
+                      let bodyPayload = broadcastBody;
+                      let subjectPayload = broadcastSubject;
+                      
+                      if (selectedBroadcastKey) {
+                        const tmpl = emailTemplates.find(t => t.key === selectedBroadcastKey);
+                        if (tmpl) {
+                          bodyPayload = tmpl.body_html || "";
+                          subjectPayload = tmpl.subject || `Update for ${event.title}`;
+                        }
+                      }
+                      
                       const res = await fetch(`/api/py/events/${id}/broadcast`, {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ subject: broadcastSubject, body: broadcastBody, signature: broadcastSignature, attachments })
+                        body: JSON.stringify({ 
+                          subject: subjectPayload, 
+                          body: bodyPayload, 
+                          signature: selectedBroadcastKey ? "" : broadcastSignature, 
+                          attachments 
+                        })
                       });
                       if (res.ok) {
                         alert("Broadcast successfully queued in the background!");
-                        setBroadcastBody("");
+                        if (!selectedBroadcastKey) {
+                          setBroadcastBody("");
+                        }
                         if (fileInput) fileInput.value = "";
                       } else {
                         alert("Failed to send broadcast. Ensure RESEND_API_KEY is configured.");
@@ -1730,99 +1814,137 @@ export default function EventDetailsPage() {
                   }}
                   className="space-y-8"
                 >
-                   {/* Personalization Help card */}
-                   <div className="bg-slate-50/50 border border-slate-100 rounded-3xl p-6 lg:p-8 space-y-4">
-                      <h4 className="text-[10px] font-black text-[#0f172a] uppercase tracking-widest">Personalization Tags</h4>
-                      <p className="text-slate-400 font-medium text-xs leading-relaxed">
-                         Use these tags to dynamically customize the email for each guest:
-                      </p>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-bold">
-                         <div className="text-slate-600"><code className="bg-white border border-slate-200/60 px-1.5 py-0.5 rounded text-yellow-600">{"{first_name}"}</code> - Guest's first name</div>
-                         <div className="text-slate-600"><code className="bg-white border border-slate-200/60 px-1.5 py-0.5 rounded text-yellow-600">{"{last_name}"}</code> - Guest's last name</div>
-                         <div className="text-slate-600"><code className="bg-white border border-slate-200/60 px-1.5 py-0.5 rounded text-yellow-600">{"{pin}"}</code> - Guest's unique Clearance PIN</div>
-                         <div className="text-slate-600"><code className="bg-white border border-slate-200/60 px-1.5 py-0.5 rounded text-yellow-600">{"{qr_code}"}</code> - Unique Check-in QR code</div>
-                      </div>
-                   </div>
-
+                   {/* Load Prebuilt Template Selector */}
                    <div className="space-y-3">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Load Prebuilt Template (Optional)</label>
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Select Broadcast Template</label>
                       <select 
+                        value={selectedBroadcastKey}
                         onChange={(e) => {
                           const key = e.target.value;
-                          if (!key) return;
-                          const tmpl = emailTemplates.find(t => t.key === key);
-                          if (tmpl) {
-                            const cleanedBody = tmpl.body_html
-                              ? tmpl.body_html
-                                  .replace(/<br\s*\/?>/gi, "\n")
-                                  .replace(/<\/p>/gi, "\n\n")
-                                  .replace(/<[^>]*>/g, "")
-                                  .trim()
-                              : "";
-                            setBroadcastSubject(tmpl.subject || "");
-                            setBroadcastBody(cleanedBody || tmpl.body_html || "");
+                          setSelectedBroadcastKey(key);
+                          if (key) {
+                            const tmpl = emailTemplates.find(t => t.key === key);
+                            if (tmpl) {
+                              setBroadcastSubject(tmpl.subject || "");
+                              setBroadcastBody(tmpl.body_html || "");
+                            }
+                          } else {
+                            setBroadcastSubject("");
+                            setBroadcastBody("");
                           }
                         }}
                         className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a] appearance-none cursor-pointer"
                       >
-                        <option value="">-- Choose a prebuilt template --</option>
+                        <option value="">-- Write a custom manual message --</option>
                         {emailTemplates.map((t) => (
                           <option key={t.key} value={t.key}>
-                            {t.name} ({t.key})
+                            {t.name}
                           </option>
                         ))}
                       </select>
                    </div>
 
-                   <div className="space-y-3">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Subject Line</label>
-                      <input 
-                        required 
-                        name="subject" 
-                        value={broadcastSubject}
-                        onChange={(e) => setBroadcastSubject(e.target.value)}
-                        placeholder={`Update for ${(event.title || "").replace(/<[^>]*>/g, "")}`} 
-                        className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a]" 
-                      />
-                   </div>
-                   <div className="space-y-3">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Message Body</label>
-                      <textarea 
-                        required 
-                        name="body" 
-                        rows={8} 
-                        value={broadcastBody}
-                        onChange={(e) => setBroadcastBody(e.target.value)}
-                        placeholder="Type your message here..." 
-                        className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a] resize-y font-mono text-sm leading-relaxed" 
-                      />
-                   </div>
-                   
-                   <div className="space-y-3">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">File Attachments (Optional)</label>
-                      <input 
-                        type="file" 
-                        id="attachments" 
-                        multiple 
-                        className="w-full px-6 py-4 bg-slate-50 rounded-2xl border-none outline-none font-bold text-slate-500 text-xs file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-black file:bg-[#0f172a] file:text-white hover:file:bg-black cursor-pointer"
-                      />
-                      <p className="text-[10px] text-slate-400 font-medium ml-1">Attach documents or media directly to the email body.</p>
-                   </div>
+                   {selectedBroadcastKey ? (
+                     // Split Preview Layout for Broadcast
+                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start animate-in fade-in duration-300">
+                       <div className="lg:col-span-5 space-y-6">
+                         <div className="space-y-3">
+                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">File Attachments (Optional)</label>
+                           <input 
+                             type="file" 
+                             id="attachments" 
+                             multiple 
+                             className="w-full px-6 py-4 bg-slate-50 rounded-2xl border-none outline-none font-bold text-slate-500 text-xs file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-black file:bg-[#0f172a] file:text-white hover:file:bg-black cursor-pointer"
+                           />
+                           <p className="text-[10px] text-slate-400 font-medium ml-1">Attach documents or media directly to the email body.</p>
+                         </div>
+                         
+                         <button type="submit" className="w-full bg-[#0f172a] hover:bg-black text-white font-black py-6 rounded-[2rem] shadow-2xl shadow-slate-200 transition-all uppercase tracking-[0.3em] text-xs active:scale-[0.98]">
+                            Dispatch Broadcast Template
+                         </button>
+                       </div>
 
-                    <div className="space-y-3">
-                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Signature (Optional)</label>
-                       <textarea 
-                         name="signature" 
-                         rows={2} 
-                         value={broadcastSignature}
-                         onChange={(e) => setBroadcastSignature(e.target.value)}
-                         placeholder="Kind regards, BMD Team" 
-                         className="w-full px-6 py-4 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a] resize-none text-sm" 
-                       />
-                    </div>
-                   <button type="submit" className="w-full bg-[#0f172a] hover:bg-black text-white font-black py-6 rounded-[2rem] shadow-2xl shadow-slate-200 transition-all uppercase tracking-[0.3em] text-xs">
-                      Dispatch Broadcast
-                   </button>
+                       <div className="lg:col-span-7 space-y-3">
+                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 block">Live Template Preview</label>
+                         <div className="bg-slate-50 rounded-3xl border border-slate-200/60 p-4 h-[450px] flex flex-col relative overflow-hidden">
+                           <iframe 
+                             title="Broadcast Template Preview"
+                             srcDoc={compileBroadcastPreview(emailTemplates.find(t => t.key === selectedBroadcastKey))}
+                             className="w-full h-full border-none rounded-2xl bg-white"
+                           />
+                         </div>
+                       </div>
+                     </div>
+                   ) : (
+                     // Manual Input Fields
+                     <div className="space-y-6 animate-in fade-in duration-300">
+                       {/* Personalization Help card */}
+                       <div className="bg-slate-50/50 border border-slate-100 rounded-3xl p-6 lg:p-8 space-y-4">
+                          <h4 className="text-[10px] font-black text-[#0f172a] uppercase tracking-widest">Personalization Tags</h4>
+                          <p className="text-slate-400 font-medium text-xs leading-relaxed">
+                             Use these tags to dynamically customize the email for each guest:
+                          </p>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-bold">
+                             <div className="text-slate-600"><code className="bg-white border border-slate-200/60 px-1.5 py-0.5 rounded text-yellow-600">{"{first_name}"}</code> - Guest's first name</div>
+                             <div className="text-slate-600"><code className="bg-white border border-slate-200/60 px-1.5 py-0.5 rounded text-yellow-600">{"{last_name}"}</code> - Guest's last name</div>
+                             <div className="text-slate-600"><code className="bg-white border border-slate-200/60 px-1.5 py-0.5 rounded text-yellow-600">{"{pin}"}</code> - Guest's unique Clearance PIN</div>
+                             <div className="text-slate-600"><code className="bg-white border border-slate-200/60 px-1.5 py-0.5 rounded text-yellow-600">{"{qr_code}"}</code> - Unique Check-in QR code</div>
+                          </div>
+                       </div>
+
+                       <div className="space-y-3">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Subject Line</label>
+                          <input 
+                            required 
+                            name="subject" 
+                            value={broadcastSubject}
+                            onChange={(e) => setBroadcastSubject(e.target.value)}
+                            placeholder={`Update for ${(event.title || "").replace(/<[^>]*>/g, "")}`} 
+                            className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a]" 
+                          />
+                       </div>
+                       
+                       <div className="space-y-3">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Message Body</label>
+                          <textarea 
+                            required 
+                            name="body" 
+                            rows={8} 
+                            value={broadcastBody}
+                            onChange={(e) => setBroadcastBody(e.target.value)}
+                            placeholder="Type your message here..." 
+                            className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a] resize-y font-mono text-sm leading-relaxed" 
+                          />
+                       </div>
+                       
+                       <div className="space-y-3">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">File Attachments (Optional)</label>
+                          <input 
+                            type="file" 
+                            id="attachments" 
+                            multiple 
+                            className="w-full px-6 py-4 bg-slate-50 rounded-2xl border-none outline-none font-bold text-slate-500 text-xs file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-black file:bg-[#0f172a] file:text-white hover:file:bg-black cursor-pointer"
+                          />
+                          <p className="text-[10px] text-slate-400 font-medium ml-1">Attach documents or media directly to the email body.</p>
+                       </div>
+
+                       <div className="space-y-3">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Signature (Optional)</label>
+                          <textarea 
+                            name="signature" 
+                            rows={2} 
+                            value={broadcastSignature}
+                            onChange={(e) => setBroadcastSignature(e.target.value)}
+                            placeholder="Kind regards, BMD Team" 
+                            className="w-full px-6 py-4 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a] resize-none text-sm" 
+                          />
+                       </div>
+                       
+                       <button type="submit" className="w-full bg-[#0f172a] hover:bg-black text-white font-black py-6 rounded-[2rem] shadow-2xl shadow-slate-200 transition-all uppercase tracking-[0.3em] text-xs">
+                          Dispatch Broadcast
+                       </button>
+                     </div>
+                   )}
                 </form>
 
                 <div className="pt-12 border-t border-slate-100 space-y-6">
@@ -1849,112 +1971,150 @@ export default function EventDetailsPage() {
                         This targets only the <strong>{registrations.filter(r => r.checked_in).length}</strong> checked-in guests.
                      </p>
                      <form 
-                       onSubmit={async (e) => {
-                         e.preventDefault();
-                         
-                         const fullBody = `${surveyBody}\n\nPlease complete our feedback survey here: ${surveyUrl}`;
-                         const targetCount = registrations.filter(r => r.checked_in).length;
-                         
-                         if (!confirm(`Are you sure you want to send this survey to the ${targetCount} checked-in attendees?`)) return;
-                         
-                         try {
-                           const res = await fetch(`/api/py/events/${id}/broadcast`, {
-                             method: "POST",
-                             headers: { 
-                               "Content-Type": "application/json",
-                               "x-user-email": session?.user?.email || ""
-                             },
-                             body: JSON.stringify({
-                               subject: surveySubject,
-                               body: fullBody,
-                               target: "checked_in"
-                             })
-                           });
-                           if (res.ok) {
-                             alert("Feedback survey broadcast successfully queued!");
-                             setSurveyUrl("");
-                           } else {
-                             alert("Failed to dispatch survey. Ensure RESEND_API_KEY is configured.");
-                           }
-                         } catch (err) {
-                           console.error(err);
-                           alert("An error occurred during dispatch.");
-                         }
-                       }}
-                       className="space-y-6"
-                     >
-                       <div className="space-y-3">
-                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Load Prebuilt Template (Optional)</label>
-                         <select 
-                           onChange={(e) => {
-                             const key = e.target.value;
-                             if (!key) return;
-                             const tmpl = emailTemplates.find(t => t.key === key);
-                             if (tmpl) {
-                               const cleanedBody = tmpl.body_html
-                                 ? tmpl.body_html
-                                     .replace(/<br\s*\/?>/gi, "\n")
-                                     .replace(/<\/p>/gi, "\n\n")
-                                     .replace(/<[^>]*>/g, "")
-                                     .trim()
-                                 : "";
-                               setSurveySubject(tmpl.subject || "");
-                               setSurveyBody(cleanedBody || tmpl.body_html || "");
-                             }
-                           }}
-                           className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a] appearance-none cursor-pointer"
-                         >
-                           <option value="">-- Choose a prebuilt template --</option>
-                           {emailTemplates.map((t) => (
-                             <option key={t.key} value={t.key}>
-                               {t.name} ({t.key})
-                             </option>
-                           ))}
-                         </select>
-                       </div>
+                        onSubmit={async (e) => {
+                          e.preventDefault();
+                          
+                          let bodyPayload = surveyBody;
+                          let subjectPayload = surveySubject;
+                          
+                          if (selectedSurveyKey) {
+                            const tmpl = emailTemplates.find(t => t.key === selectedSurveyKey);
+                            if (tmpl) {
+                              bodyPayload = tmpl.body_html || "";
+                              subjectPayload = tmpl.subject || `Feedback Survey`;
+                            }
+                          } else {
+                            bodyPayload = `${surveyBody}\n\nPlease complete our feedback survey here: ${surveyUrl}`;
+                          }
+                          
+                          const targetCount = registrations.filter(r => r.checked_in).length;
+                          if (!confirm(`Are you sure you want to send this survey to the ${targetCount} checked-in attendees?`)) return;
+                          
+                          try {
+                            const res = await fetch(`/api/py/events/${id}/broadcast`, {
+                              method: "POST",
+                              headers: { 
+                                "Content-Type": "application/json",
+                                "x-user-email": session?.user?.email || ""
+                              },
+                              body: JSON.stringify({
+                                subject: subjectPayload,
+                                body: bodyPayload,
+                                target: "checked_in"
+                              })
+                            });
+                            if (res.ok) {
+                              alert("Feedback survey broadcast successfully queued!");
+                              if (!selectedSurveyKey) {
+                                setSurveyUrl("");
+                              }
+                            } else {
+                              alert("Failed to dispatch survey. Ensure RESEND_API_KEY is configured.");
+                            }
+                          } catch (err) {
+                            console.error(err);
+                            alert("An error occurred during dispatch.");
+                          }
+                        }}
+                        className="space-y-6"
+                      >
+                        <div className="space-y-3">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Select Survey Template</label>
+                          <select 
+                            value={selectedSurveyKey}
+                            onChange={(e) => {
+                              const key = e.target.value;
+                              setSelectedSurveyKey(key);
+                              if (key) {
+                                const tmpl = emailTemplates.find(t => t.key === key);
+                                if (tmpl) {
+                                  setSurveySubject(tmpl.subject || "");
+                                  setSurveyBody(tmpl.body_html || "");
+                                }
+                              } else {
+                                setSurveySubject("");
+                                setSurveyBody("");
+                              }
+                            }}
+                            className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a] appearance-none cursor-pointer"
+                          >
+                            <option value="">-- Write a custom manual message --</option>
+                            {emailTemplates.map((t) => (
+                              <option key={t.key} value={t.key}>
+                                {t.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
 
-                       <div className="space-y-3">
-                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Survey Email Subject</label>
-                         <input 
-                           required 
-                           name="surveySubject" 
-                           value={surveySubject}
-                           onChange={(e) => setSurveySubject(e.target.value)}
-                           className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a]" 
-                         />
-                       </div>
-                       <div className="space-y-3">
-                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Survey Link (Google Forms / Typeform)</label>
-                         <input 
-                           required 
-                           name="surveyUrl" 
-                           type="url" 
-                           value={surveyUrl}
-                           onChange={(e) => setSurveyUrl(e.target.value)}
-                           placeholder="https://forms.google.com/your-survey-link" 
-                           className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a]" 
-                         />
-                       </div>
-                       <div className="space-y-3">
-                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Message Body</label>
-                         <textarea 
-                           required 
-                           name="surveyBody" 
-                           rows={6} 
-                           value={surveyBody}
-                           onChange={(e) => setSurveyBody(e.target.value)}
-                           className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a] resize-y font-mono text-xs leading-relaxed" 
-                         />
-                       </div>
-                       <button type="submit" disabled={registrations.filter(r => r.checked_in).length === 0} className="w-full bg-[#0f172a] hover:bg-black disabled:bg-slate-200 disabled:text-slate-400 text-white font-black py-6 rounded-[2rem] shadow-xl transition-all uppercase tracking-[0.2em] text-xs">
-                         Dispatch Survey to Checked-in Attendees
-                       </button>
-                     </form>
+                        {selectedSurveyKey ? (
+                          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start animate-in fade-in duration-300">
+                            <div className="lg:col-span-5 space-y-6">
+                              <button 
+                                type="submit" 
+                                disabled={registrations.filter(r => r.checked_in).length === 0} 
+                                className="w-full bg-[#0f172a] hover:bg-black disabled:bg-slate-200 disabled:text-slate-400 text-white font-black py-6 rounded-[2rem] shadow-xl transition-all uppercase tracking-[0.2em] text-xs active:scale-[0.98]"
+                              >
+                                Dispatch Survey Template
+                              </button>
+                            </div>
+
+                            <div className="lg:col-span-7 space-y-3">
+                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 block">Live Template Preview</label>
+                              <div className="bg-slate-50 rounded-3xl border border-slate-200/60 p-4 h-[450px] flex flex-col relative overflow-hidden">
+                                <iframe 
+                                  title="Survey Template Preview"
+                                  srcDoc={compileBroadcastPreview(emailTemplates.find(t => t.key === selectedSurveyKey))}
+                                  className="w-full h-full border-none rounded-2xl bg-white"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="space-y-6 animate-in fade-in duration-300">
+                            <div className="space-y-3">
+                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Survey Email Subject</label>
+                              <input 
+                                required 
+                                name="surveySubject" 
+                                value={surveySubject}
+                                onChange={(e) => setSurveySubject(e.target.value)}
+                                className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a]" 
+                              />
+                            </div>
+                            <div className="space-y-3">
+                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Survey Link (Google Forms / Typeform)</label>
+                              <input 
+                                required 
+                                name="surveyUrl" 
+                                type="url" 
+                                value={surveyUrl}
+                                onChange={(e) => setSurveyUrl(e.target.value)}
+                                placeholder="https://forms.google.com/your-survey-link" 
+                                className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a]" 
+                              />
+                            </div>
+                            <div className="space-y-3">
+                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Message Body</label>
+                              <textarea 
+                                required 
+                                name="surveyBody" 
+                                rows={6} 
+                                value={surveyBody}
+                                onChange={(e) => setSurveyBody(e.target.value)}
+                                className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a] resize-y font-mono text-xs leading-relaxed" 
+                              />
+                            </div>
+                            <button type="submit" disabled={registrations.filter(r => r.checked_in).length === 0} className="w-full bg-[#0f172a] hover:bg-black disabled:bg-slate-200 disabled:text-slate-400 text-white font-black py-6 rounded-[2rem] shadow-xl transition-all uppercase tracking-[0.2em] text-xs">
+                              Dispatch Survey to Checked-in Attendees
+                            </button>
+                          </div>
+                        )}
+                      </form>
                   </div>
              </div>
-          </div>
+           </div>
         )}
-
         {/* Details Modal */}
         {selectedReg && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">

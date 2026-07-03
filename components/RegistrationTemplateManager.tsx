@@ -91,6 +91,7 @@ interface RegistrationFormTemplate {
   };
   operator_config?: {
     display_fields?: string[];
+    card_layout_text?: string;
   };
   created_at?: string;
   updated_at?: string;

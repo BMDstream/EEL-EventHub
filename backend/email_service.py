@@ -998,7 +998,12 @@ def send_broadcast_email(
             details_html = details_html.replace("font-weight: 900;", details_styles).replace("font-weight: 800;", details_styles).replace("font-weight: 700;", details_styles)
         variables["details_html"] = details_html
 
-        if db_template:
+        is_prebuilt_html = body.strip().startswith("<!DOCTYPE") or body.strip().startswith("<html") or "<!-- TEMPLATE_META" in body or body.strip().startswith("<div") or body.strip().startswith("<table")
+        
+        if is_prebuilt_html:
+            p_subject = parse_template(subject, variables)
+            html_content = parse_template(body, variables)
+        elif db_template:
             p_subject = parse_template(db_template.subject, variables)
             db_body = db_template.body_html
             html_content = parse_template(db_body, variables)
