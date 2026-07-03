@@ -1716,18 +1716,30 @@ export default function RegistrationTemplateManager() {
                           </span>
                           
                           <div className="flex flex-wrap gap-2">
-                            {[
+                             {[
                               { label: "First Name", token: "[first_name]" },
                               { label: "Last Name", token: "[last_name]" },
                               { label: "Email Address", token: "[email]" },
                               { label: "Company", token: "[company]" },
                               { label: "Clearance ID", token: "[clearance_id]" },
-                              ...(selectedTemplate.layout_schema || [])
-                                .filter(f => f.type !== "section_header" && (f.key || f.id) && !["first_name", "last_name", "email", "company"].includes(f.key || f.id))
-                                .map(f => ({
-                                  label: (f.label || "").replace(/<[^>]*>/g, "").trim(),
-                                  token: `[${f.key || f.id}]`
-                                }))
+                              ...(() => {
+                                const fields: any[] = [];
+                                if (Array.isArray(selectedTemplate.layout_schema)) {
+                                  selectedTemplate.layout_schema.forEach((item: any) => {
+                                    if (item && Array.isArray(item.fields)) {
+                                      fields.push(...item.fields);
+                                    } else if (item) {
+                                      fields.push(item);
+                                    }
+                                  });
+                                }
+                                return fields
+                                  .filter(f => f && (f.key || f.id) && !["first_name", "last_name", "email", "company"].includes(f.key || f.id))
+                                  .map(f => ({
+                                    label: (f.label || "").replace(/<[^>]*>/g, "").trim(),
+                                    token: `[${f.key || f.id}]`
+                                  }));
+                              })()
                             ].map((item, idx) => (
                               <button
                                 key={idx}
