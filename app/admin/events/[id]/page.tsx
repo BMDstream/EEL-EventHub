@@ -1847,7 +1847,7 @@ export default function EventDetailsPage() {
                    {selectedBroadcastKey ? (
                      // Split Preview Layout for Broadcast
                      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start animate-in fade-in duration-300">
-                       <div className="lg:col-span-5 space-y-6">
+                       <div className="lg:col-span-4 space-y-6">
                          <div className="space-y-3">
                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">File Attachments (Optional)</label>
                            <input 
@@ -1864,9 +1864,9 @@ export default function EventDetailsPage() {
                          </button>
                        </div>
 
-                       <div className="lg:col-span-7 space-y-3">
+                       <div className="lg:col-span-8 space-y-3">
                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 block">Live Template Preview</label>
-                         <div className="bg-slate-50 rounded-3xl border border-slate-200/60 p-4 h-[450px] flex flex-col relative overflow-hidden">
+                         <div className="bg-slate-50 rounded-3xl border border-slate-200/60 p-4 h-[750px] flex flex-col relative overflow-hidden">
                            <iframe 
                              title="Broadcast Template Preview"
                              srcDoc={compileBroadcastPreview(emailTemplates.find(t => t.key === selectedBroadcastKey))}
@@ -2049,7 +2049,7 @@ export default function EventDetailsPage() {
 
                         {selectedSurveyKey ? (
                           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start animate-in fade-in duration-300">
-                            <div className="lg:col-span-5 space-y-6">
+                            <div className="lg:col-span-4 space-y-6">
                               <button 
                                 type="submit" 
                                 disabled={registrations.filter(r => r.checked_in).length === 0} 
@@ -2059,9 +2059,9 @@ export default function EventDetailsPage() {
                               </button>
                             </div>
 
-                            <div className="lg:col-span-7 space-y-3">
+                            <div className="lg:col-span-8 space-y-3">
                               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 block">Live Template Preview</label>
-                              <div className="bg-slate-50 rounded-3xl border border-slate-200/60 p-4 h-[450px] flex flex-col relative overflow-hidden">
+                              <div className="bg-slate-50 rounded-3xl border border-slate-200/60 p-4 h-[750px] flex flex-col relative overflow-hidden">
                                 <iframe 
                                   title="Survey Template Preview"
                                   srcDoc={compileBroadcastPreview(emailTemplates.find(t => t.key === selectedSurveyKey))}
