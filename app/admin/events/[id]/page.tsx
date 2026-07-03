@@ -1747,7 +1747,7 @@ export default function EventDetailsPage() {
                 <p className="text-slate-500 font-medium text-center">Send updates or reminders to all {registrations.length} confirmed attendees.</p>
              </div>
 
-             <div className="max-w-xl mx-auto space-y-12">
+             <div className={`${(selectedBroadcastKey || selectedSurveyKey) ? "max-w-6xl" : "max-w-xl"} mx-auto space-y-12 transition-all duration-300`}>
                 <form 
                   onSubmit={async (e) => {
                     e.preventDefault();
