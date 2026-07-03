@@ -159,7 +159,7 @@ export default function EventDetailsPage() {
       const fieldDef = fieldMap.get(fieldKey);
       const label = fieldDef?.label || standardLabels[fieldKey] || fieldKey;
       
-      let val = "";
+      let val: any = "";
       if (["first_name", "last_name", "email", "company"].includes(fieldKey)) {
         val = reg.attendee?.[fieldKey] || "";
       } else {
