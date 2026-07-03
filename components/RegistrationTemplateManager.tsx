@@ -1668,9 +1668,9 @@ export default function RegistrationTemplateManager() {
                             { id: "email", key: "email", label: "Email Address" },
                             { id: "company", key: "company", label: "Organization / Company" },
                             ...(selectedTemplate.layout_schema || [])
-                              .filter(f => f.type !== "section_header" && f.key && !["first_name", "last_name", "email", "company"].includes(f.key))
+                              .filter(f => f.type !== "section_header" && (f.key || f.id) && !["first_name", "last_name", "email", "company"].includes(f.key || f.id))
                           ].map(field => {
-                            const fieldKey = field.key;
+                            const fieldKey = field.key || field.id;
                             const displayFields = selectedTemplate.operator_config?.display_fields || [];
                             const isChecked = displayFields.includes(fieldKey);
                             
@@ -1689,7 +1689,7 @@ export default function RegistrationTemplateManager() {
                                 />
                                 <div>
                                   <span dangerouslySetInnerHTML={{ __html: field.label }} />
-                                  <span className="text-[8px] text-slate-400 font-mono block mt-0.5">key: {field.key}</span>
+                                  <span className="text-[8px] text-slate-400 font-mono block mt-0.5">key: {field.key || field.id}</span>
                                 </div>
                               </label>
                             );
