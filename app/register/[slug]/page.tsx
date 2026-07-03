@@ -455,7 +455,7 @@ function PublicRegistrationPageContent() {
           )}
 
           {field.type === "checkbox" && (
-            <label className={`${style.checkbox} ${event.registration_form_template?.theme_config?.force_text_visibility ? "text-black" : ""}`}>
+            <label className={`${style.checkbox} ${event?.registration_form_template?.theme_config?.force_text_visibility ? "text-black" : ""}`}>
                <input 
                  type="checkbox" 
                  checked={!!value}
