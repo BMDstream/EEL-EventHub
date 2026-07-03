@@ -81,6 +81,7 @@ interface Event {
   registration_end?: string;
   disclaimer_enabled?: boolean;
   disclaimer_text?: string;
+  registration_form_template?: any;
 }
 
 export default function EventDetailsPage() {
