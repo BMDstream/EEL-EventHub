@@ -121,11 +121,11 @@ export default function RegistrationTemplateManager() {
     }
     try {
       const url = await uploadImageFile(file);
-      updateFieldProperty(secId, fieldId, "image_url", url);
+      updateFieldProperty(fieldId, "image_url", url);
     } catch (e) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        updateFieldProperty(secId, fieldId, "image_url", reader.result as string);
+        updateFieldProperty(fieldId, "image_url", reader.result as string);
       };
       reader.readAsDataURL(file);
     }
