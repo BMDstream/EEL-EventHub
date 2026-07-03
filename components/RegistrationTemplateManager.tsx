@@ -1662,33 +1662,38 @@ export default function RegistrationTemplateManager() {
                         </p>
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-                          {selectedTemplate.layout_schema
-                            .filter(f => f.type !== "section_header")
-                            .map(field => {
-                              const fieldKey = field.key;
-                              const displayFields = selectedTemplate.operator_config?.display_fields || [];
-                              const isChecked = displayFields.includes(fieldKey);
-                              
-                              return (
-                                <label key={field.id} className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-slate-50 cursor-pointer text-xs font-bold text-slate-700 dark:border-slate-800 dark:bg-slate-900/10 dark:text-slate-300 dark:hover:bg-slate-900/30">
-                                  <input 
-                                    type="checkbox"
-                                    checked={isChecked}
-                                    onChange={(e) => {
-                                      const nextFields = e.target.checked 
-                                        ? [...displayFields, fieldKey] 
-                                        : displayFields.filter(k => k !== fieldKey);
-                                      updateOperatorConfig("display_fields", nextFields);
-                                    }}
-                                    className="w-4 h-4 text-[#0f172a] rounded focus:ring-0"
-                                  />
-                                  <div>
-                                    <span dangerouslySetInnerHTML={{ __html: field.label }} />
-                                    <span className="text-[8px] text-slate-400 font-mono block mt-0.5">key: {field.key}</span>
-                                  </div>
-                                </label>
-                              );
-                            })}
+                          {[
+                            { id: "first_name", key: "first_name", label: "First Name" },
+                            { id: "last_name", key: "last_name", label: "Last Name" },
+                            { id: "email", key: "email", label: "Email Address" },
+                            { id: "company", key: "company", label: "Organization / Company" },
+                            ...(selectedTemplate.layout_schema || [])
+                              .filter(f => f.type !== "section_header" && f.key && !["first_name", "last_name", "email", "company"].includes(f.key))
+                          ].map(field => {
+                            const fieldKey = field.key;
+                            const displayFields = selectedTemplate.operator_config?.display_fields || [];
+                            const isChecked = displayFields.includes(fieldKey);
+                            
+                            return (
+                              <label key={field.id} className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-slate-50 cursor-pointer text-xs font-bold text-slate-700 dark:border-slate-800 dark:bg-slate-900/10 dark:text-slate-300 dark:hover:bg-slate-900/30">
+                                <input 
+                                  type="checkbox"
+                                  checked={isChecked}
+                                  onChange={(e) => {
+                                    const nextFields = e.target.checked 
+                                      ? [...displayFields, fieldKey] 
+                                      : displayFields.filter(k => k !== fieldKey);
+                                    updateOperatorConfig("display_fields", nextFields);
+                                  }}
+                                  className="w-4 h-4 text-[#0f172a] rounded focus:ring-0"
+                                />
+                                <div>
+                                  <span dangerouslySetInnerHTML={{ __html: field.label }} />
+                                  <span className="text-[8px] text-slate-400 font-mono block mt-0.5">key: {field.key}</span>
+                                </div>
+                              </label>
+                            );
+                          })}
                         </div>
                       </div>
                     </div>
