@@ -1677,12 +1677,16 @@ export default function EventDetailsPage() {
                        </button>
                      </div>
                    ) : (
-                     <div className={`flex flex-col items-center gap-6 p-8 rounded-[1.5rem] shadow-lg w-full animate-in zoom-in-95 duration-300 ${
-                       pinStatus === "success" ? "bg-green-500 text-white" : 
-                       pinStatus === "error" ? "bg-red-500 text-white" : 
-                       pinStatus === "warning" ? "bg-red-500 text-white" :
-                       "bg-[#0f172a] text-white"
-                     }`}>
+                     <div 
+                        style={{
+                          backgroundColor: pinStatus === "success"
+                            ? (event?.registration_form_template?.theme_config?.primary_color || "#22c55e")
+                            : pinStatus === "error" || pinStatus === "warning"
+                            ? "#ef4444"
+                            : "#0f172a"
+                        }}
+                        className="flex flex-col items-center gap-6 p-8 rounded-[1.5rem] shadow-lg w-full animate-in zoom-in-95 duration-300 text-white"
+                      >
                        {pinStatus === "processing" && <Loader2 className="animate-spin" size={48} />}
                        {pinStatus === "success" && <CheckCircle2 size={48} />}
                        {pinStatus === "error" && <XCircle size={48} />}

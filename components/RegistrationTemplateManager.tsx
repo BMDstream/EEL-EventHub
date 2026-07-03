@@ -867,6 +867,23 @@ export default function RegistrationTemplateManager() {
 
                       <div className="flex flex-wrap gap-6">
                         <div className="space-y-2 flex-1 min-w-[220px]">
+                          <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-1">Primary Brand Color</label>
+                          <div className="flex items-center gap-3">
+                            <input 
+                              type="color" 
+                              value={selectedTemplate.theme_config.primary_color || "#0f172a"} 
+                              onChange={(e) => updateThemeConfig("primary_color", e.target.value)}
+                              className="w-10 h-10 rounded-xl border border-slate-200 cursor-pointer p-0 bg-transparent shrink-0" 
+                            />
+                            <input 
+                              type="text" 
+                              value={selectedTemplate.theme_config.primary_color || "#0f172a"} 
+                              onChange={(e) => updateThemeConfig("primary_color", e.target.value)}
+                              className="w-24 shrink-0 px-3 py-2.5 rounded-xl border border-slate-100 font-mono font-bold text-xs bg-slate-50 dark:bg-slate-800" 
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-2 flex-1 min-w-[220px]">
                           <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-1">Form Card Background Color</label>
                           <div className="flex items-center gap-3">
                             <input 
