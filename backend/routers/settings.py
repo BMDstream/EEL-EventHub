@@ -228,8 +228,8 @@ def get_all_templates(
     session: Session = Depends(get_session),
     current_user: Optional[User] = Depends(get_current_user_from_request)
 ):
-    if not current_user or current_user.role != "admin":
-        raise HTTPException(status_code=403, detail="Only admins can view email templates")
+    if not current_user:
+        raise HTTPException(status_code=403, detail="Only authenticated users can view email templates")
     
     # Self-healing: Check if any default templates are missing and seed them on the fly
     from backend.default_templates import DEFAULT_TEMPLATES
@@ -330,8 +330,8 @@ def get_template(
     session: Session = Depends(get_session),
     current_user: Optional[User] = Depends(get_current_user_from_request)
 ):
-    if not current_user or current_user.role != "admin":
-        raise HTTPException(status_code=403, detail="Only admins can view email templates")
+    if not current_user:
+        raise HTTPException(status_code=403, detail="Only authenticated users can view email templates")
     template = session.exec(select(EmailTemplate).where(EmailTemplate.key == key)).first()
     if not template:
         # Self-healing: Check if this is a default template and seed it

@@ -114,6 +114,26 @@ export default function EventDetailsPage() {
   const [parsedRegistrants, setParsedRegistrants] = useState<any[]>([]);
   const [importing, setImporting] = useState(false);
   const [selectedMetric, setSelectedMetric] = useState<"date" | "venue" | "enrollment" | "declined" | "checked_in" | null>(null);
+  const [emailTemplates, setEmailTemplates] = useState<any[]>([]);
+
+  // Controlled states for Broadcast Dispatch form
+  const [broadcastSubject, setBroadcastSubject] = useState("");
+  const [broadcastBody, setBroadcastBody] = useState("");
+  const [broadcastSignature, setBroadcastSignature] = useState("Kind regards, BMD Team");
+
+  // Controlled states for Survey Feedback form
+  const [surveySubject, setSurveySubject] = useState("");
+  const [surveyUrl, setSurveyUrl] = useState("");
+  const [surveyBody, setSurveyBody] = useState("Hi {first_name},\n\nThank you for attending our event! We hope you had a great experience. We'd love to hear your feedback so we can make future events even better.");
+
+  // Initialize subjects when event changes
+  useEffect(() => {
+    if (event?.title) {
+      const cleanTitle = event.title.replace(/<[^>]*>/g, "").trim();
+      setBroadcastSubject(`Update for ${cleanTitle}`);
+      setSurveySubject(`Thank you for attending ${cleanTitle} - Feedback Survey`);
+    }
+  }, [event]);
 
   const [isOnline, setIsOnline] = useState(true);
   const [offlineStats, setOfflineStats] = useState<{ cachedCount: number; checkedInCount: number } | null>(null);
@@ -568,6 +588,19 @@ export default function EventDetailsPage() {
         }
         const regData = await regRes.json();
         setRegistrations(regData);
+
+        // Load global email templates
+        try {
+          const templatesRes = await fetch(`/api/py/settings/templates`, {
+            headers: { "x-user-email": session.user.email || "" }
+          });
+          if (templatesRes.ok) {
+            const templatesData = await templatesRes.json();
+            setEmailTemplates(Array.isArray(templatesData) ? templatesData : []);
+          }
+        } catch (templateErr) {
+          console.error("Failed to load email templates", templateErr);
+        }
       } catch (err: any) {
         console.error("Failed to fetch event details", err);
         setError(err.message || String(err));
@@ -1617,11 +1650,11 @@ export default function EventDetailsPage() {
                       const res = await fetch(`/api/py/events/${id}/broadcast`, {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ subject, body, signature, attachments })
+                        body: JSON.stringify({ subject: broadcastSubject, body: broadcastBody, signature: broadcastSignature, attachments })
                       });
                       if (res.ok) {
                         alert("Broadcast successfully queued in the background!");
-                        target.reset();
+                        setBroadcastBody("");
                         if (fileInput) fileInput.value = "";
                       } else {
                         alert("Failed to send broadcast. Ensure RESEND_API_KEY is configured.");
@@ -1648,12 +1681,57 @@ export default function EventDetailsPage() {
                    </div>
 
                    <div className="space-y-3">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Load Prebuilt Template (Optional)</label>
+                      <select 
+                        onChange={(e) => {
+                          const key = e.target.value;
+                          if (!key) return;
+                          const tmpl = emailTemplates.find(t => t.key === key);
+                          if (tmpl) {
+                            const cleanedBody = tmpl.body_html
+                              ? tmpl.body_html
+                                  .replace(/<br\s*\/?>/gi, "\n")
+                                  .replace(/<\/p>/gi, "\n\n")
+                                  .replace(/<[^>]*>/g, "")
+                                  .trim()
+                              : "";
+                            setBroadcastSubject(tmpl.subject || "");
+                            setBroadcastBody(cleanedBody || tmpl.body_html || "");
+                          }
+                        }}
+                        className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a] appearance-none cursor-pointer"
+                      >
+                        <option value="">-- Choose a prebuilt template --</option>
+                        {emailTemplates.map((t) => (
+                          <option key={t.key} value={t.key}>
+                            {t.name} ({t.key})
+                          </option>
+                        ))}
+                      </select>
+                   </div>
+
+                   <div className="space-y-3">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Subject Line</label>
-                      <input required name="subject" placeholder={`Update for ${(event.title || "").replace(/<[^>]*>/g, "")}`} className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a]" />
+                      <input 
+                        required 
+                        name="subject" 
+                        value={broadcastSubject}
+                        onChange={(e) => setBroadcastSubject(e.target.value)}
+                        placeholder={`Update for ${(event.title || "").replace(/<[^>]*>/g, "")}`} 
+                        className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a]" 
+                      />
                    </div>
                    <div className="space-y-3">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Message Body</label>
-                      <textarea required name="body" rows={6} placeholder="Type your message here..." className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a] resize-none" />
+                      <textarea 
+                        required 
+                        name="body" 
+                        rows={8} 
+                        value={broadcastBody}
+                        onChange={(e) => setBroadcastBody(e.target.value)}
+                        placeholder="Type your message here..." 
+                        className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a] resize-y font-mono text-sm leading-relaxed" 
+                      />
                    </div>
                    
                    <div className="space-y-3">
@@ -1669,7 +1747,14 @@ export default function EventDetailsPage() {
 
                     <div className="space-y-3">
                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Signature (Optional)</label>
-                       <textarea name="signature" rows={2} placeholder="Kind regards, BMD Team" className="w-full px-6 py-4 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a] resize-none text-sm" />
+                       <textarea 
+                         name="signature" 
+                         rows={2} 
+                         value={broadcastSignature}
+                         onChange={(e) => setBroadcastSignature(e.target.value)}
+                         placeholder="Kind regards, BMD Team" 
+                         className="w-full px-6 py-4 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a] resize-none text-sm" 
+                       />
                     </div>
                    <button type="submit" className="w-full bg-[#0f172a] hover:bg-black text-white font-black py-6 rounded-[2rem] shadow-2xl shadow-slate-200 transition-all uppercase tracking-[0.3em] text-xs">
                       Dispatch Broadcast
@@ -1702,12 +1787,8 @@ export default function EventDetailsPage() {
                      <form 
                        onSubmit={async (e) => {
                          e.preventDefault();
-                         const target = e.target as any;
-                         const subject = target.surveySubject.value;
-                         const surveyUrl = target.surveyUrl.value;
-                         const body = target.surveyBody.value;
                          
-                         const fullBody = `${body}\n\nPlease complete our feedback survey here: ${surveyUrl}`;
+                         const fullBody = `${surveyBody}\n\nPlease complete our feedback survey here: ${surveyUrl}`;
                          const targetCount = registrations.filter(r => r.checked_in).length;
                          
                          if (!confirm(`Are you sure you want to send this survey to the ${targetCount} checked-in attendees?`)) return;
@@ -1720,14 +1801,14 @@ export default function EventDetailsPage() {
                                "x-user-email": session?.user?.email || ""
                              },
                              body: JSON.stringify({
-                               subject,
+                               subject: surveySubject,
                                body: fullBody,
                                target: "checked_in"
                              })
                            });
                            if (res.ok) {
                              alert("Feedback survey broadcast successfully queued!");
-                             target.reset();
+                             setSurveyUrl("");
                            } else {
                              alert("Failed to dispatch survey. Ensure RESEND_API_KEY is configured.");
                            }
@@ -1739,16 +1820,67 @@ export default function EventDetailsPage() {
                        className="space-y-6"
                      >
                        <div className="space-y-3">
+                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Load Prebuilt Template (Optional)</label>
+                         <select 
+                           onChange={(e) => {
+                             const key = e.target.value;
+                             if (!key) return;
+                             const tmpl = emailTemplates.find(t => t.key === key);
+                             if (tmpl) {
+                               const cleanedBody = tmpl.body_html
+                                 ? tmpl.body_html
+                                     .replace(/<br\s*\/?>/gi, "\n")
+                                     .replace(/<\/p>/gi, "\n\n")
+                                     .replace(/<[^>]*>/g, "")
+                                     .trim()
+                                 : "";
+                               setSurveySubject(tmpl.subject || "");
+                               setSurveyBody(cleanedBody || tmpl.body_html || "");
+                             }
+                           }}
+                           className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a] appearance-none cursor-pointer"
+                         >
+                           <option value="">-- Choose a prebuilt template --</option>
+                           {emailTemplates.map((t) => (
+                             <option key={t.key} value={t.key}>
+                               {t.name} ({t.key})
+                             </option>
+                           ))}
+                         </select>
+                       </div>
+
+                       <div className="space-y-3">
                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Survey Email Subject</label>
-                         <input required name="surveySubject" defaultValue={`Thank you for attending ${event?.title || ''} - Feedback Survey`} className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a]" />
+                         <input 
+                           required 
+                           name="surveySubject" 
+                           value={surveySubject}
+                           onChange={(e) => setSurveySubject(e.target.value)}
+                           className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a]" 
+                         />
                        </div>
                        <div className="space-y-3">
                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Survey Link (Google Forms / Typeform)</label>
-                         <input required name="surveyUrl" type="url" placeholder="https://forms.google.com/your-survey-link" className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a]" />
+                         <input 
+                           required 
+                           name="surveyUrl" 
+                           type="url" 
+                           value={surveyUrl}
+                           onChange={(e) => setSurveyUrl(e.target.value)}
+                           placeholder="https://forms.google.com/your-survey-link" 
+                           className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a]" 
+                         />
                        </div>
                        <div className="space-y-3">
                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Message Body</label>
-                         <textarea required name="surveyBody" rows={4} defaultValue={`Hi {first_name},\n\nThank you for attending our event! We hope you had a great experience. We'd love to hear your feedback so we can make future events even better.`} className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a] resize-none" />
+                         <textarea 
+                           required 
+                           name="surveyBody" 
+                           rows={6} 
+                           value={surveyBody}
+                           onChange={(e) => setSurveyBody(e.target.value)}
+                           className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a] resize-y font-mono text-xs leading-relaxed" 
+                         />
                        </div>
                        <button type="submit" disabled={registrations.filter(r => r.checked_in).length === 0} className="w-full bg-[#0f172a] hover:bg-black disabled:bg-slate-200 disabled:text-slate-400 text-white font-black py-6 rounded-[2rem] shadow-xl transition-all uppercase tracking-[0.2em] text-xs">
                          Dispatch Survey to Checked-in Attendees

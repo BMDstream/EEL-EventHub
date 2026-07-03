@@ -338,30 +338,32 @@ export default function AdminDashboard() {
                className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 p-8 space-y-8 relative overflow-hidden dark:bg-[#0a0f1d]/40 dark:backdrop-blur-md dark:border-white/5 hover:shadow-xl hover:shadow-slate-100 dark:hover:shadow-[0_0_25px_-5px_rgba(234,179,8,0.05)] transition-all duration-300"
              >
                 <div className="absolute top-0 left-0 w-1.5 h-full bg-gradient-to-b from-yellow-400 to-amber-500"></div>
-                {activities.map((activity, i) => {
-                  const Icon = getActivityIcon(activity.type);
-                  return (
-                    <motion.div 
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.5 + (i * 0.1) }}
-                      key={i} 
-                      className="flex gap-4 relative"
-                    >
-                      <div className="w-10 h-10 bg-slate-50 rounded-2xl flex items-center justify-center text-[#0f172a] dark:bg-slate-900 dark:text-slate-300 dark:border dark:border-white/5 shrink-0">
-                        <Icon size={18} />
-                      </div>
-                      <div>
-                        <p className="text-xs text-[#0f172a] font-bold dark:text-white">
-                          <span className="text-slate-400 dark:text-slate-500">{activity.user}</span> {activity.action}
-                        </p>
-                        <p className="text-[10px] text-slate-400 font-medium uppercase tracking-widest mt-1 dark:text-yellow-400/60">
-                          {formatRelativeTime(activity.time)}
-                        </p>
-                      </div>
-                    </motion.div>
-                  );
-                })}
+                <div className="max-h-[380px] overflow-y-auto space-y-6 pr-2 scrollbar-thin scrollbar-thumb-slate-200">
+                  {activities.map((activity, i) => {
+                    const Icon = getActivityIcon(activity.type);
+                    return (
+                      <motion.div 
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.2 + (i * 0.05) }}
+                        key={i} 
+                        className="flex gap-4 relative"
+                      >
+                        <div className="w-10 h-10 bg-slate-50 rounded-2xl flex items-center justify-center text-[#0f172a] dark:bg-slate-900 dark:text-slate-300 dark:border dark:border-white/5 shrink-0">
+                          <Icon size={18} />
+                        </div>
+                        <div>
+                          <p className="text-xs text-[#0f172a] font-bold dark:text-white">
+                            <span className="text-slate-400 dark:text-slate-500">{activity.user}</span> {activity.action.replace(/<[^>]*>/g, "")}
+                          </p>
+                          <p className="text-[10px] text-slate-400 font-medium uppercase tracking-widest mt-1 dark:text-yellow-400/60">
+                            {formatRelativeTime(activity.time)}
+                          </p>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </div>
                 {userRole === "admin" && (
                   <button 
                     onClick={openAuditLog}
@@ -459,7 +461,7 @@ export default function AdminDashboard() {
                         </div>
                         <div>
                           <p className="text-xs text-[#0f172a] font-bold dark:text-white">
-                            <span className="text-slate-400 dark:text-slate-500">{activity.user}</span> {activity.action}
+                            <span className="text-slate-400 dark:text-slate-500">{activity.user}</span> {activity.action.replace(/<[^>]*>/g, "")}
                           </p>
                           <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-1 dark:text-yellow-400/60">
                             {formatRelativeTime(activity.time)}
