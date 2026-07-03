@@ -25,6 +25,7 @@ interface FormField {
   };
   image_url?: string;
   inactive?: boolean;
+  showBeforeAttendance?: boolean;
 }
 
 interface FormSection {
