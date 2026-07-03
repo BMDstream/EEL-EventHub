@@ -201,6 +201,60 @@ export default function EventDetailsPage() {
     return results;
   };
 
+  const compileOperatorCustomLayout = (layoutText: string, reg: any): string => {
+    if (!layoutText || !reg) return "";
+    let compiled = layoutText;
+    
+    // Resolve standard fields
+    const standards = {
+      first_name: reg.attendee?.first_name || "",
+      last_name: reg.attendee?.last_name || "",
+      email: reg.attendee?.email || "",
+      company: reg.attendee?.company || "",
+      clearance_id: reg.pin || reg.clearance_id || ""
+    };
+    
+    Object.entries(standards).forEach(([key, val]) => {
+      const regex = new RegExp(`\\[${key}\\]`, "gi");
+      compiled = compiled.replace(regex, val);
+    });
+    
+    // Resolve custom fields
+    const template = event?.registration_form_template;
+    const activeSchema = template?.layout_schema || event?.custom_fields_schema || [];
+    let flatFields: any[] = [];
+    if (activeSchema.length > 0 && "fields" in activeSchema[0]) {
+      for (const section of activeSchema) {
+        flatFields.push(...(section.fields || []));
+      }
+    } else {
+      flatFields = activeSchema;
+    }
+    
+    for (const f of flatFields) {
+      const fieldKey = f.key || f.id;
+      const fieldLabel = (f.label || "").replace(/<[^>]*>/g, "").trim();
+      let answer = reg.custom_answers?.[fieldKey] || reg.custom_answers?.[f.id] || "";
+      if (typeof answer === "boolean") {
+        answer = answer ? "Yes" : "No";
+      } else if (typeof answer === "object" && answer !== null) {
+        answer = `${answer.first_name || ""} ${answer.last_name || ""}`.trim();
+      }
+      
+      if (fieldKey) {
+        const keyRegex = new RegExp(`\\[${fieldKey}\\]`, "gi");
+        compiled = compiled.replace(keyRegex, answer);
+      }
+      if (fieldLabel) {
+        const escapedLabel = fieldLabel.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+        const labelRegex = new RegExp(`\\[${escapedLabel}\\]`, "gi");
+        compiled = compiled.replace(labelRegex, answer);
+      }
+    }
+    
+    return compiled;
+  };
+
   const downloadRegistrantTemplate = () => {
     import("xlsx").then((XLSX) => {
       const customFields = event?.custom_fields_schema || [];
@@ -1567,14 +1621,24 @@ export default function EventDetailsPage() {
                        <div className="text-center w-full">
                           <p className="text-xl font-black italic uppercase tracking-tighter font-bricolage leading-tight">{pinMessage}</p>
                           {pinStatus === "success" && checkedInReg && (
-                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-left mt-6 w-full max-h-60 overflow-y-auto pr-1">
-                               {formatOperatorFields(checkedInReg).map((f: any, idx: number) => (
-                                 <div key={idx} className="bg-white/10 p-3.5 rounded-xl border border-white/5 flex flex-col justify-between animate-in fade-in slide-in-from-top-1">
-                                   <span className="text-[8px] uppercase tracking-widest text-white/60 font-black">{f.label}</span>
-                                   <span className="text-xs font-bold text-white mt-0.5 break-words">{f.value}</span>
+                             <>
+                               {event?.registration_form_template?.operator_config?.card_layout_text ? (
+                                 <div className="bg-white/10 p-5 rounded-2xl border border-white/5 text-left mt-6 w-full max-h-60 overflow-y-auto pr-1">
+                                   <pre className="text-sm font-semibold text-white whitespace-pre-wrap font-sans leading-relaxed">
+                                     {compileOperatorCustomLayout(event.registration_form_template.operator_config.card_layout_text, checkedInReg)}
+                                   </pre>
                                  </div>
-                               ))}
-                             </div>
+                               ) : (
+                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-left mt-6 w-full max-h-60 overflow-y-auto pr-1">
+                                   {formatOperatorFields(checkedInReg).map((f: any, idx: number) => (
+                                     <div key={idx} className="bg-white/10 p-3.5 rounded-xl border border-white/5 flex flex-col justify-between animate-in fade-in slide-in-from-top-1">
+                                       <span className="text-[8px] uppercase tracking-widest text-white/60 font-black">{f.label}</span>
+                                       <span className="text-xs font-bold text-white mt-0.5 break-words">{f.value}</span>
+                                     </div>
+                                   ))}
+                                 </div>
+                               )}
+                             </>
                            )}
                           {pinStatus !== "processing" && (
                             <button 

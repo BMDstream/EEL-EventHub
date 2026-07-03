@@ -100,6 +100,42 @@ export default function RegistrationTemplateManager() {
   const { data: session } = useSession();
   const isAdmin = (session?.user as any)?.role === "admin";
 
+  const compileOperatorPreviewText = (layoutText: string) => {
+    if (!layoutText || !selectedTemplate) return "";
+    let compiled = layoutText;
+    
+    const standards: Record<string, string> = {
+      first_name: "John",
+      last_name: "Doe",
+      email: "john.doe@example.com",
+      company: "Excellence Logistics",
+      clearance_id: "EEL-1234"
+    };
+    
+    Object.entries(standards).forEach(([key, val]) => {
+      const regex = new RegExp(`\\[${key}\\]`, "gi");
+      compiled = compiled.replace(regex, val);
+    });
+    
+    (selectedTemplate.layout_schema || []).forEach(f => {
+      const fieldKey = f.key || f.id;
+      const fieldLabel = (f.label || "").replace(/<[^>]*>/g, "").trim();
+      const mockVal = f.type === "partner_card" ? "VIP" : f.options?.[0] || "Sample Answer";
+      
+      if (fieldKey) {
+        const keyRegex = new RegExp(`\\[${fieldKey}\\]`, "gi");
+        compiled = compiled.replace(keyRegex, mockVal);
+      }
+      if (fieldLabel) {
+        const escapedLabel = fieldLabel.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+        const labelRegex = new RegExp(`\\[${escapedLabel}\\]`, "gi");
+        compiled = compiled.replace(labelRegex, mockVal);
+      }
+    });
+    
+    return compiled;
+  };
+
   const [templates, setTemplates] = useState<RegistrationFormTemplate[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<RegistrationFormTemplate | null>(null);
@@ -1651,49 +1687,60 @@ export default function RegistrationTemplateManager() {
                   )}
 
                   {editorTab === "operator" && (
-                    <div className="space-y-6">
+                    <div className="space-y-6 animate-in fade-in duration-300">
                       <h4 className="text-xs font-black uppercase text-slate-400 pb-2 border-b border-slate-100 dark:border-slate-800">
                         Custom Operator Check-In Screen Builder
                       </h4>
 
                       <div className="space-y-4">
                         <p className="text-[10px] text-slate-500">
-                          Select which fields from the registration form should be rendered in high-visibility cards on the operator desk when scanning passes.
+                          Type and design your check-in card display layout. Wrap any field names or custom question labels/keys in brackets (e.g. <code className="bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded font-mono text-[9px] font-bold">[first_name]</code>) to dynamically inject attendee answers when passes are scanned.
                         </p>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-                          {[
-                            { id: "first_name", key: "first_name", label: "First Name" },
-                            { id: "last_name", key: "last_name", label: "Last Name" },
-                            { id: "email", key: "email", label: "Email Address" },
-                            { id: "company", key: "company", label: "Organization / Company" },
-                            ...(selectedTemplate.layout_schema || [])
-                              .filter(f => f.type !== "section_header" && (f.key || f.id) && !["first_name", "last_name", "email", "company"].includes(f.key || f.id))
-                          ].map(field => {
-                            const fieldKey = field.key || field.id;
-                            const displayFields = selectedTemplate.operator_config?.display_fields || [];
-                            const isChecked = displayFields.includes(fieldKey);
-                            
-                            return (
-                              <label key={field.id} className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-slate-50 cursor-pointer text-xs font-bold text-slate-700 dark:border-slate-800 dark:bg-slate-900/10 dark:text-slate-300 dark:hover:bg-slate-900/30">
-                                <input 
-                                  type="checkbox"
-                                  checked={isChecked}
-                                  onChange={(e) => {
-                                    const nextFields = e.target.checked 
-                                      ? [...displayFields, fieldKey] 
-                                      : displayFields.filter(k => k !== fieldKey);
-                                    updateOperatorConfig("display_fields", nextFields);
-                                  }}
-                                  className="w-4 h-4 text-[#0f172a] rounded focus:ring-0"
-                                />
-                                <div>
-                                  <span dangerouslySetInnerHTML={{ __html: field.label }} />
-                                  <span className="text-[8px] text-slate-400 font-mono block mt-0.5">key: {field.key || field.id}</span>
-                                </div>
-                              </label>
-                            );
-                          })}
+                        <div className="space-y-2">
+                          <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
+                            Display Card Content Layout Editor
+                          </label>
+                          <textarea
+                            value={selectedTemplate.operator_config?.card_layout_text || ""}
+                            onChange={(e) => updateOperatorConfig("card_layout_text", e.target.value)}
+                            placeholder={`Name: [first_name] [last_name]\nCompany: [company]\nDietary Requirements: [dietary_requirements]`}
+                            className="w-full h-36 px-4 py-3 rounded-2xl bg-white border border-slate-200 focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400 outline-none font-bold text-sm text-[#0f172a] dark:bg-slate-900 dark:border-slate-800 dark:text-white font-mono leading-relaxed"
+                          />
+                        </div>
+
+                        <div className="space-y-3">
+                          <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
+                            Available Field Tokens (Click to insert)
+                          </span>
+                          
+                          <div className="flex flex-wrap gap-2">
+                            {[
+                              { label: "First Name", token: "[first_name]" },
+                              { label: "Last Name", token: "[last_name]" },
+                              { label: "Email Address", token: "[email]" },
+                              { label: "Company", token: "[company]" },
+                              { label: "Clearance ID", token: "[clearance_id]" },
+                              ...(selectedTemplate.layout_schema || [])
+                                .filter(f => f.type !== "section_header" && (f.key || f.id) && !["first_name", "last_name", "email", "company"].includes(f.key || f.id))
+                                .map(f => ({
+                                  label: (f.label || "").replace(/<[^>]*>/g, "").trim(),
+                                  token: `[${f.key || f.id}]`
+                                }))
+                            ].map((item, idx) => (
+                              <button
+                                key={idx}
+                                type="button"
+                                onClick={() => {
+                                  const currentText = selectedTemplate.operator_config?.card_layout_text || "";
+                                  updateOperatorConfig("card_layout_text", currentText ? currentText + " " + item.token : item.token);
+                                }}
+                                className="px-3 py-1.5 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-900/10 dark:hover:bg-slate-900/30 text-[10px] font-black text-slate-700 dark:text-slate-300 transition-all active:scale-95"
+                              >
+                                {item.label} <code className="text-yellow-500 font-mono font-bold text-[9px] ml-1">{item.token}</code>
+                              </button>
+                            ))}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -2183,27 +2230,38 @@ export default function RegistrationTemplateManager() {
                         </div>
                       </div>
 
-                      <div className="space-y-2">
-                        <span className="text-[8.5px] font-black text-slate-400 uppercase tracking-widest block ml-1">Grid Display Fields</span>
-                        <div className="grid grid-cols-2 gap-2.5">
-                          {(selectedTemplate.operator_config?.display_fields || ["company", "ticket_type"]).map((fieldKey: string) => {
-                            const fieldDef = selectedTemplate.layout_schema.find(f => f.key === fieldKey || f.id === fieldKey);
-                            const label = fieldDef?.label || fieldKey;
-                            const mockValue = fieldKey === "company" ? "Excellence Logistics" : fieldKey === "ticket_type" ? "VIP Pass" : "Sample Answer";
-                            
-                            return (
-                              <div key={fieldKey} className="bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl p-3 space-y-0.5">
-                                <span className="text-[7.5px] font-black text-slate-400 uppercase tracking-widest block truncate">
-                                  {label.replace(/<[^>]*>/g, "").trim()}
-                                </span>
-                                <p className="text-[10px] font-bold text-slate-700 dark:text-slate-350 truncate">
-                                  {mockValue}
-                                </p>
-                              </div>
-                            );
-                          })}
+                      {selectedTemplate.operator_config?.card_layout_text ? (
+                        <div className="space-y-2">
+                          <span className="text-[8.5px] font-black text-slate-400 uppercase tracking-widest block ml-1">Card Display Layout</span>
+                          <div className="bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-4">
+                            <pre className="text-[10px] font-bold text-slate-700 dark:text-slate-350 whitespace-pre-wrap font-sans leading-relaxed">
+                              {compileOperatorPreviewText(selectedTemplate.operator_config.card_layout_text)}
+                            </pre>
+                          </div>
                         </div>
-                      </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <span className="text-[8.5px] font-black text-slate-400 uppercase tracking-widest block ml-1">Grid Display Fields</span>
+                          <div className="grid grid-cols-2 gap-2.5">
+                            {(selectedTemplate.operator_config?.display_fields || ["company", "ticket_type"]).map((fieldKey: string) => {
+                              const fieldDef = selectedTemplate.layout_schema.find(f => f.key === fieldKey || f.id === fieldKey);
+                              const label = fieldDef?.label || fieldKey;
+                              const mockValue = fieldKey === "company" ? "Excellence Logistics" : fieldKey === "ticket_type" ? "VIP Pass" : "Sample Answer";
+                              
+                              return (
+                                <div key={fieldKey} className="bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl p-3 space-y-0.5">
+                                  <span className="text-[7.5px] font-black text-slate-400 uppercase tracking-widest block truncate">
+                                    {label.replace(/<[^>]*>/g, "").trim()}
+                                  </span>
+                                  <p className="text-[10px] font-bold text-slate-700 dark:text-slate-350 truncate">
+                                    {mockValue}
+                                  </p>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
