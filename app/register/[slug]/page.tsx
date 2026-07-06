@@ -226,6 +226,11 @@ function PublicRegistrationPageContent() {
   };
 
   const getPostSubmitTitle = () => {
+    if (capacityFull) {
+      const customCapacityTitle = event?.registration_form_template?.post_submit_config?.onscreen_capacity_title;
+      if (customCapacityTitle) return formatSuccessText(customCapacityTitle);
+      return "Your response has been submitted";
+    }
     if (isAttending) {
       const customTitle = event?.registration_form_template?.post_submit_config?.onscreen_title;
       if (customTitle) return formatSuccessText(customTitle);
@@ -314,36 +319,55 @@ function PublicRegistrationPageContent() {
 
   const renderFormFields = (showBefore?: boolean) => {
     const template = event?.registration_form_template;
-    let activeSchema = template?.layout_schema || event?.custom_fields_schema || [];
-    if (activeSchema.length === 0) {
-      activeSchema = [
-        { id: "field_first_name", key: "first_name", label: "First Name", placeholder: "e.g. Alan", type: "text", required: true, visible: true, showBeforeAttendance: true },
-        { id: "field_last_name", key: "last_name", label: "Last Name", placeholder: "e.g. Turing", type: "text", required: true, visible: true, showBeforeAttendance: true },
-        { id: "field_email", key: "email", label: "Secure Email Address", placeholder: "e.g. turing@bletchleypark.org.uk", type: "email", required: true, visible: true, showBeforeAttendance: true },
-        { id: "field_company", key: "company", label: "Organization / Company", placeholder: "e.g. GC&CS", type: "text", required: false, visible: event?.collect_company !== false, showBeforeAttendance: true }
-      ];
+    const activeSchema = (template?.layout_schema && template.layout_schema.length > 0)
+      ? template.layout_schema
+      : (event?.custom_fields_schema || []);
+    
+    let flatFields: any[] = [];
+    for (const item of activeSchema) {
+      if (item && typeof item === "object" && "fields" in item && Array.isArray(item.fields)) {
+        if (item.title) {
+          flatFields.push({
+            id: item.id || `section_${Date.now()}`,
+            key: item.id,
+            label: item.title,
+            type: "section_header",
+            visible: true
+          });
+        }
+        flatFields.push(...item.fields);
+      } else {
+        flatFields.push(item);
+      }
     }
 
-    let flatFields: any[] = [];
-    const firstItem = activeSchema[0];
-    if (firstItem && "fields" in firstItem) {
-      for (const section of activeSchema) {
-        flatFields.push({
-          id: section.id,
-          key: section.id,
-          label: section.title,
-          type: "section_header",
-          visible: true
-        });
-        flatFields.push(...section.fields);
-      }
-    } else {
-      flatFields = activeSchema;
+    // Ensure standard fields are always present in the final flat list
+    const hasFirstName = flatFields.some((f: any) => f.key === "first_name" || f.id === "field_first_name");
+    const hasLastName = flatFields.some((f: any) => f.key === "last_name" || f.id === "field_last_name");
+    const hasEmail = flatFields.some((f: any) => f.key === "email" || f.id === "field_email");
+    const hasCompany = flatFields.some((f: any) => f.key === "company" || f.id === "field_company");
+
+    const missing: any[] = [];
+    if (!hasFirstName) {
+      missing.push({ id: "field_first_name", key: "first_name", label: "First Name", placeholder: "e.g. Alan", type: "text", required: true, visible: true, showBeforeAttendance: true });
     }
+    if (!hasLastName) {
+      missing.push({ id: "field_last_name", key: "last_name", label: "Last Name", placeholder: "e.g. Turing", type: "text", required: true, visible: true, showBeforeAttendance: true });
+    }
+    if (!hasEmail) {
+      missing.push({ id: "field_email", key: "email", label: "Secure Email Address", placeholder: "e.g. turing@bletchleypark.org.uk", type: "email", required: true, visible: true, showBeforeAttendance: true });
+    }
+    if (!hasCompany) {
+      missing.push({ id: "field_company", key: "company", label: "Organization / Company", placeholder: "e.g. GC&CS", type: "text", required: false, visible: event?.collect_company !== false, showBeforeAttendance: true });
+    }
+
+    flatFields = [...missing, ...flatFields];
 
     const filtered = flatFields.filter(f => {
       if (f.inactive || f.visible === false) return false;
-      const matchesBefore = showBefore === true ? !!f.showBeforeAttendance : !f.showBeforeAttendance;
+      const isIdentity = ["first_name", "last_name", "email", "company"].includes(f.key || f.id || "");
+      const isBefore = isIdentity ? true : !!f.showBeforeAttendance;
+      const matchesBefore = showBefore === true ? isBefore : !isBefore;
       return matchesBefore;
     });
 

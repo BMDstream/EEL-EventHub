@@ -91,6 +91,7 @@ def run_db_initialization(session: Session, check_only_migrations: bool = False)
         
         for col_name, col_type in [
             ("registration_active", f"BOOLEAN DEFAULT {bool_true}"),
+            ("send_emails", f"BOOLEAN DEFAULT {bool_true}"),
             ("registration_start", datetime_type),
             ("registration_end", datetime_type),
             ("disclaimer_enabled", f"BOOLEAN DEFAULT {bool_false}"),

@@ -2,18 +2,25 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Html5Qrcode } from "html5-qrcode";
-import { CheckCircle2, XCircle, Camera, Loader2, AlertCircle } from "lucide-react";
+import { CheckCircle2, XCircle, Camera, Loader2, AlertCircle, Eye } from "lucide-react";
 
 interface QRScannerProps {
   onScan: (decodedText: string) => Promise<any>;
+  onViewDetails?: (registrant: any) => void;
+  operatorConfig?: {
+    success_bg_color?: string;
+    card_layout_text?: string;
+  };
 }
 
-export default function QRScanner({ onScan }: QRScannerProps) {
+export default function QRScanner({ onScan, onViewDetails, operatorConfig }: QRScannerProps) {
   const [scanning, setScanning] = useState(false);
   const [status, setStatus] = useState<"idle" | "success" | "error" | "processing" | "loading" | "warning">("idle");
   const [message, setMessage] = useState("");
   const [attendeeName, setAttendeeName] = useState<string | null>(null);
   const [scannedOperatorFields, setScannedOperatorFields] = useState<any[] | null>(null);
+  const [scannedCardLayoutText, setScannedCardLayoutText] = useState<string | null>(null);
+  const [scannedReg, setScannedReg] = useState<any | null>(null);
   const scannerRef = useRef<Html5Qrcode | null>(null);
 
   useEffect(() => {
@@ -55,6 +62,7 @@ export default function QRScanner({ onScan }: QRScannerProps) {
               const res = await onScan(decodedText);
               setStatus("success");
               setMessage("Check-in Successful");
+              setScannedReg(res);
               if (res && res.attendee) {
                 setAttendeeName(`${res.attendee.first_name} ${res.attendee.last_name}`);
               } else {
@@ -65,10 +73,17 @@ export default function QRScanner({ onScan }: QRScannerProps) {
               } else {
                 setScannedOperatorFields(null);
               }
+              if (res && res.card_layout_text) {
+                setScannedCardLayoutText(res.card_layout_text);
+              } else {
+                setScannedCardLayoutText(null);
+              }
               setTimeout(() => {
                 setStatus("idle");
                 setAttendeeName(null);
                 setScannedOperatorFields(null);
+                setScannedCardLayoutText(null);
+                setScannedReg(null);
               }, 6000);
             } catch (err) {
               const errMsg = err instanceof Error ? err.message : "Invalid or already used credential";
@@ -164,25 +179,35 @@ export default function QRScanner({ onScan }: QRScannerProps) {
       )}
 
       {(status === "success" || status === "error" || status === "processing" || status === "warning") && (
-        <div className={`flex flex-col items-center gap-6 p-12 rounded-[3rem] shadow-2xl w-full max-w-md animate-in zoom-in-95 duration-300 ${
-          status === "success" ? "bg-green-500 text-white" : 
-          status === "error" ? "bg-red-500 text-white" : 
-          status === "warning" ? "bg-red-500 text-white" :
-          "bg-[#0f172a] text-white"
-        }`}>
+        <div 
+          style={{
+            backgroundColor: status === "success" 
+              ? (operatorConfig?.success_bg_color || "#22c55e")
+              : status === "error" || status === "warning"
+                ? "#ef4444"
+                : "#0f172a"
+          }}
+          className="flex flex-col items-center gap-6 px-5 py-10 md:p-12 rounded-[3rem] shadow-2xl w-full max-w-md animate-in zoom-in-95 duration-300 text-white"
+        >
           {status === "processing" && <Loader2 className="animate-spin" size={64} />}
           {status === "success" && <CheckCircle2 size={64} />}
           {status === "error" && <XCircle size={64} />}
           {status === "warning" && <AlertCircle size={64} />}
           
-          <div className="text-center space-y-3">
+          <div className="text-center space-y-3 w-full">
              <p className="text-2xl font-black italic uppercase tracking-tighter font-bricolage leading-tight">{message}</p>
              {status === "success" && attendeeName && (
                <div className="space-y-4 border-t border-white/20 pt-4 w-full">
-                 <p className="text-lg font-bold tracking-wide">
+                 <p className="text-lg font-bold tracking-wide text-center">
                    {attendeeName}
                  </p>
-                 {scannedOperatorFields && scannedOperatorFields.length > 0 && (
+                 {scannedCardLayoutText ? (
+                   <div className="bg-white/10 p-5 rounded-2xl border border-white/5 text-left mt-4 w-full max-h-60 overflow-y-auto pr-1">
+                     <pre className="text-xs font-semibold text-white whitespace-pre-wrap font-sans leading-relaxed">
+                       {scannedCardLayoutText}
+                     </pre>
+                   </div>
+                 ) : scannedOperatorFields && scannedOperatorFields.length > 0 && (
                    <div className="grid grid-cols-1 gap-3 text-left mt-4 w-full max-h-60 overflow-y-auto pr-1">
                      {scannedOperatorFields.map((f: any, idx: number) => (
                        <div key={idx} className="bg-white/10 p-3.5 rounded-xl border border-white/5 flex flex-col">
@@ -194,16 +219,37 @@ export default function QRScanner({ onScan }: QRScannerProps) {
                  )}
                </div>
              )}
-             {status !== "processing" && (
-               <button 
-                 onClick={() => { setStatus("idle"); setScannedOperatorFields(null); }}
-                 className={`mt-8 px-10 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border ${
-                   status === "warning" ? "bg-white/20 hover:bg-white/30 border-white/10" : "bg-white/20 hover:bg-white/30 border-white/10"
-                 }`}
-               >
-                 Dismiss
-               </button>
-             )}
+              {status !== "processing" && (
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-8 w-full">
+                  {status === "success" && onViewDetails && scannedReg && (
+                    <button 
+                      onClick={() => {
+                        onViewDetails(scannedReg);
+                        setStatus("idle");
+                        setAttendeeName(null);
+                        setScannedOperatorFields(null);
+                        setScannedCardLayoutText(null);
+                        setScannedReg(null);
+                      }}
+                      className="px-6 py-4 bg-white hover:bg-white/95 text-green-600 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto"
+                    >
+                      <Eye size={12} />
+                      View Details & Edit
+                    </button>
+                  )}
+                  <button 
+                    onClick={() => {
+                      setStatus("idle");
+                      setScannedOperatorFields(null);
+                      setScannedCardLayoutText(null);
+                      setScannedReg(null);
+                    }}
+                    className="px-6 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border bg-white/20 hover:bg-white/30 border-white/10 w-full sm:w-auto cursor-pointer"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              )}
           </div>
         </div>
       )}

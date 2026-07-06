@@ -1288,20 +1288,28 @@ export default function SettingsPage() {
         .replace("Engagement Details", engagementTitle);
     }
     if (mockVars.qr_block_html) {
-      if (formValues.show_qr_code === "false") {
+      const showQr = formValues.show_qr_code !== "false";
+      const showPin = formValues.show_pin !== "false";
+
+      if (!showQr && !showPin) {
         mockVars.qr_block_html = "";
       } else {
-        let blockHtml = mockVars.qr_block_html
-          .replaceAll("#0f172a", primaryCol)
-          .replaceAll("font-family: sans-serif;", `font-family: ${activeFont};`);
-          
-        if (formValues.show_pin === "false") {
-          const pinSectionStartIndex = blockHtml.indexOf('<p style="font-size: 10px;');
-          if (pinSectionStartIndex !== -1) {
-            blockHtml = blockHtml.substring(0, pinSectionStartIndex) + "</div>";
-          }
-        }
-        mockVars.qr_block_html = blockHtml;
+        const qrSnippet = showQr
+          ? `<div style="width: 200px; height: 200px; background-color: ${primaryCol}; margin: 0 auto 32px auto; border-radius: 20px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 11px; font-weight: bold; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.15);">[QR CODE PREVIEW]</div>`
+          : "";
+
+        const pinSnippet = showPin
+          ? `<p style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.3em; color: #64748b; margin-bottom: 16px; font-family: ${activeFont};">unique access pass number</p>
+            <div style="display: inline-block; background: #ffffff; padding: 16px 32px; border-radius: 20px; border: 2px solid ${primaryCol}; font-family: ${activeFont};">
+              <code style="font-size: 32px; font-weight: 900; color: ${primaryCol}; letter-spacing: 0.25em; font-family: monospace;">ABCDEF</code>
+            </div>`
+          : "";
+
+        mockVars.qr_block_html = `
+        <div style="background: #f8fafc; padding: 48px; border-radius: 32px; text-align: center; border: 1px solid #f1f5f9; margin-bottom: 40px; position: relative; overflow: hidden; font-family: ${activeFont};">
+          ${qrSnippet}
+          ${pinSnippet}
+        </div>`;
       }
     }
     if (mockVars.warning_block_html) {

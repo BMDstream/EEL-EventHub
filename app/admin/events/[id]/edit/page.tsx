@@ -6,7 +6,7 @@ import Link from "next/link";
 import {
   ArrowLeft, Save, Loader2, Trash2, Building2, Lock, Mail,
   Type, Eye, ExternalLink, CheckCircle2, AlertCircle, Sparkles,
-  Calendar, Award, Layers
+  Calendar, Award, Layers, ChevronDown
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import AdminLayout from "@/components/AdminLayout";
@@ -185,15 +185,26 @@ const compileTemplatePreview = (
   </div>
   `;
 
-  const qrBlockHtml = `
-  <div style="background: #f8fafc; padding: 48px; border-radius: 32px; text-align: center; border: 1px solid #f1f5f9; margin-bottom: 40px; position: relative; overflow: hidden; font-family: ${fontFamily};">
-      <div style="width:140px;height:140px;background:${primary};margin:0 auto 24px auto;border-radius:16px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:bold;box-shadow:0 25px 50px -12px rgba(0,0,0,0.15);">QR CODE</div>
-      <p style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.3em; color: #64748b; margin-bottom: 16px; font-family: ${fontFamily};">unique access pass number</p>
+  const showQrCode = meta.show_qr_code !== "false";
+  const showPin = meta.show_pin !== "false";
+
+  const qrImgSnippet = showQrCode
+    ? `<div style="width:140px;height:140px;background:${primary};margin:0 auto 24px auto;border-radius:16px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:bold;box-shadow:0 25px 50px -12px rgba(0,0,0,0.15);">QR CODE</div>`
+    : "";
+
+  const pinSnippet = showPin
+    ? `<p style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.3em; color: #64748b; margin-bottom: 16px; font-family: ${fontFamily};">unique access pass number</p>
       <div style="display: inline-block; background: #ffffff; padding: 16px 32px; border-radius: 20px; border: 2px solid ${primary}; font-family: ${fontFamily};">
           <code style="font-size: 32px; font-weight: 900; color: ${primary}; letter-spacing: 0.25em; font-family: monospace;">1234</code>
-      </div>
-  </div>
-  `;
+      </div>`
+    : "";
+
+  const qrBlockHtml = (showQrCode || showPin)
+    ? `<div style="background: #f8fafc; padding: 48px; border-radius: 32px; text-align: center; border: 1px solid #f1f5f9; margin-bottom: 40px; position: relative; overflow: hidden; font-family: ${fontFamily};">
+          ${qrImgSnippet}
+          ${pinSnippet}
+       </div>`
+    : "";
 
   const warningText = meta.warning_text || "Please present this QR code OR number at the registration desk.";
   const warningBlockHtml = `
@@ -465,6 +476,7 @@ export default function EditEventPage() {
     decline_template_key: "global",
     decline_template_id: null as number | null,
     registration_form_template_id: null as number | null,
+    send_emails: true,
   });
 
   // ---------------------------------------------------------------------------
@@ -536,6 +548,7 @@ export default function EditEventPage() {
           decline_template_key: data.decline_template_key || "global",
           decline_template_id: data.decline_template_id || null,
           registration_form_template_id: data.registration_form_template_id || null,
+          send_emails: data.send_emails !== false,
         });
         setOriginalBanner(data.banner_url || "");
         setOriginalLogo(data.logo_url || "");
@@ -1280,6 +1293,20 @@ export default function EditEventPage() {
                       placeholder="e.g. EEL Events"
                       className="w-full px-5 py-4 rounded-2xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-slate-700 bg-white" />
                   </div>
+
+                  <div className="md:col-span-2 border-t border-slate-100 pt-5 mt-2 flex items-center justify-between">
+                    <div>
+                      <h4 className="text-xs font-black text-[#1e293b] uppercase tracking-wider">Enable Confirmation Emails</h4>
+                      <p className="text-[10px] text-slate-400 font-medium mt-0.5">Toggle automatic ticket and confirmation email triggers for this event</p>
+                    </div>
+                    <input 
+                      type="checkbox" 
+                      name="send_emails" 
+                      checked={formData.send_emails} 
+                      onChange={handleChange}
+                      className="w-4 h-4 text-yellow-500 bg-white border-slate-300 rounded focus:ring-yellow-500 focus:ring-2 cursor-pointer"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -1313,52 +1340,33 @@ export default function EditEventPage() {
                       <span className="ml-3 text-sm text-slate-400 font-medium">Loading templates...</span>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {/* Global (default) option */}
-                      {[
-                        { id: 0, key: "global", name: "Use Global Default", subject: "Inherits global email settings", body_html: "" },
-                        ...templates,
-                      ].map((tpl) => {
-                        const isSelected = tpl.key === "global"
-                          ? !formData.confirmation_template_id
-                          : formData.confirmation_template_id === tpl.id;
-                        const Icon = tpl.key === "global" ? Sparkles : (TEMPLATE_ICONS[tpl.key] || Mail);
-                        const label = tpl.key === "global" ? "Global Default" : tpl.name;
-                        const desc = tpl.key === "global"
-                          ? "Inherits global email settings"
-                          : `Subject: ${(tpl as EmailTemplate).subject || "—"}`;
-                        return (
-                          <button
-                            key={tpl.key === "global" ? "global" : tpl.id}
-                            type="button"
-                            onClick={() => {
-                              if (tpl.key === "global") {
-                                setFormData(prev => ({ ...prev, confirmation_template_id: null, confirmation_template_key: "global" }));
-                              } else {
-                                setFormData(prev => ({ ...prev, confirmation_template_id: tpl.id!, confirmation_template_key: tpl.key }));
-                              }
-                            }}
-                            className={`flex items-start gap-4 p-4 rounded-2xl border-2 text-left transition-all ${
-                              isSelected
-                                ? "border-[#1e293b] bg-[#1e293b]/5 shadow-sm"
-                                : "border-slate-100 bg-slate-50/50 hover:border-slate-300 hover:bg-slate-50"
-                            }`}
-                          >
-                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${isSelected ? "bg-[#1e293b]" : "bg-slate-200"}`}>
-                              <Icon size={18} className={isSelected ? "text-white" : "text-slate-500"} />
-                            </div>
-                            <div className="min-w-0">
-                              <p className={`text-xs font-black uppercase tracking-tight ${isSelected ? "text-[#1e293b]" : "text-slate-600"}`}>{label}</p>
-                              <p className="text-[10px] text-slate-400 mt-0.5 truncate">{desc}</p>
-                            </div>
-                            {isSelected && (
-                              <div className="ml-auto shrink-0">
-                                <CheckCircle2 size={18} className="text-[#1e293b]" />
-                              </div>
-                            )}
-                          </button>
-                        );
-                      })}
+                    <div className="relative">
+                      <select
+                        value={formData.confirmation_template_id ? formData.confirmation_template_id.toString() : "global"}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === "global") {
+                            setFormData(prev => ({ ...prev, confirmation_template_id: null, confirmation_template_key: "global" }));
+                          } else {
+                            const tplId = parseInt(val);
+                            const tpl = templates.find(t => t.id === tplId);
+                            if (tpl) {
+                              setFormData(prev => ({ ...prev, confirmation_template_id: tplId, confirmation_template_key: tpl.key }));
+                            }
+                          }
+                        }}
+                        className="w-full px-5 py-4 bg-white rounded-2xl border border-slate-200 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-slate-700 bg-slate-50/20 appearance-none cursor-pointer pr-10"
+                      >
+                        <option value="global">Use Global Default (Inherits global email settings)</option>
+                        {templates.map((tpl) => (
+                          <option key={tpl.id!} value={tpl.id!.toString()}>
+                            {tpl.name} {tpl.subject ? `— Subject: ${tpl.subject}` : ""}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                        <ChevronDown size={16} />
+                      </div>
                     </div>
                   )}
                 </div>
@@ -1383,52 +1391,33 @@ export default function EditEventPage() {
                       <span className="ml-3 text-sm text-slate-400 font-medium">Loading templates...</span>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {/* Global (default) option */}
-                      {[
-                        { id: 0, key: "global", name: "Use Global Default", subject: "Inherits global decline settings", body_html: "" },
-                        ...templates,
-                      ].map((tpl) => {
-                        const isSelected = tpl.key === "global"
-                          ? !formData.decline_template_id
-                          : formData.decline_template_id === tpl.id;
-                        const Icon = tpl.key === "global" ? AlertCircle : (TEMPLATE_ICONS[tpl.key] || Mail);
-                        const label = tpl.key === "global" ? "Global Decline Default" : tpl.name;
-                        const desc = tpl.key === "global"
-                          ? "Inherits global decline settings"
-                          : `Subject: ${(tpl as EmailTemplate).subject || "—"}`;
-                        return (
-                          <button
-                            key={tpl.key === "global" ? "global-decline" : `decline-${tpl.id}`}
-                            type="button"
-                            onClick={() => {
-                              if (tpl.key === "global") {
-                                setFormData(prev => ({ ...prev, decline_template_id: null, decline_template_key: "global" }));
-                              } else {
-                                setFormData(prev => ({ ...prev, decline_template_id: tpl.id!, decline_template_key: tpl.key }));
-                              }
-                            }}
-                            className={`flex items-start gap-4 p-4 rounded-2xl border-2 text-left transition-all ${
-                              isSelected
-                                ? "border-[#1e293b] bg-[#1e293b]/5 shadow-sm"
-                                : "border-slate-100 bg-slate-50/50 hover:border-slate-300 hover:bg-slate-50"
-                            }`}
-                          >
-                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${isSelected ? "bg-[#1e293b]" : "bg-slate-200"}`}>
-                              <Icon size={18} className={isSelected ? "text-white" : "text-slate-500"} />
-                            </div>
-                            <div className="min-w-0">
-                              <p className={`text-xs font-black uppercase tracking-tight ${isSelected ? "text-[#1e293b]" : "text-slate-600"}`}>{label}</p>
-                              <p className="text-[10px] text-slate-400 mt-0.5 truncate">{desc}</p>
-                            </div>
-                            {isSelected && (
-                              <div className="ml-auto shrink-0">
-                                <CheckCircle2 size={18} className="text-[#1e293b]" />
-                              </div>
-                            )}
-                          </button>
-                        );
-                      })}
+                    <div className="relative">
+                      <select
+                        value={formData.decline_template_id ? formData.decline_template_id.toString() : "global"}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === "global") {
+                            setFormData(prev => ({ ...prev, decline_template_id: null, decline_template_key: "global" }));
+                          } else {
+                            const tplId = parseInt(val);
+                            const tpl = templates.find(t => t.id === tplId);
+                            if (tpl) {
+                              setFormData(prev => ({ ...prev, decline_template_id: tplId, decline_template_key: tpl.key }));
+                            }
+                          }
+                        }}
+                        className="w-full px-5 py-4 bg-white rounded-2xl border border-slate-200 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-slate-700 bg-slate-50/20 appearance-none cursor-pointer pr-10"
+                      >
+                        <option value="global">Use Global Decline Default (Inherits global decline settings)</option>
+                        {templates.map((tpl) => (
+                          <option key={tpl.id!} value={tpl.id!.toString()}>
+                            {tpl.name} {tpl.subject ? `— Subject: ${tpl.subject}` : ""}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                        <ChevronDown size={16} />
+                      </div>
                     </div>
                   )}
                 </div>

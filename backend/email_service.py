@@ -284,6 +284,10 @@ def send_confirmation_email(
             pin = clearance_id
         db_registration = TempRegistration()
 
+    if db_event and hasattr(db_event, "send_emails") and db_event.send_emails is False:
+        print(f"INFO: Confirmation email sending is disabled for event '{getattr(db_event, 'title', '')}'. Skipping send.")
+        return {"id": "skipped-disabled-event"}
+
     body_template = None
     subject_template = None
     show_qr_code = True
@@ -785,10 +789,7 @@ def send_confirmation_email(
         # Process inline base64 images and convert them to inline attachments
         html_content, inline_attachments = process_inline_base64_images(html_content)
         
-        # RFC 2822 Compliance: unique Message-ID and List-Unsubscribe mapping
-        import uuid
-        domain_part = sender_email.split("@")[-1] if "@" in sender_email else "eelogistics.co.za"
-        msg_id = f"<{uuid.uuid4()}@{domain_part}>"
+        # RFC 2822 Compliance: unique List-Unsubscribe mapping
         unsubscribe_header = f"<mailto:events@eelogistics.co.za?subject=unsubscribe-{clearance_id}>"
         
         email_params = {
@@ -798,7 +799,6 @@ def send_confirmation_email(
             "html": html_content,
             "headers": {
                 "X-Entity-Ref-ID": clearance_id,
-                "Message-ID": msg_id,
                 "List-Unsubscribe": unsubscribe_header
             }
         }
@@ -825,7 +825,8 @@ def send_broadcast_email(
     signature: str = None, 
     config: Dict[str, Any] = None,
     attachments: List[Dict[str, Any]] = None,
-    event_details: Dict[str, Any] = None
+    event_details: Dict[str, Any] = None,
+    survey_url: str = None
 ):
     """Sends a personalized broadcast email to multiple attendees with premium styling and optional attachments."""
     event_title = ' '.join(w.capitalize() for w in re.sub(r'<[^>]*>', '', event_title).split())
@@ -938,6 +939,60 @@ def send_broadcast_email(
         last_name = reg["last_name"]
         pin = reg["pin"]
 
+        # Determine meta settings
+        is_prebuilt_html = body.strip().startswith("<!DOCTYPE") or body.strip().startswith("<html") or "<!-- TEMPLATE_META" in body or body.strip().startswith("<div") or body.strip().startswith("<table")
+        active_meta = meta
+        if is_prebuilt_html:
+            active_meta = parse_template_meta(body) or {}
+
+        show_qr = active_meta.get("show_qr_code") != "false"
+        show_pin = active_meta.get("show_pin") != "false"
+        
+        qr_img_snippet = ""
+        if show_qr:
+            from urllib.parse import quote
+            qr_url = f"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={quote(pin)}"
+            qr_img_snippet = f'<img src="{qr_url}" width="200" height="200" alt="Registration QR Code" style="margin-bottom: 32px; border-radius: 20px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.15);" />'
+            
+        pin_snippet = ""
+        if show_pin:
+            pin_snippet = f"""
+            <p style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.3em; color: #64748b; margin-bottom: 16px; font-family: {main_body_font_family};">unique access pass number</p>
+            <div style="display: inline-block; background: #ffffff; padding: 16px 32px; border-radius: 20px; border: 2px solid {primary_color}; font-family: {main_body_font_family};">
+                <code style="font-size: 32px; font-weight: 900; color: {primary_color}; letter-spacing: 0.25em; font-family: monospace;">{pin}</code>
+            </div>
+            """
+            
+        qr_block_html = ""
+        if show_qr or show_pin:
+            qr_block_html = f"""
+            <div style="background: #f8fafc; padding: 48px; border-radius: 32px; text-align: center; border: 1px solid #f1f5f9; margin-bottom: 40px; position: relative; overflow: hidden; font-family: {main_body_font_family};">
+                {qr_img_snippet}
+                {pin_snippet}
+            </div>
+            """
+            
+        # Warning block text
+        warning_text = active_meta.get("warning_text", "Please present this QR code OR number at the registration desk.")
+        warning_block_html = f"""
+        <div style="background: #fffbeb; padding: 28px; border-radius: 24px; border: 1px solid #fef3c7; margin-bottom: 40px; text-align: center; font-family: {main_body_font_family};">
+            <p style="color: #b45309; font-size: 14px; font-weight: 700; margin: 0; line-height: 1.5; text-transform: uppercase; letter-spacing: 0.05em; font-family: {main_body_font_family};">
+                {warning_text}
+            </p>
+        </div>
+        """
+        
+        # Button block (redirects to live form/profile check by default)
+        button_text = active_meta.get("button_text", "Update Details")
+        btn_url = survey_url if survey_url else "#"
+        button_block_html = f"""
+        <div style="text-align: center; margin-top: 10px; margin-bottom: 40px;">
+            <a href="{btn_url}" style="background-color: {accent_color}; color: #000000; padding: 16px 32px; border-radius: 16px; font-size: 13px; font-weight: 950; text-decoration: none; text-transform: uppercase; letter-spacing: 0.1em; display: inline-block; box-shadow: 0 4px 12px rgba(234,179,8,0.2); font-family: {main_body_font_family};">
+                {button_text}
+            </a>
+        </div>
+        """
+
         # Define variables dictionary for parsing templates
         variables = {
             "first_name": first_name,
@@ -960,7 +1015,11 @@ def send_broadcast_email(
             "footer_text": "Automated Event Management System • Security Tier 4",
             "font_family": main_body_font_family,
             "font_size": main_body_font_size,
-            "banner_html": banner_html
+            "banner_html": banner_html,
+            "qr_block_html": qr_block_html,
+            "warning_block_html": warning_block_html,
+            "button_block_html": button_block_html,
+            "survey_url": btn_url
         }
 
         # Inject QR Code if requested in custom template or default body
@@ -998,8 +1057,6 @@ def send_broadcast_email(
             details_html = details_html.replace("font-weight: 900;", details_styles).replace("font-weight: 800;", details_styles).replace("font-weight: 700;", details_styles)
         variables["details_html"] = details_html
 
-        is_prebuilt_html = body.strip().startswith("<!DOCTYPE") or body.strip().startswith("<html") or "<!-- TEMPLATE_META" in body or body.strip().startswith("<div") or body.strip().startswith("<table")
-        
         if is_prebuilt_html:
             p_subject = parse_template(subject, variables)
             html_content = parse_template(body, variables)
@@ -1081,8 +1138,6 @@ def send_broadcast_email(
         html_content, inline_attachments = process_inline_base64_images(html_content)
         
         import uuid
-        domain_part = sender_email.split("@")[-1] if "@" in sender_email else "eelogistics.co.za"
-        msg_id = f"<{uuid.uuid4()}@{domain_part}>"
         unsubscribe_header = f"<mailto:events@eelogistics.co.za?subject=unsubscribe-{reg.get('id', 'broadcast')}>"
         
         email_params = {
@@ -1091,7 +1146,6 @@ def send_broadcast_email(
             "subject": p_subject,
             "html": html_content,
             "headers": {
-                "Message-ID": msg_id,
                 "List-Unsubscribe": unsubscribe_header
             }
         }

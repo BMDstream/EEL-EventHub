@@ -749,6 +749,32 @@ def create_registrations_bulk(
             
     return {"created": created, "errors": errors}
 
+class BulkDeleteRequest(SQLModel):
+    registration_ids: List[str]
+
+@router.post("/registrations/bulk-delete")
+def bulk_delete_registrations(
+    req: BulkDeleteRequest,
+    session: Session = Depends(get_session),
+    current_user: Optional[User] = Depends(get_current_user_from_request)
+):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+        
+    deleted_count = 0
+    for reg_id in req.registration_ids:
+        try:
+            val = UUID(reg_id)
+            registration = session.get(Registration, val)
+            if registration:
+                session.delete(registration)
+                deleted_count += 1
+        except (ValueError, AttributeError):
+            pass
+            
+    session.commit()
+    return {"ok": True, "deleted_count": deleted_count}
+
 @router.delete("/registrations/{registration_id}")
 def delete_registration(
     registration_id: str,
@@ -1072,6 +1098,7 @@ def broadcast_to_attendees(
     signature = data.get("signature", "")
     attachments = data.get("attachments", [])
     target = data.get("target", "confirmed") # confirmed, checked_in
+    survey_url = data.get("survey_url", "")
     
     query = (
         select(Registration, Attendee)
@@ -1110,7 +1137,8 @@ def broadcast_to_attendees(
         signature=signature,
         config=config,
         attachments=attachments,
-        event_details=event_details
+        event_details=event_details,
+        survey_url=survey_url
     )
     
     return {"ok": True, "sent": len(registrations_data), "message": "Broadcast queued in background"}
@@ -1230,3 +1258,31 @@ def bulk_checkin(
         "conflicts": conflicts,
         "errors": errors
     }
+
+@router.put("/registrations/{registration_id}/custom-answers")
+def update_registration_custom_answers(
+    registration_id: str,
+    payload: dict,
+    session: Session = Depends(get_session)
+):
+    try:
+        val = UUID(registration_id)
+        registration = session.get(Registration, val)
+    except ValueError:
+        registration = None
+        
+    if not registration:
+        raise HTTPException(status_code=404, detail="Registration not found")
+        
+    custom_answers = registration.custom_answers or {}
+    custom_answers.update(payload)
+    registration.custom_answers = custom_answers
+    
+    from sqlalchemy.orm.attributes import flag_modified
+    flag_modified(registration, "custom_answers")
+    
+    session.add(registration)
+    session.commit()
+    session.refresh(registration)
+    return {"ok": True, "custom_answers": registration.custom_answers}
+

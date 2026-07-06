@@ -56,6 +56,7 @@ class Event(SQLModel, table=True):
     duration_days: int = Field(default=1)
     
     registration_active: bool = Field(default=True)
+    send_emails: bool = Field(default=True)
     registration_start: Optional[datetime] = Field(default=None)
     registration_end: Optional[datetime] = Field(default=None)
     disclaimer_enabled: bool = Field(default=False)

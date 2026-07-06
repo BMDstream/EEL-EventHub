@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { 
   Plus, Trash2, Copy, Save, Loader2, Edit3, Type, CheckSquare, 
   List, Palette, FileText, CheckCircle2, AlertCircle, ChevronRight, XCircle,
-  ArrowUp, ArrowDown, Layout, HelpCircle, Mail, Award, Eye, EyeOff
+  ArrowUp, ArrowDown, Layout, HelpCircle, Mail, Award, Eye, EyeOff, ChevronDown
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSession } from "next-auth/react";
@@ -179,11 +179,11 @@ export default function RegistrationTemplateManager() {
   const [notification, setNotification] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   
-  // Tabs within editor: theme, layout, postSubmit, email, operator
-  const [editorTab, setEditorTab] = useState<"theme" | "layout" | "postSubmit" | "email" | "operator">("theme");
+  // Tabs within editor: theme, layout, postSubmit, operator
+  const [editorTab, setEditorTab] = useState<"theme" | "layout" | "postSubmit" | "operator">("theme");
   
-  // Real-time Preview Mode: "form", "confirmation", "decline", "email", or "operator"
-  const [previewMode, setPreviewMode] = useState<"form" | "confirmation" | "decline" | "email" | "operator">("form");
+  // Real-time Preview Mode: "form", "confirmation", "decline", or "operator"
+  const [previewMode, setPreviewMode] = useState<"form" | "confirmation" | "decline" | "waitlist" | "operator">("form");
 
   // Sync previewMode with editorTab changes for optimal real-time feedback
   useEffect(() => {
@@ -191,8 +191,6 @@ export default function RegistrationTemplateManager() {
       setPreviewMode("form");
     } else if (editorTab === "postSubmit") {
       setPreviewMode("confirmation");
-    } else if (editorTab === "email") {
-      setPreviewMode("email");
     } else if (editorTab === "operator") {
       setPreviewMode("operator");
     }
@@ -202,6 +200,104 @@ export default function RegistrationTemplateManager() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newTplName, setNewTplName] = useState("");
   const [newTplDesc, setNewTplDesc] = useState("");
+
+  const flattenSchema = (schema: any[]): any[] => {
+    if (!schema || !Array.isArray(schema)) return [];
+    const isSectioned = schema.some((item: any) => item && typeof item === "object" && "fields" in item && Array.isArray(item.fields));
+    if (!isSectioned) return schema;
+
+    const flat: any[] = [];
+    schema.forEach((section: any) => {
+      if (section && typeof section === "object" && "fields" in section) {
+        flat.push({
+          id: section.id || `section_${Date.now()}_${Math.random()}`,
+          key: section.id || `section_${Date.now()}_${Math.random()}`,
+          label: section.title || section.label || "",
+          type: "section_header",
+          required: false,
+          visible: true
+        });
+        if (Array.isArray(section.fields)) {
+          section.fields.forEach((field: any) => {
+            if (field) {
+              flat.push(field);
+            }
+          });
+        }
+      } else {
+        flat.push(section);
+      }
+    });
+    return flat;
+  };
+
+  const nestSchema = (flat: any[]): any[] => {
+    if (!flat || !Array.isArray(flat)) return [];
+    
+    const sections: any[] = [];
+    let currentSection: any = null;
+
+    flat.forEach((item: any) => {
+      if (!item) return;
+
+      if (item.type === "section_header") {
+        currentSection = {
+          id: item.id || item.key || `section_${Date.now()}_${Math.random()}`,
+          title: item.label || item.title || "",
+          fields: []
+        };
+        sections.push(currentSection);
+      } else {
+        if (!currentSection) {
+          currentSection = {
+            id: "default_section",
+            title: "",
+            fields: []
+          };
+          sections.push(currentSection);
+        }
+        currentSection.fields.push(item);
+      }
+    });
+
+    return sections;
+  };
+
+  const ensureStandardFields = (tpl: any): any => {
+    if (!tpl || !Array.isArray(tpl.layout_schema)) return tpl;
+    
+    const flatSchema = flattenSchema(tpl.layout_schema);
+    
+    const hasFirstName = flatSchema.some((f: any) => f.key === "first_name" || f.id === "field_first_name");
+    const hasLastName = flatSchema.some((f: any) => f.key === "last_name" || f.id === "field_last_name");
+    const hasEmail = flatSchema.some((f: any) => f.key === "email" || f.id === "field_email");
+    const hasCompany = flatSchema.some((f: any) => f.key === "company" || f.id === "field_company");
+
+    const missing: any[] = [];
+    if (!hasFirstName) {
+      missing.push({ id: "field_first_name", key: "first_name", label: "First Name", placeholder: "e.g. Alan", type: "text", required: true, visible: true, showBeforeAttendance: true });
+    }
+    if (!hasLastName) {
+      missing.push({ id: "field_last_name", key: "last_name", label: "Last Name", placeholder: "e.g. Turing", type: "text", required: true, visible: true, showBeforeAttendance: true });
+    }
+    if (!hasEmail) {
+      missing.push({ id: "field_email", key: "email", label: "Secure Email Address", placeholder: "e.g. turing@bletchleypark.org.uk", type: "email", required: true, visible: true, showBeforeAttendance: true });
+    }
+    if (!hasCompany) {
+      missing.push({ id: "field_company", key: "company", label: "Organization / Company", placeholder: "e.g. GC&CS", type: "text", required: false, visible: true, showBeforeAttendance: true });
+    }
+
+    if (missing.length > 0) {
+      return {
+        ...tpl,
+        layout_schema: [...missing, ...flatSchema]
+      };
+    }
+    return {
+      ...tpl,
+      layout_schema: flatSchema
+    };
+  };
 
   // Load all templates
   const loadTemplates = async (selectIdToActivate?: number) => {
@@ -219,7 +315,7 @@ export default function RegistrationTemplateManager() {
         const idToSelect = selectIdToActivate || data[0].id;
         setSelectedId(idToSelect);
         const tpl = data.find((t: any) => t.id === idToSelect) || data[0];
-        setSelectedTemplate(JSON.parse(JSON.stringify(tpl))); // deep copy
+        setSelectedTemplate(ensureStandardFields(JSON.parse(JSON.stringify(tpl)))); // deep copy
       } else {
         setSelectedId(null);
         setSelectedTemplate(null);
@@ -252,7 +348,7 @@ export default function RegistrationTemplateManager() {
     setSelectedId(id);
     const tpl = templates.find((t) => t.id === id);
     if (tpl) {
-      setSelectedTemplate(JSON.parse(JSON.stringify(tpl)));
+      setSelectedTemplate(ensureStandardFields(JSON.parse(JSON.stringify(tpl))));
       setHasUnsavedChanges(false);
     }
   };
@@ -374,8 +470,10 @@ export default function RegistrationTemplateManager() {
           name: selectedTemplate.name,
           description: selectedTemplate.description,
           theme_config: selectedTemplate.theme_config,
-          layout_schema: selectedTemplate.layout_schema,
-          post_submit_config: selectedTemplate.post_submit_config
+          layout_schema: nestSchema(selectedTemplate.layout_schema),
+          post_submit_config: selectedTemplate.post_submit_config,
+          email_config: selectedTemplate.email_config,
+          operator_config: selectedTemplate.operator_config
         })
       });
       if (!res.ok) throw new Error("Failed to save changes");
@@ -488,6 +586,14 @@ export default function RegistrationTemplateManager() {
     updateLayoutSchema(newSchema);
   };
 
+  const updateFieldProperties = (fieldId: string, updates: Partial<FormField>) => {
+    if (!selectedTemplate) return;
+    const newSchema = selectedTemplate.layout_schema.map(f => 
+      f.id === fieldId ? { ...f, ...updates } : f
+    );
+    updateLayoutSchema(newSchema);
+  };
+
   const moveFieldOrder = (index: number, direction: "up" | "down") => {
     if (!selectedTemplate) return;
     const targetIndex = direction === "up" ? index - 1 : index + 1;
@@ -588,74 +694,69 @@ export default function RegistrationTemplateManager() {
         )}
       </AnimatePresence>
 
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
-        {/* Left Column: Selector list & configs */}
-        <div className="xl:col-span-8 space-y-8">
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {/* Sidebar list of templates */}
-            <div className="md:col-span-1 space-y-4">
-              <div className="flex items-center justify-between ml-1">
-                <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">
-                  Select Template
-                </h3>
-                {isAdmin && (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between ml-1">
+          <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">
+            Select Template
+          </h3>
+          {isAdmin && (
+            <button
+              onClick={() => { setShowCreateModal(true); }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#0f172a] hover:bg-[#1e293b] text-white text-[10px] font-black uppercase tracking-wider transition-all shadow-sm"
+            >
+              <Plus size={11} />
+              New
+            </button>
+          )}
+        </div>
+        <div className="bg-white rounded-[2rem] p-4 shadow-sm border border-slate-100 dark:bg-[#0f172a] dark:border-slate-800 flex flex-row items-center gap-4 overflow-x-auto whitespace-nowrap min-h-[110px] scrollbar-thin">
+          {templates.map((t) => {
+            const isSelected = t.id === selectedId;
+            return (
+              <div key={t.id} className="relative group/row font-bold inline-block min-w-[240px] shrink-0">
+                <button
+                  onClick={() => handleSelectTemplate(t.id)}
+                  className={`w-full flex items-center justify-between p-4 rounded-2xl text-left transition-all ${
+                    isSelected 
+                      ? "bg-[#0f172a]/5 text-[#0f172a] font-black dark:bg-yellow-400/10 dark:text-yellow-400"
+                      : "text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800/50"
+                  }`}
+                >
+                  <div className="flex-1 min-w-0 pr-10">
+                    <p className="text-sm font-bold truncate">{t.name}</p>
+                    <p className="text-[10px] text-slate-400 font-medium truncate mt-0.5">{t.description || "No description provided."}</p>
+                  </div>
+                  <ChevronRight size={14} className={`opacity-40 transition-transform shrink-0 ${isSelected ? "translate-x-1" : ""}`} />
+                </button>
+                
+                {/* Actions */}
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 opacity-0 group-hover/row:opacity-100 transition-opacity flex items-center gap-1 bg-white/95 rounded-xl px-1.5 py-1 shadow-sm border border-slate-100 dark:bg-[#0f172a]">
                   <button
-                    onClick={() => { setShowCreateModal(true); }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#0f172a] hover:bg-[#1e293b] text-white text-[10px] font-black uppercase tracking-wider transition-all shadow-sm"
+                    onClick={(e) => { e.stopPropagation(); handleDuplicateTemplate(t); }}
+                    title="Copy template"
+                    className="p-1.5 rounded-lg text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20"
                   >
-                    <Plus size={11} />
-                    New
+                    <Copy size={13} />
                   </button>
-                )}
+                  {isAdmin && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleDeleteTemplate(t.id, t.name); }}
+                      title="Delete template"
+                      className="p-1.5 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  )}
+                </div>
               </div>
-              <div className="bg-white rounded-[2rem] p-4 shadow-sm border border-slate-100 dark:bg-[#0f172a] dark:border-slate-800 space-y-2 max-h-[600px] overflow-y-auto">
-                {templates.map((t) => {
-                  const isSelected = t.id === selectedId;
-                  return (
-                    <div key={t.id} className="relative group/row font-bold">
-                      <button
-                        onClick={() => handleSelectTemplate(t.id)}
-                        className={`w-full flex items-center justify-between p-4 rounded-2xl text-left transition-all ${
-                          isSelected 
-                            ? "bg-[#0f172a]/5 text-[#0f172a] font-black dark:bg-yellow-400/10 dark:text-yellow-400"
-                            : "text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800/50"
-                        }`}
-                      >
-                        <div className="flex-1 min-w-0 pr-12">
-                          <p className="text-sm font-bold truncate">{t.name}</p>
-                          <p className="text-[10px] text-slate-400 font-medium truncate mt-0.5">{t.description || "No description provided."}</p>
-                        </div>
-                        <ChevronRight size={14} className={`opacity-40 transition-transform shrink-0 ${isSelected ? "translate-x-1" : ""}`} />
-                      </button>
-                      
-                      {/* Actions */}
-                      <div className="absolute right-3 top-1/2 -translate-y-1/2 opacity-0 group-hover/row:opacity-100 transition-opacity flex items-center gap-1 bg-white/95 rounded-xl px-1.5 py-1 shadow-sm border border-slate-100 dark:bg-[#0f172a]">
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleDuplicateTemplate(t); }}
-                          title="Copy template"
-                          className="p-1.5 rounded-lg text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20"
-                        >
-                          <Copy size={13} />
-                        </button>
-                        {isAdmin && (
-                          <button
-                            onClick={(e) => { e.stopPropagation(); handleDeleteTemplate(t.id, t.name); }}
-                            title="Delete template"
-                            className="p-1.5 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+            );
+          })}
+        </div>
+      </div>
 
-            {/* Config details editor */}
-            <div className="md:col-span-2 space-y-6">
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start mt-8">
+        {/* Left Column: Template Editor */}
+        <div className="xl:col-span-8 space-y-6">
               {selectedTemplate ? (
                 <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-100 dark:bg-[#0f172a] dark:border-slate-800 space-y-8 max-h-[750px] overflow-y-auto pr-4">
                   {/* Title & description editing */}
@@ -686,7 +787,6 @@ export default function RegistrationTemplateManager() {
                       { id: "theme", label: "Theme", icon: Palette },
                       { id: "layout", label: "Form Fields", icon: Layout },
                       { id: "postSubmit", label: "Post-Submit Screens", icon: FileText },
-                      { id: "email", label: "Confirmation Email", icon: Mail },
                       { id: "operator", label: "Operator check-in", icon: Award }
                     ].map((tab) => {
                       const Icon = tab.icon;
@@ -981,6 +1081,7 @@ export default function RegistrationTemplateManager() {
                               onChange={(val) => updateThemeConfig("form_heading", val)}
                               placeholder="e.g. Register."
                               minHeight="80px"
+                              variant="simple"
                             />
                           </div>
                           <div className="space-y-2.5">
@@ -990,6 +1091,7 @@ export default function RegistrationTemplateManager() {
                               onChange={(val) => updateThemeConfig("form_subheading", val)}
                               placeholder="e.g. Secure your credentials for this exclusive engagement."
                               minHeight="80px"
+                              variant="simple"
                             />
                           </div>
                         </div>
@@ -1159,13 +1261,37 @@ export default function RegistrationTemplateManager() {
                               <div className="flex items-center justify-between gap-4">
                                 <div className="flex items-center gap-2">
                                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest shrink-0">#{index + 1}</span>
-                                  <span className={`text-[9px] px-2 py-0.5 rounded-lg font-black uppercase tracking-wide ${
-                                    field.type === "section_header"
-                                      ? "bg-indigo-150 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300"
-                                      : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
-                                  }`}>
-                                    {field.type}
-                                  </span>
+                                  <div className="relative">
+                                    <select
+                                      value={field.type}
+                                      disabled={isStandardField}
+                                      onChange={(e) => {
+                                        const newType = e.target.value as any;
+                                        updateFieldProperties(field.id, { 
+                                          type: newType, 
+                                          options: newType === "select" ? (field.options || ["Option 1", "Option 2"]) : undefined
+                                        });
+                                      }}
+                                      className={`text-[9px] pl-2 pr-6 py-0.5 rounded-lg font-black uppercase tracking-wide border border-slate-200 outline-none appearance-none cursor-pointer focus:border-[#1e293b] focus:ring-1 focus:ring-[#1e293b]/5 dark:bg-slate-800 dark:border-slate-700 dark:text-white disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed ${
+                                        field.type === "section_header"
+                                          ? "bg-indigo-150 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300"
+                                          : "bg-slate-150 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
+                                      }`}
+                                    >
+                                      <option value="text">Text Field</option>
+                                      <option value="numeric">Number Field</option>
+                                      <option value="email">Email Field</option>
+                                      <option value="select">Select Dropdown</option>
+                                      <option value="checkbox">Checkbox</option>
+                                      <option value="partner_card">Partner Card</option>
+                                      <option value="section_header">Section Header</option>
+                                    </select>
+                                    {!isStandardField && (
+                                      <div className="absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                                        <ChevronDown size={10} />
+                                      </div>
+                                    )}
+                                  </div>
                                   {isStandardField && (
                                     <span className="text-[8px] bg-amber-50 border border-amber-250 text-amber-600 dark:bg-amber-950/20 dark:border-amber-900/30 dark:text-amber-400 px-1.5 py-0.5 rounded font-black uppercase tracking-wider">
                                       System Field
@@ -1227,6 +1353,7 @@ export default function RegistrationTemplateManager() {
                                       onChange={(val) => updateFieldProperty(field.id, "label", val)}
                                       placeholder="e.g. What is your t-shirt size?"
                                       minHeight="60px"
+                                      variant="simple"
                                     />
                                   </div>
                                 </div>
@@ -1382,6 +1509,7 @@ export default function RegistrationTemplateManager() {
                               onChange={(val) => updatePostSubmitConfig("onscreen_title", val)}
                               placeholder="e.g. YOUR REGISTRATION HAS BEEN CONFIRMED."
                               minHeight="80px"
+                              variant="simple"
                             />
                           </div>
 
@@ -1469,6 +1597,7 @@ export default function RegistrationTemplateManager() {
                               onChange={(val) => updatePostSubmitConfig("onscreen_decline_title", val)}
                               placeholder="e.g. RSVP Response Recorded."
                               minHeight="80px"
+                              variant="simple"
                             />
                           </div>
 
@@ -1556,6 +1685,7 @@ export default function RegistrationTemplateManager() {
                               onChange={(val) => updatePostSubmitConfig("onscreen_capacity_title", val)}
                               placeholder="e.g. EVENT IS FULL / WAITLISTED."
                               minHeight="80px"
+                              variant="simple"
                             />
                           </div>
 
@@ -1646,64 +1776,7 @@ export default function RegistrationTemplateManager() {
                     </div>
                   )}
 
-                  {editorTab === "email" && (
-                    <div className="space-y-6">
-                      <h4 className="text-xs font-black uppercase text-slate-400 pb-2 border-b border-slate-100 dark:border-slate-800">
-                        Modular Confirmation Email Builder
-                      </h4>
 
-                      <div className="space-y-4">
-                        <div className="flex flex-wrap gap-6">
-                          <label className="flex items-center gap-2 cursor-pointer select-none text-[10px] font-bold">
-                            <input 
-                              type="checkbox"
-                              checked={selectedTemplate.email_config?.show_qr_code !== false}
-                              onChange={(e) => updateEmailConfig("show_qr_code", e.target.checked)}
-                              className="w-3.5 h-3.5 text-[#0f172a] rounded"
-                            />
-                            Show QR Code in Confirmation Email
-                          </label>
-                          <label className="flex items-center gap-2 cursor-pointer select-none text-[10px] font-bold">
-                            <input 
-                              type="checkbox"
-                              checked={selectedTemplate.email_config?.show_pin !== false}
-                              onChange={(e) => updateEmailConfig("show_pin", e.target.checked)}
-                              className="w-3.5 h-3.5 text-[#0f172a] rounded"
-                            />
-                            Show Unique PIN in Confirmation Email
-                          </label>
-                        </div>
-
-                        <div className="space-y-2">
-                          <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 ml-1">Email Subject Template</label>
-                          <input 
-                            type="text" 
-                            value={selectedTemplate.email_config?.subject_template || ""}
-                            onChange={(e) => updateEmailConfig("subject_template", e.target.value)}
-                            placeholder="e.g. Your credentials for {{event.title}}"
-                            className="w-full px-4 py-2.5 rounded-xl border border-slate-100 font-bold text-xs bg-slate-50 dark:bg-slate-800 dark:border-slate-700 text-[#0f172a] dark:text-white"
-                          />
-                          <p className="text-[8px] text-slate-400 font-bold uppercase tracking-wide">
-                            Available tokens: {"{{registrant.first_name}}"}, {"{{event.title}}"}, {"{{event.location}}"}
-                          </p>
-                        </div>
-
-                        <div className="space-y-2">
-                          <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 ml-1">Email Rich-Text Body Template</label>
-                          <RichTextEditor 
-                            value={selectedTemplate.email_config?.body_template || ""}
-                            onChange={(val) => updateEmailConfig("body_template", val)}
-                            placeholder="Type confirmation body..."
-                            minHeight="180px"
-                            availableTokens={["{{registrant.first_name}}", "{{registrant.last_name}}", "{{registrant.company}}", "{{event.title}}", "{{event.location}}", "{{event.start_date}}", "{{registration.pin}}"]}
-                          />
-                          <p className="text-[8px] text-slate-400 font-bold uppercase tracking-wide">
-                            Supports standard html tags and brace replacement tokens.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
 
                   {editorTab === "operator" && (
                     <div className="space-y-6 animate-in fade-in duration-300">
@@ -1802,8 +1875,6 @@ export default function RegistrationTemplateManager() {
                   <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">Create a template to begin</p>
                 </div>
               )}
-            </div>
-          </div>
         </div>
 
         {/* Right Column: Real-time Form / Success Screen preview panel */}
@@ -1833,11 +1904,12 @@ export default function RegistrationTemplateManager() {
                 Decline
               </button>
               <button
-                onClick={() => setPreviewMode("email")}
-                className={`px-2 py-1 rounded-lg transition-all ${previewMode === "email" ? "bg-white text-[#0f172a] shadow-sm font-black dark:bg-[#0f172a] dark:text-white" : "hover:text-slate-600"}`}
+                onClick={() => setPreviewMode("waitlist")}
+                className={`px-2 py-1 rounded-lg transition-all ${previewMode === "waitlist" ? "bg-white text-[#0f172a] shadow-sm font-black dark:bg-[#0f172a] dark:text-white" : "hover:text-slate-600"}`}
               >
-                Email
+                Waitlist
               </button>
+
               <button
                 onClick={() => setPreviewMode("operator")}
                 className={`px-2 py-1 rounded-lg transition-all ${previewMode === "operator" ? "bg-white text-[#0f172a] shadow-sm font-black dark:bg-[#0f172a] dark:text-white" : "hover:text-slate-600"}`}
@@ -1876,7 +1948,7 @@ export default function RegistrationTemplateManager() {
                 style={{
                   fontFamily: selectedTemplate.theme_config.typography_font || "Calibri, sans-serif"
                 }}
-                className="rounded-[2.5rem] border border-slate-150 p-8 shadow-lg transition-all min-h-[480px] relative overflow-hidden flex flex-col justify-between preview-form-text-custom"
+                className="rounded-[2.5rem] border border-slate-150 p-8 shadow-lg transition-all min-h-[480px] max-h-[750px] relative overflow-hidden flex flex-col justify-between preview-form-text-custom"
               >
                 <style dangerouslySetInnerHTML={{ __html: `
                   ${selectedTemplate.theme_config.form_text_color ? `
@@ -1956,7 +2028,7 @@ export default function RegistrationTemplateManager() {
                 style={{ backgroundColor: selectedTemplate.theme_config.form_bg_color || "#ffffff" }}
               />
 
-              <div className="relative z-10 w-full space-y-6">
+              <div className="relative z-10 w-full space-y-6 overflow-y-auto max-h-[640px] pr-2 scrollbar-thin">
                 {previewMode === "form" ? (
                   <>
                     {/* Header */}
@@ -1988,7 +2060,11 @@ export default function RegistrationTemplateManager() {
                     <div className="space-y-4">
                       {/* Render fields designated to appear BEFORE attendance status */}
                       {selectedTemplate.layout_schema
-                        .filter(field => field.visible && field.type !== "section_header" && (field as any).showBeforeAttendance)
+                        .filter(field => {
+                          if (!field || field.inactive || field.visible === false || field.type === "section_header") return false;
+                          const isIdentity = ["first_name", "last_name", "email", "company"].includes(field.key || field.id || "");
+                          return isIdentity ? true : !!(field as any).showBeforeAttendance;
+                        })
                         .map((field) => (
                           <div key={field.id} className="space-y-1.5">
                             <label className="text-[10px] font-semibold text-slate-650 dark:text-slate-350 block flex items-center flex-wrap gap-1 client-question-label">
@@ -2024,7 +2100,12 @@ export default function RegistrationTemplateManager() {
                     {/* Render fields designated to appear AFTER attendance status */}
                     <div className="space-y-4 mt-4">
                       {selectedTemplate.layout_schema
-                        .filter(field => field.visible && (field.type === "section_header" || !(field as any).showBeforeAttendance))
+                        .filter(field => {
+                          if (!field || field.inactive || field.visible === false) return false;
+                          if (field.type === "section_header") return true;
+                          const isIdentity = ["first_name", "last_name", "email", "company"].includes(field.key || field.id || "");
+                          return isIdentity ? false : !(field as any).showBeforeAttendance;
+                        })
                         .map((field) => {
                           if (field.type === "section_header") {
                             return (
@@ -2175,81 +2256,47 @@ export default function RegistrationTemplateManager() {
                       </div>
                     );
                   })()
-                ) : previewMode === "email" ? (
-                  // Real-time Modular Email Preview
-                  <div className="space-y-4 text-left w-full h-full flex flex-col">
-                    <div className="bg-slate-50 border border-slate-100 rounded-[1.5rem] p-5 space-y-5 shadow-sm max-h-[500px] overflow-y-auto w-full">
-                      {/* Header Logo */}
-                      <div className="flex justify-between items-center">
-                        <span 
-                          style={{ backgroundColor: selectedTemplate.theme_config.primary_color || "#0f172a" }}
-                          className="text-[9px] font-black text-white uppercase tracking-widest px-3 py-1.5 rounded-lg"
-                        >
-                          Attendee Pass
-                        </span>
-                        {selectedTemplate.theme_config.logo_url && (
-                          <img src={selectedTemplate.theme_config.logo_url} alt="Logo" className="max-h-6 object-contain" />
-                        )}
-                      </div>
-
-                      {/* Title */}
-                      <h2 
-                        style={{ color: selectedTemplate.theme_config.primary_color || "#0f172a" }}
-                        className="text-2xl font-black uppercase tracking-tight italic"
-                      >
-                        Access <span style={{ color: selectedTemplate.theme_config.accent_color || "#94a3b8" }}>Granted</span>
-                      </h2>
-
-                      {/* Custom confirmation email body */}
+                ) : previewMode === "waitlist" ? (
+                  // Waitlist Screen View
+                  (() => {
+                    return (
                       <div 
-                        className="text-xs font-medium text-slate-650 leading-relaxed font-sans whitespace-pre-wrap break-words prose prose-sm max-w-none"
-                        dangerouslySetInnerHTML={{
-                          __html: (() => {
-                            let text = selectedTemplate.email_config?.body_template || "Type confirmation body...";
-                            // Replace tokens with sample data
-                            text = text.replace(/\{\{registrant\.first_name\}\}/g, "John");
-                            text = text.replace(/\{\{registrant\.last_name\}\}/g, "Doe");
-                            text = text.replace(/\{\{registrant\.company\}\}/g, "Excellence Logistics");
-                            text = text.replace(/\{\{event\.title\}\}/g, "Golf Day 2026");
-                            text = text.replace(/\{\{event\.location\}\}/g, "The Country Club");
-                            text = text.replace(/\{\{event\.start_date\}\}/g, "Thursday, Sep 11, 2026");
-                            text = text.replace(/\{\{registration\.pin\}\}/g, "1234");
-                            return text;
-                          })()
-                        }}
-                      />
-
-                      {/* Engagement Details Info block */}
-                      <div className="p-3.5 rounded-xl border border-slate-100 bg-slate-50/50 space-y-2">
-                        <span className="text-[7.5px] font-black text-slate-400 uppercase tracking-widest block">Engagement Details</span>
-                        <div className="space-y-1">
-                          <p className="text-[10px] font-black text-slate-700">Golf Day 2026</p>
-                          <p className="text-[8.5px] font-bold text-slate-500">Thursday, Sep 11, 2026 @ 10:00 AM</p>
-                          <p className="text-[8.5px] font-bold text-slate-500">The Country Club</p>
-                        </div>
-                      </div>
-
-                      {/* QR and PIN ticket blocks */}
-                      {selectedTemplate.email_config?.show_qr_code !== false && (
-                        <div className="bg-white border border-slate-150/60 rounded-2xl p-4 text-center space-y-3">
-                          <div 
-                            style={{ backgroundColor: selectedTemplate.theme_config.primary_color || "#0f172a" }}
-                            className="w-20 h-20 rounded-xl mx-auto flex items-center justify-center text-[7px] font-bold text-white uppercase tracking-widest shadow-sm"
-                          >
-                            [QR CODE]
+                        className="p-6 rounded-2xl text-center space-y-6 shadow-sm border border-slate-100/50 w-full"
+                        style={{ backgroundColor: selectedTemplate.theme_config.feedback_bg_color || "#f1f5f9" }}
+                      >
+                        {selectedTemplate.post_submit_config.capacity_icon_url ? (
+                          <div className={`w-16 h-16 rounded-2xl overflow-hidden mx-auto shadow-md flex items-center justify-center ${selectedTemplate.post_submit_config.capacity_icon_style === "cover" ? "p-0" : "p-2"}`}>
+                            <img 
+                              src={selectedTemplate.post_submit_config.capacity_icon_url} 
+                              alt="Logo" 
+                              className={`w-full h-full ${
+                                selectedTemplate.post_submit_config.capacity_icon_style === "cover" 
+                                  ? "object-cover" 
+                                  : selectedTemplate.post_submit_config.capacity_icon_style === "fill" 
+                                    ? "object-fill" 
+                                    : "object-contain"
+                              }`} 
+                            />
                           </div>
-                          {selectedTemplate.email_config?.show_pin !== false && (
-                            <div className="space-y-1">
-                              <span className="text-[7.5px] font-black text-slate-400 uppercase tracking-widest block">unique access pass number</span>
-                              <div className="inline-block bg-white border border-slate-200 px-3 py-1.5 rounded-lg">
-                                <code className="text-sm font-black text-slate-800 tracking-widest">EEL-1234</code>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                        ) : (
+                          <div className="w-16 h-16 rounded-2xl bg-rose-500 flex items-center justify-center mx-auto shadow-md">
+                            <AlertCircle size={36} className="text-white animate-pulse" />
+                          </div>
+                        )}
+
+                        <h1 
+                          className="text-2xl font-bold text-[#0f172a] tracking-tight preview-success-title"
+                          dangerouslySetInnerHTML={{ __html: selectedTemplate.post_submit_config.onscreen_capacity_title || "Your response has been submitted" }}
+                        />
+
+                        <div 
+                          className="text-slate-500 text-xs font-medium leading-relaxed whitespace-pre-line preview-success-desc" 
+                          style={{ whiteSpace: 'pre-line' }}
+                          dangerouslySetInnerHTML={{ __html: formatPostSubmit(selectedTemplate.post_submit_config.onscreen_capacity_description || "We are sorry, the event is currently at maximum capacity. We have recorded your email for waitlist priority.") }}
+                        />
+                      </div>
+                    );
+                  })()
                 ) : (
                   // Operator view
                   <div className="space-y-4 text-left w-full h-full flex flex-col justify-between">

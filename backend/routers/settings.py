@@ -618,6 +618,13 @@ def update_registration_template(
         template.theme_config = payload.theme_config
     if payload.layout_schema is not None:
         template.layout_schema = payload.layout_schema
+        try:
+            events_to_sync = session.exec(select(Event).where(Event.registration_form_template_id == tpl_id)).all()
+            for ev in events_to_sync:
+                ev.custom_fields_schema = payload.layout_schema
+                session.add(ev)
+        except Exception as e:
+            print(f"Failed to sync layout schema back to events: {e}")
     if payload.post_submit_config is not None:
         template.post_submit_config = payload.post_submit_config
     if payload.email_config is not None:

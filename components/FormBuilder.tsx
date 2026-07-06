@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { 
   Plus, Trash2, Type, List, CheckSquare, Save, Loader2, 
-  Sparkles, ArrowUp, ArrowDown, Users, Hash, FileText 
+  Sparkles, ArrowUp, ArrowDown, Users, Hash, FileText, ChevronDown
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSession } from "next-auth/react";
@@ -33,10 +33,12 @@ interface FormSection {
 
 export default function FormBuilder({ 
   eventId, 
+  templateId,
   initialSchema, 
   onSave 
 }: { 
   eventId: string; 
+  templateId?: number;
   initialSchema: any[]; 
   onSave: (schema: any[]) => void; 
 }) {
@@ -48,16 +50,85 @@ export default function FormBuilder({
   // Initialize and migrate legacy schema
   useEffect(() => {
     if (initialSchema) {
+      // Check if standard fields exist in the schema
+      const flatFields: any[] = [];
       const isSectioned = initialSchema.length > 0 && "fields" in initialSchema[0];
       if (isSectioned) {
-        setSections(initialSchema as FormSection[]);
+        initialSchema.forEach((sec: any) => flatFields.push(...(sec.fields || [])));
       } else {
-        // Migrate flat array to single default section
-        setSections([
+        flatFields.push(...initialSchema);
+      }
+
+      const hasFirstName = flatFields.some(f => f.key === "first_name" || f.id === "field_first_name");
+      const hasLastName = flatFields.some(f => f.key === "last_name" || f.id === "field_last_name");
+      const hasEmail = flatFields.some(f => f.key === "email" || f.id === "field_email");
+      const hasCompany = flatFields.some(f => f.key === "company" || f.id === "field_company");
+
+      let updatedSchema = [...initialSchema];
+      
+      const missingStandardFields: any[] = [];
+      if (!hasFirstName) {
+        missingStandardFields.push({ id: "field_first_name", key: "first_name", label: "First Name", placeholder: "e.g. Alan", type: "text", required: true, visible: true, showBeforeAttendance: true });
+      }
+      if (!hasLastName) {
+        missingStandardFields.push({ id: "field_last_name", key: "last_name", label: "Last Name", placeholder: "e.g. Turing", type: "text", required: true, visible: true, showBeforeAttendance: true });
+      }
+      if (!hasEmail) {
+        missingStandardFields.push({ id: "field_email", key: "email", label: "Secure Email Address", placeholder: "e.g. turing@bletchleypark.org.uk", type: "email", required: true, visible: true, showBeforeAttendance: true });
+      }
+      if (!hasCompany) {
+        missingStandardFields.push({ id: "field_company", key: "company", label: "Organization / Company", placeholder: "e.g. GC&CS", type: "text", required: false, visible: true, showBeforeAttendance: true });
+      }
+
+      if (missingStandardFields.length > 0) {
+        if (isSectioned && updatedSchema.length > 0) {
+          updatedSchema[0] = {
+            ...updatedSchema[0],
+            fields: [...missingStandardFields, ...(updatedSchema[0].fields || [])]
+          };
+        } else if (!isSectioned) {
+          updatedSchema = [...missingStandardFields, ...updatedSchema];
+        }
+      }
+
+      if (isSectioned) {
+        setSections(updatedSchema as FormSection[]);
+      } else {
+        // Parse flat array containing section_header items into FormSections
+        const parsedSections: FormSection[] = [];
+        let currentSection: FormSection | null = null;
+        
+        updatedSchema.forEach((item: any) => {
+          if (item.type === "section_header") {
+            if (currentSection) {
+              parsedSections.push(currentSection);
+            }
+            currentSection = {
+              id: item.id || `section_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+              title: item.label || "New Section",
+              fields: []
+            };
+          } else {
+            if (!currentSection) {
+              currentSection = {
+                id: "default_section",
+                title: "Registration Details",
+                fields: []
+              };
+            }
+            currentSection.fields.push(item);
+          }
+        });
+        
+        if (currentSection) {
+          parsedSections.push(currentSection);
+        }
+        
+        setSections(parsedSections.length > 0 ? parsedSections : [
           {
             id: "default_section",
             title: "Registration Details",
-            fields: initialSchema as FormField[]
+            fields: []
           }
         ]);
       }
@@ -221,10 +292,10 @@ export default function FormBuilder({
     return [];
   };
 
-  // Save Config
   const handleSave = async () => {
     setSaving(true);
     try {
+      // 1. Save to event-specific custom_fields_schema
       const res = await fetch(`/api/py/events/${eventId}/form-schema`, {
         method: "PUT",
         headers: { 
@@ -233,16 +304,60 @@ export default function FormBuilder({
         },
         body: JSON.stringify({ custom_fields_schema: sections })
       });
-      if (res.ok) {
-        onSave(sections);
-        alert("Form schema saved successfully!");
-      } else {
+      if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
-        alert(`Failed to save form schema: ${errorData.detail || "Server error"}`);
+        throw new Error(errorData.detail || "Failed to save event form schema");
       }
-    } catch (err) {
+
+      // 2. Save back to the global template (so both sides stay in sync!)
+      if (templateId) {
+        // Fetch current template config first
+        const tplRes = await fetch(`/api/py/settings/registration-templates/${templateId}`);
+        if (tplRes.ok) {
+          const currentTpl = await tplRes.json();
+           // Flatten sections into a flat list of fields for the template's layout_schema
+           const flatLayoutSchema: any[] = [];
+           sections.forEach((sec) => {
+             if (sec.id !== "default_section" || sec.title !== "Registration Details") {
+               flatLayoutSchema.push({
+                 id: sec.id,
+                 key: sec.id,
+                 label: sec.title,
+                 type: "section_header",
+                 visible: true
+               });
+             }
+             flatLayoutSchema.push(...sec.fields);
+           });
+
+           // Update the template layout schema
+           const updateRes = await fetch(`/api/py/settings/registration-templates/${templateId}`, {
+             method: "PUT",
+             headers: { 
+               "Content-Type": "application/json",
+               "x-user-email": session?.user?.email || ""
+             },
+             body: JSON.stringify({
+               name: currentTpl.name,
+               description: currentTpl.description,
+               theme_config: currentTpl.theme_config,
+               layout_schema: flatLayoutSchema, // update with flat schema!
+               post_submit_config: currentTpl.post_submit_config,
+               email_config: currentTpl.email_config,
+               operator_config: currentTpl.operator_config
+             })
+           });
+          if (!updateRes.ok) {
+            console.warn("Failed to sync layout schema back to global template.");
+          }
+        }
+      }
+
+      onSave(sections);
+      alert("Form schema saved and synced successfully!");
+    } catch (err: any) {
       console.error(err);
-      alert("An unexpected error occurred while saving.");
+      alert(err.message || "An unexpected error occurred while saving.");
     } finally {
       setSaving(false);
     }
@@ -387,14 +502,39 @@ export default function FormBuilder({
                                        placeholder="Question text..."
                                        minHeight="55px"
                                        toolbarMode="on-focus"
+                                       variant="simple"
                                      />
                                    </div>
-                                   <div className="space-y-1.5">
-                                     <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Type</label>
-                                     <div className="px-4 py-3 bg-white rounded-xl border border-slate-150 font-bold text-slate-400 text-[10px] uppercase tracking-widest flex items-center gap-2 dark:bg-slate-800 dark:border-slate-700">
-                                       {field.type === "partner_card" ? "Partner Card" : field.type}
-                                     </div>
-                                   </div>
+                                    <div className="space-y-1.5 relative">
+                                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Type</label>
+                                      <div className="relative">
+                                        <select
+                                          value={field.type}
+                                          disabled={["field_first_name", "field_last_name", "field_email", "field_company"].includes(field.id) || ["first_name", "last_name", "email", "company"].includes((field as any).key)}
+                                          onChange={(e) => {
+                                            const newType = e.target.value as any;
+                                            updateField(section.id, field.id, { 
+                                              type: newType,
+                                              options: newType === "select" ? (field.options || ["Option 1", "Option 2"]) : undefined
+                                            });
+                                          }}
+                                          className="w-full px-4 py-3 bg-white rounded-xl border border-slate-150 font-bold text-[#0f172a] text-[10px] uppercase tracking-widest outline-none appearance-none cursor-pointer pr-10 focus:border-[#1e293b] focus:ring-2 focus:ring-[#1e293b]/5 dark:bg-slate-800 dark:border-slate-700 dark:text-white disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
+                                        >
+                                          <option value="text">Text Field</option>
+                                          <option value="numeric">Number Field</option>
+                                          <option value="email">Email Field</option>
+                                          <option value="select">Select Dropdown</option>
+                                          <option value="checkbox">Checkbox</option>
+                                          <option value="partner_card">Partner Card</option>
+                                          <option value="section_header">Section Header</option>
+                                        </select>
+                                        {!["field_first_name", "field_last_name", "field_email", "field_company"].includes(field.id) && (
+                                          <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                                            <ChevronDown size={14} />
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
                                  </div>
 
                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

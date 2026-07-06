@@ -96,6 +96,7 @@ export default function EventDetailsPage() {
   const [error, setError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [selectedReg, setSelectedReg] = useState<Registration | null>(null);
+  const [hideResendButton, setHideResendButton] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const { data: session } = useSession();
   const sessionRole = (session?.user as any)?.role || "staff";
@@ -107,12 +108,29 @@ export default function EventDetailsPage() {
   const [pinStatus, setPinStatus] = useState<"idle" | "success" | "error" | "processing" | "warning">("idle");
   const [pinMessage, setPinMessage] = useState("");
   const [checkedInReg, setCheckedInReg] = useState<any | null>(null);
+  const [editedAnswers, setEditedAnswers] = useState<Record<string, any>>({});
+  const [isSavingAnswers, setIsSavingAnswers] = useState(false);
+
+  useEffect(() => {
+    if (checkedInReg) {
+      setEditedAnswers(checkedInReg.custom_answers || {});
+    } else {
+      setEditedAnswers({});
+    }
+  }, [checkedInReg]);
+
+  const handleAnswerChange = (key: string, value: any) => {
+    setEditedAnswers(prev => ({ ...prev, [key]: value }));
+  };
+
   const [resendingRegId, setResendingRegId] = useState<string | null>(null);
   const [bulkResending, setBulkResending] = useState(false);
   const [selectedScanDay, setSelectedScanDay] = useState<number | "auto">("auto");
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [parsedRegistrants, setParsedRegistrants] = useState<any[]>([]);
   const [importing, setImporting] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   const [selectedMetric, setSelectedMetric] = useState<"date" | "venue" | "enrollment" | "declined" | "checked_in" | null>(null);
   const [emailTemplates, setEmailTemplates] = useState<any[]>([]);
   const [selectedBroadcastKey, setSelectedBroadcastKey] = useState("");
@@ -168,6 +186,43 @@ export default function EventDetailsPage() {
       `;
     }
 
+    const showQr = meta.show_qr_code !== "false";
+    const showPin = meta.show_pin !== "false";
+
+    const qrImgSnippet = showQr
+      ? `<div style="width: 200px; height: 200px; background-color: ${brandPrimary}; margin: 0 auto 32px auto; border-radius: 20px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 11px; font-weight: bold; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.15);">[QR CODE PREVIEW]</div>`
+      : "";
+
+    const pinSnippet = showPin
+      ? `<p style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.3em; color: #64748b; margin-bottom: 16px; font-family: sans-serif;">unique access pass number</p>
+        <div style="display: inline-block; background: #ffffff; padding: 16px 32px; border-radius: 20px; border: 2px solid ${brandPrimary}; font-family: sans-serif;">
+          <code style="font-size: 32px; font-weight: 900; color: ${brandPrimary}; letter-spacing: 0.25em; font-family: monospace;">ABCDEF</code>
+        </div>`
+      : "";
+
+    const qrBlockHtmlStr = (showQr || showPin)
+      ? `<div style="background: #f8fafc; padding: 48px; border-radius: 32px; text-align: center; border: 1px solid #f1f5f9; margin-bottom: 40px; position: relative; overflow: hidden; font-family: sans-serif;">
+            ${qrImgSnippet}
+            ${pinSnippet}
+         </div>`
+      : "";
+
+    const warningBlockHtmlStr = `
+    <div style="background: #fffbeb; padding: 28px; border-radius: 24px; border: 1px solid #fef3c7; margin-bottom: 40px; text-align: center; font-family: sans-serif;">
+        <p style="color: #b45309; font-size: 14px; font-weight: 700; margin: 0; line-height: 1.5; text-transform: uppercase; letter-spacing: 0.05em;">
+            ${meta.warning_text || "Please present this QR code OR number at the registration desk."}
+        </p>
+    </div>
+    `;
+
+    const buttonBlockHtmlStr = `
+    <div style="text-align: center; margin-top: 10px; margin-bottom: 40px;">
+        <a href="${surveyUrl || '#'}" style="background-color: ${brandAccent}; color: #000000; padding: 16px 32px; border-radius: 16px; font-size: 13px; font-weight: 950; text-decoration: none; text-transform: uppercase; letter-spacing: 0.1em; display: inline-block; font-family: sans-serif;">
+            ${meta.button_text || "Update Details"}
+        </a>
+    </div>
+    `;
+
     const vars: Record<string, string> = {
       first_name: "John",
       last_name: "Doe",
@@ -185,7 +240,11 @@ export default function EventDetailsPage() {
       broadcast_body: html.includes("broadcast_body") ? "This is a sample live preview of your broadcast announcement email body. Attending guests will see this layout." : "Thank you for registering.",
       broadcast_signature: "The BMD Team",
       footer_text: "Automated Event Management System",
-      qr_code: `<div style="background: #f8fafc; padding: 32px; border-radius: 24px; text-align: center; border: 1px solid #e2e8f0; margin: 24px auto; max-width: 240px;"><div style="width: 160px; height: 160px; background: #000; margin: 0 auto; display: flex; align-items: center; justify-content: center; color: white;">[QR CODE]</div></div>`
+      qr_code: `<div style="background: #f8fafc; padding: 32px; border-radius: 24px; text-align: center; border: 1px solid #e2e8f0; margin: 24px auto; max-width: 240px;"><div style="width: 160px; height: 160px; background: #000; margin: 0 auto; display: flex; align-items: center; justify-content: center; color: white;">[QR CODE]</div></div>`,
+      qr_block_html: qrBlockHtmlStr,
+      warning_block_html: warningBlockHtmlStr,
+      button_block_html: buttonBlockHtmlStr,
+      survey_url: surveyUrl
     };
 
     let compiled = html;
@@ -222,7 +281,9 @@ export default function EventDetailsPage() {
       ? opConfig.display_fields 
       : ["first_name", "last_name", "email", "company"];
 
-    const activeSchema = template?.layout_schema || event?.custom_fields_schema || [];
+    const activeSchema = (event?.custom_fields_schema && event.custom_fields_schema.length > 0)
+      ? event.custom_fields_schema
+      : (template?.layout_schema || []);
     let flatFields: any[] = [];
     if (activeSchema.length > 0 && "fields" in activeSchema[0]) {
       for (const section of activeSchema) {
@@ -291,7 +352,9 @@ export default function EventDetailsPage() {
     
     // Resolve custom fields
     const template = event?.registration_form_template;
-    const activeSchema = template?.layout_schema || event?.custom_fields_schema || [];
+    const activeSchema = (event?.custom_fields_schema && event.custom_fields_schema.length > 0)
+      ? event.custom_fields_schema
+      : (template?.layout_schema || []);
     let flatFields: any[] = [];
     if (activeSchema.length > 0 && "fields" in activeSchema[0]) {
       for (const section of activeSchema) {
@@ -541,6 +604,7 @@ export default function EventDetailsPage() {
       });
       const regData = await regRes.json();
       setRegistrations(regData);
+      setSelectedIds([]);
     } catch (err) {
       console.error("Failed to refresh registrations", err);
     } finally {
@@ -748,6 +812,8 @@ export default function EventDetailsPage() {
       });
       if (res.ok) {
         setRegistrations(prev => prev.filter(r => r.id !== regId));
+        // Remove from selected list if present
+        setSelectedIds(prev => prev.filter(id => id !== regId));
       }
     } catch (err) {
       console.error("Failed to delete registration", err);
@@ -756,9 +822,53 @@ export default function EventDetailsPage() {
     }
   };
 
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    if (!confirm(`Are you sure you want to delete the ${selectedIds.length} selected registrants? This action cannot be undone.`)) return;
+    setBulkDeleting(true);
+    try {
+      const res = await fetch("/api/py/registrations/bulk-delete", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-email": session?.user?.email || ""
+        },
+        body: JSON.stringify({ registration_ids: selectedIds })
+      });
+      if (res.ok) {
+        setRegistrations(prev => prev.filter(r => !selectedIds.includes(r.id)));
+        setSelectedIds([]);
+      } else {
+        alert("Failed to delete selected registrants.");
+      }
+    } catch (err) {
+      console.error("Failed to execute bulk delete", err);
+      alert("An error occurred during bulk deletion.");
+    } finally {
+      setBulkDeleting(false);
+    }
+  };
+
   const exportToExcel = () => {
     if (registrations.length === 0) return;
     
+    // Flatten schema fields (supporting custom layout sections)
+    const activeSchema = (event?.custom_fields_schema && event.custom_fields_schema.length > 0)
+      ? event.custom_fields_schema
+      : (event?.registration_form_template?.layout_schema || []);
+
+    let flatFields: any[] = [];
+    for (const item of activeSchema) {
+      if (item && typeof item === "object" && "fields" in item && Array.isArray(item.fields)) {
+        flatFields.push(...item.fields);
+      } else {
+        flatFields.push(item);
+      }
+    }
+
+    // Filter out basic identity fields already exported separately
+    const displayFields = flatFields.filter(f => f && !["first_name", "last_name", "email", "company"].includes(f.key || f.id || ""));
+
     // Define headers
     const headers = [
       "First Name", 
@@ -774,7 +884,10 @@ export default function EventDetailsPage() {
         : []
       ),
       "Registered At",
-      ...(event?.custom_fields_schema || []).map(f => f.label)
+      ...displayFields.map(f => {
+        const lbl = (f.label || f.title || "").replace(/<[^>]*>/g, "").trim();
+        return `"${lbl.replace(/"/g, '""')}"`;
+      })
     ];
 
     // Helper to escape CSV values (wrap in quotes, escape existing quotes)
@@ -818,8 +931,8 @@ export default function EventDetailsPage() {
         escapeCSV(new Date(reg.created_at).toLocaleString()),
       ];
 
-      const customInfo = (event?.custom_fields_schema || []).map(f => {
-        const val = reg.custom_answers?.[f.id];
+      const customInfo = displayFields.map(f => {
+        const val = reg.custom_answers?.[f.id] || reg.custom_answers?.[f.key];
         if (val === null || val === undefined || val === "") return "";
         if (typeof val === "boolean") return val ? "Yes" : "No";
         if (Array.isArray(val)) return escapeCSV(val.join(", "));
@@ -1254,21 +1367,53 @@ export default function EventDetailsPage() {
             <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
               <div className="px-10 py-8 border-b border-slate-50 flex justify-between items-center bg-slate-50/30">
                 <h2 className="text-xl font-black text-[#0f172a] font-bricolage italic uppercase tracking-tight">Active <span className="text-slate-300">Registrants</span></h2>
-                {userRole === "admin" && (
-                  <button 
-                    onClick={() => setIsImportModalOpen(true)}
-                    className="flex items-center gap-2 bg-[#0f172a] hover:bg-black text-white px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all"
-                  >
-                    <Upload size={14} />
-                    Import Registrants
-                  </button>
-                )}
+                <div className="flex items-center gap-3">
+                  {selectedIds.length > 0 && (userRole === "admin" || userRole === "manager") && (
+                    <button
+                      onClick={handleBulkDelete}
+                      disabled={bulkDeleting}
+                      className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all disabled:opacity-50 animate-fade-in"
+                    >
+                      {bulkDeleting ? (
+                        <Loader2 className="animate-spin" size={14} />
+                      ) : (
+                        <Trash2 size={14} />
+                      )}
+                      Delete Selected ({selectedIds.length})
+                    </button>
+                  )}
+                  {userRole === "admin" && (
+                    <button 
+                      onClick={() => setIsImportModalOpen(true)}
+                      className="flex items-center gap-2 bg-[#0f172a] hover:bg-black text-white px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all"
+                    >
+                      <Upload size={14} />
+                      Import Registrants
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="overflow-auto max-h-[650px] pb-4 relative">
                 <table className="w-full text-left min-w-[1100px] border-collapse">
                 <thead className="sticky top-0 bg-white z-10">
                   <tr className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] bg-white">
-                    <th className="px-10 py-6 bg-white border-b border-slate-100">Attendee Details</th>
+                    {(userRole === "admin" || userRole === "manager") && (
+                      <th className="pl-10 pr-2 py-6 bg-white border-b border-slate-100 w-12 text-center">
+                        <input
+                          type="checkbox"
+                          checked={filteredRegistrations.length > 0 && selectedIds.length === filteredRegistrations.length}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedIds(filteredRegistrations.map((r) => r.id));
+                            } else {
+                              setSelectedIds([]);
+                            }
+                          }}
+                          className="w-4 h-4 text-yellow-500 bg-white border-slate-300 rounded focus:ring-yellow-500 focus:ring-2 cursor-pointer"
+                        />
+                      </th>
+                    )}
+                    <th className={`${(userRole === "admin" || userRole === "manager") ? "px-6" : "px-10"} py-6 bg-white border-b border-slate-100`}>Attendee Details</th>
                     <th className="px-10 py-6 bg-white border-b border-slate-100">Organization</th>
                     <th className="px-10 py-6 bg-white border-b border-slate-100">Status</th>
                     <th className="px-10 py-6 bg-white border-b border-slate-100">Verified On</th>
@@ -1278,7 +1423,7 @@ export default function EventDetailsPage() {
                 <tbody className="divide-y divide-slate-50">
                   {filteredRegistrations.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="px-10 py-24 text-center">
+                      <td colSpan={(userRole === "admin" || userRole === "manager") ? 6 : 5} className="px-10 py-24 text-center">
                         <div className="bg-slate-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
                           <Users className="text-slate-200" size={32} />
                         </div>
@@ -1288,7 +1433,23 @@ export default function EventDetailsPage() {
                   ) : (
                     filteredRegistrations.map((reg) => (
                       <tr key={reg.id} className="hover:bg-slate-50/50 transition-colors group">
-                        <td className="px-10 py-8">
+                        {(userRole === "admin" || userRole === "manager") && (
+                          <td className="pl-10 pr-2 py-8 text-center">
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.includes(reg.id)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedIds((prev) => [...prev, reg.id]);
+                                } else {
+                                  setSelectedIds((prev) => prev.filter((id) => id !== reg.id));
+                                }
+                              }}
+                              className="w-4 h-4 text-yellow-500 bg-white border-slate-300 rounded focus:ring-yellow-500 focus:ring-2 cursor-pointer"
+                            />
+                          </td>
+                        )}
+                        <td className={`${(userRole === "admin" || userRole === "manager") ? "px-6" : "px-10"} py-8`}>
                           <div className="flex items-center gap-4">
                              <div className="w-10 h-10 bg-[#0f172a] text-white rounded-xl flex items-center justify-center font-bold text-xs uppercase">
                                 {reg.attendee.first_name[0]}{reg.attendee.last_name[0]}
@@ -1378,7 +1539,10 @@ export default function EventDetailsPage() {
                             </button>
                           )}
                           <button
-                            onClick={() => setSelectedReg(reg)}
+                            onClick={() => {
+                              setHideResendButton(false);
+                              setSelectedReg(reg);
+                            }}
                             className="p-2 text-slate-300 hover:text-[#0f172a] transition-all"
                           >
                             <MoreVertical size={18} />
@@ -1405,6 +1569,7 @@ export default function EventDetailsPage() {
           <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 p-10 lg:p-14">
              <FormBuilder 
                eventId={id as string} 
+               templateId={event.registration_form_template?.id}
                initialSchema={event.custom_fields_schema} 
                onSave={(newSchema) => setEvent({ ...event, custom_fields_schema: newSchema })} 
              />
@@ -1495,6 +1660,7 @@ export default function EventDetailsPage() {
                  <div className="bg-slate-50 p-8 rounded-[2rem] border border-slate-100">
                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 ml-1">QR Verification</h3>
                    <QRScanner 
+                     operatorConfig={event?.registration_form_template?.operator_config}
                      onScan={async (regId) => {
                        const targetDay = selectedScanDay === "auto" ? 1 : selectedScanDay;
                        
@@ -1529,7 +1695,10 @@ export default function EventDetailsPage() {
                          };
                          return {
                            ...resultObj,
-                           operator_fields: formatOperatorFields(resultObj)
+                           operator_fields: formatOperatorFields(resultObj),
+                           card_layout_text: event?.registration_form_template?.operator_config?.card_layout_text 
+                             ? compileOperatorCustomLayout(event.registration_form_template.operator_config.card_layout_text, resultObj)
+                             : null
                          };
                        }
                        
@@ -1552,9 +1721,17 @@ export default function EventDetailsPage() {
                        
                        return {
                          ...updated,
-                         operator_fields: formatOperatorFields(updated)
+                         operator_fields: formatOperatorFields(updated),
+                         card_layout_text: event?.registration_form_template?.operator_config?.card_layout_text 
+                           ? compileOperatorCustomLayout(event.registration_form_template.operator_config.card_layout_text, updated)
+                           : null
                        };
-                     }} 
+                     }}
+                     onViewDetails={(registrant) => {
+                        const fullReg = registrations.find(r => r.id === registrant.id) || registrant;
+                        setHideResendButton(true);
+                        setSelectedReg(fullReg);
+                      }}
                    />
                  </div>
                </div>
@@ -1599,7 +1776,8 @@ export default function EventDetailsPage() {
                                if (checkedInDays.includes(targetDay)) {
                                  setPinStatus("warning");
                                  setPinMessage(`Already Checked In for Day ${targetDay}`);
-                                 setTimeout(() => setPinStatus("idle"), 4000);
+                                 setCheckedInReg(localReg);
+                                 setTimeout(() => { setPinStatus("idle"); setCheckedInReg(null); }, 10000);
                                  return;
                                }
                                
@@ -1647,22 +1825,25 @@ export default function EventDetailsPage() {
                                setCheckedInReg(updated);
                                setPin("");
                                setTimeout(() => { setPinStatus("idle"); setCheckedInReg(null); }, 6000);
-                               
-                               dbOffline.initDb().then(async (db) => {
+                 dbOffline.initDb().then(async (db) => {
                                  const tx = db.transaction(["registrations"], "readwrite");
                                  tx.objectStore("registrations").put(updated);
                                }).catch(() => {});
                              } else {
-                               const err = await res.json();
+                               const err = await res.json().catch(() => ({}));
                                const errMsg = err.detail || "Invalid PIN";
-                               if (errMsg.toLowerCase().includes("already checked in")) {
+                               if (err.already_checked_in && err.registration) {
+                                 setPinStatus("warning");
+                                 setPinMessage(errMsg);
+                                 setCheckedInReg(err.registration);
+                               } else if (errMsg.toLowerCase().includes("already checked in")) {
                                  setPinStatus("warning");
                                  setPinMessage(errMsg);
                                } else {
                                  setPinStatus("error");
                                  setPinMessage(errMsg);
                                }
-                               setTimeout(() => setPinStatus("idle"), 4000);
+                               setTimeout(() => { setPinStatus("idle"); setCheckedInReg(null); }, 10000);
                              }
                            } catch (err) {
                              setPinStatus("error");
@@ -1681,11 +1862,13 @@ export default function EventDetailsPage() {
                         style={{
                           backgroundColor: pinStatus === "success"
                             ? (event?.registration_form_template?.operator_config?.success_bg_color || "#22c55e")
-                            : pinStatus === "error" || pinStatus === "warning"
+                            : pinStatus === "warning"
+                            ? "#f97316"
+                            : pinStatus === "error"
                             ? "#ef4444"
                             : "#0f172a"
                         }}
-                        className="flex flex-col items-center gap-6 p-8 rounded-[1.5rem] shadow-lg w-full animate-in zoom-in-95 duration-300 text-white"
+                        className="flex flex-col items-center gap-6 px-5 py-8 md:p-8 rounded-[1.5rem] shadow-lg w-full animate-in zoom-in-95 duration-300 text-white"
                       >
                        {pinStatus === "processing" && <Loader2 className="animate-spin" size={48} />}
                        {pinStatus === "success" && <CheckCircle2 size={48} />}
@@ -1694,7 +1877,7 @@ export default function EventDetailsPage() {
                        
                        <div className="text-center w-full">
                           <p className="text-xl font-black italic uppercase tracking-tighter font-bricolage leading-tight">{pinMessage}</p>
-                          {pinStatus === "success" && checkedInReg && (
+                          {(pinStatus === "success" || pinStatus === "warning") && checkedInReg && (
                              <>
                                {event?.registration_form_template?.operator_config?.card_layout_text ? (
                                  <div className="bg-white/10 p-5 rounded-2xl border border-white/5 text-left mt-6 w-full max-h-60 overflow-y-auto pr-1">
@@ -1712,8 +1895,121 @@ export default function EventDetailsPage() {
                                    ))}
                                  </div>
                                )}
+
+                                <button
+                                   type="button"
+                                   onClick={() => {
+                                     const fullReg = registrations.find(r => r.id === checkedInReg?.id) || checkedInReg;
+                                     setHideResendButton(true);
+                                     setSelectedReg(fullReg);
+                                     setPinStatus("idle");
+                                     setCheckedInReg(null);
+                                   }}
+                                   className="w-full mt-5 bg-white/15 hover:bg-white/25 text-white border border-white/10 font-black py-3 px-4 rounded-xl text-[10px] uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer"
+                                 >
+                                   <Eye size={14} />
+                                   View Registrant Details & Edit
+                                 </button>
+
+                               {/* Interactive Custom Questions Form inside the Scanner card */}
+                               <div className="mt-6 border-t border-white/10 pt-5 text-left w-full space-y-4">
+                                 <span className="text-[10px] font-black text-white/70 uppercase tracking-widest block mb-2">Update Custom Answers</span>
+                                 {(() => {
+                                   const activeSchema = (event?.custom_fields_schema && event.custom_fields_schema.length > 0)
+                                     ? event.custom_fields_schema
+                                     : (event?.registration_form_template?.layout_schema || []);
+                                   let flatFields: any[] = [];
+                                   if (activeSchema.length > 0 && "fields" in activeSchema[0]) {
+                                     for (const section of activeSchema) {
+                                       flatFields.push(...(section.fields || []));
+                                     }
+                                   } else {
+                                     flatFields = activeSchema;
+                                   }
+                                   const customFields = flatFields.filter(f => f && f.key && !["first_name", "last_name", "email", "company"].includes(f.key));
+                                   
+                                   if (customFields.length === 0) {
+                                     return <p className="text-[10px] text-white/50 italic">No custom questions configured for this event form.</p>;
+                                   }
+                                   
+                                   return (
+                                     <div className="space-y-3.5 max-h-60 overflow-y-auto pr-1">
+                                       {customFields.map((field) => {
+                                         const label = (field.label || "").replace(/<[^>]*>/g, "").trim();
+                                         const val = editedAnswers[field.key] || "";
+                                         
+                                         return (
+                                           <div key={field.key} className="space-y-1.5">
+                                             <label className="text-[9px] font-black text-white/65 uppercase tracking-wider block">{label}</label>
+                                             {field.type === "select" && field.options && field.options.length > 0 ? (
+                                               <select
+                                                 value={val}
+                                                 onChange={(e) => handleAnswerChange(field.key, e.target.value)}
+                                                 className="w-full px-3 py-2 bg-white/15 rounded-xl border border-white/10 text-xs font-bold text-white outline-none focus:ring-1 focus:ring-yellow-400"
+                                               >
+                                                 <option value="" className="text-slate-800">Select option...</option>
+                                                 {field.options.map((opt: string) => (
+                                                   <option key={opt} value={opt} className="text-slate-800">{opt}</option>
+                                                 ))}
+                                               </select>
+                                             ) : field.type === "checkbox" ? (
+                                               <label className="flex items-center gap-2 cursor-pointer select-none text-xs font-bold text-white">
+                                                 <input
+                                                   type="checkbox"
+                                                   checked={val === "Yes" || val === true}
+                                                   onChange={(e) => handleAnswerChange(field.key, e.target.checked ? "Yes" : "No")}
+                                                   className="w-4 h-4 rounded text-[#0f172a]"
+                                                 />
+                                                 Check if true
+                                               </label>
+                                             ) : (
+                                               <input
+                                                 type="text"
+                                                 value={val}
+                                                 onChange={(e) => handleAnswerChange(field.key, e.target.value)}
+                                                 placeholder={`Enter ${label.toLowerCase()}...`}
+                                                 className="w-full px-3 py-2 bg-white/15 rounded-xl border border-white/10 text-xs font-semibold text-white placeholder-white/30 outline-none focus:ring-1 focus:ring-yellow-400"
+                                               />
+                                             )}
+                                           </div>
+                                         );
+                                       })}
+                                     </div>
+                                   );
+                                 })()}
+                                 
+                                 <button
+                                   onClick={async () => {
+                                     try {
+                                       setIsSavingAnswers(true);
+                                       const res = await fetch(`/api/py/registrations/${checkedInReg.id}/custom-answers`, {
+                                         method: "PUT",
+                                         headers: { "Content-Type": "application/json" },
+                                         body: JSON.stringify(editedAnswers)
+                                       });
+                                       if (res.ok) {
+                                         const data = await res.json();
+                                         setRegistrations(prev => prev.map(r => r.id === checkedInReg.id ? { ...r, custom_answers: data.custom_answers } : r));
+                                         setCheckedInReg((prev: any) => prev ? { ...prev, custom_answers: data.custom_answers } : null);
+                                         alert("Answers saved successfully!");
+                                       } else {
+                                         alert("Failed to save answers.");
+                                       }
+                                     } catch (err) {
+                                       console.error(err);
+                                       alert("Connection error while saving answers.");
+                                     } finally {
+                                       setIsSavingAnswers(false);
+                                     }
+                                   }}
+                                   disabled={isSavingAnswers}
+                                   className="w-full mt-2 bg-white hover:bg-slate-100 text-slate-900 font-black py-2.5 rounded-xl text-[10px] uppercase tracking-wider transition-all disabled:opacity-50"
+                                 >
+                                   {isSavingAnswers ? "Saving..." : "Save Custom Answers"}
+                                 </button>
+                               </div>
                              </>
-                           )}
+                          )}
                           {pinStatus !== "processing" && (
                             <button 
                               onClick={() => { setPinStatus("idle"); setCheckedInReg(null); }}
@@ -2004,7 +2300,8 @@ export default function EventDetailsPage() {
                               body: JSON.stringify({
                                 subject: subjectPayload,
                                 body: bodyPayload,
-                                target: "checked_in"
+                                target: "checked_in",
+                                survey_url: surveyUrl
                               })
                             });
                             if (res.ok) {
@@ -2054,6 +2351,18 @@ export default function EventDetailsPage() {
                         {selectedSurveyKey ? (
                           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start animate-in fade-in duration-300">
                             <div className="lg:col-span-4 space-y-6">
+                              <div className="space-y-3">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Survey Link (Google Forms / Typeform)</label>
+                                <input 
+                                  required 
+                                  name="surveyUrl" 
+                                  type="url" 
+                                  value={surveyUrl}
+                                  onChange={(e) => setSurveyUrl(e.target.value)}
+                                  placeholder="https://forms.google.com/your-survey-link" 
+                                  className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a]" 
+                                />
+                              </div>
                               <button 
                                 type="submit" 
                                 disabled={registrations.filter(r => r.checked_in).length === 0} 
@@ -2139,7 +2448,7 @@ export default function EventDetailsPage() {
                 </button>
               </div>
               <div className="p-10 max-h-[60vh] overflow-y-auto space-y-8">
-                 <div className="grid grid-cols-2 gap-8">
+                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
                     <div>
                        <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">Status</p>
                        <p className="font-bold text-[#0f172a] capitalize">{selectedReg.status}</p>
@@ -2165,28 +2474,52 @@ export default function EventDetailsPage() {
                  <div className="pt-8 border-t border-slate-50">
                     <h4 className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] mb-6">Custom Field Responses</h4>
                     <div className="space-y-6">
-                       {(!event.custom_fields_schema || event.custom_fields_schema.length === 0) ? (
-                         <p className="text-slate-400 text-xs italic">No custom fields defined for this event.</p>
-                       ) : (
-                         event.custom_fields_schema.map(field => (
-                           <div key={field.id} className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
-                              <p className="text-[10px] font-black text-yellow-600 uppercase tracking-widest mb-2">{field.label}</p>
-                              <p className="font-bold text-[#0f172a]">{getAnswerString(selectedReg.custom_answers?.[field.id])}</p>
-                           </div>
-                         ))
-                       )}
+                       {(() => {
+                         const activeSchema = (event?.custom_fields_schema && event.custom_fields_schema.length > 0)
+                           ? event.custom_fields_schema
+                           : (event?.registration_form_template?.layout_schema || []);
+                         
+                         let flatFields: any[] = [];
+                         for (const item of activeSchema) {
+                           if (item && typeof item === "object" && "fields" in item && Array.isArray(item.fields)) {
+                             flatFields.push(...item.fields);
+                           } else {
+                             flatFields.push(item);
+                           }
+                         }
+
+                         const displayFields = flatFields.filter(f => f && !["first_name", "last_name", "email", "company"].includes(f.key || f.id || ""));
+
+                         if (displayFields.length === 0) {
+                           return <p className="text-slate-400 text-xs italic">No custom fields responses.</p>;
+                         }
+
+                         return displayFields.map(field => {
+                           const label = (field.label || field.title || "").replace(/<[^>]*>/g, "").trim();
+                           const val = selectedReg.custom_answers?.[field.id] || selectedReg.custom_answers?.[field.key];
+                           
+                           return (
+                             <div key={field.id} className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
+                                <p className="text-[10px] font-black text-yellow-600 uppercase tracking-widest mb-2">{label}</p>
+                                <p className="font-bold text-[#0f172a]">{getAnswerString(val)}</p>
+                             </div>
+                           );
+                         });
+                       })()}
                     </div>
                  </div>
               </div>
               <div className="p-10 bg-slate-50 border-t border-slate-100 flex justify-between items-center">
-                 <button 
-                   onClick={() => handleResendEmail(selectedReg.id)}
-                   disabled={resendingRegId === selectedReg.id}
-                   className="px-6 py-4 bg-yellow-400 hover:bg-yellow-500 disabled:bg-slate-200 text-[#0f172a] text-[10px] font-black uppercase tracking-widest rounded-2xl transition-all flex items-center gap-2"
-                 >
-                    {resendingRegId === selectedReg.id ? <Loader2 size={14} className="animate-spin" /> : null}
-                    Resend Ticket Email
-                 </button>
+                 {hideResendButton ? <div /> : (
+                   <button 
+                     onClick={() => handleResendEmail(selectedReg.id)}
+                     disabled={resendingRegId === selectedReg.id}
+                     className="px-6 py-4 bg-yellow-400 hover:bg-yellow-500 disabled:bg-slate-200 text-[#0f172a] text-[10px] font-black uppercase tracking-widest rounded-2xl transition-all flex items-center gap-2"
+                   >
+                      {resendingRegId === selectedReg.id ? <Loader2 size={14} className="animate-spin" /> : null}
+                      Resend Ticket Email
+                   </button>
+                 )}
                  <button 
                    onClick={() => setSelectedReg(null)}
                    className="px-8 py-4 bg-[#0f172a] text-white text-[10px] font-black uppercase tracking-widest rounded-2xl hover:bg-black transition-all shadow-xl shadow-slate-200"

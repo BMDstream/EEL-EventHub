@@ -104,7 +104,8 @@ def dispatch_send_broadcast_email(
     signature: str = None,
     config: dict = None,
     attachments: list = None,
-    event_details: dict = None
+    event_details: dict = None,
+    survey_url: str = None
 ):
     """Abstraction layer to dispatch broadcast email tasks inline synchronously on serverless environments."""
     args = {
@@ -115,7 +116,8 @@ def dispatch_send_broadcast_email(
         "signature": signature,
         "config": config,
         "attachments": attachments,
-        "event_details": event_details
+        "event_details": event_details,
+        "survey_url": survey_url
     }
     
     if QSTASH_TOKEN and vercel_env != "preview":
