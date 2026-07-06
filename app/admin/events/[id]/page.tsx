@@ -522,7 +522,11 @@ export default function EventDetailsPage() {
       });
       if (res.ok) {
         const result = await res.json();
-        alert(`Successfully imported ${result.created.length} registrants! Errors: ${result.errors.length}`);
+        if (result.errors.length > 0) {
+          alert(`Successfully imported ${result.created.length} registrants.\n\nErrors encountered:\n- ${result.errors.join("\n- ")}`);
+        } else {
+          alert(`Successfully imported ${result.created.length} registrants!`);
+        }
         
         // Refresh registrants list
         const regRes = await fetch(`/api/py/events/${id}/registrations`, {
