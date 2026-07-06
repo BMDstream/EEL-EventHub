@@ -45,6 +45,39 @@ const getAnswerString = (ans: any): string => {
   return String(ans);
 };
 
+const getCustomAnswer = (customAnswers: any, fieldDef: any): any => {
+  if (!customAnswers || !fieldDef) return "";
+  
+  const fieldId = fieldDef.id;
+  const fieldKey = fieldDef.key;
+  const fieldLabel = (fieldDef.label || fieldDef.title || "").replace(/<[^>]*>/g, "").trim().toLowerCase();
+  
+  // 1. Direct ID / Key match
+  if (fieldId && customAnswers[fieldId] !== undefined) return customAnswers[fieldId];
+  if (fieldKey && customAnswers[fieldKey] !== undefined) return customAnswers[fieldKey];
+  
+  // 2. Exact label match (case insensitive)
+  const keys = Object.keys(customAnswers);
+  for (const k of keys) {
+    const cleanK = k.toLowerCase().trim();
+    if (fieldLabel && cleanK === fieldLabel) {
+      return customAnswers[k];
+    }
+  }
+  
+  // 3. Fuzzy label prefix match (for truncated Excel headers like "Player or Spe")
+  if (fieldLabel && fieldLabel.length >= 4) {
+    for (const k of keys) {
+      const cleanK = k.toLowerCase().trim();
+      if (cleanK.length >= 4 && (fieldLabel.startsWith(cleanK) || cleanK.startsWith(fieldLabel))) {
+        return customAnswers[k];
+      }
+    }
+  }
+  
+  return "";
+};
+
 interface Attendee {
   id: number;
   email: string;
@@ -383,7 +416,7 @@ export default function EventDetailsPage() {
       const fieldKey = f.key;
       const fieldLabel = (f.label || "").replace(/<[^>]*>/g, "").trim().toLowerCase();
       
-      let answer = reg.custom_answers?.[fieldId] || reg.custom_answers?.[fieldKey] || "";
+      let answer = getCustomAnswer(reg.custom_answers, f);
       if (typeof answer === "boolean") {
         answer = answer ? "Yes" : "No";
       } else if (typeof answer === "object" && answer !== null) {
@@ -554,10 +587,15 @@ export default function EventDetailsPage() {
             const custom_answers: Record<string, any> = {};
             Object.keys(row).forEach(key => {
               if (!standardKeys.includes(key)) {
-                // Check if key matches a label or ID in event.custom_fields_schema
+                // Check if key matches a label or ID in event.custom_fields_schema (supporting fuzzy prefix matches for truncated keys)
                 const matchedField = customFields.find(
-                  f => (f.label || "").toLowerCase().trim() === key.toLowerCase().trim() ||
-                       f.id.toLowerCase().trim() === key.toLowerCase().trim()
+                  f => {
+                    const cleanLabel = (f.label || "").toLowerCase().trim();
+                    const cleanKey = key.toLowerCase().trim();
+                    if (cleanLabel === cleanKey) return true;
+                    if (cleanLabel.length >= 4 && cleanKey.length >= 4 && (cleanLabel.startsWith(cleanKey) || cleanKey.startsWith(cleanLabel))) return true;
+                    return f.id.toLowerCase().trim() === cleanKey;
+                  }
                 );
                 if (matchedField) {
                   custom_answers[matchedField.id] = row[key];
@@ -1019,7 +1057,7 @@ export default function EventDetailsPage() {
       ];
 
       const customInfo = displayFields.map(f => {
-        const val = reg.custom_answers?.[f.id] || reg.custom_answers?.[f.key];
+        const val = getCustomAnswer(reg.custom_answers, f);
         if (val === null || val === undefined || val === "") return "";
         if (typeof val === "boolean") return val ? "Yes" : "No";
         if (Array.isArray(val)) return escapeCSV(val.join(", "));
@@ -2583,7 +2621,7 @@ export default function EventDetailsPage() {
 
                          return displayFields.map(field => {
                            const label = (field.label || field.title || "").replace(/<[^>]*>/g, "").trim();
-                           const val = selectedReg.custom_answers?.[field.id] || selectedReg.custom_answers?.[field.key];
+                           const val = getCustomAnswer(selectedReg.custom_answers, field);
                            
                            return (
                              <div key={field.id} className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
