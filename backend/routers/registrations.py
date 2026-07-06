@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Request, status
 from fastapi.responses import StreamingResponse
-from sqlmodel import Session, select
+from sqlmodel import Session, select, SQLModel
 from sqlalchemy import func
 from typing import List, Dict, Any, Optional
 from pydantic import BaseModel
