@@ -337,7 +337,7 @@ export default function EventDetailsPage() {
     let compiled = layoutText;
     
     // Resolve standard fields
-    const standards = {
+    const standards: Record<string, string> = {
       first_name: reg.attendee?.first_name || "",
       last_name: reg.attendee?.last_name || "",
       email: reg.attendee?.email || "",
@@ -352,37 +352,120 @@ export default function EventDetailsPage() {
     
     // Resolve custom fields
     const template = event?.registration_form_template;
-    const activeSchema = (event?.custom_fields_schema && event.custom_fields_schema.length > 0)
-      ? event.custom_fields_schema
-      : (template?.layout_schema || []);
-    let flatFields: any[] = [];
-    if (activeSchema.length > 0 && "fields" in activeSchema[0]) {
-      for (const section of activeSchema) {
-        flatFields.push(...(section.fields || []));
+    
+    // Get flat fields from event schema (activeSchema)
+    const eventSchema = event?.custom_fields_schema || [];
+    let eventFlatFields: any[] = [];
+    if (eventSchema.length > 0 && "fields" in eventSchema[0]) {
+      for (const section of eventSchema) {
+        eventFlatFields.push(...(section.fields || []));
       }
     } else {
-      flatFields = activeSchema;
+      eventFlatFields = eventSchema;
     }
     
-    for (const f of flatFields) {
-      const fieldKey = f.key || f.id;
-      const fieldLabel = (f.label || "").replace(/<[^>]*>/g, "").trim();
-      let answer = reg.custom_answers?.[fieldKey] || reg.custom_answers?.[f.id] || "";
+    // Get flat fields from template schema
+    const templateSchema = template?.layout_schema || [];
+    let templateFlatFields: any[] = [];
+    if (templateSchema.length > 0 && "fields" in templateSchema[0]) {
+      for (const section of templateSchema) {
+        templateFlatFields.push(...(section.fields || []));
+      }
+    } else {
+      templateFlatFields = templateSchema;
+    }
+    
+    // Build a map of label (lowercase, trimmed) to answer value in reg.custom_answers
+    const labelToAnswer = new Map<string, any>();
+    
+    eventFlatFields.forEach(f => {
+      const fieldId = f.id;
+      const fieldKey = f.key;
+      const fieldLabel = (f.label || "").replace(/<[^>]*>/g, "").trim().toLowerCase();
+      
+      let answer = reg.custom_answers?.[fieldId] || reg.custom_answers?.[fieldKey] || "";
       if (typeof answer === "boolean") {
         answer = answer ? "Yes" : "No";
       } else if (typeof answer === "object" && answer !== null) {
         answer = `${answer.first_name || ""} ${answer.last_name || ""}`.trim();
       }
       
-      if (fieldKey) {
-        const keyRegex = new RegExp(`\\[${fieldKey}\\]`, "gi");
-        compiled = compiled.replace(keyRegex, answer);
+      if (answer !== undefined && answer !== null && answer !== "") {
+        if (fieldLabel) labelToAnswer.set(fieldLabel, answer);
+        if (fieldId) labelToAnswer.set(fieldId.toLowerCase(), answer);
+        if (fieldKey) labelToAnswer.set(fieldKey.toLowerCase(), answer);
       }
-      if (fieldLabel) {
-        const escapedLabel = fieldLabel.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
-        const labelRegex = new RegExp(`\\[${escapedLabel}\\]`, "gi");
-        compiled = compiled.replace(labelRegex, answer);
+    });
+
+    const replacements = new Map<string, string>();
+    
+    // Map standard fields
+    Object.entries(standards).forEach(([key, val]) => {
+      replacements.set(key.toLowerCase(), String(val));
+    });
+    
+    // Map template fields using matched answers by label or ID
+    templateFlatFields.forEach(f => {
+      const fieldId = f.id;
+      const fieldKey = f.key;
+      const fieldLabel = (f.label || "").replace(/<[^>]*>/g, "").trim().toLowerCase();
+      
+      let answer = "";
+      if (fieldLabel && labelToAnswer.has(fieldLabel)) {
+        answer = labelToAnswer.get(fieldLabel);
+      } else if (fieldId && labelToAnswer.has(fieldId.toLowerCase())) {
+        answer = labelToAnswer.get(fieldId.toLowerCase());
+      } else if (fieldKey && labelToAnswer.has(fieldKey.toLowerCase())) {
+        answer = labelToAnswer.get(fieldKey.toLowerCase());
+      } else {
+        let rawAnswer = reg.custom_answers?.[fieldId] || reg.custom_answers?.[fieldKey] || "";
+        if (typeof rawAnswer === "boolean") {
+          answer = rawAnswer ? "Yes" : "No";
+        } else if (typeof rawAnswer === "object" && rawAnswer !== null) {
+          answer = `${rawAnswer.first_name || ""} ${rawAnswer.last_name || ""}`.trim();
+        } else {
+          answer = String(rawAnswer);
+        }
       }
+      
+      if (fieldId) replacements.set(fieldId.toLowerCase(), answer);
+      if (fieldKey) replacements.set(fieldKey.toLowerCase(), answer);
+      if (fieldLabel) replacements.set(fieldLabel, answer);
+    });
+
+    // Also add all event-specific keys/labels as replacements
+    eventFlatFields.forEach(f => {
+      const fieldId = f.id;
+      const fieldKey = f.key;
+      const fieldLabel = (f.label || "").replace(/<[^>]*>/g, "").trim().toLowerCase();
+      
+      let answer = "";
+      if (fieldId && labelToAnswer.has(fieldId.toLowerCase())) {
+        answer = labelToAnswer.get(fieldId.toLowerCase());
+      } else if (fieldKey && labelToAnswer.has(fieldKey.toLowerCase())) {
+        answer = labelToAnswer.get(fieldKey.toLowerCase());
+      } else if (fieldLabel && labelToAnswer.has(fieldLabel)) {
+        answer = labelToAnswer.get(fieldLabel);
+      }
+      
+      if (fieldId) replacements.set(fieldId.toLowerCase(), answer);
+      if (fieldKey) replacements.set(fieldKey.toLowerCase(), answer);
+      if (fieldLabel) replacements.set(fieldLabel, answer);
+    });
+
+    // Replace brackets in compiled layout text
+    const matches = compiled.match(/\[([^\]]+)\]/g);
+    if (matches) {
+      matches.forEach(match => {
+        const token = match.slice(1, -1).trim();
+        const tokenLower = token.toLowerCase();
+        if (replacements.has(tokenLower)) {
+          const val = replacements.get(tokenLower) || "";
+          const escapedToken = token.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+          const regex = new RegExp(`\\[${escapedToken}\\]`, "gi");
+          compiled = compiled.replace(regex, val);
+        }
+      });
     }
     
     return compiled;
