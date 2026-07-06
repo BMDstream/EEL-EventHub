@@ -56,6 +56,21 @@ const getCustomAnswer = (customAnswers: any, fieldDef: any): any => {
   if (fieldId && customAnswers[fieldId] !== undefined) return customAnswers[fieldId];
   if (fieldKey && customAnswers[fieldKey] !== undefined) return customAnswers[fieldKey];
   
+  // 1b. Legacy Padel (ID 19) mapping
+  const padelLegacyMap: Record<string, string> = {
+    "dietary_requirements": "field_1779962054556",
+    "dietary_other": "field_1779962096590",
+    "entry_role": "field_1779962137331",
+    "padel_category": "field_1779962172868",
+    "t_shirt_size": "field_1779962303585",
+    "partner_card": "field_1781088483505",
+    "partner_t_shirt": "field_1781158985365",
+  };
+  
+  if (fieldId && padelLegacyMap[fieldId] && customAnswers[padelLegacyMap[fieldId]] !== undefined) {
+    return customAnswers[padelLegacyMap[fieldId]];
+  }
+  
   // 2. Exact label match (case insensitive)
   const keys = Object.keys(customAnswers);
   for (const k of keys) {
@@ -2051,7 +2066,15 @@ export default function EventDetailsPage() {
                                    } else {
                                      flatFields = activeSchema;
                                    }
-                                   const customFields = flatFields.filter(f => f && f.key && !["first_name", "last_name", "email", "company"].includes(f.key));
+                                   const getCustomAnswer = (answers: any, field: any) => {
+                                      const key = field.key || field.id;
+                                      if (event.id === 19) {
+                                         const map: Record<string, string> = { "p2_skill": "skill_level", "p2_preferred_partner": "partner_name" };
+                                         return answers[key] ?? answers[map[key]] ?? "";
+                                      }
+                                      return answers[key] ?? "";
+                                   };
+                                   const customFields = flatFields.filter(f => f && (f.key || f.id) && !["first_name", "last_name", "email", "company"].includes(f.key || f.id));
                                    
                                    if (customFields.length === 0) {
                                      return <p className="text-[10px] text-white/50 italic">No custom questions configured for this event form.</p>;
@@ -2061,15 +2084,16 @@ export default function EventDetailsPage() {
                                      <div className="space-y-3.5 max-h-60 overflow-y-auto pr-1">
                                        {customFields.map((field) => {
                                          const label = (field.label || "").replace(/<[^>]*>/g, "").trim();
-                                         const val = editedAnswers[field.key] || "";
+                                         const fieldKey = field.key || field.id;
+                                         const val = getCustomAnswer(editedAnswers, field);
                                          
                                          return (
-                                           <div key={field.key} className="space-y-1.5">
+                                           <div key={fieldKey} className="space-y-1.5">
                                              <label className="text-[9px] font-black text-white/65 uppercase tracking-wider block">{label}</label>
                                              {field.type === "select" && field.options && field.options.length > 0 ? (
                                                <select
                                                  value={val}
-                                                 onChange={(e) => handleAnswerChange(field.key, e.target.value)}
+                                                 onChange={(e) => handleAnswerChange(fieldKey, e.target.value)}
                                                  className="w-full px-3 py-2 bg-white/15 rounded-xl border border-white/10 text-xs font-bold text-white outline-none focus:ring-1 focus:ring-yellow-400"
                                                >
                                                  <option value="" className="text-slate-800">Select option...</option>
@@ -2082,7 +2106,7 @@ export default function EventDetailsPage() {
                                                  <input
                                                    type="checkbox"
                                                    checked={val === "Yes" || val === true}
-                                                   onChange={(e) => handleAnswerChange(field.key, e.target.checked ? "Yes" : "No")}
+                                                   onChange={(e) => handleAnswerChange(fieldKey, e.target.checked ? "Yes" : "No")}
                                                    className="w-4 h-4 rounded text-[#0f172a]"
                                                  />
                                                  Check if true
@@ -2091,7 +2115,7 @@ export default function EventDetailsPage() {
                                                <input
                                                  type="text"
                                                  value={val}
-                                                 onChange={(e) => handleAnswerChange(field.key, e.target.value)}
+                                                 onChange={(e) => handleAnswerChange(fieldKey, e.target.value)}
                                                  placeholder={`Enter ${label.toLowerCase()}...`}
                                                  className="w-full px-3 py-2 bg-white/15 rounded-xl border border-white/10 text-xs font-semibold text-white placeholder-white/30 outline-none focus:ring-1 focus:ring-yellow-400"
                                                />
