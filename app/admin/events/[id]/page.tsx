@@ -461,13 +461,13 @@ export default function EventDetailsPage() {
           const customFields = event?.custom_fields_schema || [];
 
           const parsed = jsonData.map((row: any) => {
-            const email = row.email || row.Email || row.EMAIL || "";
-            const first_name = row.first_name || row.First_Name || row.first_name || row.firstName || row.FirstName || "";
-            const last_name = row.last_name || row.Last_Name || row.last_name || row.lastName || row.LastName || "";
-            const company = row.company || row.Company || row.COMPANY || "";
+            const email = row.email || row.Email || row.EMAIL || row["Email"] || "";
+            const first_name = row.first_name || row.First_Name || row["First Name"] || row.firstName || row.FirstName || "";
+            const last_name = row.last_name || row.Last_Name || row["Last Name"] || row.lastName || row.LastName || "";
+            const company = row.company || row.Company || row.COMPANY || row["Organization"] || row["Company Name"] || "";
             
             // Gather custom field answers, mapping the spreadsheet headers to standard schema field IDs
-            const standardKeys = ["email", "first_name", "last_name", "company", "Email", "First_Name", "Last_Name", "Company", "EMAIL", "COMPANY", "firstName", "lastName", "FirstName", "LastName"];
+            const standardKeys = ["email", "first_name", "last_name", "company", "Email", "First_Name", "Last_Name", "Company", "EMAIL", "COMPANY", "firstName", "lastName", "FirstName", "LastName", "First Name", "Last Name", "Organization", "Company Name"];
             const custom_answers: Record<string, any> = {};
             Object.keys(row).forEach(key => {
               if (!standardKeys.includes(key)) {
