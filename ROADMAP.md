@@ -42,5 +42,6 @@ This document tracks planned monthly milestones, feature requests, and pipeline 
 ---
 
 ## 💡 Pipeline Backlog & Future Ideas
+* **Registrant Answers Editing Sidebar**: Convert the read-only custom questions display inside the "Registration Details" side-drawer into interactive inputs with a "Save" button to allow admins and managers to update registrant answers directly from the event dashboard.
 * **Sponsor Lead Retrieval**: Allow sponsors to scan attendee QR codes (with consent) to gather leads.
 * **Multi-Event Portals**: A unified dashboard for frequent attendees to view all their upcoming registrations and past history.
