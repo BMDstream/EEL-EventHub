@@ -282,7 +282,16 @@ def register_attendee(
             session.commit()
             session.refresh(registration)
         else:
-            pin = str(random.randint(1000, 9999))
+            # Generate a unique PIN for this event
+            while True:
+                pin = str(random.randint(1000, 9999))
+                exists = session.exec(
+                    select(Registration)
+                    .where(Registration.event_id == event_id)
+                    .where(Registration.pin == pin)
+                ).first()
+                if not exists:
+                    break
             registration = Registration(
                 event_id=event_id, 
                 attendee_id=attendee.id, 
@@ -367,7 +376,16 @@ def register_attendee(
             
             if not partner_reg:
                 print(f"Tournament co-registration: Creating core registration for partner {partner_attendee.id}")
-                partner_pin = str(random.randint(1000, 9999))
+                # Generate a unique partner PIN for this event
+                while True:
+                    partner_pin = str(random.randint(1000, 9999))
+                    exists = session.exec(
+                        select(Registration)
+                        .where(Registration.event_id == event_id)
+                        .where(Registration.pin == partner_pin)
+                    ).first()
+                    if not exists:
+                        break
                 partner_reg = Registration(
                     event_id=event_id,
                     attendee_id=partner_attendee.id,
@@ -703,7 +721,16 @@ def create_registrations_bulk(
                 session.commit()
                 session.refresh(registration)
             else:
-                pin = str(random.randint(1000, 9999))
+                # Generate a unique PIN for this event
+                while True:
+                    pin = str(random.randint(1000, 9999))
+                    exists = session.exec(
+                        select(Registration)
+                        .where(Registration.event_id == event_id)
+                        .where(Registration.pin == pin)
+                    ).first()
+                    if not exists:
+                        break
                 registration = Registration(
                     event_id=event_id,
                     attendee_id=attendee.id,
