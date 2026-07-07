@@ -684,12 +684,20 @@ def create_registrations_bulk(
                 .where(Registration.attendee_id == attendee.id)
             ).first()
             
-            encrypted_custom_answers = encrypt_dict(custom_answers)
+            # Clean empty answers from payload (treating None, "", or whitespace-only as empty)
+            cleaned_custom_answers = {}
+            for k, v in custom_answers.items():
+                is_empty = v is None or (isinstance(v, str) and not v.strip())
+                if not is_empty:
+                    cleaned_custom_answers[k] = v
+            
             is_new = True
             
             if registration:
                 is_new = False
-                registration.custom_answers = encrypted_custom_answers
+                existing_answers = decrypt_dict(registration.custom_answers) if registration.custom_answers else {}
+                merged_answers = {**existing_answers, **cleaned_custom_answers}
+                registration.custom_answers = encrypt_dict(merged_answers)
                 registration.status = "confirmed"
                 session.add(registration)
                 session.commit()
@@ -699,7 +707,7 @@ def create_registrations_bulk(
                 registration = Registration(
                     event_id=event_id,
                     attendee_id=attendee.id,
-                    custom_answers=encrypted_custom_answers,
+                    custom_answers=encrypt_dict(cleaned_custom_answers),
                     pin=pin,
                     status="confirmed"
                 )
