@@ -42,6 +42,7 @@ This document tracks planned monthly milestones, feature requests, and pipeline 
 ---
 
 ## 💡 Pipeline Backlog & Future Ideas
+* **Dynamic Sender Email Input**: Convert the rigid frontend dropdown select for the sender email into a text input field, allowing event managers to use custom email prefixes (e.g., event@, rsvp@, info@) for whitelisted domains without requiring code changes.
 * **Registrant Answers Editing Sidebar**: Convert the read-only custom questions display inside the "Registration Details" side-drawer into interactive inputs with a "Save" button to allow admins and managers to update registrant answers directly from the event dashboard.
 * **Sponsor Lead Retrieval**: Allow sponsors to scan attendee QR codes (with consent) to gather leads.
 * **Multi-Event Portals**: A unified dashboard for frequent attendees to view all their upcoming registrations and past history.
