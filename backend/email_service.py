@@ -761,7 +761,7 @@ def send_confirmation_email(
         sender_email = config.get("sender_email") if config else None
         
         # Verify sender_email domain and restrict to verified default configurations
-        allowed_domains = ["eelogistics.co.za", "bmdcomputing.com"]
+        allowed_domains = ["eelogistics.co.za", "bmdcomputing.com", "maziv.com"]
         is_valid_domain = False
         if sender_email:
             email_parts = sender_email.split("@")
@@ -899,7 +899,7 @@ def send_broadcast_email(
     sender_email = config.get("sender_email") if config else None
     
     # Verify sender_email domain and restrict to verified default configurations
-    allowed_domains = ["eelogistics.co.za", "bmdcomputing.com"]
+    allowed_domains = ["eelogistics.co.za", "bmdcomputing.com", "maziv.com"]
     is_valid_domain = False
     if sender_email:
         email_parts = sender_email.split("@")
