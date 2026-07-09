@@ -42,6 +42,7 @@ This document tracks planned monthly milestones, feature requests, and pipeline 
 ---
 
 ## 💡 Pipeline Backlog & Future Ideas
+* **Admin Session Tracker & Audit Log**: Implement a real-time active session dashboard showing currently logged-in users (IP, device, and last active timestamp) along with a comprehensive audit trail logging all actions (e.g., check-ins, setting updates, bulk uploads) to track who made modifications and when.
 * **Dynamic PIN Length Scaling**: Automatically scale registration PIN lengths between 4 and 6 digits based on the event's registrant capacity (4 digits for events under 5,000 guests, 6 digits for larger or unlimited events) to guarantee uniqueness without forcing long codes on smaller events.
 * **Dynamic Sender Email Input**: Convert the rigid frontend dropdown select for the sender email into a text input field, allowing event managers to use custom email prefixes (e.g., event@, rsvp@, info@) for whitelisted domains without requiring code changes.
 * **Registrant Answers Editing Sidebar**: Convert the read-only custom questions display inside the "Registration Details" side-drawer into interactive inputs with a "Save" button to allow admins and managers to update registrant answers directly from the event dashboard.
