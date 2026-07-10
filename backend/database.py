@@ -30,7 +30,7 @@ def run_db_initialization(session: Session, check_only_migrations: bool = False)
     """
     from sqlmodel import select
     from sqlalchemy import inspect, text
-    from backend.models import User, Client, SystemSetting, EmailTemplate
+    from backend.models import User, Client, SystemSetting, EmailTemplate, UserSession, AuditLog
     from datetime import datetime
     
     # 1. Ensure core schema tables are created

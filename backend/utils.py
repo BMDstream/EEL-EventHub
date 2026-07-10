@@ -18,7 +18,7 @@ if os.getenv("MOCK_EMAIL_SERVICE") == "true":
     limiter.enabled = False
 
 def get_current_user_from_request(
-    request: Optional[Request] = None,
+    request: Request,
     x_user_email: Optional[str] = Header(None),
     email: Optional[str] = None,
     session: Session = Depends(get_session)
