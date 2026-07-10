@@ -156,7 +156,7 @@ export default function ClientViewPage() {
                 </div>
               </div>
               <h1 className="text-5xl md:text-7xl font-black tracking-tighter font-bricolage italic mb-4 leading-none">
-                {stats.title} <br />
+                {(stats.title || "").replace(/<[^>]*>/g, "")} <br />
                 <span className="client-text-accent">INSIGHTS.</span>
               </h1>
               <p className="text-zinc-500 font-medium max-w-xl text-lg">
