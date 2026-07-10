@@ -831,7 +831,7 @@ export default function EditEventPage() {
                   </h3>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-3">
+                  <div className="space-y-3 md:col-span-2">
                     <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">Event Title</label>
                     <RichTextEditor 
                       value={formData.title || ""} 
