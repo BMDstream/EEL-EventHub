@@ -487,6 +487,24 @@ const parseTemplateMeta = (html: string): Record<string, any> | null => {
 const normalizeFormValues = (meta: Record<string, any> | null, baseKey: string) => {
   const defaults = DEFAULT_FORM_FIELDS[baseKey] || {};
   const merged = { ...defaults, ...meta };
+  
+  if (merged.show_details_card === undefined) merged.show_details_card = "true";
+  if (merged.show_button === undefined) merged.show_button = "true";
+  if (merged.button_text === undefined) {
+    merged.button_text = baseKey === "partner_pending" || baseKey === "tournament_matchup" 
+      ? "Update Your Ticket Details" 
+      : "Update Details";
+  }
+  if (merged.show_badge === undefined) merged.show_badge = "true";
+  if (merged.badge_text === undefined) {
+    if (baseKey === "registration_confirmed") merged.badge_text = "Attendee Pass";
+    else if (baseKey === "registration_declined") merged.badge_text = "Response Recorded";
+    else if (baseKey === "partner_pending") merged.badge_text = "Action Required";
+    else if (baseKey === "broadcast") merged.badge_text = "Broadcast Dispatch";
+    else if (baseKey === "tournament_matchup") merged.badge_text = "Championship Access";
+    else merged.badge_text = "Attendee Pass";
+  }
+
   if (!merged.sections) {
     merged.sections = {
       mainBodyMessage: {
@@ -550,6 +568,29 @@ const compileTemplateHtml = (key: string, values: Record<string, any> = {}, font
         </tr>
   ` : "";
 
+  const showBadge = values.show_badge !== "false";
+  const badgeText = values.badge_text || (
+    baseKey === "registration_confirmed" ? "Attendee Pass" :
+    baseKey === "registration_declined" ? "Response Recorded" :
+    baseKey === "partner_pending" ? "Action Required" :
+    baseKey === "broadcast" ? "Broadcast Dispatch" :
+    baseKey === "tournament_matchup" ? "Championship Access" : "Attendee Pass"
+  );
+  
+  const badgeBgColor = baseKey === "registration_confirmed"
+    ? (values.attendeePassBgColor || config?.attendeePassBgColor || "#000000")
+    : (values.primary_color || "#0f172a");
+
+  const badgeHtml = showBadge ? `
+                  <table border="0" cellspacing="0" cellpadding="0" style="display: inline-block;">
+                    <tr>
+                      <td align="center" style="background: ${badgeBgColor}; padding: 12px 28px; border-radius: 16px;">
+                        <span style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.4em; color: #ffffff;">${badgeText}</span>
+                      </td>
+                    </tr>
+                  </table>
+  ` : "";
+
   if (baseKey === "registration_confirmed") {
     const warningHtml = values.warning_text ? `
             <div style="background: #fffbeb; padding: 28px; border-radius: 24px; border: 1px solid #fef3c7; margin-bottom: 40px; text-align: center;">
@@ -570,13 +611,7 @@ const compileTemplateHtml = (key: string, values: Record<string, any> = {}, font
             <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 48px;">
               <tr>
                 <td align="left" valign="middle">
-                  <table border="0" cellspacing="0" cellpadding="0" style="display: inline-block;">
-                    <tr>
-                      <td align="center" style="background: ${values.attendeePassBgColor || config?.attendeePassBgColor || "#000000"}; padding: 12px 28px; border-radius: 16px;">
-                        <span style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.4em; color: #ffffff;">Attendee Pass</span>
-                      </td>
-                    </tr>
-                  </table>
+                  ${badgeHtml}
                 </td>
                 {logo_html}
               </tr>
@@ -588,10 +623,10 @@ const compileTemplateHtml = (key: string, values: Record<string, any> = {}, font
                 Hello <strong>{first_name}</strong>,<br><br>
                 ${(values.body_text || "").replace(/\n/g, "<br>")}
             </p>
-            {details_html}
+            ${values.show_details_card !== "false" ? "{details_html}" : ""}
             {qr_block_html}
             ${warningHtml}
-            {button_block_html}
+            ${values.show_button !== "false" ? "{button_block_html}" : ""}
             <hr style="border: 0; border-top: 1px solid #f1f5f9; margin-bottom: 40px; margin-top: 40px;" />
             <table width="100%" border="0" cellspacing="0" cellpadding="0">
               <tr>
@@ -623,13 +658,7 @@ const compileTemplateHtml = (key: string, values: Record<string, any> = {}, font
             <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 48px;">
               <tr>
                 <td align="left" valign="middle">
-                  <table border="0" cellspacing="0" cellpadding="0" style="display: inline-block;">
-                    <tr>
-                      <td align="center" style="background: ${values.primary_color || ""}; padding: 12px 28px; border-radius: 16px;">
-                        <span style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.4em; color: #ffffff;">Response Recorded</span>
-                      </td>
-                    </tr>
-                  </table>
+                  ${badgeHtml}
                 </td>
                 {logo_html}
               </tr>
@@ -672,13 +701,7 @@ const compileTemplateHtml = (key: string, values: Record<string, any> = {}, font
             <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 48px;">
               <tr>
                 <td align="left" valign="middle">
-                  <table border="0" cellspacing="0" cellpadding="0" style="display: inline-block;">
-                    <tr>
-                      <td align="center" style="background: ${values.primary_color || ""}; padding: 12px 28px; border-radius: 16px;">
-                        <span style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.4em; color: #ffffff;">Action Required</span>
-                      </td>
-                    </tr>
-                  </table>
+                  ${badgeHtml}
                 </td>
                 {logo_html}
               </tr>
@@ -744,13 +767,7 @@ const compileTemplateHtml = (key: string, values: Record<string, any> = {}, font
             <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 48px;">
               <tr>
                 <td align="left" valign="middle">
-                  <table border="0" cellspacing="0" cellpadding="0" style="display: inline-block;">
-                    <tr>
-                      <td align="center" style="background: ${values.primary_color || ""}; padding: 12px 28px; border-radius: 16px;">
-                        <span style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.4em; color: #ffffff;">Broadcast Dispatch</span>
-                      </td>
-                    </tr>
-                  </table>
+                  ${badgeHtml}
                 </td>
                 {logo_html}
               </tr>
@@ -759,7 +776,7 @@ const compileTemplateHtml = (key: string, values: Record<string, any> = {}, font
                 Hello <strong>{first_name}</strong>,<br><br>
                 ${(values.body_text || "").replace(/\n/g, "<br>")}
             </p>
-            {details_html}
+            ${values.show_details_card !== "false" ? "{details_html}" : ""}
             <p style="font-size: 15px; font-weight: 800; color: ${values.primary_color || ""}; margin-top: 30px;">
                 ${(values.signature || "").replace(/\n/g, "<br>")}
             </p>
@@ -2391,6 +2408,72 @@ export default function SettingsPage() {
                                   className="w-4 h-4 text-yellow-500 bg-slate-100 border-slate-300 rounded focus:ring-yellow-500 focus:ring-2 dark:bg-slate-800"
                                 />
                               </div>
+
+                              <div className="flex items-center justify-between">
+                                <label className="text-[9px] font-black uppercase tracking-wider text-slate-400">
+                                  Show Event Details Card
+                                </label>
+                                <input
+                                  type="checkbox"
+                                  checked={formValues.show_details_card !== "false"}
+                                  onChange={(e) => handleFormChange("show_details_card", e.target.checked ? "true" : "false")}
+                                  className="w-4 h-4 text-yellow-500 bg-slate-100 border-slate-300 rounded focus:ring-yellow-500 focus:ring-2 dark:bg-slate-800"
+                                />
+                              </div>
+
+                              <div className="flex items-center justify-between">
+                                <label className="text-[9px] font-black uppercase tracking-wider text-slate-400">
+                                  Show Action Button
+                                </label>
+                                <input
+                                  type="checkbox"
+                                  checked={formValues.show_button !== "false"}
+                                  onChange={(e) => handleFormChange("show_button", e.target.checked ? "true" : "false")}
+                                  className="w-4 h-4 text-yellow-500 bg-slate-100 border-slate-300 rounded focus:ring-yellow-500 focus:ring-2 dark:bg-slate-800"
+                                />
+                              </div>
+
+                              {formValues.show_button !== "false" && (
+                                <div className="space-y-1.5 pt-1">
+                                  <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
+                                    Action Button Text
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={formValues.button_text || ""}
+                                    onChange={(e) => handleFormChange("button_text", e.target.value)}
+                                    placeholder="e.g. Update Details"
+                                    className="w-full px-4 py-2 rounded-xl bg-white border border-slate-200 focus:border-yellow-400 outline-none font-bold text-xs text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                                  />
+                                </div>
+                              )}
+
+                              <div className="flex items-center justify-between">
+                                <label className="text-[9px] font-black uppercase tracking-wider text-slate-400">
+                                  Show Attendee Pass Badge
+                                </label>
+                                <input
+                                  type="checkbox"
+                                  checked={formValues.show_badge !== "false"}
+                                  onChange={(e) => handleFormChange("show_badge", e.target.checked ? "true" : "false")}
+                                  className="w-4 h-4 text-yellow-500 bg-slate-100 border-slate-300 rounded focus:ring-yellow-500 focus:ring-2 dark:bg-slate-800"
+                                />
+                              </div>
+
+                              {formValues.show_badge !== "false" && (
+                                <div className="space-y-1.5 pt-1">
+                                  <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
+                                    Badge Text
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={formValues.badge_text || ""}
+                                    onChange={(e) => handleFormChange("badge_text", e.target.value)}
+                                    placeholder="e.g. Attendee Pass"
+                                    className="w-full px-4 py-2 rounded-xl bg-white border border-slate-200 focus:border-yellow-400 outline-none font-bold text-xs text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                                  />
+                                </div>
+                              )}
                             </div>
                           </div>
 

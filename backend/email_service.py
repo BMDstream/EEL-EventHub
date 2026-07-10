@@ -64,6 +64,45 @@ def unescape_html_links(html_content: str) -> str:
     html_content = re.sub(r'&lt;br\s*/?\s*&gt;', '<br />', html_content, flags=re.IGNORECASE)
     return html_content
 
+def apply_template_meta_controls(html_content: str, meta: dict) -> str:
+    """Modifies the email template HTML dynamically based on settings stored in TEMPLATE_META."""
+    if not html_content or not meta:
+        return html_content
+    import re
+    
+    # 1. Check if badge should be hidden
+    if meta.get("show_badge") == "false":
+        # Regex to locate the badge table block and remove it
+        badge_pattern = r'<table[^>]*>\s*<tr>\s*<td[^>]*align="center"[^>]*>\s*<span[^>]*>(?:Attendee Pass|Response Recorded|Action Required|\{badge_text\}|[^<]*)</span>\s*</td>\s*</tr>\s*</table>'
+        html_content = re.sub(badge_pattern, '', html_content, flags=re.IGNORECASE | re.DOTALL)
+        
+    # 2. Check if custom badge text should be applied
+    elif meta.get("badge_text"):
+        custom_badge_text = meta.get("badge_text")
+        # Regex to replace the text inside the badge span
+        def badge_replacer(match):
+            table_html = match.group(0)
+            table_html = re.sub(
+                r'(<span[^>]*>)(?:Attendee Pass|Response Recorded|Action Required|\{badge_text\}|[^<]*)(</span>)',
+                rf'\g<1>{custom_badge_text}\g<2>',
+                table_html,
+                flags=re.IGNORECASE
+            )
+            return table_html
+            
+        badge_pattern = r'<table[^>]*>\s*<tr>\s*<td[^>]*align="center"[^>]*>\s*<span[^>]*>(?:Attendee Pass|Response Recorded|Action Required|\{badge_text\}|[^<]*)</span>\s*</td>\s*</tr>\s*</table>'
+        html_content = re.sub(badge_pattern, badge_replacer, html_content, flags=re.IGNORECASE | re.DOTALL)
+        
+    # 3. Check if Details Card should be hidden
+    if meta.get("show_details_card") == "false":
+        html_content = html_content.replace("{details_html}", "")
+        
+    # 4. Check if Action Button should be hidden
+    if meta.get("show_button") == "false":
+        html_content = html_content.replace("{button_block_html}", "")
+        
+    return html_content
+
 # Simple in-process template cache — only caches successfully fetched templates.
 # Unlike lru_cache, this will NOT cache None, so the self-healing seeder can
 # always retry on the next call if a template was missing on a cold start.
@@ -779,6 +818,7 @@ def send_confirmation_email(
             }
             db_subject = parse_template(db_template.subject, variables)
             db_body = db_template.body_html
+            db_body = apply_template_meta_controls(db_body, meta)
             db_html = parse_template(db_body, variables)
     except Exception as ex:
         print(f"Error applying database template override: {ex}")
@@ -1109,10 +1149,12 @@ def send_broadcast_email(
 
         if is_prebuilt_html:
             p_subject = parse_template(subject, variables)
-            html_content = parse_template(body, variables)
+            body_with_controls = apply_template_meta_controls(body, active_meta)
+            html_content = parse_template(body_with_controls, variables)
         elif db_template:
             p_subject = parse_template(db_template.subject, variables)
             db_body = db_template.body_html
+            db_body = apply_template_meta_controls(db_body, active_meta)
             html_content = parse_template(db_body, variables)
         else:
             # Fallback to hardcoded layout
