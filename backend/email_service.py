@@ -1037,20 +1037,39 @@ def send_broadcast_email(
             """
         variables["qr_code"] = qr_code_html
 
+        address_html = ""
+        if event_details and event_details.get('address'):
+            query_str = f"{event_details.get('location', '')} {event_details.get('address', '')}".strip()
+            maps_url = f"https://www.google.com/maps/search/?api=1&query={quote(query_str)}"
+            address_html = f"""
+            <div style="margin-top: 20px; font-family: {font_family};">
+                <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: {engagement_details_color}; opacity: 0.8; margin: 0 0 4px 0; font-family: {font_family};">Address</p>
+                <p style="font-size: 16px; font-weight: 700; color: {engagement_details_color}; margin: 0 0 10px 0; font-family: {font_family};">{event_details.get('address')}</p>
+                <a href="{maps_url}" target="_blank" style="display: inline-block; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.05em; color: #ffffff; background-color: {engagement_details_color}; text-decoration: none; padding: 10px 20px; border-radius: 12px; margin-top: 4px; font-family: {font_family};">
+                    🗺️ Open in Google Maps
+                </a>
+            </div>
+            """
+
         details_html = f"""
-        <div style="background: #ffffff; padding: 24px; border: 1px solid #f1f5f9; border-radius: 24px; margin-bottom: 24px; margin-top: 24px; font-family: {details_font_family};">
-            <div style="margin-bottom: 12px; font-family: {details_font_family};">
-                <p style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin: 0 0 2px 0; font-family: {details_font_family};">Event</p>
-                <p style="font-size: 15px; font-weight: 800; color: {engagement_details_color}; margin: 0; font-family: {details_font_family};">{event_title}</p>
+        <div style="background: #ffffff; padding: 32px; border: 1px solid #f1f5f9; border-radius: 32px; margin-bottom: 40px; font-family: {details_font_family};">
+            <p style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.3em; color: {engagement_details_color}; margin-bottom: 24px; font-family: {details_font_family};">{active_meta.get('engagement_title', 'Engagement Details')}</p>
+            
+            <div style="margin-bottom: 20px; font-family: {details_font_family};">
+                <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: {engagement_details_color}; opacity: 0.8; margin: 0 0 4px 0; font-family: {details_font_family};">Event</p>
+                <p style="font-size: 18px; font-weight: 800; color: {engagement_details_color}; margin: 0; font-family: {details_font_family};">{event_title}</p>
             </div>
-            <div style="margin-bottom: 12px; font-family: {details_font_family};">
-                <p style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin: 0 0 2px 0; font-family: {details_font_family};">Date & Time</p>
-                <p style="font-size: 15px; font-weight: 800; color: {engagement_details_color}; margin: 0; font-family: {details_font_family};">{date_str} @ {time_str}</p>
+
+            <div style="margin-bottom: 20px; font-family: {details_font_family};">
+                <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: {engagement_details_color}; opacity: 0.8; margin: 0 0 4px 0; font-family: {details_font_family};">Date & Time</p>
+                <p style="font-size: 16px; font-weight: 700; color: {engagement_details_color}; margin: 0; font-family: {details_font_family};">{date_str} @ {time_str}</p>
             </div>
-            <div style="margin-bottom: 12px; font-family: {details_font_family};">
-                <p style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin: 0 0 2px 0; font-family: {details_font_family};">Venue</p>
-                <p style="font-size: 15px; font-weight: 800; color: {engagement_details_color}; margin: 0; font-family: {details_font_family};">{location_str}</p>
+
+            <div style="margin-bottom: 20px; font-family: {details_font_family};">
+                <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: {engagement_details_color}; opacity: 0.8; margin: 0 0 4px 0; font-family: {details_font_family};">Venue</p>
+                <p style="font-size: 16px; font-weight: 700; color: {engagement_details_color}; margin: 0; font-family: {details_font_family};">{location_str}</p>
             </div>
+            {address_html}
         </div>
         """
         if details_styles:
