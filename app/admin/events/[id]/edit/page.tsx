@@ -1277,31 +1277,18 @@ export default function EditEventPage() {
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-1.5">
                       <Mail size={12} /> Sender Email Domain
                     </label>
-                    {effectiveRole === "admin" ? (
-                      <div className="relative">
-                        <input 
-                          type="email" 
-                          name="sender_email" 
-                          value={formData.sender_email} 
-                          onChange={handleChange}
-                          placeholder="e.g. event@maziv.com"
-                          className="w-full px-5 py-4 rounded-2xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-slate-700 bg-white" 
-                        />
-                        <p className="text-[9px] text-slate-400 font-medium mt-1.5 ml-1">
-                          Whitelisted domains: <strong>eelogistics.co.za</strong>, <strong>bmdcomputing.com</strong>, <strong>maziv.com</strong>
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="relative">
-                        <select name="sender_email" value={formData.sender_email} onChange={handleChange}
-                          className="w-full px-5 py-4 rounded-2xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-slate-700 bg-white appearance-none cursor-pointer">
-                          <option value="">Default (events@eelogistics.co.za)</option>
-                          {(senderEmails.length > 0 ? senderEmails : ["events@eelogistics.co.za", "events@bmdcomputing.com"]).map((email) => (
-                            <option key={email} value={email}>{email}</option>
-                          ))}
-                        </select>
-                      </div>
-                    )}
+                    <div className="relative">
+                      <select name="sender_email" value={formData.sender_email} onChange={handleChange}
+                        className="w-full px-5 py-4 rounded-2xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-slate-700 bg-white appearance-none cursor-pointer">
+                        <option value="">Default (events@eelogistics.co.za)</option>
+                        {(senderEmails.length > 0 ? senderEmails : ["events@eelogistics.co.za", "events@bmdcomputing.com"]).map((email) => (
+                          <option key={email} value={email}>{email}</option>
+                        ))}
+                      </select>
+                      <p className="text-[9px] text-slate-400 font-medium mt-1.5 ml-1">
+                        Select from pre-approved domains managed in Admin Settings.
+                      </p>
+                    </div>
                   </div>
 
                   <div className="space-y-2">
