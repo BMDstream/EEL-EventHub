@@ -93,11 +93,88 @@ export default function RichTextEditor({
   const [isFocused, setIsFocused] = useState(false);
   const [editorBg, setEditorBg] = useState<"light" | "dark">("light");
 
+  const updateActiveStylesFromSelection = () => {
+    if (typeof window === "undefined") return;
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0) {
+      const range = sel.getRangeAt(0);
+      let parentEl = range.commonAncestorContainer as HTMLElement;
+      if (parentEl.nodeType === 3) {
+        parentEl = parentEl.parentNode as HTMLElement;
+      }
+      
+      if (editorRef.current?.contains(parentEl)) {
+        const computedStyle = window.getComputedStyle(parentEl);
+        
+        const fontSizeVal = computedStyle.fontSize;
+        if (fontSizeVal) {
+          const pxVal = parseFloat(fontSizeVal);
+          const roundedPx = `${Math.round(pxVal)}px`;
+          if (FONT_SIZES.includes(roundedPx)) {
+            setActiveSize(roundedPx);
+          }
+        }
+        
+        const fontFamilyVal = computedStyle.fontFamily;
+        if (fontFamilyVal) {
+          const matchedFont = FONTS.find(f => 
+            f.value.toLowerCase().includes(fontFamilyVal.toLowerCase()) || 
+            fontFamilyVal.toLowerCase().includes(f.value.toLowerCase()) ||
+            f.label.toLowerCase() === fontFamilyVal.replace(/['"]/g, "").toLowerCase()
+          );
+          if (matchedFont) {
+            setActiveFont(matchedFont.value);
+          } else {
+            const cleanName = fontFamilyVal.replace(/['"]/g, "").split(",")[0].trim();
+            const fallbackMatch = FONTS.find(f => f.label.toLowerCase() === cleanName.toLowerCase());
+            if (fallbackMatch) {
+              setActiveFont(fallbackMatch.value);
+            }
+          }
+        }
+      }
+    }
+  };
+
   // Sync content with value if editor is not active
   useEffect(() => {
     if (editorRef.current && value !== editorRef.current.innerHTML) {
       if (document.activeElement !== editorRef.current) {
         editorRef.current.innerHTML = value || "";
+      }
+    }
+    
+    // Parse default font size and font family on initial mount or value changes
+    if (value) {
+      try {
+        const tempDiv = document.createElement("div");
+        tempDiv.innerHTML = value;
+        const styledSpan = tempDiv.querySelector("span[style]");
+        if (styledSpan) {
+          const spanEl = styledSpan as HTMLElement;
+          const fs = spanEl.style.fontSize;
+          const ff = spanEl.style.fontFamily;
+          if (fs && FONT_SIZES.includes(fs)) {
+            setActiveSize(fs);
+          }
+          if (ff) {
+            const matched = FONTS.find(f => f.value.includes(ff) || ff.includes(f.value));
+            if (matched) setActiveFont(matched.value);
+          }
+        } else {
+          const fsMatch = value.match(/font-size:\s*(\d+px)/);
+          if (fsMatch && FONT_SIZES.includes(fsMatch[1])) {
+            setActiveSize(fsMatch[1]);
+          }
+          const ffMatch = value.match(/font-family:\s*([^;"]+)/);
+          if (ffMatch) {
+            const cleanFf = ffMatch[1].trim();
+            const matched = FONTS.find(f => f.value.includes(cleanFf) || cleanFf.includes(f.value));
+            if (matched) setActiveFont(matched.value);
+          }
+        }
+      } catch (e) {
+        console.error("Failed to parse font settings from value:", e);
       }
     }
   }, [value]);
@@ -643,7 +720,10 @@ export default function RichTextEditor({
           contentEditable
           suppressContentEditableWarning
           onInput={handleInput}
-          onFocus={() => setIsFocused(true)}
+          onFocus={() => {
+            setIsFocused(true);
+            updateActiveStylesFromSelection();
+          }}
           onBlur={(e) => {
             handleInput();
             if (wrapperRef.current && wrapperRef.current.contains(e.relatedTarget as Node)) {
@@ -651,8 +731,14 @@ export default function RichTextEditor({
             }
             setIsFocused(false);
           }}
-          onMouseUp={saveSelection}
-          onKeyUp={saveSelection}
+          onMouseUp={() => {
+            saveSelection();
+            updateActiveStylesFromSelection();
+          }}
+          onKeyUp={() => {
+            saveSelection();
+            updateActiveStylesFromSelection();
+          }}
           onPaste={handlePaste}
           className="w-full p-4 outline-none overflow-y-auto leading-relaxed text-sm min-h-[120px] custom-scrollbar editor-outline-helper"
           style={{ minHeight, fontFamily: activeFont, fontSize: activeSize }}
