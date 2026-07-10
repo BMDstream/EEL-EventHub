@@ -34,6 +34,36 @@ def generate_qr_base64(data: str):
     img.save(buffered, format="PNG")
     return base64.b64encode(buffered.getvalue()).decode()
 
+def unescape_html_links(html_content: str) -> str:
+    """Detects and unescapes common HTML tags that were saved as plain text by rich-text editors."""
+    if not html_content:
+        return html_content
+    import re
+    
+    # Helper to unescape attributes inside matched tag (e.g. quotes and ampersands)
+    def replacer(match):
+        tag = match.group(0)
+        tag = (tag.replace("&lt;", "<")
+                  .replace("&gt;", ">")
+                  .replace("&quot;", '"')
+                  .replace("&#x27;", "'")
+                  .replace("&#39;", "'")
+                  .replace("&amp;", "&"))
+        return tag
+        
+    # 1. Unescape anchor tags <a ...> and </a>
+    html_content = re.sub(r'&lt;a\s+.*?&gt;', replacer, html_content, flags=re.IGNORECASE)
+    html_content = re.sub(r'&lt;/a\s*&gt;', '</a>', html_content, flags=re.IGNORECASE)
+    
+    # 2. Unescape common formatting tags: b, strong, i, em, u, br, p, span
+    formatting_tags = ["b", "strong", "i", "em", "u", "br", "p", "span"]
+    for tag in formatting_tags:
+        html_content = re.sub(rf'&lt;{tag}\b.*?&gt;', replacer, html_content, flags=re.IGNORECASE)
+        html_content = re.sub(rf'&lt;/{tag}\s*&gt;', f'</{tag}>', html_content, flags=re.IGNORECASE)
+        
+    html_content = re.sub(r'&lt;br\s*/?\s*&gt;', '<br />', html_content, flags=re.IGNORECASE)
+    return html_content
+
 # Simple in-process template cache — only caches successfully fetched templates.
 # Unlike lru_cache, this will NOT cache None, so the self-healing seeder can
 # always retry on the next call if a template was missing on a cold start.
@@ -787,6 +817,7 @@ def send_confirmation_email(
                 subject = f"Registration Confirmed: {event_title}" if is_attending else f"RSVP Recorded: {event_title}"
         
         # Process inline base64 images and convert them to inline attachments
+        html_content = unescape_html_links(html_content)
         html_content, inline_attachments = process_inline_base64_images(html_content)
         
         # RFC 2822 Compliance: unique List-Unsubscribe mapping
@@ -1154,6 +1185,7 @@ def send_broadcast_email(
             </table>"""
 
         # Process inline base64 images and convert them to inline attachments
+        html_content = unescape_html_links(html_content)
         html_content, inline_attachments = process_inline_base64_images(html_content)
         
         import uuid
