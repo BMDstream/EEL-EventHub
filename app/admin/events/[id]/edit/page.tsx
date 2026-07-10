@@ -768,34 +768,34 @@ export default function EditEventPage() {
   // Render
   // ---------------------------------------------------------------------------
   return (
-    <div className="min-h-screen bg-[#f8fafc] p-8">
-      <div className="max-w-5xl mx-auto">
+    <AdminLayout>
+      <div className="max-w-5xl mx-auto font-outfit">
         <div className="flex justify-between items-center mb-10">
           <Link
             href={`/admin/events/${id}`}
-            className="flex items-center gap-2 text-slate-500 hover:text-slate-700 transition-colors text-sm font-bold uppercase tracking-widest"
+            className="flex items-center gap-2 text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-350 transition-colors text-sm font-bold uppercase tracking-widest"
           >
             <ArrowLeft size={18} />
             Back to Event
           </Link>
           <button
             onClick={handleDelete}
-            className="flex items-center gap-2 text-red-500 hover:text-red-600 font-bold px-4 py-2 rounded-xl hover:bg-red-50 transition-all border border-transparent hover:border-red-100"
+            className="flex items-center gap-2 text-red-500 hover:text-red-650 font-bold px-4 py-2 rounded-xl hover:bg-red-50 dark:hover:bg-red-950/20 transition-all border border-transparent hover:border-red-100 dark:hover:border-red-900/35"
           >
             <Trash2 size={20} />
             Delete Event
           </button>
         </div>
 
-        <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden shadow-2xl shadow-slate-200/50">
+        <div className="bg-white dark:bg-[#0a0f1d]/40 dark:backdrop-blur-md rounded-[2.5rem] border border-slate-100 dark:border-white/5 overflow-hidden shadow-2xl dark:shadow-none">
           {/* Header */}
-          <div className="bg-[#1e293b] px-10 py-10">
-            <h1 className="text-3xl font-black text-white italic tracking-tight">Edit Event Settings</h1>
-            <p className="text-slate-400 font-medium mt-2">Configure event details, email templates, and registration preferences.</p>
+          <div className="bg-[#1e293b] dark:bg-slate-900/50 px-10 py-10 dark:border-b dark:border-white/5">
+            <h1 className="text-3xl font-black text-white italic tracking-tight font-bricolage uppercase">Edit Event Settings</h1>
+            <p className="text-slate-450 dark:text-slate-500 font-medium mt-2">Configure event details, email templates, and registration preferences.</p>
           </div>
 
           {/* Tab Bar */}
-          <div className="flex border-b border-slate-100 bg-slate-50/60 px-10">
+          <div className="flex border-b border-slate-100 dark:border-white/5 bg-slate-50/60 dark:bg-slate-900/30 px-10">
             {[
               { id: "details", label: "Event Details", icon: Building2 },
               { id: "email", label: "Email & Templates", icon: Mail },
@@ -809,8 +809,8 @@ export default function EditEventPage() {
                   onClick={() => setActiveTab(tab.id as any)}
                   className={`flex items-center gap-2 px-6 py-4 text-xs font-black uppercase tracking-widest border-b-2 transition-all ${
                     active
-                      ? "border-[#1e293b] text-[#1e293b]"
-                      : "border-transparent text-slate-400 hover:text-slate-600"
+                      ? "border-yellow-400 text-slate-800 dark:text-yellow-400"
+                      : "border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
                   }`}
                 >
                   <Icon size={14} />
@@ -825,14 +825,14 @@ export default function EditEventPage() {
             <form onSubmit={handleSubmit} className="p-10 space-y-12">
               {/* 1. Core Parameters */}
               <div className="space-y-6">
-                <div className="border-b border-slate-100 pb-3">
-                  <h3 className="text-xs font-black text-[#1e293b] uppercase tracking-[0.2em] flex items-center gap-2">
-                    <Building2 size={16} className="text-slate-400" /> 1. Core Parameters
+                <div className="border-b border-slate-100 dark:border-white/5 pb-3">
+                  <h3 className="text-xs font-black text-[#1e293b] dark:text-white uppercase tracking-[0.2em] flex items-center gap-2">
+                    <Building2 size={16} className="text-slate-400 dark:text-slate-500" /> 1. Core Parameters
                   </h3>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Event Title</label>
+                    <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">Event Title</label>
                     <RichTextEditor 
                       value={formData.title || ""} 
                       onChange={(val) => setFormData(prev => ({ ...prev, title: val }))} 
@@ -842,17 +842,17 @@ export default function EditEventPage() {
                   </div>
 
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">URL Slug</label>
+                    <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">URL Slug</label>
                     <input required type="text" name="slug" value={formData.slug} onChange={handleChange}
-                      className="w-full px-5 py-4 rounded-2xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-slate-700 bg-slate-50/50" />
+                      className="w-full px-5 py-4 rounded-2xl border border-slate-100 dark:border-slate-800 focus:border-[#1e293b] dark:focus:border-yellow-400 focus:ring-4 focus:ring-yellow-400/20 outline-none transition-all font-bold text-slate-700 dark:text-white bg-slate-50/50 dark:bg-slate-900/60" />
                   </div>
 
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                    <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 flex items-center gap-2">
                       <Building2 size={14} /> Brand Client
                     </label>
                     <select name="client_id" value={formData.client_id} onChange={handleChange}
-                      className="w-full px-5 py-4 rounded-2xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-slate-700 bg-slate-50/50 appearance-none cursor-pointer">
+                      className="w-full px-5 py-4 rounded-2xl border border-slate-100 dark:border-slate-800 focus:border-[#1e293b] dark:focus:border-yellow-400 focus:ring-4 focus:ring-yellow-400/20 outline-none transition-all font-bold text-slate-700 dark:text-white bg-slate-50/50 dark:bg-slate-900/60 appearance-none cursor-pointer">
                       {clients.map((c) => (
                         <option key={c.id} value={c.id.toString()}>{c.name}</option>
                       ))}
@@ -860,47 +860,47 @@ export default function EditEventPage() {
                   </div>
 
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Date &amp; Time</label>
+                    <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">Date &amp; Time</label>
                     <input required type="datetime-local" name="start_date" value={formData.start_date} onChange={handleChange}
-                      className="w-full px-5 py-4 rounded-2xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-slate-700 bg-slate-50/50" />
+                      className="w-full px-5 py-4 rounded-2xl border border-slate-100 dark:border-slate-800 focus:border-[#1e293b] dark:focus:border-yellow-400 focus:ring-4 focus:ring-yellow-400/20 outline-none transition-all font-bold text-slate-700 dark:text-white bg-slate-50/50 dark:bg-slate-900/60" />
                   </div>
 
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Venue</label>
+                    <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">Venue</label>
                     <input required type="text" name="location" value={formData.location} onChange={handleChange}
-                      className="w-full px-5 py-4 rounded-2xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-slate-700 bg-slate-50/50" />
+                      className="w-full px-5 py-4 rounded-2xl border border-slate-100 dark:border-slate-800 focus:border-[#1e293b] dark:focus:border-yellow-400 focus:ring-4 focus:ring-yellow-400/20 outline-none transition-all font-bold text-slate-700 dark:text-white bg-slate-50/50 dark:bg-slate-900/60" />
                   </div>
 
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Address</label>
+                    <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">Address</label>
                     <input required type="text" name="address" value={formData.address} onChange={handleChange}
-                      className="w-full px-5 py-4 rounded-2xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-slate-700 bg-slate-50/50" />
+                      className="w-full px-5 py-4 rounded-2xl border border-slate-100 dark:border-slate-800 focus:border-[#1e293b] dark:focus:border-yellow-400 focus:ring-4 focus:ring-yellow-400/20 outline-none transition-all font-bold text-slate-700 dark:text-white bg-slate-50/50 dark:bg-slate-900/60" />
                   </div>
 
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Capacity</label>
+                    <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">Capacity</label>
                     <input required type="number" name="capacity" value={formData.capacity} onChange={handleChange}
-                      className="w-full px-5 py-4 rounded-2xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-slate-700 bg-slate-50/50" />
+                      className="w-full px-5 py-4 rounded-2xl border border-slate-100 dark:border-slate-800 focus:border-[#1e293b] dark:focus:border-yellow-400 focus:ring-4 focus:ring-yellow-400/20 outline-none transition-all font-bold text-slate-700 dark:text-white bg-slate-50/50 dark:bg-slate-900/60" />
                   </div>
 
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Duration (Days)</label>
+                    <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">Duration (Days)</label>
                     <input required type="number" min={1} name="duration_days" value={formData.duration_days} onChange={handleChange}
-                      className="w-full px-5 py-4 rounded-2xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-slate-700 bg-slate-50/50" />
+                      className="w-full px-5 py-4 rounded-2xl border border-slate-100 dark:border-slate-800 focus:border-[#1e293b] dark:focus:border-yellow-400 focus:ring-4 focus:ring-yellow-400/20 outline-none transition-all font-bold text-slate-700 dark:text-white bg-slate-50/50 dark:bg-slate-900/60" />
                   </div>
                 </div>
               </div>
 
               {/* 2. Page Styling & Background */}
-              <div className="space-y-6 pt-8 border-t border-slate-100">
-                <div className="border-b border-slate-100 pb-3">
-                  <h3 className="text-xs font-black text-[#1e293b] uppercase tracking-[0.2em] flex items-center gap-2">
-                    <Calendar size={16} className="text-slate-400" /> 2. Page Styling &amp; Background
+              <div className="space-y-6 pt-8 border-t border-slate-100 dark:border-white/5">
+                <div className="border-b border-slate-100 dark:border-white/5 pb-3">
+                  <h3 className="text-xs font-black text-[#1e293b] dark:text-white uppercase tracking-[0.2em] flex items-center gap-2">
+                    <Calendar size={16} className="text-slate-400 dark:text-slate-500" /> 2. Page Styling &amp; Background
                   </h3>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-between justify-between">
+                    <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 flex items-between justify-between">
                       Background Banner
                       {formData.banner_url && <button type="button" onClick={() => setFormData({ ...formData, banner_url: "" })} className="text-red-500 hover:underline text-[9px] uppercase font-bold tracking-widest">Remove</button>}
                     </label>
@@ -917,15 +917,15 @@ export default function EditEventPage() {
                           }
                         }
                       }} className="absolute inset-0 opacity-0 cursor-pointer z-10" />
-                      <div className={`w-full h-24 rounded-2xl border-2 border-dashed ${formData.banner_url ? "border-green-500/30 bg-green-50/50" : "border-slate-200 bg-slate-50/50"} relative transition-all overflow-hidden`}>
+                      <div className={`w-full h-24 rounded-2xl border-2 border-dashed ${formData.banner_url ? "border-green-500/30 bg-green-50/50 dark:bg-green-950/20" : "border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/60"} relative transition-all overflow-hidden`}>
                         {formData.banner_url ? (
                           <div className="absolute inset-0">
                             <div className="absolute inset-0" style={{ backgroundImage: `url(${formData.banner_url})`, backgroundSize: "cover", backgroundPosition: "center", backgroundRepeat: "no-repeat" }} />
                           </div>
                         ) : (
                           <div className="flex flex-col items-center justify-center h-full">
-                            <p className="text-[10px] font-black text-slate-400 uppercase">Upload Banner Image</p>
-                            <p className="text-[8px] text-slate-300 uppercase mt-1">Recommended: 1920x1080</p>
+                            <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase">Upload Banner Image</p>
+                            <p className="text-[8px] text-slate-300 dark:text-slate-600 uppercase mt-1">Recommended: 1920x1080</p>
                           </div>
                         )}
                       </div>
@@ -933,7 +933,7 @@ export default function EditEventPage() {
                   </div>
 
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center justify-between">
+                    <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 flex items-center justify-between">
                       Registration Page Background Image (Optional)
                       {formData.background_url && <button type="button" onClick={() => setFormData({ ...formData, background_url: "" })} className="text-red-500 hover:underline text-[9px] uppercase font-bold tracking-widest">Remove</button>}
                     </label>
@@ -950,7 +950,7 @@ export default function EditEventPage() {
                           }
                         }
                       }} className="absolute inset-0 opacity-0 cursor-pointer z-10" />
-                      <div className={`w-full h-24 rounded-2xl border-2 border-dashed ${formData.background_url ? "border-green-500/30 bg-green-50/50" : "border-slate-200 bg-slate-50/50"} relative transition-all overflow-hidden`}>
+                      <div className={`w-full h-24 rounded-2xl border-2 border-dashed ${formData.background_url ? "border-green-500/30 bg-green-50/50 dark:bg-green-950/20" : "border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/60"} relative transition-all overflow-hidden`}>
                         {formData.background_url ? (
                           <div className="absolute inset-0">
                             {formData.banner_size === "contain" && <div className="absolute inset-0 scale-110 blur-md opacity-60 bg-cover bg-center" style={{ backgroundImage: `url(${formData.background_url})` }} />}
@@ -958,8 +958,8 @@ export default function EditEventPage() {
                           </div>
                         ) : (
                           <div className="flex flex-col items-center justify-center h-full">
-                            <p className="text-[10px] font-black text-slate-400 uppercase">Upload Background Image</p>
-                            <p className="text-[8px] text-slate-300 uppercase mt-1">Recommended: 1920x1080</p>
+                            <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase">Upload Background Image</p>
+                            <p className="text-[8px] text-slate-300 dark:text-slate-600 uppercase mt-1">Recommended: 1920x1080</p>
                           </div>
                         )}
                       </div>
@@ -968,12 +968,12 @@ export default function EditEventPage() {
 
                   {(formData.banner_url || formData.background_url) && (
                     <div className="space-y-3 md:col-span-2">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Banner &amp; Background Display Settings</label>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50/50 rounded-2xl border border-slate-100 p-6">
+                      <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">Banner &amp; Background Display Settings</label>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50/50 dark:bg-slate-900/40 rounded-2xl border border-slate-100 dark:border-slate-800 p-6">
                         <div>
-                          <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-1 block mb-1">Fit / Scale</label>
+                          <label className="text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 block mb-1">Fit / Scale</label>
                           <select name="banner_size" value={formData.banner_size} onChange={handleChange}
-                            className="w-full px-4 py-3 rounded-xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-xs text-slate-700 bg-white cursor-pointer">
+                            className="w-full px-4 py-3 rounded-xl border border-slate-100 dark:border-slate-800 focus:border-[#1e293b] dark:focus:border-yellow-400 focus:ring-4 focus:ring-yellow-400/20 outline-none transition-all font-bold text-xs text-slate-700 dark:text-white bg-white dark:bg-slate-900 cursor-pointer">
                             <option value="cover">Cover (Fill Screen)</option>
                             <option value="contain">Contain (Show Full Image)</option>
                             <option value="100% 100%">Stretch to Fit</option>
@@ -982,9 +982,9 @@ export default function EditEventPage() {
                           </select>
                         </div>
                         <div>
-                          <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-1 block mb-1">Focus / Position</label>
+                          <label className="text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 block mb-1">Focus / Position</label>
                           <select name="banner_position" value={formData.banner_position} onChange={handleChange}
-                            className="w-full px-4 py-3 rounded-xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-xs text-slate-700 bg-white cursor-pointer">
+                            className="w-full px-4 py-3 rounded-xl border border-slate-100 dark:border-slate-800 focus:border-[#1e293b] dark:focus:border-yellow-400 focus:ring-4 focus:ring-yellow-400/20 outline-none transition-all font-bold text-xs text-slate-700 dark:text-white bg-white dark:bg-slate-900 cursor-pointer">
                             <option value="center">Center</option>
                             <option value="top">Top</option>
                             <option value="bottom">Bottom</option>
@@ -999,15 +999,15 @@ export default function EditEventPage() {
               </div>
 
               {/* 3. Form Design & Layout */}
-              <div className="space-y-6 pt-8 border-t border-slate-100">
-                <div className="border-b border-slate-100 pb-3">
-                  <h3 className="text-xs font-black text-[#1e293b] uppercase tracking-[0.2em] flex items-center gap-2">
-                    <Layers size={16} className="text-slate-400" /> 3. Form Design &amp; Layout
+              <div className="space-y-6 pt-8 border-t border-slate-100 dark:border-white/5">
+                <div className="border-b border-slate-100 dark:border-white/5 pb-3">
+                  <h3 className="text-xs font-black text-[#1e293b] dark:text-white uppercase tracking-[0.2em] flex items-center gap-2">
+                    <Layers size={16} className="text-slate-400 dark:text-slate-500" /> 3. Form Design &amp; Layout
                   </h3>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center justify-between">
+                    <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 flex items-center justify-between">
                       Event Email Logo Override
                       {formData.logo_url && <button type="button" onClick={() => setFormData({ ...formData, logo_url: "" })} className="text-red-500 hover:underline text-[9px] uppercase font-bold tracking-widest">Remove</button>}
                     </label>
@@ -1024,15 +1024,15 @@ export default function EditEventPage() {
                           }
                         }
                       }} className="absolute inset-0 opacity-0 cursor-pointer z-10" />
-                      <div className={`w-full h-24 rounded-2xl border-2 border-dashed ${formData.logo_url ? "border-green-500/30 bg-green-50/50" : "border-slate-200 bg-slate-50/50"} relative transition-all overflow-hidden`}>
+                      <div className={`w-full h-24 rounded-2xl border-2 border-dashed ${formData.logo_url ? "border-green-500/30 bg-green-50/50 dark:bg-green-950/20" : "border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/60"} relative transition-all overflow-hidden`}>
                         {formData.logo_url ? (
                           <div className="absolute inset-0 flex items-center justify-center p-4 bg-slate-900/5">
                             <img src={formData.logo_url} alt="Logo Preview" className="max-h-full max-w-full object-contain" />
                           </div>
                         ) : (
                           <div className="flex flex-col items-center justify-center h-full">
-                            <p className="text-[10px] font-black text-slate-400 uppercase">Upload Custom Email Logo</p>
-                            <p className="text-[8px] text-slate-300 uppercase mt-1">Overrides client/default logo for this event</p>
+                            <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase">Upload Custom Email Logo</p>
+                            <p className="text-[8px] text-slate-300 dark:text-slate-655 uppercase mt-1">Overrides client/default logo for this event</p>
                           </div>
                         )}
                       </div>
@@ -1040,9 +1040,9 @@ export default function EditEventPage() {
                   </div>
 
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Registration Form Design Style</label>
+                    <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">Registration Form Design Style</label>
                     <select name="banner_theme" value={formData.banner_theme} onChange={handleChange}
-                      className="w-full px-4 py-3 rounded-xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-xs text-slate-700 bg-slate-50/50 cursor-pointer">
+                      className="w-full px-4 py-3 rounded-xl border border-slate-100 dark:border-slate-800 focus:border-[#1e293b] dark:focus:border-yellow-400 focus:ring-4 focus:ring-yellow-400/20 outline-none transition-all font-bold text-xs text-slate-700 dark:text-white bg-slate-50/50 dark:bg-slate-900/60 cursor-pointer">
                       <option value="cyber_dark">Cyber Dark (Premium Black &amp; Gold)</option>
                       <option value="minimal_light">Minimal Light (Clean White &amp; Slate)</option>
                       <option value="glassmorphism">Glassmorphism (Frosted Glass Overlay)</option>
@@ -1062,7 +1062,7 @@ export default function EditEventPage() {
                   </div>
 
                   <div className="space-y-3 md:col-span-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Registration Form Layout</label>
+                    <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">Registration Form Layout</label>
                     <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
                       {[
                         { id: "", label: "Default", desc: "Theme default" },
@@ -1074,14 +1074,14 @@ export default function EditEventPage() {
                         const active = formData.banner_layout === lay.id;
                         return (
                           <button key={lay.id} type="button" onClick={() => setFormData(prev => ({ ...prev, banner_layout: lay.id }))}
-                            className={`flex flex-col items-center justify-between p-2.5 rounded-xl border text-center transition-all bg-white hover:border-slate-350 ${active ? "border-slate-800 ring-2 ring-slate-800/10 shadow-sm" : "border-slate-100 shadow-sm opacity-80 hover:opacity-100"}`}>
-                            {lay.id === "" && <div className="relative w-full h-10 bg-slate-100 rounded flex items-center justify-center border border-slate-200/60 mb-2 overflow-hidden"><div className="text-[9px] font-black tracking-tighter text-slate-400 uppercase">Default</div></div>}
-                            {lay.id === "stacked" && <div className="flex flex-col gap-0.5 w-full h-10 bg-slate-150 rounded p-1 border border-slate-200/60 mb-2"><div className="bg-slate-350 h-2 w-full rounded-sm"></div><div className="bg-white h-5 w-4/5 mx-auto rounded-sm border border-slate-200 flex items-center justify-center"><span className="w-1.5 h-1.5 bg-slate-300 rounded-full"></span></div></div>}
-                            {lay.id === "split" && <div className="flex gap-0.5 w-full h-10 bg-slate-150 rounded p-1 border border-slate-200/60 mb-2"><div className="bg-slate-350 w-2/5 h-full rounded-sm"></div><div className="bg-white w-3/5 h-full rounded-sm border border-slate-200 flex items-center justify-center"><span className="w-1.5 h-1.5 bg-slate-300 rounded-full"></span></div></div>}
-                            {lay.id === "reversed" && <div className="flex gap-0.5 w-full h-10 bg-slate-150 rounded p-1 border border-slate-200/60 mb-2"><div className="bg-white w-3/5 h-full rounded-sm border border-slate-200 flex items-center justify-center"><span className="w-1.5 h-1.5 bg-slate-300 rounded-full"></span></div><div className="bg-slate-350 w-2/5 h-full rounded-sm"></div></div>}
-                            {lay.id === "centered" && <div className="relative w-full h-10 bg-slate-200 rounded p-1 border border-slate-250 mb-2 flex items-center justify-center"><div className="bg-white w-3/4 h-6 rounded-sm border border-slate-300 shadow-sm flex items-center justify-center"><span className="w-1.5 h-1.5 bg-slate-300 rounded-full"></span></div></div>}
-                            <span className="text-[10px] font-black tracking-tight text-slate-800 block leading-tight">{lay.label}</span>
-                            <span className="text-[8px] text-slate-400 font-bold block">{lay.desc}</span>
+                            className={`flex flex-col items-center justify-between p-2.5 rounded-xl border text-center transition-all bg-white dark:bg-slate-900 hover:border-slate-350 dark:hover:border-slate-700 ${active ? "border-slate-800 dark:border-yellow-400 ring-2 ring-slate-800/10 dark:ring-yellow-400/25 shadow-sm" : "border-slate-100 dark:border-slate-800 shadow-sm opacity-80 hover:opacity-100"}`}>
+                            {lay.id === "" && <div className="relative w-full h-10 bg-slate-100 dark:bg-slate-800 rounded flex items-center justify-center border border-slate-200/60 dark:border-slate-700 mb-2 overflow-hidden"><div className="text-[9px] font-black tracking-tighter text-slate-400 dark:text-slate-500 uppercase">Default</div></div>}
+                            {lay.id === "stacked" && <div className="flex flex-col gap-0.5 w-full h-10 bg-slate-150 dark:bg-slate-800 rounded p-1 border border-slate-200/60 dark:border-slate-700 mb-2"><div className="bg-slate-350 dark:bg-slate-700 h-2 w-full rounded-sm"></div><div className="bg-white dark:bg-slate-900 h-5 w-4/5 mx-auto rounded-sm border border-slate-200 dark:border-slate-750 flex items-center justify-center"><span className="w-1.5 h-1.5 bg-slate-300 dark:bg-slate-600 rounded-full"></span></div></div>}
+                            {lay.id === "split" && <div className="flex gap-0.5 w-full h-10 bg-slate-150 dark:bg-slate-800 rounded p-1 border border-slate-200/60 dark:border-slate-700 mb-2"><div className="bg-slate-350 dark:bg-slate-700 w-2/5 h-full rounded-sm"></div><div className="bg-white dark:bg-slate-900 w-3/5 h-full rounded-sm border border-slate-200 dark:border-slate-750 flex items-center justify-center"><span className="w-1.5 h-1.5 bg-slate-300 dark:bg-slate-600 rounded-full"></span></div></div>}
+                            {lay.id === "reversed" && <div className="flex gap-0.5 w-full h-10 bg-slate-150 dark:bg-slate-800 rounded p-1 border border-slate-200/60 dark:border-slate-700 mb-2"><div className="bg-white dark:bg-slate-900 w-3/5 h-full rounded-sm border border-slate-200 dark:border-slate-750 flex items-center justify-center"><span className="w-1.5 h-1.5 bg-slate-300 dark:bg-slate-600 rounded-full"></span></div><div className="bg-slate-350 dark:bg-slate-700 w-2/5 h-full rounded-sm"></div></div>}
+                            {lay.id === "centered" && <div className="relative w-full h-10 bg-slate-200 dark:bg-slate-800 rounded p-1 border border-slate-250 dark:border-slate-700 mb-2 flex items-center justify-center"><div className="bg-white dark:bg-slate-900 w-3/4 h-6 rounded-sm border border-slate-300 dark:border-slate-750 shadow-sm flex items-center justify-center"><span className="w-1.5 h-1.5 bg-slate-300 dark:bg-slate-600 rounded-full"></span></div></div>}
+                            <span className="text-[10px] font-black tracking-tight text-slate-800 dark:text-slate-200 block leading-tight">{lay.label}</span>
+                            <span className="text-[8px] text-slate-400 dark:text-slate-500 font-bold block">{lay.desc}</span>
                           </button>
                         );
                       })}
@@ -1089,7 +1089,7 @@ export default function EditEventPage() {
                   </div>
 
                   <div className="space-y-3 md:col-span-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Registration Form Template</label>
+                    <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">Registration Form Template</label>
                     <select 
                       name="registration_form_template_id" 
                       value={formData.registration_form_template_id || ""} 
@@ -1100,7 +1100,7 @@ export default function EditEventPage() {
                           registration_form_template_id: val ? parseInt(val) : null 
                         });
                       }}
-                      className="w-full px-4 py-3 rounded-xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-xs text-slate-700 bg-slate-50/50 cursor-pointer"
+                      className="w-full px-4 py-3 rounded-xl border border-slate-100 dark:border-slate-800 focus:border-[#1e293b] dark:focus:border-yellow-400 focus:ring-4 focus:ring-yellow-400/20 outline-none transition-all font-bold text-xs text-slate-700 dark:text-white bg-slate-50/50 dark:bg-slate-900/60 cursor-pointer"
                     >
                       <option value="">Default Form (Custom questions managed below)</option>
                       {regTemplates.map((t) => (
@@ -1110,21 +1110,21 @@ export default function EditEventPage() {
                   </div>
 
                   <div className="space-y-3 md:col-span-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Custom Color Overrides</label>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50/50 rounded-2xl border border-slate-100 p-6">
+                    <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">Custom Color Overrides</label>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50/50 dark:bg-slate-900/60 rounded-2xl border border-slate-100 dark:border-slate-800 p-6">
                       {[
                         { name: "banner_primary_color", label: "Custom Primary Color Override", placeholder: "e.g. #0f172a" },
                         { name: "banner_accent_color", label: "Custom Accent Color Override", placeholder: "e.g. #eab308" },
                         { name: "banner_text_color", label: "Custom Text Color Override", placeholder: "e.g. #ffffff" },
                       ].map((field) => (
                         <div key={field.name} className="space-y-2">
-                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 block">{field.label}</label>
+                          <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 block">{field.label}</label>
                           <div className="flex items-center gap-3">
                             <input type="color" name={field.name} value={(formData as any)[field.name] || "#000000"} onChange={handleChange}
-                              className="w-10 h-10 rounded-xl border border-slate-200 cursor-pointer p-0 bg-transparent shrink-0" />
+                              className="w-10 h-10 rounded-xl border border-slate-200 dark:border-slate-700 cursor-pointer p-0 bg-transparent shrink-0" />
                             <input type="text" name={field.name} value={(formData as any)[field.name]} onChange={handleChange}
                               placeholder={field.placeholder}
-                              className="w-full px-4 py-2.5 rounded-xl border border-slate-100 focus:border-[#1e293b] outline-none font-bold text-xs text-slate-700 bg-white" />
+                              className="w-full px-4 py-2.5 rounded-xl border border-slate-100 dark:border-slate-800 focus:border-[#1e293b] dark:focus:border-yellow-400 outline-none font-bold text-xs text-slate-700 dark:text-white bg-white dark:bg-slate-900" />
                           </div>
                         </div>
                       ))}
@@ -1132,7 +1132,7 @@ export default function EditEventPage() {
                   </div>
 
                   <div className="space-y-3 md:col-span-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Intelligence / Description</label>
+                    <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">Intelligence / Description</label>
                     <RichTextEditor 
                       value={formData.description || ""} 
                       onChange={(val) => setFormData(prev => ({ ...prev, description: val }))} 
@@ -1144,34 +1144,34 @@ export default function EditEventPage() {
               </div>
 
               {/* 4. Access Rules & Options */}
-              <div className="space-y-6 pt-8 border-t border-slate-100">
-                <div className="border-b border-slate-100 pb-3">
-                  <h3 className="text-xs font-black text-[#1e293b] uppercase tracking-[0.2em] flex items-center gap-2">
-                    <Award size={16} className="text-slate-400" /> 4. Access Rules &amp; Options
+              <div className="space-y-6 pt-8 border-t border-slate-100 dark:border-white/5">
+                <div className="border-b border-slate-100 dark:border-white/5 pb-3">
+                  <h3 className="text-xs font-black text-[#1e293b] dark:text-white uppercase tracking-[0.2em] flex items-center gap-2">
+                    <Award size={16} className="text-slate-400 dark:text-slate-500" /> 4. Access Rules &amp; Options
                   </h3>
                 </div>
                 <div className="grid grid-cols-1 gap-6">
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Approved Email Domains (Optional - comma separated)</label>
+                    <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">Approved Email Domains (Optional - comma separated)</label>
                     <input type="text" name="allowed_domains" value={formData.allowed_domains} onChange={handleChange}
                       placeholder="e.g. bmdcomputing.com, companyname.co.za"
-                      className="w-full px-5 py-4 rounded-2xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-slate-700 bg-slate-50/50" />
-                    <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest ml-1">Guests will only be permitted to register if their email ends in one of these domains.</p>
+                      className="w-full px-5 py-4 rounded-2xl border border-slate-100 dark:border-slate-800 focus:border-[#1e293b] dark:focus:border-yellow-400 focus:ring-4 focus:ring-yellow-400/20 outline-none transition-all font-bold text-slate-700 dark:text-white bg-slate-50/50 dark:bg-slate-900/60" />
+                    <p className="text-[9px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest ml-1">Guests will only be permitted to register if their email ends in one of these domains.</p>
                   </div>
 
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Registration Options</label>
-                    <div className="space-y-3 bg-slate-50/50 rounded-2xl border border-slate-100 p-5">
+                    <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">Registration Options</label>
+                    <div className="space-y-3 bg-slate-50/50 dark:bg-slate-900/60 rounded-2xl border border-slate-100 dark:border-slate-800 p-5">
                       <label className="flex items-center gap-4 cursor-pointer">
                         <input type="checkbox" name="collect_company" checked={formData.collect_company} onChange={handleChange}
-                          className="w-5 h-5 rounded border-slate-300 text-[#1e293b] focus:ring-[#1e293b]/5" />
-                        <span className="text-xs font-bold text-slate-600">Collect Organization / Company name from guests</span>
+                          className="w-5 h-5 rounded border-slate-300 dark:border-slate-750 text-[#1e293b] dark:text-yellow-500 focus:ring-yellow-400/20 dark:bg-slate-850" />
+                        <span className="text-xs font-bold text-slate-600 dark:text-slate-350">Collect Organization / Company name from guests</span>
                       </label>
                       {formData.collect_company && (
-                        <label className="flex items-center gap-4 pl-9 mt-2 cursor-pointer border-t border-slate-100/50 pt-2">
+                        <label className="flex items-center gap-4 pl-9 mt-2 cursor-pointer border-t border-slate-100/50 dark:border-slate-800/50 pt-2">
                           <input type="checkbox" name="company_required" checked={formData.company_required} onChange={handleChange}
-                            className="w-5 h-5 rounded border-slate-300 text-[#1e293b] focus:ring-[#1e293b]/5" />
-                          <span className="text-xs font-bold text-slate-600">Organization / Company is required</span>
+                            className="w-5 h-5 rounded border-slate-300 dark:border-slate-750 text-[#1e293b] dark:text-yellow-500 focus:ring-yellow-400/20 dark:bg-slate-850" />
+                          <span className="text-xs font-bold text-slate-600 dark:text-slate-350">Organization / Company is required</span>
                         </label>
                       )}
                     </div>
@@ -1180,59 +1180,59 @@ export default function EditEventPage() {
               </div>
 
               {/* 5. Registration Access & Disclaimer */}
-              <div className="border-t border-slate-100 pt-8 mt-6 space-y-6">
-                <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-3">
-                  <Lock size={16} className="text-slate-400" /> 5. Registration Access &amp; Disclaimer
+              <div className="border-t border-slate-100 dark:border-white/5 pt-8 mt-6 space-y-6">
+                <h3 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mb-4 flex items-center gap-3">
+                  <Lock size={16} className="text-slate-400 dark:text-slate-500" /> 5. Registration Access &amp; Disclaimer
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-3 md:col-span-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Registration Availability</label>
-                    <label className="flex items-center gap-4 p-5 bg-slate-50/50 rounded-2xl border border-slate-100 cursor-pointer hover:bg-slate-50 transition-colors">
+                    <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">Registration Availability</label>
+                    <label className="flex items-center gap-4 p-5 bg-slate-50/50 dark:bg-slate-900/60 rounded-2xl border border-slate-100 dark:border-slate-800 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-900/40 transition-colors">
                       <input type="checkbox" name="registration_active" checked={formData.registration_active} onChange={handleChange}
-                        className="w-5 h-5 rounded border-slate-300 text-[#1e293b] focus:ring-[#1e293b]/5" />
+                        className="w-5 h-5 rounded border-slate-300 dark:border-slate-750 text-yellow-500 focus:ring-yellow-400/20 dark:bg-slate-850" />
                       <div>
-                        <p className="text-xs font-bold text-[#1e293b]">Registration Form Active</p>
-                        <p className="text-[10px] text-slate-400 mt-0.5">Toggle this off to immediately suspend all public registrations.</p>
+                        <p className="text-xs font-bold text-[#1e293b] dark:text-white">Registration Form Active</p>
+                        <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">Toggle this off to immediately suspend all public registrations.</p>
                       </div>
                     </label>
                   </div>
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Schedule Open Date &amp; Time (Optional)</label>
+                    <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">Schedule Open Date &amp; Time (Optional)</label>
                     <input type="datetime-local" name="registration_start" value={formData.registration_start} onChange={handleChange}
-                      className="w-full px-5 py-4 rounded-2xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-slate-700 bg-slate-50/50" />
-                    <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest ml-1">Leave empty to open immediately</p>
+                      className="w-full px-5 py-4 rounded-2xl border border-slate-100 dark:border-slate-800 focus:border-[#1e293b] dark:focus:border-yellow-400 focus:ring-4 focus:ring-yellow-400/20 outline-none transition-all font-bold text-slate-700 dark:text-white bg-slate-50/50 dark:bg-slate-900/60" />
+                    <p className="text-[9px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest ml-1">Leave empty to open immediately</p>
                   </div>
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Schedule Close Date &amp; Time (Optional)</label>
+                    <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">Schedule Close Date &amp; Time (Optional)</label>
                     <input type="datetime-local" name="registration_end" value={formData.registration_end} onChange={handleChange}
-                      className="w-full px-5 py-4 rounded-2xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-slate-700 bg-slate-50/50" />
-                    <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest ml-1">Leave empty to keep open indefinitely</p>
+                      className="w-full px-5 py-4 rounded-2xl border border-slate-100 dark:border-slate-800 focus:border-[#1e293b] dark:focus:border-yellow-400 focus:ring-4 focus:ring-yellow-400/20 outline-none transition-all font-bold text-slate-700 dark:text-white bg-slate-50/50 dark:bg-slate-900/60" />
+                    <p className="text-[9px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest ml-1">Leave empty to keep open indefinitely</p>
                   </div>
-                  <div className="space-y-3 md:col-span-2 border-t border-slate-100 pt-6 mt-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Disclaimer &amp; Indemnity</label>
-                    <label className="flex items-center gap-4 p-5 bg-slate-50/50 rounded-2xl border border-slate-100 cursor-pointer hover:bg-slate-50 transition-colors">
+                  <div className="space-y-3 md:col-span-2 border-t border-slate-100 dark:border-white/5 pt-6 mt-2">
+                    <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">Disclaimer &amp; Indemnity</label>
+                    <label className="flex items-center gap-4 p-5 bg-slate-50/50 dark:bg-slate-900/60 rounded-2xl border border-slate-100 dark:border-slate-800 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-900/40 transition-colors">
                       <input type="checkbox" name="disclaimer_enabled" checked={formData.disclaimer_enabled} onChange={handleChange}
-                        className="w-5 h-5 rounded border-slate-300 text-[#1e293b] focus:ring-[#1e293b]/5" />
+                        className="w-5 h-5 rounded border-slate-300 dark:border-slate-750 text-yellow-500 focus:ring-yellow-400/20 dark:bg-slate-855" />
                       <div>
-                        <p className="text-xs font-bold text-[#1e293b]">Enable Disclaimer &amp; Indemnity</p>
-                        <p className="text-[10px] text-slate-400 mt-0.5">Show a custom terms/indemnity agreement that guests must accept to register.</p>
+                        <p className="text-xs font-bold text-[#1e293b] dark:text-white">Enable Disclaimer &amp; Indemnity</p>
+                        <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">Show a custom terms/indemnity agreement that guests must accept to register.</p>
                       </div>
                     </label>
                     {formData.disclaimer_enabled && (
                       <div className="space-y-2 mt-3">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Custom Checkbox Phrasing Text</label>
+                        <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">Custom Checkbox Phrasing Text</label>
                         <input type="text" name="disclaimer_checkbox_label" value={formData.disclaimer_checkbox_label} onChange={handleChange}
                           placeholder="I have read and accept the Disclaimer and Indemnity"
-                          className="w-full px-5 py-4 rounded-2xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-slate-700 bg-slate-50/50" />
+                          className="w-full px-5 py-4 rounded-2xl border border-slate-100 dark:border-slate-800 focus:border-[#1e293b] dark:focus:border-yellow-400 focus:ring-4 focus:ring-yellow-400/20 outline-none transition-all font-bold text-slate-700 dark:text-white bg-slate-50/50 dark:bg-slate-900/60" />
                       </div>
                     )}
                   </div>
                   {formData.disclaimer_enabled && (
                     <div className="space-y-3 md:col-span-2">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Disclaimer Content</label>
+                      <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">Disclaimer Content</label>
                       <textarea required={formData.disclaimer_enabled} name="disclaimer_text" value={formData.disclaimer_text} onChange={handleChange} rows={4}
                         placeholder="Enter the disclaimer and indemnity statement that guests must read and accept..."
-                        className="w-full px-5 py-4 rounded-2xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-slate-700 bg-slate-50/50 resize-none" />
+                        className="w-full px-5 py-4 rounded-2xl border border-slate-100 dark:border-slate-800 focus:border-[#1e293b] dark:focus:border-yellow-400 focus:ring-4 focus:ring-yellow-400/20 outline-none transition-all font-bold text-slate-700 dark:text-white bg-slate-50/50 dark:bg-slate-900/60 resize-none" />
                     </div>
                   )}
                 </div>
@@ -1254,7 +1254,7 @@ export default function EditEventPage() {
 
               {/* Notification */}
               {saveEmailNotification && (
-                <div className={`flex items-center gap-3 p-4 rounded-2xl text-sm font-bold ${saveEmailNotification.type === "success" ? "bg-emerald-50 text-emerald-700 border border-emerald-100" : "bg-red-50 text-red-700 border border-red-100"}`}>
+                <div className={`flex items-center gap-3 p-4 rounded-2xl text-sm font-bold ${saveEmailNotification.type === "success" ? "bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-450 border border-emerald-100 dark:border-emerald-900/30" : "bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-450 border border-red-100 dark:border-red-900/30"}`}>
                   {saveEmailNotification.type === "success" ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
                   {saveEmailNotification.text}
                 </div>
@@ -1263,54 +1263,54 @@ export default function EditEventPage() {
               {/* Sender Configuration */}
               <div className="space-y-5">
                 <div className="flex items-center gap-3 mb-1">
-                  <div className="w-8 h-8 bg-[#1e293b] rounded-xl flex items-center justify-center">
+                  <div className="w-8 h-8 bg-[#1e293b] dark:bg-slate-800 rounded-xl flex items-center justify-center">
                     <Mail size={16} className="text-white" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-black text-[#1e293b] uppercase tracking-widest">Sender Configuration</h3>
-                    <p className="text-[10px] text-slate-400 font-medium mt-0.5">Override the global "from" address and display name for this event</p>
+                    <h3 className="text-sm font-black text-[#1e293b] dark:text-white uppercase tracking-widest">Sender Configuration</h3>
+                    <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium mt-0.5">Override the global "from" address and display name for this event</p>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50/60 rounded-2xl border border-slate-100 p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50/60 dark:bg-slate-900/60 rounded-2xl border border-slate-100 dark:border-slate-800 p-6">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-1.5">
+                    <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 flex items-center gap-1.5">
                       <Mail size={12} /> Sender Email Domain
                     </label>
                     <div className="relative">
                       <select name="sender_email" value={formData.sender_email} onChange={handleChange}
-                        className="w-full px-5 py-4 rounded-2xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-slate-700 bg-white appearance-none cursor-pointer">
+                        className="w-full px-5 py-4 rounded-2xl border border-slate-100 dark:border-slate-850 focus:border-[#1e293b] dark:focus:border-yellow-400 focus:ring-4 focus:ring-yellow-400/20 outline-none transition-all font-bold text-slate-700 dark:text-white bg-white dark:bg-slate-900 appearance-none cursor-pointer">
                         <option value="">Default (events@eelogistics.co.za)</option>
                         {(senderEmails.length > 0 ? senderEmails : ["events@eelogistics.co.za", "events@bmdcomputing.com"]).map((email) => (
                           <option key={email} value={email}>{email}</option>
                         ))}
                       </select>
-                      <p className="text-[9px] text-slate-400 font-medium mt-1.5 ml-1">
+                      <p className="text-[9px] text-slate-400 dark:text-slate-500 font-medium mt-1.5 ml-1">
                         Select from pre-approved domains managed in Admin Settings.
                       </p>
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-1.5">
+                    <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 flex items-center gap-1.5">
                       <Type size={12} /> Sender Display Name
                     </label>
                     <input type="text" name="sender_name" value={formData.sender_name} onChange={handleChange}
                       placeholder="e.g. EEL Events"
-                      className="w-full px-5 py-4 rounded-2xl border border-slate-100 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-slate-700 bg-white" />
+                      className="w-full px-5 py-4 rounded-2xl border border-slate-100 dark:border-slate-850 focus:border-[#1e293b] dark:focus:border-yellow-400 focus:ring-4 focus:ring-yellow-400/20 outline-none transition-all font-bold text-slate-700 dark:text-white bg-white dark:bg-slate-900" />
                   </div>
 
-                  <div className="md:col-span-2 border-t border-slate-100 pt-5 mt-2 flex items-center justify-between">
+                  <div className="md:col-span-2 border-t border-slate-100 dark:border-white/5 pt-5 mt-2 flex items-center justify-between">
                     <div>
-                      <h4 className="text-xs font-black text-[#1e293b] uppercase tracking-wider">Enable Confirmation Emails</h4>
-                      <p className="text-[10px] text-slate-400 font-medium mt-0.5">Toggle automatic ticket and confirmation email triggers for this event</p>
+                      <h4 className="text-xs font-black text-[#1e293b] dark:text-white uppercase tracking-wider">Enable Confirmation Emails</h4>
+                      <p className="text-[10px] text-slate-400 dark:text-slate-550 font-medium mt-0.5">Toggle automatic ticket and confirmation email triggers for this event</p>
                     </div>
                     <input 
                       type="checkbox" 
                       name="send_emails" 
                       checked={formData.send_emails} 
                       onChange={handleChange}
-                      className="w-4 h-4 text-yellow-500 bg-white border-slate-300 rounded focus:ring-yellow-500 focus:ring-2 cursor-pointer"
+                      className="w-4 h-4 text-yellow-500 dark:text-yellow-400 bg-white dark:bg-slate-950/20 border-slate-300 dark:border-slate-700 rounded focus:ring-yellow-500 focus:ring-2 cursor-pointer"
                     />
                   </div>
                 </div>
@@ -1322,18 +1322,18 @@ export default function EditEventPage() {
                 <div className="space-y-5">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-[#1e293b] rounded-xl flex items-center justify-center">
+                      <div className="w-8 h-8 bg-[#1e293b] dark:bg-slate-800 rounded-xl flex items-center justify-center">
                         <Eye size={16} className="text-white" />
                       </div>
                       <div>
-                        <h3 className="text-sm font-black text-[#1e293b] uppercase tracking-widest">Confirmation Email Template</h3>
-                        <p className="text-[10px] text-slate-400 font-medium mt-0.5">Choose the design used when sending confirmation emails for this event</p>
+                        <h3 className="text-sm font-black text-[#1e293b] dark:text-white uppercase tracking-widest">Confirmation Email Template</h3>
+                        <p className="text-[10px] text-slate-400 dark:text-slate-555 font-medium mt-0.5">Choose the design used when sending confirmation emails for this event</p>
                       </div>
                     </div>
                     <Link
                       href="/admin/settings"
                       target="_blank"
-                      className="flex items-center gap-1.5 text-[10px] font-black text-slate-400 hover:text-[#1e293b] uppercase tracking-widest transition-colors"
+                      className="flex items-center gap-1.5 text-[10px] font-black text-slate-400 dark:text-slate-500 hover:text-[#1e293b] dark:hover:text-yellow-400 uppercase tracking-widest transition-colors"
                     >
                       <ExternalLink size={12} />
                       Customise Templates
@@ -1361,7 +1361,7 @@ export default function EditEventPage() {
                             }
                           }
                         }}
-                        className="w-full px-5 py-4 bg-white rounded-2xl border border-slate-200 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-slate-700 bg-slate-50/20 appearance-none cursor-pointer pr-10"
+                        className="w-full px-5 py-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 focus:border-[#1e293b] dark:focus:border-yellow-400 focus:ring-4 focus:ring-yellow-400/20 outline-none transition-all font-bold text-slate-700 dark:text-white bg-slate-50/20 dark:bg-slate-950/20 appearance-none cursor-pointer pr-10"
                       >
                         <option value="global">Use Global Default (Inherits global email settings)</option>
                         {templates.map((tpl) => (
@@ -1381,12 +1381,12 @@ export default function EditEventPage() {
                 <div className="space-y-5">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-[#1e293b] rounded-xl flex items-center justify-center">
+                      <div className="w-8 h-8 bg-[#1e293b] dark:bg-slate-800 rounded-xl flex items-center justify-center">
                         <AlertCircle size={16} className="text-white" />
                       </div>
                       <div>
-                        <h3 className="text-sm font-black text-[#1e293b] uppercase tracking-widest">Decline Registrant Email Template</h3>
-                        <p className="text-[10px] text-slate-400 font-medium mt-0.5">Choose the design used when a guest declines to attend this event</p>
+                        <h3 className="text-sm font-black text-[#1e293b] dark:text-white uppercase tracking-widest">Decline Registrant Email Template</h3>
+                        <p className="text-[10px] text-slate-400 dark:text-slate-555 font-medium mt-0.5">Choose the design used when a guest declines to attend this event</p>
                       </div>
                     </div>
                   </div>
@@ -1412,7 +1412,7 @@ export default function EditEventPage() {
                             }
                           }
                         }}
-                        className="w-full px-5 py-4 bg-white rounded-2xl border border-slate-200 focus:border-[#1e293b] focus:ring-4 focus:ring-[#1e293b]/5 outline-none transition-all font-bold text-slate-700 bg-slate-50/20 appearance-none cursor-pointer pr-10"
+                        className="w-full px-5 py-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 focus:border-[#1e293b] dark:focus:border-yellow-400 focus:ring-4 focus:ring-yellow-400/20 outline-none transition-all font-bold text-slate-700 dark:text-white bg-slate-50/20 dark:bg-slate-950/20 appearance-none cursor-pointer pr-10"
                       >
                         <option value="global">Use Global Decline Default (Inherits global decline settings)</option>
                         {templates.map((tpl) => (
@@ -1435,14 +1435,14 @@ export default function EditEventPage() {
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="text-[10px] font-black text-[#1e293b] uppercase tracking-widest">Confirmation Email Preview</h3>
-                      <p className="text-[9px] text-slate-400 font-medium mt-0.5">Rendered with this event's branding — banner, logo and colours</p>
+                      <h3 className="text-[10px] font-black text-[#1e293b] dark:text-white uppercase tracking-widest">Confirmation Email Preview</h3>
+                      <p className="text-[9px] text-slate-450 dark:text-slate-500 font-medium mt-0.5">Rendered with this event's branding — banner, logo and colours</p>
                     </div>
-                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest bg-slate-100 px-3 py-1.5 rounded-full">
+                    <span className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest bg-slate-100 dark:bg-slate-900 px-3 py-1.5 rounded-full">
                       {activeConfTemplateName}
                     </span>
                   </div>
-                  <div className="rounded-2xl border border-slate-100 overflow-hidden bg-slate-50" style={{ height: "500px" }}>
+                  <div className="rounded-2xl border border-slate-100 dark:border-slate-800 overflow-hidden bg-slate-50 dark:bg-slate-900" style={{ height: "500px" }}>
                     {previewHtml ? (
                       <iframe
                         ref={previewFrameRef}
@@ -1452,7 +1452,7 @@ export default function EditEventPage() {
                       />
                     ) : (
                       <div className="flex items-center justify-center h-full">
-                        <Loader2 className="animate-spin text-slate-300" size={28} />
+                        <Loader2 className="animate-spin text-slate-350 dark:text-slate-700" size={28} />
                       </div>
                     )}
                   </div>
@@ -1462,14 +1462,14 @@ export default function EditEventPage() {
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="text-[10px] font-black text-[#1e293b] uppercase tracking-widest">Decline Email Preview</h3>
-                      <p className="text-[9px] text-slate-400 font-medium mt-0.5">Rendered with this event's branding — banner, logo and colours</p>
+                      <h3 className="text-[10px] font-black text-[#1e293b] dark:text-white uppercase tracking-widest">Decline Email Preview</h3>
+                      <p className="text-[9px] text-slate-450 dark:text-slate-500 font-medium mt-0.5">Rendered with this event's branding — banner, logo and colours</p>
                     </div>
-                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest bg-slate-100 px-3 py-1.5 rounded-full">
+                    <span className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest bg-slate-100 dark:bg-slate-900 px-3 py-1.5 rounded-full">
                       {activeDeclineTemplateName}
                     </span>
                   </div>
-                  <div className="rounded-2xl border border-slate-100 overflow-hidden bg-slate-50" style={{ height: "500px" }}>
+                  <div className="rounded-2xl border border-slate-100 dark:border-slate-800 overflow-hidden bg-slate-50 dark:bg-slate-900" style={{ height: "500px" }}>
                     {declinePreviewHtml ? (
                       <iframe
                         ref={declinePreviewFrameRef}
@@ -1479,16 +1479,16 @@ export default function EditEventPage() {
                       />
                     ) : (
                       <div className="flex items-center justify-center h-full">
-                        <Loader2 className="animate-spin text-slate-300" size={28} />
+                        <Loader2 className="animate-spin text-slate-350 dark:text-slate-700" size={28} />
                       </div>
                     )}
                   </div>
                 </div>
               </div>
 
-              <p className="text-[9px] text-slate-300 text-center font-medium mt-4">
+              <p className="text-[9px] text-slate-300 dark:text-slate-600 text-center font-medium mt-4">
                 To edit the template content and subject line, use{" "}
-                <Link href="/admin/settings" target="_blank" className="underline hover:text-slate-400 transition-colors">
+                <Link href="/admin/settings" target="_blank" className="underline hover:text-slate-400 dark:hover:text-yellow-400 transition-colors">
                   Settings → Email Templates
                 </Link>
               </p>
@@ -1496,7 +1496,7 @@ export default function EditEventPage() {
               {/* Save button */}
               <div className="pt-2">
                 <button type="submit" disabled={saving}
-                  className="w-full bg-[#1e293b] hover:bg-[#0f172a] disabled:bg-slate-300 text-white font-black py-5 rounded-2xl shadow-2xl shadow-slate-200 transition-all flex items-center justify-center gap-3 uppercase tracking-widest text-sm">
+                  className="w-full bg-[#1e293b] dark:bg-yellow-400 hover:bg-[#0f172a] dark:hover:bg-yellow-500 disabled:bg-slate-300 dark:disabled:bg-slate-800 text-white dark:text-slate-950 font-black py-5 rounded-2xl shadow-2xl dark:shadow-none transition-all flex items-center justify-center gap-3 uppercase tracking-widest text-sm">
                   {saving ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />}
                   {saving ? "Deploying Changes..." : "Commit Changes"}
                 </button>
@@ -1505,6 +1505,6 @@ export default function EditEventPage() {
           )}
         </div>
       </div>
-    </div>
+    </AdminLayout>
   );
 }
