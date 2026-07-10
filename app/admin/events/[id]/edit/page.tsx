@@ -428,6 +428,7 @@ export default function EditEventPage() {
   const [originalLogo, setOriginalLogo] = useState("");
   const [originalBg, setOriginalBg] = useState("");
   const [eventUserRole, setEventUserRole] = useState<string>("staff");
+  const effectiveRole = userRole === "admin" ? "admin" : eventUserRole;
   const [activeTab, setActiveTab] = useState<"details" | "email">("details");
 
   // Email tab states
@@ -496,12 +497,12 @@ export default function EditEventPage() {
   }, [session]);
 
   useEffect(() => {
-    if ((userRole !== "admin" && userRole !== "manager") || !session?.user?.email) return;
+    if ((effectiveRole !== "admin" && effectiveRole !== "manager") || !session?.user?.email) return;
     fetch("/api/py/settings/sender-domains", { headers: { "x-user-email": session.user.email } })
       .then((res) => res.json())
       .then((data) => { if (Array.isArray(data)) setSenderEmails(data); })
       .catch((err) => console.error("Failed to fetch sender domains", err));
-  }, [userRole, session]);
+  }, [effectiveRole, session]);
 
   useEffect(() => {
     if (!session?.user?.email) return;
@@ -646,7 +647,7 @@ export default function EditEventPage() {
   // ---------------------------------------------------------------------------
   // Handlers
   // ---------------------------------------------------------------------------
-  const effectiveRole = userRole === "admin" ? "admin" : eventUserRole;
+  // effectiveRole declared at top level
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1276,7 +1277,7 @@ export default function EditEventPage() {
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-1.5">
                       <Mail size={12} /> Sender Email Domain
                     </label>
-                    {userRole === "admin" ? (
+                    {effectiveRole === "admin" ? (
                       <div className="relative">
                         <input 
                           type="email" 
