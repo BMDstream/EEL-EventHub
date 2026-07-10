@@ -99,6 +99,7 @@ def run_db_initialization(session: Session, check_only_migrations: bool = False)
             ("logo_url", "TEXT"),
             ("sender_email", "TEXT"),
             ("sender_name", "TEXT"),
+            ("reply_to", "TEXT"),
             ("company_required", f"BOOLEAN DEFAULT {bool_false}"),
             ("background_url", "TEXT")
         ]:

@@ -176,6 +176,10 @@ def get_event_email_config(event: Event, session: Session):
     # Override with event-specific sender_name if provided
     if getattr(event, "sender_name", None):
         config["sender_name"] = event.sender_name
+        
+    # Override with event-specific reply_to if provided
+    if getattr(event, "reply_to", None):
+        config["reply_to"] = event.reply_to
             
     # Override with event-specific logo if provided
     if getattr(event, "logo_url", None):

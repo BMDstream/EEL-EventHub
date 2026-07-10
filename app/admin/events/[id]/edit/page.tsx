@@ -454,6 +454,7 @@ export default function EditEventPage() {
     logo_url: "",
     sender_email: "",
     sender_name: "",
+    reply_to: "",
     client_id: "",
     collect_company: true,
     company_required: false,
@@ -526,6 +527,7 @@ export default function EditEventPage() {
           logo_url: data.logo_url || "",
           sender_email: data.sender_email || "",
           sender_name: data.sender_name || "",
+          reply_to: data.reply_to || "",
           client_id: data.client_id ? data.client_id.toString() : "",
           collect_company: data.collect_company !== false,
           company_required: !!data.company_required,
@@ -659,6 +661,7 @@ export default function EditEventPage() {
         client_id: formData.client_id ? parseInt(formData.client_id) : null,
         sender_email: formData.sender_email || null,
         sender_name: formData.sender_name || null,
+        reply_to: formData.reply_to || null,
         start_date: formData.start_date,
         allowed_domains: formData.allowed_domains
           ? formData.allowed_domains.split(",").map(d => d.trim().toLowerCase()).filter(d => d)
@@ -1298,6 +1301,18 @@ export default function EditEventPage() {
                     <input type="text" name="sender_name" value={formData.sender_name} onChange={handleChange}
                       placeholder="e.g. EEL Events"
                       className="w-full px-5 py-4 rounded-2xl border border-slate-100 dark:border-slate-850 focus:border-[#1e293b] dark:focus:border-yellow-400 focus:ring-4 focus:ring-yellow-400/20 outline-none transition-all font-bold text-slate-700 dark:text-white bg-white dark:bg-slate-900" />
+                  </div>
+
+                  <div className="space-y-2 md:col-span-2">
+                    <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 flex items-center gap-1.5">
+                      <Mail size={12} /> Reply-To Email Address
+                    </label>
+                    <input type="email" name="reply_to" value={formData.reply_to} onChange={handleChange}
+                      placeholder="e.g. events@yourdomain.com"
+                      className="w-full px-5 py-4 rounded-2xl border border-slate-100 dark:border-slate-850 focus:border-[#1e293b] dark:focus:border-yellow-400 focus:ring-4 focus:ring-yellow-400/20 outline-none transition-all font-bold text-slate-700 dark:text-white bg-white dark:bg-slate-900" />
+                    <p className="text-[9px] text-slate-400 dark:text-slate-500 font-medium mt-1 ml-1">
+                      If left blank, replies will default to the client-level Reply-To address.
+                    </p>
                   </div>
 
                   <div className="md:col-span-2 border-t border-slate-100 dark:border-white/5 pt-5 mt-2 flex items-center justify-between">

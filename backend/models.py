@@ -44,6 +44,7 @@ class Event(SQLModel, table=True):
     logo_url: Optional[str] = Field(default=None)
     sender_email: Optional[str] = Field(default=None)
     sender_name: Optional[str] = Field(default=None)
+    reply_to: Optional[str] = Field(default=None)
     client_id: Optional[int] = Field(default=None, foreign_key="client.id", index=True)
     collect_company: bool = Field(default=True)
     company_required: bool = Field(default=False)
