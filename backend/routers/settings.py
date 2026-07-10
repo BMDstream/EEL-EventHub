@@ -38,6 +38,9 @@ def refresh_db(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Database refresh failed: {str(e)}")
 
+class SenderEmailsPayload(BaseModel):
+    emails: List[str]
+
 @router.get("/settings/sender-domains", response_model=List[str])
 def get_sender_domains(
     session: Session = Depends(get_session),
@@ -47,6 +50,13 @@ def get_sender_domains(
         raise HTTPException(status_code=401, detail="Authentication required")
     if current_user.role not in ["admin", "manager"]:
         raise HTTPException(status_code=403, detail="Only admins and managers can list sender domains")
+    
+    # Check database first for pre-approved custom emails
+    db_setting = session.exec(
+        select(SystemSetting).where(SystemSetting.key == "approved_sender_emails")
+    ).first()
+    if db_setting and isinstance(db_setting.value, dict) and "emails" in db_setting.value:
+        return db_setting.value["emails"]
     
     import os
     import resend
@@ -72,10 +82,48 @@ def get_sender_domains(
             print(f"Error fetching domains from Resend: {e}")
             
     if not domains_list:
-        domains_list = ["eelogistics.co.za", "bmdcomputing.com"]
+        domains_list = ["eelogistics.co.za", "bmdcomputing.com", "maziv.com"]
         
     sender_emails = [f"events@{domain}" for domain in domains_list]
     return sender_emails
+
+@router.post("/settings/sender-emails")
+def update_approved_sender_emails(
+    payload: SenderEmailsPayload,
+    session: Session = Depends(get_session),
+    current_user: Optional[User] = Depends(get_current_user_from_request)
+):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only admins can update approved sender emails")
+    
+    db_setting = session.exec(
+        select(SystemSetting).where(SystemSetting.key == "approved_sender_emails")
+    ).first()
+    
+    if db_setting:
+        db_setting.value = {"emails": payload.emails}
+        session.add(db_setting)
+    else:
+        new_setting = SystemSetting(
+            key="approved_sender_emails",
+            value={"emails": payload.emails}
+        )
+        session.add(new_setting)
+        
+    session.commit()
+    
+    # Flush redis cache if active
+    try:
+        from backend.cache_service import redis_client
+        if redis_client:
+            redis_client.flushall()
+            print("Redis cache flushed on approved sender emails update.")
+    except Exception:
+        pass
+        
+    return {"status": "success", "message": "Approved sender emails updated successfully."}
 
 
 

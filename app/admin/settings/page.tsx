@@ -1016,6 +1016,32 @@ export default function SettingsPage() {
     banner_url: ""
   });
   const [senderEmails, setSenderEmails] = useState<string[]>([]);
+  const [newSenderEmail, setNewSenderEmail] = useState("");
+  const [isSavingSenderEmails, setIsSavingSenderEmails] = useState(false);
+
+  const saveApprovedSenderEmails = async (updatedList: string[]) => {
+    setIsSavingSenderEmails(true);
+    try {
+      const res = await fetch("/api/py/settings/sender-emails", {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "x-user-email": session?.user?.email || ""
+        },
+        body: JSON.stringify({ emails: updatedList })
+      });
+      if (res.ok) {
+        setSenderEmails(updatedList);
+      } else {
+        const err = await res.json();
+        alert(`Failed to save: ${err.detail || "Unknown error"}`);
+      }
+    } catch (e) {
+      alert("Network error: failed to update approved sender emails.");
+    } finally {
+      setIsSavingSenderEmails(false);
+    }
+  };
   const [loadingSettings, setLoadingSettings] = useState<boolean>(true);
   const [savingSettings, setSavingSettings] = useState<boolean>(false);
   const [settingsMessage, setSettingsMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -3003,7 +3029,8 @@ export default function SettingsPage() {
         {/* GLOBAL SETTINGS TAB CONTENT */}
         {/* ======================================================== */}
         {activeTab === "global" && (
-          <form onSubmit={handleSaveSettings} className="space-y-8">
+          <>
+            <form onSubmit={handleSaveSettings} className="space-y-8">
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -3359,6 +3386,93 @@ export default function SettingsPage() {
               </button>
             </div>
           </form>
+
+          {/* Approved Sender Emails Manager (Admin Only) */}
+          {userRole === "admin" && (
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="mt-8 bg-white rounded-[2.5rem] p-10 shadow-sm border border-slate-100 dark:bg-[#0f172a] dark:border-slate-800"
+            >
+              <div className="flex items-center gap-4 mb-8">
+                <div className="p-4 bg-yellow-50 text-[#eab308] rounded-2xl dark:bg-yellow-950/20">
+                  <Mail size={24} />
+                </div>
+                <div>
+                  <h2 className="text-xl font-black text-[#0f172a] font-bricolage italic uppercase tracking-tight dark:text-white">Approved Sender Emails</h2>
+                  <p className="text-sm text-slate-400 font-medium">Manage pre-approved emails that Managers can select from when configuring events.</p>
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                {/* Add email input bar */}
+                <div className="flex gap-4 max-w-xl">
+                  <input 
+                    type="email" 
+                    value={newSenderEmail}
+                    onChange={(e) => setNewSenderEmail(e.target.value)}
+                    placeholder="e.g. event@maziv.com"
+                    className="flex-1 px-6 py-4 rounded-2xl bg-slate-50 border border-slate-200 focus:border-yellow-400 outline-none font-bold text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                  />
+                  <button
+                    type="button"
+                    disabled={isSavingSenderEmails || !newSenderEmail}
+                    onClick={async () => {
+                      const trimmed = newSenderEmail.trim().toLowerCase();
+                      if (!trimmed.includes("@")) {
+                        alert("Please enter a valid email address.");
+                        return;
+                      }
+                      if (senderEmails.includes(trimmed)) {
+                        alert("This email is already in the approved list.");
+                        return;
+                      }
+                      const updated = [...senderEmails, trimmed];
+                      await saveApprovedSenderEmails(updated);
+                      setNewSenderEmail("");
+                    }}
+                    className="flex items-center gap-2 bg-[#0f172a] hover:bg-black text-white px-6 py-4 rounded-2xl font-black transition-all text-xs uppercase tracking-widest disabled:opacity-50 dark:bg-yellow-400 dark:text-black"
+                  >
+                    {isSavingSenderEmails ? <Loader2 className="animate-spin" size={14} /> : <Plus size={14} />}
+                    Add Email
+                  </button>
+                </div>
+
+                {/* List of approved emails */}
+                <div className="max-w-2xl border border-slate-50 dark:border-slate-800/80 rounded-2xl overflow-hidden bg-slate-50/20">
+                  {senderEmails.length === 0 ? (
+                    <div className="px-6 py-8 text-center text-slate-400 font-bold text-xs uppercase tracking-wider">
+                      No custom sender emails defined. Fallbacks are active.
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-slate-100 dark:divide-slate-800/80">
+                      {senderEmails.map((email) => (
+                        <div key={email} className="px-6 py-4 flex items-center justify-between hover:bg-slate-50/30">
+                          <span className="text-sm font-bold text-slate-700 dark:text-slate-200">{email}</span>
+                          <button
+                            type="button"
+                            disabled={isSavingSenderEmails}
+                            onClick={async () => {
+                              if (confirm(`Remove "${email}" from the approved list?`)) {
+                                const updated = senderEmails.filter(e => e !== email);
+                                await saveApprovedSenderEmails(updated);
+                              }
+                            }}
+                            className="text-red-500 hover:text-red-700 p-2 hover:bg-red-50 rounded-xl transition-all"
+                            title="Delete Sender Email"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          )}
+          </>
         )}
 
         {/* ======================================================== */}
