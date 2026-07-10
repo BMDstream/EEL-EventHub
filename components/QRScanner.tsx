@@ -78,13 +78,7 @@ export default function QRScanner({ onScan, onViewDetails, operatorConfig }: QRS
               } else {
                 setScannedCardLayoutText(null);
               }
-              setTimeout(() => {
-                setStatus("idle");
-                setAttendeeName(null);
-                setScannedOperatorFields(null);
-                setScannedCardLayoutText(null);
-                setScannedReg(null);
-              }, 6000);
+              // Auto-timeout disabled to allow review of details.
             } catch (err) {
               const errMsg = err instanceof Error ? err.message : "Invalid or already used credential";
               setAttendeeName(null);
@@ -95,7 +89,7 @@ export default function QRScanner({ onScan, onViewDetails, operatorConfig }: QRS
                 setStatus("error");
                 setMessage(errMsg);
               }
-              setTimeout(() => setStatus("idle"), 5000);
+              // Auto-timeout disabled to allow review of details.
             }
           },
           (errorMessage) => {
@@ -246,7 +240,7 @@ export default function QRScanner({ onScan, onViewDetails, operatorConfig }: QRS
                     }}
                     className="px-6 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border bg-white/20 hover:bg-white/30 border-white/10 w-full sm:w-auto cursor-pointer"
                   >
-                    Dismiss
+                    {status === "success" || status === "warning" ? "Scan Next Guest" : "Close & Resume"}
                   </button>
                 </div>
               )}

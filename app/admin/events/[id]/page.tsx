@@ -1965,13 +1965,11 @@ export default function EventDetailsPage() {
                                if (!localReg) {
                                  setPinStatus("error");
                                  setPinMessage("Clearance PIN not found in offline cache.");
-                                 setTimeout(() => setPinStatus("idle"), 4000);
                                  return;
                                }
                                if (localReg.status === "declined") {
                                  setPinStatus("error");
                                  setPinMessage("Declined registration cannot be checked in.");
-                                 setTimeout(() => setPinStatus("idle"), 4000);
                                  return;
                                }
                                const checkedInDays = localReg.checked_in_days || [];
@@ -1979,7 +1977,6 @@ export default function EventDetailsPage() {
                                  setPinStatus("warning");
                                  setPinMessage(`Already Checked In for Day ${targetDay}`);
                                  setCheckedInReg(localReg);
-                                 setTimeout(() => { setPinStatus("idle"); setCheckedInReg(null); }, 10000);
                                  return;
                                }
                                
@@ -1997,11 +1994,9 @@ export default function EventDetailsPage() {
                                setPinMessage(`Check-in Successful: ${localReg.attendee?.first_name || 'Guest'}`);
                                setCheckedInReg(localReg);
                                setPin("");
-                               setTimeout(() => { setPinStatus("idle"); setCheckedInReg(null); }, 6000);
                              } catch (err) {
                                setPinStatus("error");
                                setPinMessage("Local verification error");
-                               setTimeout(() => setPinStatus("idle"), 4000);
                              }
                              return;
                            }
@@ -2026,8 +2021,7 @@ export default function EventDetailsPage() {
                                setPinMessage(`Check-in Successful: ${updated.attendee?.first_name || 'Guest'}`);
                                setCheckedInReg(updated);
                                setPin("");
-                               setTimeout(() => { setPinStatus("idle"); setCheckedInReg(null); }, 6000);
-                 dbOffline.initDb().then(async (db) => {
+                               dbOffline.initDb().then(async (db) => {
                                  const tx = db.transaction(["registrations"], "readwrite");
                                  tx.objectStore("registrations").put(updated);
                                }).catch(() => {});
@@ -2045,12 +2039,10 @@ export default function EventDetailsPage() {
                                  setPinStatus("error");
                                  setPinMessage(errMsg);
                                }
-                               setTimeout(() => { setPinStatus("idle"); setCheckedInReg(null); }, 10000);
                              }
                            } catch (err) {
                              setPinStatus("error");
                              setPinMessage("Verification error");
-                             setTimeout(() => setPinStatus("idle"), 4000);
                            }
                          }}
                          disabled={pin.length !== 4 && pin.length !== 6}
@@ -2231,7 +2223,7 @@ export default function EventDetailsPage() {
                                 pinStatus === "warning" ? "bg-white/20 hover:bg-white/30 border-white/10" : "bg-white/20 hover:bg-white/30 border-white/10"
                               }`}
                             >
-                              Dismiss
+                              {pinStatus === "success" || pinStatus === "warning" ? "Scan Next Guest" : "Close & Resume"}
                             </button>
                           )}
                        </div>
