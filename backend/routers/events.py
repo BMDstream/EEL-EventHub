@@ -10,7 +10,8 @@ from backend.utils import (
     verify_client_access,
     verify_event_access,
     verify_event_manager_access,
-    limiter
+    limiter,
+    log_audit
 )
 
 router = APIRouter()
@@ -75,6 +76,14 @@ def create_event(
     session.add(event)
     session.commit()
     session.refresh(event)
+    
+    log_audit(
+        current_user.email,
+        "create_event",
+        f"Created event: {event.title}",
+        event.id
+    )
+    
     return event
 
 def resolve_event_template_metas(event, session, event_dict):
@@ -247,6 +256,13 @@ def update_event(
     from backend.cache_service import clear_cached_event
     clear_cached_event(db_event.slug)
     
+    log_audit(
+        current_user.email,
+        "update_event",
+        f"Updated event settings: {db_event.title}",
+        db_event.id
+    )
+    
     return db_event
 
 @router.put("/{event_id}/form-schema")
@@ -272,6 +288,13 @@ def update_event_form_schema(
     from backend.cache_service import clear_cached_event
     clear_cached_event(db_event.slug)
     
+    log_audit(
+        current_user.email,
+        "update_schema",
+        f"Updated form studio schema for event: {db_event.title}",
+        db_event.id
+    )
+    
     return db_event
 
 @router.delete("/{event_id}")
@@ -294,6 +317,13 @@ def delete_event(
     # Invalidate Redis cache
     from backend.cache_service import clear_cached_event
     clear_cached_event(event.slug)
+    
+    log_audit(
+        current_user.email,
+        "delete_event",
+        f"Deleted event: {event.title}",
+        event.id
+    )
     
     return {"ok": True}
 
@@ -745,6 +775,14 @@ def update_event_staff(
                 )
             
     session.commit()
+    
+    log_audit(
+        current_user.email,
+        "update_staff",
+        f"Updated staff assignments for event: {event.title}",
+        event.id
+    )
+    
     return {"ok": True}
 
 @router.post("/{event_id}/duplicate")
@@ -816,6 +854,13 @@ def duplicate_event(
                 {"user_id": link[0], "event_id": duplicate.id, "role": link[1]}
             )
         session.commit()
+        
+        log_audit(
+            current_user.email,
+            "duplicate_event",
+            f"Duplicated event {db_event.title} to {duplicate.title}",
+            duplicate.id
+        )
     except Exception as e:
         session.rollback()
         print(f"Error copying staff links for duplicate event {duplicate.id}: {e}")

@@ -26,6 +26,7 @@ import {
   RefreshCw,
   Wifi,
   WifiOff,
+  UserPlus,
   X
 } from "lucide-react";
 import AdminLayout from "@/components/AdminLayout";
@@ -180,6 +181,33 @@ export default function EventDetailsPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [selectedMetric, setSelectedMetric] = useState<"date" | "venue" | "enrollment" | "declined" | "checked_in" | null>(null);
+  
+  // Custom states for check-in filtering and walk-ins
+  const [checkInFilter, setCheckInFilter] = useState<"all" | "checked_in" | "not_checked_in">("all");
+  const [isWalkinOpen, setIsWalkinOpen] = useState(false);
+  const [walkinFormData, setWalkinFormData] = useState({
+    first_name: "",
+    last_name: "",
+    email: "",
+    company: "",
+    custom_answers: {} as Record<string, any>
+  });
+  const [isSubmittingWalkin, setIsSubmittingWalkin] = useState(false);
+
+  // Flatten custom fields from active schema
+  const activeSchema = (event?.custom_fields_schema && event.custom_fields_schema.length > 0)
+    ? event.custom_fields_schema
+    : (event?.registration_form_template?.layout_schema || []);
+
+  let flatFields: any[] = [];
+  for (const item of activeSchema) {
+    if (item && typeof item === "object" && "fields" in item && Array.isArray(item.fields)) {
+      flatFields.push(...item.fields);
+    } else {
+      flatFields.push(item);
+    }
+  }
+  const customFields = flatFields.filter(f => f && (f.key || f.id) && !["first_name", "last_name", "email", "company"].includes(f.key || f.id));
   const [emailTemplates, setEmailTemplates] = useState<any[]>([]);
   const [selectedBroadcastKey, setSelectedBroadcastKey] = useState("");
   const [selectedSurveyKey, setSelectedSurveyKey] = useState("");
@@ -990,7 +1018,7 @@ export default function EventDetailsPage() {
   };
 
   const exportToExcel = () => {
-    if (registrations.length === 0) return;
+    if (filteredRegistrations.length === 0) return;
     
     // Flatten schema fields (supporting custom layout sections)
     const activeSchema = (event?.custom_fields_schema && event.custom_fields_schema.length > 0)
@@ -1040,7 +1068,7 @@ export default function EventDetailsPage() {
       return str;
     };
 
-    const rows = registrations.map(reg => {
+    const rows = filteredRegistrations.map(reg => {
       const checkedInDaysStr = reg.checked_in_days && reg.checked_in_days.length > 0
         ? reg.checked_in_days.map(d => `Day ${d}`).join(", ")
         : "None";
@@ -1109,12 +1137,17 @@ export default function EventDetailsPage() {
 
   const filteredRegistrations = registrations.filter(reg => {
     const search = searchTerm.toLowerCase();
-    return (
+    const matchesSearch = (
       reg.attendee.first_name.toLowerCase().includes(search) ||
       reg.attendee.last_name.toLowerCase().includes(search) ||
       reg.attendee.email.toLowerCase().includes(search) ||
       (reg.attendee.company || "").toLowerCase().includes(search)
     );
+    if (!matchesSearch) return false;
+    
+    if (checkInFilter === "checked_in") return reg.checked_in;
+    if (checkInFilter === "not_checked_in") return !reg.checked_in;
+    return true;
   });
 
   if (loading) {
@@ -1488,6 +1521,26 @@ export default function EventDetailsPage() {
                     className="w-full pl-16 pr-8 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a] placeholder-slate-300 transition-all"
                   />
                </div>
+               <div className="flex bg-slate-100/85 p-1.5 rounded-2xl border border-slate-100 flex-wrap items-center gap-1">
+                 <button
+                   onClick={() => setCheckInFilter("all")}
+                   className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${checkInFilter === "all" ? "bg-[#0f172a] text-white shadow-sm" : "text-slate-400 hover:text-slate-600"}`}
+                 >
+                   All ({registrations.length})
+                 </button>
+                 <button
+                   onClick={() => setCheckInFilter("checked_in")}
+                   className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${checkInFilter === "checked_in" ? "bg-emerald-500 text-white shadow-sm" : "text-slate-400 hover:text-emerald-600"}`}
+                 >
+                   Checked In ({registrations.filter(r => r.checked_in).length})
+                 </button>
+                 <button
+                   onClick={() => setCheckInFilter("not_checked_in")}
+                   className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${checkInFilter === "not_checked_in" ? "bg-slate-900 text-white shadow-sm" : "text-slate-400 hover:text-slate-600"}`}
+                 >
+                   Not Checked In ({registrations.filter(r => !r.checked_in).length})
+                 </button>
+               </div>
                <div className="flex items-center gap-3">
                    <button 
                      onClick={fetchRegistrations}
@@ -1520,6 +1573,15 @@ export default function EventDetailsPage() {
                         <Trash2 size={14} />
                       )}
                       Delete Selected ({selectedIds.length})
+                    </button>
+                  )}
+                  {(userRole === "admin" || userRole === "manager") && (
+                    <button 
+                      onClick={() => setIsWalkinOpen(true)}
+                      className="flex items-center gap-2 bg-[#eab308] hover:bg-[#ca8a04] text-[#0f172a] px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all"
+                    >
+                      <UserPlus size={14} />
+                      Add Registrant
                     </button>
                   )}
                   {userRole === "admin" && (
@@ -2133,7 +2195,10 @@ export default function EventDetailsPage() {
                                        setIsSavingAnswers(true);
                                        const res = await fetch(`/api/py/registrations/${checkedInReg.id}/custom-answers`, {
                                          method: "PUT",
-                                         headers: { "Content-Type": "application/json" },
+                                         headers: { 
+                                           "Content-Type": "application/json",
+                                           "x-user-email": session?.user?.email || ""
+                                         },
                                          body: JSON.stringify(editedAnswers)
                                        });
                                        if (res.ok) {
@@ -2676,6 +2741,192 @@ export default function EventDetailsPage() {
                     Close Review
                  </button>
               </div>
+            </div>
+          </div>
+        )}
+        {/* Walk-in (Manual Registrant) Modal */}
+        {isWalkinOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm font-outfit">
+            <div className="bg-white rounded-[2.5rem] shadow-2xl border border-slate-100 w-full max-w-xl overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-200">
+              <div className="px-10 py-8 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
+                <div>
+                  <h3 className="text-xl font-black text-[#0f172a] font-bricolage italic uppercase tracking-tight">On-The-Day <span className="text-slate-300">Walk-in</span></h3>
+                  <p className="text-slate-400 font-bold uppercase tracking-widest text-[9px] mt-1">Register Guest Directly Into Database</p>
+                </div>
+                <button 
+                  onClick={() => setIsWalkinOpen(false)}
+                  className="w-10 h-10 bg-slate-100 hover:bg-slate-200 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              <form 
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  setIsSubmittingWalkin(true);
+                  try {
+                    const res = await fetch(`/api/py/events/${event.id}/registrations/walk-in`, {
+                      method: "POST",
+                      headers: { 
+                        "Content-Type": "application/json",
+                        "x-user-email": session?.user?.email || ""
+                      },
+                      body: JSON.stringify(walkinFormData)
+                    });
+                    if (res.ok) {
+                      alert("Walk-in registrant added and checked in successfully!");
+                      setIsWalkinOpen(false);
+                      // Clear form
+                      setWalkinFormData({
+                        first_name: "",
+                        last_name: "",
+                        email: "",
+                        company: "",
+                        custom_answers: {}
+                      });
+                      // Refresh registrant list
+                      fetchRegistrations();
+                    } else {
+                      const errData = await res.json();
+                      alert(`Failed to add registrant: ${errData.detail || "Unknown error"}`);
+                    }
+                  } catch (err) {
+                    console.error("Walk-in error", err);
+                    alert("A connection error occurred while creating walk-in registration.");
+                  } finally {
+                    setIsSubmittingWalkin(false);
+                  }
+                }}
+                className="p-10 space-y-6 overflow-y-auto flex-1 text-left"
+              >
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5 col-span-2 sm:col-span-1">
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider block">First Name *</label>
+                    <input 
+                      type="text" 
+                      required
+                      value={walkinFormData.first_name}
+                      onChange={(e) => setWalkinFormData(prev => ({ ...prev, first_name: e.target.value }))}
+                      placeholder="e.g. Jane"
+                      className="w-full px-4 py-3 bg-slate-50 rounded-xl border border-slate-100 text-xs font-semibold text-[#0f172a] focus:ring-2 focus:ring-yellow-400 focus:bg-white outline-none transition-all"
+                    />
+                  </div>
+                  <div className="space-y-1.5 col-span-2 sm:col-span-1">
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider block">Last Name *</label>
+                    <input 
+                      type="text" 
+                      required
+                      value={walkinFormData.last_name}
+                      onChange={(e) => setWalkinFormData(prev => ({ ...prev, last_name: e.target.value }))}
+                      placeholder="e.g. Doe"
+                      className="w-full px-4 py-3 bg-slate-50 rounded-xl border border-slate-100 text-xs font-semibold text-[#0f172a] focus:ring-2 focus:ring-yellow-400 focus:bg-white outline-none transition-all"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider block">Email Address *</label>
+                  <input 
+                    type="email" 
+                    required
+                    value={walkinFormData.email}
+                    onChange={(e) => setWalkinFormData(prev => ({ ...prev, email: e.target.value.toLowerCase() }))}
+                    placeholder="e.g. jane.doe@company.com"
+                    className="w-full px-4 py-3 bg-slate-50 rounded-xl border border-slate-100 text-xs font-semibold text-[#0f172a] focus:ring-2 focus:ring-yellow-400 focus:bg-white outline-none transition-all"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider block">Company / Organization</label>
+                  <input 
+                    type="text" 
+                    value={walkinFormData.company}
+                    onChange={(e) => setWalkinFormData(prev => ({ ...prev, company: e.target.value }))}
+                    placeholder="e.g. Vumatel"
+                    className="w-full px-4 py-3 bg-slate-50 rounded-xl border border-slate-100 text-xs font-semibold text-[#0f172a] focus:ring-2 focus:ring-yellow-400 focus:bg-white outline-none transition-all"
+                  />
+                </div>
+
+                {/* Custom Fields section */}
+                {customFields.length > 0 && (
+                  <div className="border-t border-slate-100 pt-6 space-y-4">
+                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Custom Answers</h4>
+                    {customFields.map((field: any) => {
+                      const label = (field.label || "").replace(/<[^>]*>/g, "").trim();
+                      const fieldKey = field.key || field.id;
+                      const val = walkinFormData.custom_answers[fieldKey] || "";
+
+                      return (
+                        <div key={fieldKey} className="space-y-1.5">
+                          <label className="text-[9px] font-black text-slate-500 uppercase tracking-wider block">
+                            {label} {field.required && "*"}
+                          </label>
+                          {field.type === "select" && field.options && field.options.length > 0 ? (
+                            <select
+                              required={field.required}
+                              value={val}
+                              onChange={(e) => setWalkinFormData(prev => ({
+                                ...prev,
+                                custom_answers: { ...prev.custom_answers, [fieldKey]: e.target.value }
+                              }))}
+                              className="w-full px-4 py-3 bg-slate-50 rounded-xl border border-slate-100 text-xs font-bold text-slate-700 focus:ring-2 focus:ring-yellow-400 focus:bg-white outline-none transition-all cursor-pointer"
+                            >
+                              <option value="">Select option...</option>
+                              {field.options.map((opt: string) => (
+                                <option key={opt} value={opt}>{opt}</option>
+                              ))}
+                            </select>
+                          ) : field.type === "checkbox" ? (
+                            <label className="flex items-center gap-2 cursor-pointer select-none text-xs font-bold text-slate-700">
+                              <input
+                                type="checkbox"
+                                checked={val === "Yes" || val === true}
+                                onChange={(e) => setWalkinFormData(prev => ({
+                                  ...prev,
+                                  custom_answers: { ...prev.custom_answers, [fieldKey]: e.target.checked ? "Yes" : "No" }
+                                }))}
+                                className="w-4 h-4 rounded text-slate-900 border-slate-300 focus:ring-yellow-400"
+                              />
+                              Yes
+                            </label>
+                          ) : (
+                            <input
+                              type="text"
+                              required={field.required}
+                              value={val}
+                              onChange={(e) => setWalkinFormData(prev => ({
+                                ...prev,
+                                custom_answers: { ...prev.custom_answers, [fieldKey]: e.target.value }
+                              }))}
+                              placeholder={`Enter ${label.toLowerCase()}...`}
+                              className="w-full px-4 py-3 bg-slate-50 rounded-xl border border-slate-100 text-xs font-semibold text-[#0f172a] focus:ring-2 focus:ring-yellow-400 focus:bg-white outline-none transition-all"
+                            />
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                <div className="border-t border-slate-100 pt-6 flex gap-4">
+                  <button 
+                    type="button"
+                    onClick={() => setIsWalkinOpen(false)}
+                    className="flex-1 px-6 py-4 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-2xl text-xs font-black uppercase tracking-wider transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit"
+                    disabled={isSubmittingWalkin}
+                    className="flex-1 px-6 py-4 bg-[#eab308] hover:bg-[#ca8a04] text-[#0f172a] rounded-2xl text-xs font-black uppercase tracking-wider transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {isSubmittingWalkin ? <Loader2 className="animate-spin" size={14} /> : null}
+                    Submit & Check In
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}

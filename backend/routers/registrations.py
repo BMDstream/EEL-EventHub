@@ -23,6 +23,7 @@ from backend.utils import (
     verify_event_manager_access,
     get_event_email_config,
     perform_checkin_logic,
+    log_audit,
     limiter
 )
 
@@ -283,8 +284,14 @@ def register_attendee(
             session.refresh(registration)
         else:
             # Generate a unique PIN for this event
+            capacity = event.capacity or 0
+            if capacity >= 5000 or capacity == 0:
+                pin_min, pin_max = 100000, 999999
+            else:
+                pin_min, pin_max = 1000, 9999
+
             while True:
-                pin = str(random.randint(1000, 9999))
+                pin = str(random.randint(pin_min, pin_max))
                 exists = session.exec(
                     select(Registration)
                     .where(Registration.event_id == event_id)
@@ -377,8 +384,14 @@ def register_attendee(
             if not partner_reg:
                 print(f"Tournament co-registration: Creating core registration for partner {partner_attendee.id}")
                 # Generate a unique partner PIN for this event
+                capacity = event.capacity or 0
+                if capacity >= 5000 or capacity == 0:
+                    pin_min, pin_max = 100000, 999999
+                else:
+                    pin_min, pin_max = 1000, 9999
+
                 while True:
-                    partner_pin = str(random.randint(1000, 9999))
+                    partner_pin = str(random.randint(pin_min, pin_max))
                     exists = session.exec(
                         select(Registration)
                         .where(Registration.event_id == event_id)
@@ -722,8 +735,14 @@ def create_registrations_bulk(
                 session.refresh(registration)
             else:
                 # Generate a unique PIN for this event
+                capacity = event.capacity or 0
+                if capacity >= 5000 or capacity == 0:
+                    pin_min, pin_max = 100000, 999999
+                else:
+                    pin_min, pin_max = 1000, 9999
+
                 while True:
-                    pin = str(random.randint(1000, 9999))
+                    pin = str(random.randint(pin_min, pin_max))
                     exists = session.exec(
                         select(Registration)
                         .where(Registration.event_id == event_id)
@@ -782,6 +801,14 @@ def create_registrations_bulk(
             session.rollback()
             errors.append(f"Error registering {email}: {str(e)}")
             
+    if created:
+        log_audit(
+            current_user.email,
+            "bulk_import",
+            f"Bulk imported {len(created)} registrants successfully",
+            event_id
+        )
+            
     return {"created": created, "errors": errors}
 
 class BulkDeleteRequest(SQLModel):
@@ -808,6 +835,12 @@ def bulk_delete_registrations(
             pass
             
     session.commit()
+    if deleted_count > 0:
+        log_audit(
+            current_user.email,
+            "bulk_delete",
+            f"Bulk deleted {deleted_count} registrations"
+        )
     return {"ok": True, "deleted_count": deleted_count}
 
 @router.delete("/registrations/{registration_id}")
@@ -828,8 +861,19 @@ def delete_registration(
     if not registration:
         raise HTTPException(status_code=404, detail="Registration not found")
         
+    attendee_name = f"{registration.attendee.first_name} {registration.attendee.last_name}"
+    event_id = registration.event_id
+    
     session.delete(registration)
     session.commit()
+    
+    log_audit(
+        current_user.email,
+        "delete_registration",
+        f"Deleted registration for {attendee_name}",
+        event_id
+    )
+    
     return {"ok": True}
 
 @router.put("/registrations/{registration_id}/checkin")
@@ -889,6 +933,15 @@ def toggle_checkin(
     }
     event = session.get(Event, registration.event_id)
     trigger_webhooks(webhook_event, webhook_payload, session, background_tasks, client_id=event.client_id if event else None)
+    
+    user_email = request.headers.get("x-user-email") or "Terminal Scanner"
+    status_str = "Checked in" if registration.checked_in else "Checked out"
+    log_audit(
+        user_email,
+        "checkin_toggle",
+        f"{status_str} attendee {registration.attendee.first_name} {registration.attendee.last_name}",
+        registration.event_id
+    )
 
     return {
         "id": str(registration.id),
@@ -960,6 +1013,14 @@ def checkin_by_pin(
     }
     event = session.get(Event, event_id)
     trigger_webhooks("checkin.created", webhook_payload, session, background_tasks, client_id=event.client_id if event else None)
+    
+    user_email = request.headers.get("x-user-email") or "Terminal Scanner"
+    log_audit(
+        user_email,
+        "checkin",
+        f"Checked in {registration.attendee.first_name} {registration.attendee.last_name} via PIN/QR",
+        event_id
+    )
 
     return {
         "id": str(registration.id),
@@ -1298,8 +1359,11 @@ def bulk_checkin(
 def update_registration_custom_answers(
     registration_id: str,
     payload: dict,
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    current_user: Optional[User] = Depends(get_current_user_from_request)
 ):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Authentication required")
     try:
         val = UUID(registration_id)
         registration = session.get(Registration, val)
@@ -1319,5 +1383,104 @@ def update_registration_custom_answers(
     session.add(registration)
     session.commit()
     session.refresh(registration)
+    
+    log_audit(
+        current_user.email,
+        "update_answers",
+        f"Updated registration custom answers for {registration.attendee.first_name} {registration.attendee.last_name}",
+        registration.event_id
+    )
+    
     return {"ok": True, "custom_answers": registration.custom_answers}
+
+@router.post("/events/{event_id}/registrations/walk-in", response_model=Registration)
+def create_walkin_registration(
+    event_id: int,
+    data: dict,
+    session: Session = Depends(get_session),
+    current_user: Optional[User] = Depends(get_current_user_from_request)
+):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+        
+    event = session.get(Event, event_id)
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+        
+    verify_event_access(current_user, event, session)
+    
+    first_name = data.get("first_name", "").strip()
+    last_name = data.get("last_name", "").strip()
+    email = data.get("email", "").strip().lower()
+    company = data.get("company", "").strip()
+    custom_answers = data.get("custom_answers", {})
+    
+    if not first_name or not last_name or not email:
+        raise HTTPException(status_code=400, detail="First name, last name, and email are required")
+        
+    # Check if attendee already exists or create new
+    attendee = session.exec(select(Attendee).where(func.lower(Attendee.email) == email)).first()
+    if not attendee:
+        attendee = Attendee(first_name=first_name, last_name=last_name, email=email, company=company)
+        session.add(attendee)
+        session.commit()
+        session.refresh(attendee)
+    else:
+        # Update details if changed
+        if company and attendee.company != company:
+            attendee.company = company
+            session.add(attendee)
+            session.commit()
+            session.refresh(attendee)
+            
+    # Check if already registered for this event
+    existing_reg = session.exec(
+        select(Registration)
+        .where(Registration.event_id == event_id)
+        .where(Registration.attendee_id == attendee.id)
+    ).first()
+    
+    if existing_reg:
+        raise HTTPException(status_code=400, detail="Attendee is already registered for this event")
+        
+    # Capacity-based PIN length scaling
+    capacity = event.capacity or 0
+    if capacity >= 5000 or capacity == 0:
+        pin_min, pin_max = 100000, 999999
+    else:
+        pin_min, pin_max = 1000, 9999
+        
+    while True:
+        pin = str(random.randint(pin_min, pin_max))
+        exists = session.exec(
+            select(Registration)
+            .where(Registration.event_id == event_id)
+            .where(Registration.pin == pin)
+        ).first()
+        if not exists:
+            break
+            
+    registration = Registration(
+        event_id=event_id,
+        attendee_id=attendee.id,
+        custom_answers=encrypt_dict(custom_answers),
+        pin=pin,
+        status="confirmed",
+        checked_in=True
+    )
+    
+    registration.checked_in_days = [1]
+    
+    session.add(registration)
+    session.commit()
+    session.refresh(registration)
+    
+    log_audit(
+        current_user.email,
+        "walkin_registration",
+        f"Registered walk-in attendee: {first_name} {last_name} ({email})",
+        event_id
+    )
+    
+    return registration
 

@@ -6,7 +6,7 @@ from sqlmodel import Session, SQLModel, select
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from backend.database import engine, init_db
-from backend.models import SystemSetting, Client, EmailTemplate, RegistrationFormTemplate
+from backend.models import SystemSetting, Client, EmailTemplate, RegistrationFormTemplate, AuditLog, UserSession
 
 def run_migrations():
     print("Starting database schema migration and seeding...")
@@ -654,7 +654,10 @@ def run_migrations():
                 ("idx_event_checkins_player_id", "event_checkins", "player_id"),
                 ("idx_matches_challenger_id", "matches", "challenger_id"),
                 ("idx_matches_partner_id", "matches", "partner_id"),
-                ("idx_matches_status", "matches", "status")
+                ("idx_matches_status", "matches", "status"),
+                ("idx_audit_logs_user_email", "audit_logs", "user_email"),
+                ("idx_audit_logs_action", "audit_logs", "action"),
+                ("idx_user_sessions_user_email", "user_sessions", "user_email")
             ]
             for idx_name, table, column in indexes_to_create:
                 try:

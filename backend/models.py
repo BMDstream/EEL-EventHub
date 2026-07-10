@@ -140,3 +140,20 @@ class RegistrationFormTemplate(SQLModel, table=True):
     operator_config: Optional[Dict[str, Any]] = Field(default={}, sa_column=Column(JSON))
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+class AuditLog(SQLModel, table=True):
+    __tablename__ = "audit_logs"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_email: str = Field(index=True)
+    action: str = Field(index=True)
+    description: str
+    event_id: Optional[int] = Field(default=None, foreign_key="event.id", index=True, nullable=True)
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
+
+class UserSession(SQLModel, table=True):
+    __tablename__ = "user_sessions"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_email: str = Field(index=True)
+    ip_address: Optional[str] = None
+    user_agent: Optional[str] = None
+    last_active: datetime = Field(default_factory=datetime.utcnow)

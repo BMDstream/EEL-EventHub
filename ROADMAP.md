@@ -42,6 +42,8 @@ This document tracks planned monthly milestones, feature requests, and pipeline 
 ---
 
 ## 💡 Pipeline Backlog & Future Ideas
+* **On-the-Day Walk-in Registrations**: Add an "Add Registrant" button to the admin dashboard, opening a manual creation form to register new guests (walk-ins) on the day of the event directly into the database.
+* **Check-in Filters & Custom Exporters**: Add list filter controls to the registrant dashboard (All, Checked In, Not Checked In) along with the ability to export only the filtered subset of checked-in registrants to an Excel report.
 * **Admin Session Tracker & Audit Log**: Implement a real-time active session dashboard showing currently logged-in users (IP, device, and last active timestamp) along with a comprehensive audit trail logging all actions (e.g., check-ins, setting updates, bulk uploads) to track who made modifications and when.
 * **Dynamic PIN Length Scaling**: Automatically scale registration PIN lengths between 4 and 6 digits based on the event's registrant capacity (4 digits for events under 5,000 guests, 6 digits for larger or unlimited events) to guarantee uniqueness without forcing long codes on smaller events.
 * **Dynamic Sender Email Input**: Convert the rigid frontend dropdown select for the sender email into a text input field, allowing event managers to use custom email prefixes (e.g., event@, rsvp@, info@) for whitelisted domains without requiring code changes.

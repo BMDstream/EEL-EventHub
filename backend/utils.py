@@ -18,6 +18,7 @@ if os.getenv("MOCK_EMAIL_SERVICE") == "true":
     limiter.enabled = False
 
 def get_current_user_from_request(
+    request: Optional[Request] = None,
     x_user_email: Optional[str] = Header(None),
     email: Optional[str] = None,
     session: Session = Depends(get_session)
@@ -26,6 +27,37 @@ def get_current_user_from_request(
     if not user_email:
         return None
     user = session.exec(select(User).where(func.lower(User.email) == user_email.lower())).first()
+    
+    # Track Active Session
+    if user and request:
+        try:
+            from datetime import datetime
+            from backend.database import engine
+            from backend.models import UserSession
+            ip_addr = request.client.host if request.client else None
+            user_agent = request.headers.get("user-agent")
+            
+            with Session(engine) as tracker_session:
+                user_sess = tracker_session.exec(
+                    select(UserSession).where(UserSession.user_email == user.email)
+                ).first()
+                if user_sess:
+                    user_sess.ip_address = ip_addr
+                    user_sess.user_agent = user_agent
+                    user_sess.last_active = datetime.utcnow()
+                    tracker_session.add(user_sess)
+                else:
+                    new_sess = UserSession(
+                        user_email=user.email,
+                        ip_address=ip_addr,
+                        user_agent=user_agent,
+                        last_active=datetime.utcnow()
+                    )
+                    tracker_session.add(new_sess)
+                tracker_session.commit()
+        except Exception as session_err:
+            print(f"Session tracking warning: {session_err}")
+            
     return user
 
 def hash_password(password: str) -> str:
@@ -253,3 +285,21 @@ def perform_checkin_logic(registration: Registration, day: Optional[int], mode: 
     flag_modified(registration, "checked_in_days")
     registration.checked_in = len(registration.checked_in_days) > 0
     return registration
+
+def log_audit(user_email: str, action: str, description: str, event_id: Optional[int] = None):
+    try:
+        from datetime import datetime
+        from backend.database import engine
+        from backend.models import AuditLog
+        with Session(engine) as audit_session:
+            log_entry = AuditLog(
+                user_email=user_email,
+                action=action,
+                description=description,
+                event_id=event_id,
+                timestamp=datetime.utcnow()
+            )
+            audit_session.add(log_entry)
+            audit_session.commit()
+    except Exception as e:
+        print(f"Failed to write audit log: {e}")

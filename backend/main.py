@@ -7,7 +7,7 @@ from slowapi import _rate_limit_exceeded_handler
 from backend.database import init_db, engine, IS_SERVERLESS
 from backend.utils import limiter
 from backend.models import SystemSetting, Client, EmailTemplate
-from backend.routers import auth, events, registrations, settings, users, webhooks, tasks, tournament, media
+from backend.routers import auth, events, registrations, settings, users, webhooks, tasks, tournament, media, security
 
 app = FastAPI(docs_url="/api/py/docs", openapi_url="/api/py/openapi.json")
 
@@ -49,6 +49,7 @@ app.include_router(users.router, prefix="/api/py/users", tags=["users"])
 app.include_router(media.router, prefix="/api/py/media", tags=["media"])
 app.include_router(webhooks.router, prefix="/api/py/webhooks", tags=["webhooks"])
 app.include_router(tasks.router, prefix="/api/py/tasks", tags=["tasks"])
+app.include_router(security.router, prefix="/api/py/security", tags=["security"])
 app.include_router(tournament.router)
 
 @app.get("/api/py/healthcheck")
