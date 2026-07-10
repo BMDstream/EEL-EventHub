@@ -913,15 +913,29 @@ def send_broadcast_email(
             "accent_color": "#94a3b8"
         }
 
+    db_template = get_template_from_db("broadcast")
+    
+    is_prebuilt_html = body.strip().startswith("<!DOCTYPE") or body.strip().startswith("<html") or "<!-- TEMPLATE_META" in body or body.strip().startswith("<div") or body.strip().startswith("<table")
+    
+    meta = {}
+    if is_prebuilt_html:
+        meta = parse_template_meta(body) or {}
+    elif db_template:
+        meta = parse_template_meta(db_template.body_html) if db_template else {}
+
     primary_color = config.get("primary_color", "#0f172a")
     accent_color = config.get("accent_color", "#94a3b8")
     attendee_pass_bg_color = config.get("attendee_pass_bg_color", "#000000")
     engagement_details_color = config.get("engagement_details_color", primary_color)
     font_family = config.get("font_family", "'Carlito', Calibri, Candara, Segoe, 'Segoe UI', Optima, Arial, sans-serif")
     font_size = config.get("font_size", "16px")
-    
-    db_template = get_template_from_db("broadcast")
-    meta = parse_template_meta(db_template.body_html) if db_template else {}
+
+    if meta:
+        primary_color = meta.get("primary_color", primary_color)
+        accent_color = meta.get("accent_color", accent_color)
+        attendee_pass_bg_color = meta.get("attendeePassBgColor", attendee_pass_bg_color)
+        engagement_details_color = meta.get("engagementDetailsColor", engagement_details_color)
+
     sections = meta.get("sections", {}) if meta else {}
     if isinstance(sections, str):
         try:
@@ -945,9 +959,6 @@ def send_broadcast_email(
     alert_font_size = alert_config.get("fontSize", "14px")
     alert_styles = get_font_weight_style_css(alert_config.get("fontStyleWeight"), "700", "normal")
 
-    if meta:
-        attendee_pass_bg_color = meta.get("attendeePassBgColor", attendee_pass_bg_color)
-        engagement_details_color = meta.get("engagementDetailsColor", engagement_details_color)
     logo_td_html = get_logo_html(config, meta, primary_color)
 
     show_banner_meta = meta.get("show_banner", "false") if meta else "false"
@@ -1010,18 +1021,13 @@ def send_broadcast_email(
         last_name = reg["last_name"]
         pin = reg["pin"]
 
-        # Determine meta settings
-        is_prebuilt_html = body.strip().startswith("<!DOCTYPE") or body.strip().startswith("<html") or "<!-- TEMPLATE_META" in body or body.strip().startswith("<div") or body.strip().startswith("<table")
         active_meta = meta
-        if is_prebuilt_html:
-            active_meta = parse_template_meta(body) or {}
 
         show_qr = active_meta.get("show_qr_code") != "false"
         show_pin = active_meta.get("show_pin") != "false"
         
         qr_img_snippet = ""
         if show_qr:
-            from urllib.parse import quote
             qr_url = f"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={quote(pin)}"
             qr_img_snippet = f'<img src="{qr_url}" width="200" height="200" alt="Registration QR Code" style="margin-bottom: 32px; border-radius: 20px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.15);" />'
             
