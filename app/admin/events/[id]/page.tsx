@@ -2296,7 +2296,10 @@ export default function EventDetailsPage() {
                       
                       const res = await fetch(`/api/py/events/${id}/broadcast`, {
                         method: "POST",
-                        headers: { "Content-Type": "application/json" },
+                        headers: { 
+                          "Content-Type": "application/json",
+                          "x-user-email": session?.user?.email || ""
+                        },
                         body: JSON.stringify({ 
                           subject: subjectPayload, 
                           body: bodyPayload, 
