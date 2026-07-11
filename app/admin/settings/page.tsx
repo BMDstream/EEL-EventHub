@@ -2705,21 +2705,48 @@ export default function SettingsPage() {
                               </div>
                             </div>
                             
-                            <div className="space-y-1.5 max-w-[280px]">
-                              <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
-                                Greeting Prefix
-                              </label>
-                              <select
-                                value={formValues.greeting_prefix || "Hello"}
-                                onChange={(e) => handleFormChange("greeting_prefix", e.target.value)}
-                                className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 focus:border-yellow-400 outline-none font-bold text-xs text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white"
-                              >
-                                <option value="Hello">Hello John,</option>
-                                <option value="Dear">Dear John,</option>
-                                <option value="Hi">Hi John,</option>
-                                <option value="None">None (No greeting line)</option>
-                              </select>
-                            </div>
+                            {(() => {
+                              const predefinedPrefixes = ["Hello", "Dear", "Hi", "None"];
+                              const currentPrefix = formValues.greeting_prefix || "Hello";
+                              const isCustomPrefix = !predefinedPrefixes.includes(currentPrefix);
+                              return (
+                                <div className="space-y-1.5 max-w-[380px]">
+                                  <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
+                                    Greeting Prefix
+                                  </label>
+                                  <div className="flex gap-2">
+                                    <select
+                                      value={isCustomPrefix ? "Custom" : currentPrefix}
+                                      onChange={(e) => {
+                                        const val = e.target.value;
+                                        if (val === "Custom") {
+                                          handleFormChange("greeting_prefix", "Custom prefix...");
+                                        } else {
+                                          handleFormChange("greeting_prefix", val);
+                                        }
+                                      }}
+                                      className="flex-1 px-4 py-3 rounded-xl bg-white border border-slate-200 focus:border-yellow-400 outline-none font-bold text-xs text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                                    >
+                                      <option value="Hello">Hello John,</option>
+                                      <option value="Dear">Dear John,</option>
+                                      <option value="Hi">Hi John,</option>
+                                      <option value="None">None (No greeting line)</option>
+                                      <option value="Custom">Custom...</option>
+                                    </select>
+                                    
+                                    {(isCustomPrefix || currentPrefix === "Custom prefix...") && (
+                                      <input
+                                        type="text"
+                                        value={currentPrefix === "Custom prefix..." ? "" : currentPrefix}
+                                        onChange={(e) => handleFormChange("greeting_prefix", e.target.value)}
+                                        placeholder="e.g. Greetings"
+                                        className="w-36 px-4 py-3 rounded-xl bg-white border border-slate-200 focus:border-yellow-400 outline-none font-bold text-xs text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                                      />
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })()}
 
                             <div className="space-y-2">
                               <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
