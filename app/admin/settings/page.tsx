@@ -529,6 +529,10 @@ const compileTemplateHtml = (key: string, values: Record<string, any> = {}, font
   const baseKey = resolveBaseTemplateKey(key);
   const metaComment = `<!-- TEMPLATE_META: ${JSON.stringify(values)} -->`;
   let html = "";
+  const greetingPrefix = values.greeting_prefix !== undefined ? values.greeting_prefix : "Hello";
+  const greetingHtml = greetingPrefix === "None" 
+    ? "" 
+    : `${greetingPrefix} <strong>{first_name}</strong>,<br><br>`;
   
   const sections = values.sections || {};
   const mainBodyFontFamily = sections.mainBodyMessage?.fontFamily || fontFamily;
@@ -620,8 +624,7 @@ const compileTemplateHtml = (key: string, values: Record<string, any> = {}, font
                 ${values.heading_title || ""} <span style="color: ${values.accent_color || ""};">${values.heading_subtitle || ""}</span>
             </h2>
             <p style="font-family: ${mainBodyFontFamily}; font-size: ${mainBodyFontSize}; ${mainBodyStyles} line-height: 1.7; margin-bottom: 40px; color: #475569;">
-                Hello <strong>{first_name}</strong>,<br><br>
-                ${(values.body_text || "").replace(/\n/g, "<br>")}
+                ${greetingHtml}${(values.body_text || "").replace(/\n/g, "<br>")}
             </p>
             ${values.show_details_card !== "false" ? "{details_html}" : ""}
             {qr_block_html}
@@ -667,8 +670,7 @@ const compileTemplateHtml = (key: string, values: Record<string, any> = {}, font
                 ${values.heading_title || ""} <span style="color: ${values.accent_color || ""};">${values.heading_subtitle || ""}</span>
             </h2>
             <p style="font-family: ${mainBodyFontFamily}; font-size: ${mainBodyFontSize}; ${mainBodyStyles} line-height: 1.7; margin-bottom: 40px; color: #475569;">
-                Hello <strong>{first_name}</strong>,<br><br>
-                ${(values.body_text || "").replace(/\n/g, "<br>")}
+                ${greetingHtml}${(values.body_text || "").replace(/\n/g, "<br>")}
             </p>
             <hr style="border: 0; border-top: 1px solid #f1f5f9; margin-bottom: 40px; margin-top: 40px;" />
             <table width="100%" border="0" cellspacing="0" cellpadding="0">
@@ -723,8 +725,7 @@ const compileTemplateHtml = (key: string, values: Record<string, any> = {}, font
             </div>
             
             <p style="font-family: ${mainBodyFontFamily}; font-size: ${mainBodyFontSize}; ${mainBodyStyles} line-height: 1.7; margin-bottom: 40px; color: #475569;">
-                Hello <strong>{first_name}</strong>,<br><br>
-                ${(values.body_text || "").replace(/\n/g, "<br>")}
+                ${greetingHtml}${(values.body_text || "").replace(/\n/g, "<br>")}
             </p>
             
             <div style="text-align: center; margin-top: 10px; margin-bottom: 40px;">
@@ -773,8 +774,7 @@ const compileTemplateHtml = (key: string, values: Record<string, any> = {}, font
               </tr>
             </table>
             <p style="font-family: ${mainBodyFontFamily}; font-size: ${mainBodyFontSize}; ${mainBodyStyles} line-height: 1.7; margin-bottom: 40px; color: #475569;">
-                Hello <strong>{first_name}</strong>,<br><br>
-                ${(values.body_text || "").replace(/\n/g, "<br>")}
+                ${greetingHtml}${(values.body_text || "").replace(/\n/g, "<br>")}
             </p>
             ${values.show_details_card !== "false" ? "{details_html}" : ""}
             <p style="font-size: 15px; font-weight: 800; color: ${values.primary_color || ""}; margin-top: 30px;">
@@ -2705,6 +2705,22 @@ export default function SettingsPage() {
                               </div>
                             </div>
                             
+                            <div className="space-y-1.5 max-w-[280px]">
+                              <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
+                                Greeting Prefix
+                              </label>
+                              <select
+                                value={formValues.greeting_prefix || "Hello"}
+                                onChange={(e) => handleFormChange("greeting_prefix", e.target.value)}
+                                className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 focus:border-yellow-400 outline-none font-bold text-xs text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                              >
+                                <option value="Hello">Hello John,</option>
+                                <option value="Dear">Dear John,</option>
+                                <option value="Hi">Hi John,</option>
+                                <option value="None">None (No greeting line)</option>
+                              </select>
+                            </div>
+
                             <div className="space-y-2">
                               <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
                                 Main Body Message
