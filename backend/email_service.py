@@ -100,6 +100,24 @@ def apply_template_meta_controls(html_content: str, meta: dict) -> str:
     # 4. Check if Action Button should be hidden
     if meta.get("show_button") == "false":
         html_content = html_content.replace("{button_block_html}", "")
+
+    # 5. Check if logo table should be hidden if show_logo is false (collapses spacer gap)
+    if meta.get("show_logo") == "false":
+        logo_table_pattern = r'<table[^>]*>\s*<tr>\s*<td[^>]*>\s*</td>\s*\{logo_html\}\s*</tr>\s*</table>'
+        html_content = re.sub(logo_table_pattern, '', html_content, flags=re.IGNORECASE | re.DOTALL)
+
+    # 6. Clean up invalid nested divs inside paragraph tags to avoid email client rendering issues
+    try:
+        html_content = re.sub(
+            r'<p([^>]*)>(.*?)</p>',
+            lambda m: f'<p{m.group(1)}>{re.sub(r"</?div[^>]*>", "<br>", m.group(2), flags=re.IGNORECASE)}</p>',
+            html_content,
+            flags=re.IGNORECASE | re.DOTALL
+        )
+        # Collapse multiple consecutive <br> tags introduced during cleanup
+        html_content = re.sub(r'(<br\s*/?>\s*){3,}', '<br><br>', html_content, flags=re.IGNORECASE)
+    except Exception as e:
+        print(f"Error sanitizing nested divs in template body: {e}")
         
     return html_content
 
