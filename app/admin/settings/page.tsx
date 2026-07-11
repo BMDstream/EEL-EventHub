@@ -1378,6 +1378,24 @@ export default function SettingsPage() {
       const placeholder = `{${key}}`;
       html = html.replaceAll(placeholder, value);
     });
+
+    // Collapse logo spacer table if badge and logo are both hidden
+    const showBadge = formValues.show_badge !== "false";
+    if (!showBadge && !showLogo) {
+      const emptyHeaderTablePattern = /<table[^>]*>\s*<tr>\s*<td[^>]*>\s*<\/td>\s*<\/tr>\s*<\/table>/gi;
+      html = html.replace(emptyHeaderTablePattern, '');
+    }
+
+    // Clean up nested divs inside paragraph tags to avoid rendering issues
+    try {
+      html = html.replace(/<p([^>]*)>([\s\S]*?)<\/p>/gi, (match, pAttrs, pContent) => {
+        const cleanedContent = pContent.replace(/<\/?div[^>]*>/gi, '<br>');
+        return `<p${pAttrs}>${cleanedContent}</p>`;
+      });
+      html = html.replace(/(<br\s*\/?>\s*){3,}/gi, '<br><br>');
+    } catch (e) {
+      console.error("Error sanitizing nested divs in preview HTML:", e);
+    }
     
     return html;
   };
