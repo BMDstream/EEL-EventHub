@@ -289,3 +289,24 @@ def run_db_initialization(session: Session, check_only_migrations: bool = False)
         print("Performance indexes verified.")
     except Exception as e:
         print(f"Performance indexes creation warning: {e}")
+
+    # Auto-correct capitalization for all existing attendee names in the database (Self-Healing casing sweep)
+    try:
+        from backend.models import Attendee
+        from backend.utils import clean_name_capitalization
+        attendees = session.query(Attendee).all()
+        count = 0
+        for attendee in attendees:
+            clean_first = clean_name_capitalization(attendee.first_name)
+            clean_last = clean_name_capitalization(attendee.last_name)
+            if clean_first != attendee.first_name or clean_last != attendee.last_name:
+                attendee.first_name = clean_first
+                attendee.last_name = clean_last
+                session.add(attendee)
+                count += 1
+        if count > 0:
+            session.commit()
+            print(f"INFO: Successfully capitalized {count} existing attendee names in database.")
+    except Exception as e:
+        session.rollback()
+        print(f"Attendee casing sweep warning: {e}")

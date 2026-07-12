@@ -81,6 +81,14 @@ class Attendee(SQLModel, table=True):
     
     registrations: List["Registration"] = Relationship(back_populates="attendee")
 
+    def __init__(self, **data):
+        from backend.utils import clean_name_capitalization
+        if "first_name" in data:
+            data["first_name"] = clean_name_capitalization(data["first_name"])
+        if "last_name" in data:
+            data["last_name"] = clean_name_capitalization(data["last_name"])
+        super().__init__(**data)
+
 class Registration(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     pin: Optional[str] = Field(default=None, index=True) # 4-digit numeric PIN

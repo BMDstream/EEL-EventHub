@@ -68,6 +68,29 @@ def hash_password(password: str) -> str:
     salt = bcrypt.gensalt()
     return bcrypt.hashpw(password.encode("utf-8"), salt).decode("utf-8")
 
+def clean_name_capitalization(name: str) -> str:
+    if not name:
+        return ""
+    
+    def clean_single_word(w: str) -> str:
+        if not w:
+            return ""
+        if w.isupper() or w.islower():
+            return w.capitalize()
+        return w
+
+    words = name.strip().split()
+    cleaned_words = []
+    for w in words:
+        if "-" in w:
+            parts = w.split("-")
+            cleaned_parts = [clean_single_word(p) for p in parts]
+            cleaned_words.append("-".join(cleaned_parts))
+        else:
+            cleaned_words.append(clean_single_word(w))
+            
+    return " ".join(cleaned_words)
+
 def verify_client_access(user: Optional[User], client_id: Optional[int], session: Session):
     if not user:
         raise HTTPException(status_code=401, detail="Authentication required")
