@@ -8,13 +8,19 @@ load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL")
 # Handle cases where the engine must be running serverless or locally
 IS_SERVERLESS = DATABASE_URL and "localhost" not in DATABASE_URL and "sqlite" not in DATABASE_URL
+is_sqlite = DATABASE_URL and DATABASE_URL.startswith("sqlite")
 
-engine = create_engine(
-    DATABASE_URL,
-    echo=False,
-    poolclass=NullPool if IS_SERVERLESS else None,
-    connect_args={"sslmode": "require"} if IS_SERVERLESS else {}
-)
+engine_args = {
+    "echo": False,
+    "connect_args": {"sslmode": "require"} if IS_SERVERLESS else {}
+}
+
+if not is_sqlite:
+    engine_args["pool_size"] = 5
+    engine_args["max_overflow"] = 10
+    engine_args["pool_recycle"] = 1800
+
+engine = create_engine(DATABASE_URL, **engine_args)
 
 def init_db():
     SQLModel.metadata.create_all(engine)
@@ -310,3 +316,70 @@ def run_db_initialization(session: Session, check_only_migrations: bool = False)
     except Exception as e:
         session.rollback()
         print(f"Attendee casing sweep warning: {e}")
+
+    # Auto-optimize and migrate existing base64 assets to Vercel Blob
+    try:
+        import base64
+        from backend.models import Client, SystemSetting
+        from backend.media_service import upload_media
+        from sqlalchemy.orm.attributes import flag_modified
+
+        def upload_base64_string(b64_str: str, name_hint: str) -> str:
+            if not b64_str or not b64_str.startswith("data:image/"):
+                return b64_str
+            try:
+                meta, data = b64_str.split(",", 1)
+                content_type = meta.split(";")[0].split(":")[1]
+                ext = content_type.split("/")[1]
+                file_bytes = base64.b64decode(data)
+                url = upload_media(file_bytes, f"{name_hint}.{ext}", content_type)
+                if url and url.startswith("http"):
+                    return url
+            except Exception as ex:
+                print(f"Failed to auto-upload base64 asset '{name_hint}': {ex}")
+            return b64_str
+
+        # 1. Clean up clients
+        clients = session.query(Client).all()
+        clients_updated = False
+        for client in clients:
+            if client.logo_url and client.logo_url.startswith("data:image/"):
+                url = upload_base64_string(client.logo_url, f"client_{client.id}_logo")
+                if url != client.logo_url:
+                    client.logo_url = url
+                    clients_updated = True
+            if client.banner_url and client.banner_url.startswith("data:image/"):
+                url = upload_base64_string(client.banner_url, f"client_{client.id}_banner")
+                if url != client.banner_url:
+                    client.banner_url = url
+                    clients_updated = True
+        if clients_updated:
+            session.commit()
+            print("INFO: Successfully optimized client base64 logo/banners into Vercel Blob.")
+
+        # 2. Clean up SystemSetting default settings
+        banner_setting = session.query(SystemSetting).filter(SystemSetting.key == "email_config").first()
+        if banner_setting and isinstance(banner_setting.value, dict):
+            config = banner_setting.value
+            banner_url = config.get("banner_url")
+            logo_url = config.get("logo_url")
+            updated_config = False
+            if banner_url and banner_url.startswith("data:image/"):
+                url = upload_base64_string(banner_url, "default_banner")
+                if url != banner_url:
+                    config["banner_url"] = url
+                    updated_config = True
+            if logo_url and logo_url.startswith("data:image/"):
+                url = upload_base64_string(logo_url, "default_logo")
+                if url != logo_url:
+                    config["logo_url"] = url
+                    updated_config = True
+            if updated_config:
+                banner_setting.value = config
+                flag_modified(banner_setting, "value")
+                session.add(banner_setting)
+                session.commit()
+                print("INFO: Successfully optimized system default base64 logo/banners into Vercel Blob.")
+    except Exception as e:
+        session.rollback()
+        print(f"Base64 auto-migration warning: {e}")

@@ -1651,6 +1651,32 @@ export default function SettingsPage() {
     setEditorMode(mode);
   };
 
+  const uploadImageFile = async (file: File, onUploadSuccess: (url: string) => void) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    try {
+      const res = await fetch("/api/py/media/upload", {
+        method: "POST",
+        headers: {
+          "x-user-email": session?.user?.email || ""
+        },
+        body: formData
+      });
+      if (!res.ok) {
+        throw new Error("Failed to upload image to media server");
+      }
+      const data = await res.json();
+      onUploadSuccess(data.url);
+    } catch (err: any) {
+      console.error("Image upload failed, falling back to base64 encoding", err);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        onUploadSuccess(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
 
   // ==========================================
   // GLOBAL SETTINGS HANDLERS
@@ -1659,11 +1685,9 @@ export default function SettingsPage() {
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setConfig(prev => ({ ...prev, logo_url: reader.result as string }));
-      };
-      reader.readAsDataURL(file);
+      uploadImageFile(file, (url) => {
+        setConfig(prev => ({ ...prev, logo_url: url }));
+      });
     }
   };
 
@@ -2318,11 +2342,9 @@ export default function SettingsPage() {
                                             e.stopPropagation();
                                             const file = e.dataTransfer.files?.[0];
                                             if (file) {
-                                              const reader = new FileReader();
-                                              reader.onloadend = () => {
-                                                handleFormChange("logo_image_url", reader.result as string);
-                                              };
-                                              reader.readAsDataURL(file);
+                                              uploadImageFile(file, (url) => {
+                                                handleFormChange("logo_image_url", url);
+                                              });
                                             }
                                           }}
                                           onClick={() => {
@@ -2332,11 +2354,9 @@ export default function SettingsPage() {
                                             input.onchange = (e) => {
                                               const file = (e.target as HTMLInputElement).files?.[0];
                                               if (file) {
-                                                const reader = new FileReader();
-                                                reader.onloadend = () => {
-                                                  handleFormChange("logo_image_url", reader.result as string);
-                                                };
-                                                reader.readAsDataURL(file);
+                                                uploadImageFile(file, (url) => {
+                                                  handleFormChange("logo_image_url", url);
+                                                });
                                               }
                                             };
                                             input.click();
@@ -2552,11 +2572,9 @@ export default function SettingsPage() {
                                         e.stopPropagation();
                                         const file = e.dataTransfer.files?.[0];
                                         if (file) {
-                                          const reader = new FileReader();
-                                          reader.onloadend = () => {
-                                            handleFormChange("banner_image_url", reader.result as string);
-                                          };
-                                          reader.readAsDataURL(file);
+                                          uploadImageFile(file, (url) => {
+                                            handleFormChange("banner_image_url", url);
+                                          });
                                         }
                                       }}
                                       onClick={() => {
@@ -2566,11 +2584,9 @@ export default function SettingsPage() {
                                         input.onchange = (e) => {
                                           const file = (e.target as HTMLInputElement).files?.[0];
                                           if (file) {
-                                            const reader = new FileReader();
-                                            reader.onloadend = () => {
-                                              handleFormChange("banner_image_url", reader.result as string);
-                                            };
-                                            reader.readAsDataURL(file);
+                                            uploadImageFile(file, (url) => {
+                                              handleFormChange("banner_image_url", url);
+                                            });
                                           }
                                         };
                                         input.click();
@@ -3408,11 +3424,9 @@ export default function SettingsPage() {
                           e.stopPropagation();
                           const file = e.dataTransfer.files?.[0];
                           if (file) {
-                            const reader = new FileReader();
-                            reader.onloadend = () => {
-                              setConfig({ ...config, banner_url: reader.result as string });
-                            };
-                            reader.readAsDataURL(file);
+                            uploadImageFile(file, (url) => {
+                              setConfig({ ...config, banner_url: url });
+                            });
                           }
                         }}
                         onClick={() => {
@@ -3422,11 +3436,9 @@ export default function SettingsPage() {
                           input.onchange = (e) => {
                             const file = (e.target as HTMLInputElement).files?.[0];
                             if (file) {
-                              const reader = new FileReader();
-                              reader.onloadend = () => {
-                                setConfig({ ...config, banner_url: reader.result as string });
-                              };
-                              reader.readAsDataURL(file);
+                              uploadImageFile(file, (url) => {
+                                setConfig({ ...config, banner_url: url });
+                              });
                             }
                           };
                           input.click();
