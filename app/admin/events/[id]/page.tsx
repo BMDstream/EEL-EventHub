@@ -200,6 +200,7 @@ export default function EventDetailsPage() {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
+          "x-user-email": session?.user?.email || ""
         },
         body: JSON.stringify(detailsEditedAnswers),
       });
