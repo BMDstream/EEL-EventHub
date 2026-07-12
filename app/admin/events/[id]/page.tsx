@@ -159,6 +159,8 @@ export default function EventDetailsPage() {
   const [checkedInReg, setCheckedInReg] = useState<any | null>(null);
   const [editedAnswers, setEditedAnswers] = useState<Record<string, any>>({});
   const [isSavingAnswers, setIsSavingAnswers] = useState(false);
+  const [detailsEditedAnswers, setDetailsEditedAnswers] = useState<Record<string, any>>({});
+  const [isSavingDetailsAnswers, setIsSavingDetailsAnswers] = useState(false);
 
   useEffect(() => {
     if (checkedInReg) {
@@ -168,9 +170,63 @@ export default function EventDetailsPage() {
     }
   }, [checkedInReg]);
 
+  useEffect(() => {
+    if (selectedReg) {
+      setDetailsEditedAnswers(selectedReg.custom_answers || {});
+    } else {
+      setDetailsEditedAnswers({});
+    }
+  }, [selectedReg]);
+
   const handleAnswerChange = (key: string, value: any) => {
     setEditedAnswers(prev => ({ ...prev, [key]: value }));
   };
+
+  const handleDetailsAnswerChange = (key: string, value: any) => {
+    setDetailsEditedAnswers(prev => ({ ...prev, [key]: value }));
+  };
+
+  const handleCancelDetailsEdit = () => {
+    if (selectedReg) {
+      setDetailsEditedAnswers(selectedReg.custom_answers || {});
+    }
+  };
+
+  const handleSaveDetailsAnswers = async () => {
+    if (!selectedReg) return;
+    setIsSavingDetailsAnswers(true);
+    try {
+      const res = await fetch(`/api/py/registrations/${selectedReg.id}/custom-answers`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(detailsEditedAnswers),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.detail || "Failed to save answers");
+      }
+
+      const data = await res.json();
+      
+      const updatedReg = {
+        ...selectedReg,
+        custom_answers: data.custom_answers
+      };
+      setSelectedReg(updatedReg);
+      setRegistrations(prev => prev.map(r => r.id === selectedReg.id ? updatedReg : r));
+    } catch (err: any) {
+      alert(err.message || "An error occurred while saving custom answers.");
+    } finally {
+      setIsSavingDetailsAnswers(false);
+    }
+  };
+
+  const isDetailsAnswersDirty = selectedReg 
+    ? JSON.stringify(detailsEditedAnswers) !== JSON.stringify(selectedReg.custom_answers || {})
+    : false;
 
   const [resendingRegId, setResendingRegId] = useState<string | null>(null);
   const [bulkResending, setBulkResending] = useState(false);
@@ -2702,40 +2758,92 @@ export default function EventDetailsPage() {
                          if (displayFields.length === 0) {
                            return <p className="text-slate-400 dark:text-slate-650 text-xs italic">No custom fields responses.</p>;
                          }
-
                          return displayFields.map(field => {
-                           const label = (field.label || field.title || "").replace(/<[^>]*>/g, "").trim();
-                           const val = getCustomAnswer(selectedReg.custom_answers, field);
-                           
-                           return (
-                             <div key={field.id} className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-800/80">
-                                <p className="text-[10px] font-black text-yellow-600 uppercase tracking-widest mb-2">{label}</p>
-                                <p className="font-bold text-[#0f172a] dark:text-white">{getAnswerString(val)}</p>
-                             </div>
-                           );
-                         });
+                            const label = (field.label || field.title || "").replace(/<[^>]*>/g, "").trim();
+                            
+                            let targetKey = field.id || field.key || "";
+                            if (selectedReg.custom_answers) {
+                              const fieldId = field.id;
+                              const fieldKey = field.key;
+                              const fieldLabel = (field.label || field.title || "").replace(/<[^>]*>/g, "").trim().toLowerCase();
+                              if (fieldId && selectedReg.custom_answers[fieldId] !== undefined) {
+                                targetKey = fieldId;
+                              } else if (fieldKey && selectedReg.custom_answers[fieldKey] !== undefined) {
+                                targetKey = fieldKey;
+                              } else {
+                                const cleanLabel = fieldLabel;
+                                const keys = Object.keys(selectedReg.custom_answers);
+                                for (const k of keys) {
+                                  if (k.toLowerCase().trim() === cleanLabel) {
+                                    targetKey = k;
+                                    break;
+                                  }
+                                }
+                              }
+                            }
+
+                            const val = getCustomAnswer(detailsEditedAnswers, field);
+                            const valStr = val === undefined || val === null ? "" : String(val);
+                            
+                            const handleChange = (newVal: string) => {
+                              handleDetailsAnswerChange(targetKey, newVal);
+                            };
+
+                            return (
+                              <div key={field.id} className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-800/80">
+                                 <p className="text-[10px] font-black text-yellow-600 uppercase tracking-widest mb-2">{label}</p>
+                                 <input 
+                                   type="text"
+                                   value={valStr}
+                                   onChange={(e) => handleChange(e.target.value)}
+                                   className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400 outline-none font-bold text-[#0f172a] dark:text-white text-sm"
+                                 />
+                              </div>
+                            );
+                          });
                        })()}
                     </div>
                  </div>
               </div>
               <div className="p-10 bg-slate-50 dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center">
-                 {hideResendButton ? <div /> : (
-                   <button 
-                     onClick={() => handleResendEmail(selectedReg.id)}
-                     disabled={resendingRegId === selectedReg.id}
-                     className="px-6 py-4 bg-yellow-400 hover:bg-yellow-500 disabled:bg-slate-200 dark:disabled:bg-slate-800 dark:disabled:text-slate-500 text-[#0f172a] text-[10px] font-black uppercase tracking-widest rounded-2xl transition-all flex items-center gap-2"
-                   >
-                      {resendingRegId === selectedReg.id ? <Loader2 size={14} className="animate-spin" /> : null}
-                      Resend Ticket Email
-                   </button>
-                 )}
-                 <button 
-                   onClick={() => setSelectedReg(null)}
-                   className="px-8 py-4 bg-[#0f172a] dark:bg-slate-850 text-white dark:text-slate-200 text-[10px] font-black uppercase tracking-widest rounded-2xl hover:bg-black dark:hover:bg-slate-700 transition-all shadow-xl shadow-slate-200 dark:shadow-none"
-                 >
-                    Close Review
-                 </button>
-              </div>
+                  {isDetailsAnswersDirty ? (
+                    <>
+                      <button 
+                        onClick={handleCancelDetailsEdit}
+                        className="px-8 py-4 bg-slate-200 hover:bg-slate-350 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-[10px] font-black uppercase tracking-widest rounded-2xl transition-all"
+                      >
+                        Cancel
+                      </button>
+                      <button 
+                        onClick={handleSaveDetailsAnswers}
+                        disabled={isSavingDetailsAnswers}
+                        className="px-8 py-4 bg-green-500 hover:bg-green-600 disabled:bg-slate-200 dark:disabled:bg-slate-800 text-white text-[10px] font-black uppercase tracking-widest rounded-2xl transition-all flex items-center gap-2 shadow-xl shadow-green-200 dark:shadow-none"
+                      >
+                        {isSavingDetailsAnswers ? <Loader2 size={14} className="animate-spin" /> : null}
+                        Save Answers
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      {hideResendButton ? <div /> : (
+                        <button 
+                          onClick={() => handleResendEmail(selectedReg.id)}
+                          disabled={resendingRegId === selectedReg.id}
+                          className="px-6 py-4 bg-yellow-400 hover:bg-yellow-500 disabled:bg-slate-200 dark:disabled:bg-slate-800 dark:disabled:text-slate-500 text-[#0f172a] text-[10px] font-black uppercase tracking-widest rounded-2xl transition-all flex items-center gap-2"
+                        >
+                           {resendingRegId === selectedReg.id ? <Loader2 size={14} className="animate-spin" /> : null}
+                           Resend Ticket Email
+                        </button>
+                      )}
+                      <button 
+                        onClick={() => setSelectedReg(null)}
+                        className="px-8 py-4 bg-[#0f172a] dark:bg-slate-850 text-white dark:text-slate-200 text-[10px] font-black uppercase tracking-widest rounded-2xl hover:bg-black dark:hover:bg-slate-700 transition-all shadow-xl shadow-slate-200 dark:shadow-none"
+                      >
+                         Close Review
+                      </button>
+                    </>
+                  )}
+               </div>
             </div>
           </div>
         )}
