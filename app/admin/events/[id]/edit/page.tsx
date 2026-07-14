@@ -11,6 +11,7 @@ import {
 import { useSession } from "next-auth/react";
 import AdminLayout from "@/components/AdminLayout";
 import RichTextEditor from "@/components/RichTextEditor";
+import { unescapeHtmlLinks } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
 // Helpers shared with settings page
@@ -365,7 +366,7 @@ const compileTemplatePreview = (
     .replaceAll("{pin}", "1234")
     .replaceAll("{clearance_id}", "1234");
 
-  return finalHtml;
+  return unescapeHtmlLinks(finalHtml);
 };
 
 const uploadImageFile = async (file: File): Promise<string> => {

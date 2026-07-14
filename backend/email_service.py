@@ -803,6 +803,7 @@ def send_confirmation_email(
         if db_template:
             variables = {
                 "first_name": first_name,
+                "last_name": getattr(db_attendee, "last_name", ""),
                 "event_title": event_title,
                 "to_email": to_email,
                 "pin": clearance_id,

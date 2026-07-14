@@ -40,6 +40,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useSession } from "next-auth/react";
 import RegistrationTemplateManager from "@/components/RegistrationTemplateManager";
 import RichTextEditor from "@/components/RichTextEditor";
+import { unescapeHtmlLinks } from "@/lib/utils";
 
 interface EmailTemplate {
   id?: number;
@@ -1417,7 +1418,7 @@ export default function SettingsPage() {
       console.error("Error sanitizing nested divs in preview HTML:", e);
     }
     
-    return html;
+    return unescapeHtmlLinks(html);
   };
 
   const handleCreateTemplate = async () => {

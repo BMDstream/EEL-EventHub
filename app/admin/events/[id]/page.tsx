@@ -34,6 +34,7 @@ import FormBuilder from "@/components/FormBuilder";
 import QRScanner from "@/components/QRScanner";
 import StaffAssignment from "@/components/StaffAssignment";
 import * as dbOffline from "@/lib/indexedDb";
+import { unescapeHtmlLinks } from "@/lib/utils";
 
 const getAnswerString = (ans: any): string => {
   if (ans === null || ans === undefined) return "—";
@@ -385,7 +386,7 @@ export default function EventDetailsPage() {
       compiled = compiled.replaceAll(`{${key}}`, val);
     });
 
-    return compiled;
+    return unescapeHtmlLinks(compiled);
   };
 
   // Initialize subjects when event changes
