@@ -420,10 +420,7 @@ def send_confirmation_email(
     elif config:
         t_key = config.get("confirmation_template_key", "registration_confirmed")
 
-    if t_key == "registration_confirmed":
-        db_template = None
-    else:
-        db_template = get_template_from_db(t_key)
+    db_template = get_template_from_db(t_key)
         
     meta = parse_template_meta(db_template.body_html) if db_template else {}
     sections = meta.get("sections", {}) if meta else {}
@@ -557,18 +554,11 @@ def send_confirmation_email(
                 heading_text = "Action Required."
                 body_text_raw = "Your partner has registered you for **{event_title}**. Please complete your ticket details to finalize your registration."
             else:
-                heading_text = "Registration Confirmed."
-                body_text_raw = (
-                    "Thank you. Your registration for the 2026 Maziv Group Invitational at Highland Gate is officially confirmed.<br>"
-                    "Below is your unique entry details and access pass.<br>"
-                    "Please keep this email handy (or save the QR code to your phone) for seamless check-in at the venue registration desk.<br><br>"
-                    "<strong>Next Steps</strong><br>"
-                    "A detailed itinerary, travel guidelines, and your check-in coordinates for the retreat houses will be shared with you closer to the date.<br>"
-                    "If you need to make any changes to your registration details or dietary requirements in the meantime, please contact us at <a href=\"mailto:events@maziv.com\" style=\"color: #7c1c91; text-decoration: underline;\">events@maziv.com</a>.<br><br>"
-                    "We look forward to hosting you for an unforgettable experience in Dullstroom.<br><br>"
-                    "Warm regards,<br>"
-                    "The Maziv Group"
-                )
+                heading_text = config.get("heading_text", "Registration Confirmed.") if config else "Registration Confirmed."
+                body_text_raw = config.get(
+                    "body_text",
+                    "Your registration for **{event_title}** has been confirmed. Below are your secure credentials for terminal verification."
+                ) if config else "Your registration for **{event_title}** has been confirmed. Below are your secure credentials for terminal verification."
         else:
             heading_text = config.get("decline_heading_text", "Response Recorded.")
             body_text_raw = config.get(
