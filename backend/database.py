@@ -12,7 +12,7 @@ is_sqlite = DATABASE_URL and DATABASE_URL.startswith("sqlite")
 
 engine_args = {
     "echo": False,
-    "connect_args": {"sslmode": "require"} if IS_SERVERLESS else {}
+    "connect_args": {"sslmode": "require", "connect_timeout": 20} if IS_SERVERLESS else {}
 }
 
 if not is_sqlite:
