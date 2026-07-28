@@ -27,6 +27,8 @@ import {
   Wifi,
   WifiOff,
   UserPlus,
+  ArrowUpAZ,
+  ArrowDownAZ,
   X
 } from "lucide-react";
 import AdminLayout from "@/components/AdminLayout";
@@ -242,6 +244,10 @@ export default function EventDetailsPage() {
   
   // Custom states for check-in filtering and walk-ins
   const [checkInFilter, setCheckInFilter] = useState<"all" | "checked_in" | "not_checked_in">("all");
+  const [sortBy, setSortBy] = useState<"registration_date" | "alphabetical">("registration_date");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const [companyFilter, setCompanyFilter] = useState<string>("all");
+  const [dateFilter, setDateFilter] = useState<string>("all");
   const [isWalkinOpen, setIsWalkinOpen] = useState(false);
   const [walkinFormData, setWalkinFormData] = useState({
     first_name: "",
@@ -1193,20 +1199,65 @@ export default function EventDetailsPage() {
   const confirmedCount = registrations.filter(r => r.status === "confirmed").length;
   const checkedInCount = registrations.filter(r => r.checked_in).length;
 
-  const filteredRegistrations = registrations.filter(reg => {
-    const search = searchTerm.toLowerCase();
-    const matchesSearch = (
-      reg.attendee.first_name.toLowerCase().includes(search) ||
-      reg.attendee.last_name.toLowerCase().includes(search) ||
-      reg.attendee.email.toLowerCase().includes(search) ||
-      (reg.attendee.company || "").toLowerCase().includes(search)
-    );
-    if (!matchesSearch) return false;
-    
-    if (checkInFilter === "checked_in") return reg.checked_in;
-    if (checkInFilter === "not_checked_in") return !reg.checked_in;
-    return true;
-  });
+  // Get unique companies for the company filter
+  const uniqueCompanies = Array.from(
+    new Set(
+      registrations
+        .map((r) => r.attendee?.company?.trim())
+        .filter(Boolean)
+    )
+  ).sort((a, b) => a.localeCompare(b));
+
+  // Get unique registration dates (formatted as YYYY-MM-DD) for the date filter
+  const uniqueDates = Array.from(
+    new Set(
+      registrations
+        .map((r) => r.created_at ? new Date(r.created_at).toISOString().split('T')[0] : "")
+        .filter(Boolean)
+    )
+  ).sort((a, b) => b.localeCompare(a));
+
+  const filteredRegistrations = registrations
+    .filter(reg => {
+      const search = searchTerm.toLowerCase();
+      const matchesSearch = (
+        (reg.attendee?.first_name || "").toLowerCase().includes(search) ||
+        (reg.attendee?.last_name || "").toLowerCase().includes(search) ||
+        (reg.attendee?.email || "").toLowerCase().includes(search) ||
+        (reg.attendee?.company || "").toLowerCase().includes(search)
+      );
+      if (!matchesSearch) return false;
+      
+      if (checkInFilter === "checked_in") return reg.checked_in;
+      if (checkInFilter === "not_checked_in") return !reg.checked_in;
+      return true;
+    })
+    .filter(reg => {
+      if (companyFilter !== "all" && reg.attendee?.company?.trim() !== companyFilter) {
+        return false;
+      }
+      return true;
+    })
+    .filter(reg => {
+      if (dateFilter !== "all") {
+        const regDate = reg.created_at ? new Date(reg.created_at).toISOString().split('T')[0] : "";
+        if (regDate !== dateFilter) {
+          return false;
+        }
+      }
+      return true;
+    })
+    .sort((a, b) => {
+      if (sortBy === "alphabetical") {
+        const nameA = `${a.attendee?.first_name || ""} ${a.attendee?.last_name || ""}`.trim().toLowerCase();
+        const nameB = `${b.attendee?.first_name || ""} ${b.attendee?.last_name || ""}`.trim().toLowerCase();
+        return sortOrder === "asc" ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
+      } else {
+        const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+        return sortOrder === "asc" ? dateA - dateB : dateB - dateA;
+      }
+    });
 
   if (loading) {
     return (
@@ -1568,51 +1619,115 @@ export default function EventDetailsPage() {
 
         {activeTab === "registrants" ? (
           <div className="space-y-6">
-            <div className="bg-white dark:bg-[#0d1527] rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-800/80 p-8 flex flex-col md:flex-row md:items-center justify-between gap-6">
-               <div className="relative flex-1 max-w-md">
-                  <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 dark:text-slate-500" size={20} />
-                  <input 
-                    type="text" 
-                    placeholder="Search by name, email or company..." 
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-16 pr-8 py-5 bg-slate-50 dark:bg-slate-800 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a] dark:text-white placeholder-slate-300 dark:placeholder-slate-600 transition-all"
-                  />
-               </div>
-               <div className="flex bg-slate-100/85 dark:bg-slate-900/50 p-1.5 rounded-2xl border border-slate-100 dark:border-slate-800/60 flex-wrap items-center gap-1">
-                 <button
-                   onClick={() => setCheckInFilter("all")}
-                   className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${checkInFilter === "all" ? "bg-[#0f172a] dark:bg-yellow-400 text-white dark:text-black shadow-sm" : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"}`}
-                 >
-                   All ({registrations.length})
-                 </button>
-                 <button
-                   onClick={() => setCheckInFilter("checked_in")}
-                   className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${checkInFilter === "checked_in" ? "bg-emerald-500 text-white shadow-sm" : "text-slate-400 dark:text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400"}`}
-                 >
-                   Checked In ({registrations.filter(r => r.checked_in).length})
-                 </button>
-                 <button
-                   onClick={() => setCheckInFilter("not_checked_in")}
-                   className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${checkInFilter === "not_checked_in" ? "bg-slate-900 dark:bg-slate-800 text-white shadow-sm" : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"}`}
-                 >
-                   Not Checked In ({registrations.filter(r => !r.checked_in).length})
-                 </button>
-               </div>
-               <div className="flex items-center gap-3">
-                   <button 
-                     onClick={fetchRegistrations}
-                     disabled={refreshing}
-                     className="px-5 py-4 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-2xl transition-all text-[#0f172a] dark:text-slate-300 disabled:text-slate-400 flex items-center justify-center border border-slate-100 dark:border-slate-700 hover:border-slate-200 dark:hover:border-slate-600"
-                     title="Refresh List"
-                   >
-                      <RefreshCw size={18} className={refreshing ? "animate-spin" : ""} />
-                   </button>
-                   <div className="flex items-center gap-4 px-6 py-4 bg-slate-50 dark:bg-[#121b2e] rounded-2xl">
-                      <span className="text-[10px] font-black text-slate-300 dark:text-slate-500 uppercase tracking-widest">Showing:</span>
-                      <span className="text-xs font-black text-[#0f172a] dark:text-slate-200">{filteredRegistrations.length} Registrants</span>
+            <div className="bg-white dark:bg-[#0d1527] rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-800/80 p-8 flex flex-col gap-6">
+              {/* Row 1: Search and Check-in Tabs */}
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                 <div className="relative flex-1 max-w-md">
+                    <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 dark:text-slate-500" size={20} />
+                    <input 
+                      type="text" 
+                      placeholder="Search by name, email or company..." 
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full pl-16 pr-8 py-5 bg-slate-50 dark:bg-slate-800 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a] dark:text-white placeholder-slate-300 dark:placeholder-slate-600 transition-all"
+                    />
+                 </div>
+                 <div className="flex flex-wrap items-center gap-4">
+                   <div className="flex bg-slate-100/85 dark:bg-slate-900/50 p-1.5 rounded-2xl border border-slate-100 dark:border-slate-800/60 flex-wrap items-center gap-1">
+                     <button
+                       onClick={() => setCheckInFilter("all")}
+                       className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${checkInFilter === "all" ? "bg-[#0f172a] dark:bg-yellow-400 text-white dark:text-black shadow-sm" : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"}`}
+                     >
+                       All ({registrations.length})
+                     </button>
+                     <button
+                       onClick={() => setCheckInFilter("checked_in")}
+                       className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${checkInFilter === "checked_in" ? "bg-emerald-500 text-white shadow-sm" : "text-slate-400 dark:text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400"}`}
+                     >
+                       Checked In ({registrations.filter(r => r.checked_in).length})
+                     </button>
+                     <button
+                       onClick={() => setCheckInFilter("not_checked_in")}
+                       className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${checkInFilter === "not_checked_in" ? "bg-slate-900 dark:bg-slate-800 text-white shadow-sm" : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"}`}
+                     >
+                       Not Checked In ({registrations.filter(r => !r.checked_in).length})
+                     </button>
                    </div>
-                </div>
+                   <div className="flex items-center gap-3">
+                      <button 
+                        onClick={fetchRegistrations}
+                        disabled={refreshing}
+                        className="px-5 py-4 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-2xl transition-all text-[#0f172a] dark:text-slate-300 disabled:text-slate-400 flex items-center justify-center border border-slate-100 dark:border-slate-700 hover:border-slate-200 dark:hover:border-slate-600"
+                        title="Refresh List"
+                      >
+                         <RefreshCw size={18} className={refreshing ? "animate-spin" : ""} />
+                      </button>
+                      <div className="flex items-center gap-4 px-6 py-4 bg-slate-50 dark:bg-[#121b2e] rounded-2xl">
+                         <span className="text-[10px] font-black text-slate-300 dark:text-slate-500 uppercase tracking-widest">Showing:</span>
+                         <span className="text-xs font-black text-[#0f172a] dark:text-slate-200">{filteredRegistrations.length} Registrants</span>
+                      </div>
+                   </div>
+                 </div>
+              </div>
+              
+              {/* Row 2: Advanced Filtering and Sorting */}
+              <div className="flex flex-col sm:flex-row sm:items-center gap-6 border-t border-slate-50 dark:border-slate-800/80 pt-6">
+                 {/* Company Filter Dropdown */}
+                 <div className="flex flex-col gap-1.5 flex-1 min-w-[200px]">
+                    <label className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">Filter by Company</label>
+                    <select
+                      value={companyFilter}
+                      onChange={(e) => setCompanyFilter(e.target.value)}
+                      className="w-full px-5 py-4 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 outline-none font-bold text-xs text-[#0f172a] dark:text-slate-200 cursor-pointer transition-all"
+                    >
+                      <option value="all">All Companies</option>
+                      {uniqueCompanies.map((c) => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
+                 </div>
+
+                 {/* Date Filter Dropdown */}
+                 <div className="flex flex-col gap-1.5 flex-1 min-w-[200px]">
+                    <label className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">Filter by Reg Date</label>
+                    <select
+                      value={dateFilter}
+                      onChange={(e) => setDateFilter(e.target.value)}
+                      className="w-full px-5 py-4 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 outline-none font-bold text-xs text-[#0f172a] dark:text-slate-200 cursor-pointer transition-all"
+                    >
+                      <option value="all">All Dates</option>
+                      {uniqueDates.map((d) => {
+                        const formattedDate = new Date(d).toLocaleDateString(undefined, { dateStyle: 'medium' });
+                        return <option key={d} value={d}>{formattedDate}</option>;
+                      })}
+                    </select>
+                 </div>
+
+                 {/* Sort By Dropdown */}
+                 <div className="flex flex-col gap-1.5 min-w-[180px]">
+                    <label className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">Sort by</label>
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value as any)}
+                      className="w-full px-5 py-4 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 outline-none font-bold text-xs text-[#0f172a] dark:text-slate-200 cursor-pointer transition-all"
+                    >
+                      <option value="registration_date">Registration Date</option>
+                      <option value="alphabetical">Alphabetical Order</option>
+                    </select>
+                 </div>
+
+                 {/* Sort Order Toggle Button */}
+                 <div className="flex flex-col gap-1.5">
+                    <label className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">Order</label>
+                    <button
+                      onClick={() => setSortOrder(prev => prev === "asc" ? "desc" : "asc")}
+                      className="px-5 py-3.5 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-all text-xs font-black uppercase tracking-wider text-[#0f172a] dark:text-slate-300 flex items-center justify-center gap-2 border border-slate-100 dark:border-slate-700 hover:border-slate-200 dark:hover:border-slate-600"
+                    >
+                      {sortOrder === "asc" ? <ArrowUpAZ size={16} /> : <ArrowDownAZ size={16} />}
+                      {sortOrder === "asc" ? "Asc" : "Desc"}
+                    </button>
+                 </div>
+              </div>
             </div>
 
             <div className="bg-white dark:bg-[#0d1527] rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-800/80 overflow-hidden">
