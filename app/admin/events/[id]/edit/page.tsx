@@ -480,6 +480,7 @@ export default function EditEventPage() {
     decline_template_id: null as number | null,
     registration_form_template_id: null as number | null,
     send_emails: true,
+    send_sms: false,
   });
 
   // ---------------------------------------------------------------------------
@@ -553,6 +554,7 @@ export default function EditEventPage() {
           decline_template_id: data.decline_template_id || null,
           registration_form_template_id: data.registration_form_template_id || null,
           send_emails: data.send_emails !== false,
+          send_sms: !!data.send_sms,
         });
         setOriginalBanner(data.banner_url || "");
         setOriginalLogo(data.logo_url || "");
@@ -1325,6 +1327,20 @@ export default function EditEventPage() {
                       type="checkbox" 
                       name="send_emails" 
                       checked={formData.send_emails} 
+                      onChange={handleChange}
+                      className="w-4 h-4 text-yellow-500 dark:text-yellow-400 bg-white dark:bg-slate-950/20 border-slate-300 dark:border-slate-700 rounded focus:ring-yellow-500 focus:ring-2 cursor-pointer"
+                    />
+                  </div>
+
+                  <div className="md:col-span-2 border-t border-slate-100 dark:border-white/5 pt-5 mt-2 flex items-center justify-between">
+                    <div>
+                      <h4 className="text-xs font-black text-[#1e293b] dark:text-white uppercase tracking-wider">Enable SMS Confirmations</h4>
+                      <p className="text-[10px] text-slate-400 dark:text-slate-550 font-medium mt-0.5">Toggle automatic ticket and confirmation SMS triggers for this event</p>
+                    </div>
+                    <input 
+                      type="checkbox" 
+                      name="send_sms" 
+                      checked={formData.send_sms} 
                       onChange={handleChange}
                       className="w-4 h-4 text-yellow-500 dark:text-yellow-400 bg-white dark:bg-slate-950/20 border-slate-300 dark:border-slate-700 rounded focus:ring-yellow-500 focus:ring-2 cursor-pointer"
                     />

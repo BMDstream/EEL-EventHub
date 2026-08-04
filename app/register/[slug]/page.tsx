@@ -572,6 +572,17 @@ function PublicRegistrationPageContent() {
     }
   }, [searchParams]);
 
+  // Support direct access pass viewing via URL parameters (e.g. ?pass=true&reg_id=ID&pin=PIN)
+  useEffect(() => {
+    const showPass = searchParams.get("pass") === "true";
+    const regId = searchParams.get("reg_id");
+    const pin = searchParams.get("pin");
+    if (showPass && regId) {
+      setRegisteredId(regId);
+      if (pin) setRegisteredPin(pin);
+    }
+  }, [searchParams]);
+
   // Prune any custom answers for fields that are hidden because of conditional branching
   useEffect(() => {
     const flatFields = getFlatFields();

@@ -13,7 +13,7 @@ from uuid import UUID
 from backend.database import get_session, engine
 from backend.models import Event, Attendee, Registration, User, Client
 from backend.email_service import send_confirmation_email, send_broadcast_email
-from backend.tasks import dispatch_send_confirmation_email, dispatch_send_broadcast_email
+from backend.tasks import dispatch_send_confirmation_email, dispatch_send_broadcast_email, dispatch_send_confirmation_sms
 from backend.encryption import encrypt_dict, decrypt_dict
 from backend.routers.webhooks import trigger_webhooks
 from backend.utils import (
@@ -219,7 +219,8 @@ def register_attendee(
                 email=email, 
                 first_name=first_name, 
                 last_name=last_name, 
-                company=company
+                company=company,
+                phone=data.get("phone", "").strip() if data.get("phone") else None
             )
             session.add(attendee)
             session.commit()
@@ -228,6 +229,8 @@ def register_attendee(
             print(f"Found exact match for {first_name} {last_name} ({email}) - updating profile.")
             message = "We've identified your existing profile. Your information has been synchronized." if is_attending else "Your registration has been submitted."
             attendee.company = company
+            if data.get("phone"):
+                attendee.phone = data.get("phone", "").strip()
             session.add(attendee)
             session.commit()
             session.refresh(attendee)
@@ -515,6 +518,17 @@ def register_attendee(
                 matchup=f"{first_name} {last_name} vs {partner_first} {partner_last}",
                 registration_id=str(registration.id)
             )
+            
+            if getattr(event, "send_sms", False) and attendee.phone:
+                dispatch_send_confirmation_sms(
+                    background_tasks=background_tasks,
+                    to_phone=attendee.phone,
+                    first_name=attendee.first_name,
+                    event_title=event.title,
+                    clearance_id=str(registration.id),
+                    pin=challenger_checkin.pin,
+                    event_slug=event.slug
+                )
 
             # 2. Send Partner confirmation email (with matchup details AND profile update link)
             dispatch_send_confirmation_email(
@@ -534,6 +548,17 @@ def register_attendee(
                 profile_update_link=partner_update_link,
                 registration_id=str(partner_reg.id)
             )
+            
+            if getattr(event, "send_sms", False) and partner_attendee.phone:
+                dispatch_send_confirmation_sms(
+                    background_tasks=background_tasks,
+                    to_phone=partner_attendee.phone,
+                    first_name=partner_attendee.first_name,
+                    event_title=event.title,
+                    clearance_id=str(partner_reg.id),
+                    pin=partner_checkin.pin,
+                    event_slug=event.slug
+                )
             
             print(f"Tournament co-registration and match creation complete for Challenger: {email} & Partner: {partner_email}")
             
@@ -561,6 +586,17 @@ def register_attendee(
                     is_attending=is_attending,
                     registration_id=str(registration.id)
                 )
+                
+                if getattr(event, "send_sms", False) and attendee.phone:
+                    dispatch_send_confirmation_sms(
+                        background_tasks=background_tasks,
+                        to_phone=attendee.phone,
+                        first_name=attendee.first_name,
+                        event_title=event.title,
+                        clearance_id=str(registration.id),
+                        pin=registration.pin,
+                        event_slug=event.slug
+                    )
         except Exception as e:
             print(f"Error dispatching confirmation email: {e}")
 

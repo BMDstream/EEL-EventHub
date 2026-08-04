@@ -31,5 +31,13 @@ def tasks_worker(payload: TaskPayload):
         except Exception as e:
             raise HTTPException(status_code=400, detail=f"Error executing task: {e}")
             
+    elif task_name == "send_confirmation_sms":
+        try:
+            from backend.sms_service import send_confirmation_sms
+            res = send_confirmation_sms(**args)
+            return {"status": "success", "task": task_name, "result": res}
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Error executing task: {e}")
+            
     else:
         raise HTTPException(status_code=400, detail=f"Unknown task: {task_name}")

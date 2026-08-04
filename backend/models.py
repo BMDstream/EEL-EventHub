@@ -58,6 +58,7 @@ class Event(SQLModel, table=True):
     
     registration_active: bool = Field(default=True)
     send_emails: bool = Field(default=True)
+    send_sms: bool = Field(default=False)
     registration_start: Optional[datetime] = Field(default=None)
     registration_end: Optional[datetime] = Field(default=None)
     disclaimer_enabled: bool = Field(default=False)
@@ -78,6 +79,7 @@ class Attendee(SQLModel, table=True):
     first_name: str
     last_name: str
     company: Optional[str] = None
+    phone: Optional[str] = None
     
     registrations: List["Registration"] = Relationship(back_populates="attendee")
 

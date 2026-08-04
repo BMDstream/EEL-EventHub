@@ -3,6 +3,7 @@ import httpx
 import time
 from fastapi import BackgroundTasks
 from backend.email_service import send_confirmation_email, send_broadcast_email
+from backend.sms_service import send_confirmation_sms
 
 # Read configuration from the environment
 QSTASH_TOKEN = os.getenv("QSTASH_TOKEN")
@@ -140,3 +141,42 @@ def dispatch_send_broadcast_email(
         background_tasks.add_task(execute_with_retries, send_broadcast_email, **args)
     else:
         execute_with_retries(send_broadcast_email, **args)
+
+def dispatch_send_confirmation_sms(
+    background_tasks: BackgroundTasks,
+    to_phone: str,
+    first_name: str,
+    event_title: str,
+    clearance_id: str,
+    pin: str = None,
+    event_slug: str = None
+):
+    """Abstraction layer to dispatch confirmation SMS tasks inline synchronously on serverless environments."""
+    args = {
+        "to_phone": to_phone,
+        "first_name": first_name,
+        "event_title": event_title,
+        "clearance_id": clearance_id,
+        "pin": pin,
+        "event_slug": event_slug
+    }
+    
+    if QSTASH_TOKEN and vercel_env != "preview":
+        url = f"https://qstash.upstash.io/v2/publish/{APP_BASE_URL}/api/py/tasks/worker"
+        headers = {
+            "Authorization": f"Bearer {QSTASH_TOKEN}",
+            "Content-Type": "application/json",
+            "Upstash-Retries": "3"
+        }
+        payload = {
+            "task": "send_confirmation_sms",
+            "args": args
+        }
+        _post_qstash_sync(url=url, headers=headers, payload=payload, task_name="send_confirmation_sms")
+        return
+ 
+    # Fallback: Use FastAPI BackgroundTasks so the SMS is sent AFTER the HTTP response
+    if background_tasks is not None:
+        background_tasks.add_task(execute_with_retries, send_confirmation_sms, **args)
+    else:
+        execute_with_retries(send_confirmation_sms, **args)

@@ -89,7 +89,8 @@ def run_migrations():
                 ("confirmation_template_id", "INTEGER"),
                 ("decline_template_key", "TEXT DEFAULT 'global'"),
                 ("decline_template_id", "INTEGER"),
-                ("registration_form_template_id", "INTEGER")
+                ("registration_form_template_id", "INTEGER"),
+                ("send_sms", f"BOOLEAN DEFAULT {bool_false}")
             ]:
                 if col_name not in event_columns:
                     try:
@@ -100,7 +101,7 @@ def run_migrations():
                         session.rollback()
                         print(f"Column '{col_name}' error: {e}")
 
-        # Client fields
+         # Client fields
         client_columns = [col['name'] for col in inspector.get_columns('client')] if inspector.has_table('client') else []
         if client_columns:
             for col_name, col_type in [
@@ -115,6 +116,17 @@ def run_migrations():
                     except Exception as e:
                         session.rollback()
                         print(f"Column '{col_name}' error: {e}")
+
+        # Attendee fields
+        attendee_columns = [col['name'] for col in inspector.get_columns('attendee')] if inspector.has_table('attendee') else []
+        if attendee_columns and 'phone' not in attendee_columns:
+            try:
+                session.execute(text('ALTER TABLE "attendee" ADD COLUMN phone TEXT'))
+                session.commit()
+                print("Column 'phone' added to attendee table.")
+            except Exception as e:
+                session.rollback()
+                print(f"Column 'phone' error: {e}")
 
         # Seed default settings
         default_email = session.exec(select(SystemSetting).where(SystemSetting.key == "email_config")).first()
