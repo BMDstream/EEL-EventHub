@@ -29,7 +29,9 @@ import {
   UserPlus,
   ArrowUpAZ,
   ArrowDownAZ,
-  X
+  X,
+  Printer,
+  Mail
 } from "lucide-react";
 import AdminLayout from "@/components/AdminLayout";
 import FormBuilder from "@/components/FormBuilder";
@@ -1509,6 +1511,43 @@ export default function EventDetailsPage() {
                   >
                     <Eye size={20} />
                     Share Client Link
+                  </button>
+                  <Link
+                    href={`/admin/events/${id}/badges`}
+                    className="flex items-center justify-center gap-3 bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-[#0f172a] dark:text-slate-200 px-8 py-5 rounded-2xl font-black transition-all border border-slate-200 dark:border-slate-700 uppercase tracking-widest text-xs text-center"
+                  >
+                    <Printer size={20} />
+                    Print Badges
+                  </Link>
+                  <button
+                    onClick={async () => {
+                      const confirmedCount = registrations.filter(r => r.status === "confirmed").length;
+                      if (confirmedCount === 0) {
+                        alert("No confirmed attendees to remind.");
+                        return;
+                      }
+                      if (confirm(`Are you sure you want to send pre-event reminder notifications to ${confirmedCount} confirmed attendee(s)?`)) {
+                        try {
+                          const res = await fetch(`/api/py/events/${id}/remind`, {
+                            method: "POST",
+                            headers: { "x-user-email": session?.user?.email || "" }
+                          });
+                          if (res.ok) {
+                            const data = await res.json();
+                            alert(data.message || "Reminders queued successfully!");
+                          } else {
+                            const err = await res.json();
+                            alert(`Failed to send reminders: ${err.detail || "Unknown error"}`);
+                          }
+                        } catch (err) {
+                          alert("An error occurred while sending reminders.");
+                        }
+                      }
+                    }}
+                    className="flex items-center justify-center gap-3 bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-[#0f172a] dark:text-slate-200 px-8 py-5 rounded-2xl font-black transition-all border border-slate-200 dark:border-slate-700 uppercase tracking-widest text-xs"
+                  >
+                    <Mail size={20} />
+                    Send Reminders
                   </button>
                   <Link
                     href={`/admin/events/${id}/edit`}
