@@ -1,6 +1,6 @@
 "use client";
 
-import { ShieldCheck, ArrowRight, Lock } from "lucide-react";
+import { ShieldCheck, ArrowRight, Lock, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { useState, Suspense } from "react";
@@ -11,6 +11,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleCredentialsLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -84,14 +85,23 @@ export default function LoginPage() {
             </div>
             <div>
               <label className="block text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-2 ml-1">Access Key (Password)</label>
-              <input 
-                type="password" 
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="w-full bg-zinc-800 border-2 border-zinc-600 rounded-xl px-5 py-4 text-sm text-white placeholder-zinc-400 focus:outline-none focus:border-[#25678e] focus:shadow-[0_0_0_3px_rgba(37,103,142,0.4)] transition-all font-medium"
-                placeholder="Enter password..."
-              />
+              <div className="relative">
+                <input 
+                  type={showPassword ? "text" : "password"} 
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="w-full bg-zinc-800 border-2 border-zinc-600 rounded-xl pl-5 pr-12 py-4 text-sm text-white placeholder-zinc-400 focus:outline-none focus:border-[#25678e] focus:shadow-[0_0_0_3px_rgba(37,103,142,0.4)] transition-all font-medium"
+                  placeholder="Enter password..."
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white transition-colors"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
             </div>
 
             {error && (
