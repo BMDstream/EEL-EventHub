@@ -1391,6 +1391,78 @@ def bulk_checkin(
         "errors": errors
     }
 
+class UpdateRegistrationPayload(BaseModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    email: Optional[str] = None
+    company: Optional[str] = None
+    pin: Optional[str] = None
+    status: Optional[str] = None
+
+@router.put("/registrations/{registration_id}")
+def update_registration(
+    registration_id: str,
+    payload: UpdateRegistrationPayload,
+    session: Session = Depends(get_session),
+    current_user: Optional[User] = Depends(get_current_user_from_request)
+):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    try:
+        val = UUID(registration_id)
+        registration = session.get(Registration, val)
+    except ValueError:
+        registration = None
+        
+    if not registration:
+        raise HTTPException(status_code=404, detail="Registration not found")
+        
+    # Update attendee details if provided
+    attendee = registration.attendee
+    if attendee:
+        if payload.first_name is not None:
+            attendee.first_name = payload.first_name.strip()
+        if payload.last_name is not None:
+            attendee.last_name = payload.last_name.strip()
+        if payload.email is not None:
+            attendee.email = payload.email.strip().lower()
+        if payload.company is not None:
+            attendee.company = payload.company.strip()
+        session.add(attendee)
+        
+    # Update registration details
+    if payload.pin is not None:
+        registration.pin = payload.pin.strip()
+    if payload.status is not None:
+        registration.status = payload.status.strip()
+        
+    session.add(registration)
+    session.commit()
+    session.refresh(registration)
+    
+    log_audit(
+        current_user.email,
+        "update_registration",
+        f"Updated registration details for {registration.attendee.first_name} {registration.attendee.last_name}",
+        registration.event_id
+    )
+    
+    return {
+        "ok": True,
+        "registration": {
+            "id": str(registration.id),
+            "status": registration.status,
+            "pin": registration.pin,
+            "attendee": {
+                "id": registration.attendee.id,
+                "first_name": registration.attendee.first_name,
+                "last_name": registration.attendee.last_name,
+                "email": registration.attendee.email,
+                "company": registration.attendee.company
+            }
+        }
+    }
+
 @router.put("/registrations/{registration_id}/custom-answers")
 def update_registration_custom_answers(
     registration_id: str,

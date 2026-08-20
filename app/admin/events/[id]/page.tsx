@@ -166,6 +166,12 @@ export default function EventDetailsPage() {
   const [isSavingAnswers, setIsSavingAnswers] = useState(false);
   const [detailsEditedAnswers, setDetailsEditedAnswers] = useState<Record<string, any>>({});
   const [isSavingDetailsAnswers, setIsSavingDetailsAnswers] = useState(false);
+  const [editedFirstName, setEditedFirstName] = useState("");
+  const [editedLastName, setEditedLastName] = useState("");
+  const [editedEmail, setEditedEmail] = useState("");
+  const [editedCompany, setEditedCompany] = useState("");
+  const [editedPin, setEditedPin] = useState("");
+  const [editedStatus, setEditedStatus] = useState("");
 
   useEffect(() => {
     if (checkedInReg) {
@@ -178,8 +184,20 @@ export default function EventDetailsPage() {
   useEffect(() => {
     if (selectedReg) {
       setDetailsEditedAnswers(selectedReg.custom_answers || {});
+      setEditedFirstName(selectedReg.attendee?.first_name || "");
+      setEditedLastName(selectedReg.attendee?.last_name || "");
+      setEditedEmail(selectedReg.attendee?.email || "");
+      setEditedCompany(selectedReg.attendee?.company || "");
+      setEditedPin(selectedReg.pin || "");
+      setEditedStatus(selectedReg.status || "confirmed");
     } else {
       setDetailsEditedAnswers({});
+      setEditedFirstName("");
+      setEditedLastName("");
+      setEditedEmail("");
+      setEditedCompany("");
+      setEditedPin("");
+      setEditedStatus("confirmed");
     }
   }, [selectedReg]);
 
@@ -194,6 +212,12 @@ export default function EventDetailsPage() {
   const handleCancelDetailsEdit = () => {
     if (selectedReg) {
       setDetailsEditedAnswers(selectedReg.custom_answers || {});
+      setEditedFirstName(selectedReg.attendee?.first_name || "");
+      setEditedLastName(selectedReg.attendee?.last_name || "");
+      setEditedEmail(selectedReg.attendee?.email || "");
+      setEditedCompany(selectedReg.attendee?.company || "");
+      setEditedPin(selectedReg.pin || "");
+      setEditedStatus(selectedReg.status || "confirmed");
     }
   };
 
@@ -201,7 +225,32 @@ export default function EventDetailsPage() {
     if (!selectedReg) return;
     setIsSavingDetailsAnswers(true);
     try {
-      const res = await fetch(`/api/py/registrations/${selectedReg.id}/custom-answers`, {
+      // 1. Save general registration/attendee details
+      const detailsRes = await fetch(`/api/py/registrations/${selectedReg.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-email": session?.user?.email || ""
+        },
+        body: JSON.stringify({
+          first_name: editedFirstName,
+          last_name: editedLastName,
+          email: editedEmail,
+          company: editedCompany,
+          pin: editedPin,
+          status: editedStatus
+        }),
+      });
+
+      if (!detailsRes.ok) {
+        const errorData = await detailsRes.json();
+        throw new Error(errorData.detail || "Failed to save registration details");
+      }
+
+      const detailsData = await detailsRes.json();
+
+      // 2. Save custom answers
+      const answersRes = await fetch(`/api/py/registrations/${selectedReg.id}/custom-answers`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -210,28 +259,43 @@ export default function EventDetailsPage() {
         body: JSON.stringify(detailsEditedAnswers),
       });
 
-      if (!res.ok) {
-        const errorData = await res.json();
+      if (!answersRes.ok) {
+        const errorData = await answersRes.json();
         throw new Error(errorData.detail || "Failed to save answers");
       }
 
-      const data = await res.json();
+      const answersData = await answersRes.json();
       
       const updatedReg = {
         ...selectedReg,
-        custom_answers: data.custom_answers
+        status: detailsData.registration.status,
+        pin: detailsData.registration.pin,
+        attendee: {
+          ...selectedReg.attendee,
+          first_name: detailsData.registration.attendee.first_name,
+          last_name: detailsData.registration.attendee.last_name,
+          email: detailsData.registration.attendee.email,
+          company: detailsData.registration.attendee.company
+        },
+        custom_answers: answersData.custom_answers
       };
       setSelectedReg(updatedReg);
       setRegistrations(prev => prev.map(r => r.id === selectedReg.id ? updatedReg : r));
     } catch (err: any) {
-      alert(err.message || "An error occurred while saving custom answers.");
+      alert(err.message || "An error occurred while saving details.");
     } finally {
       setIsSavingDetailsAnswers(false);
     }
   };
 
   const isDetailsAnswersDirty = selectedReg 
-    ? JSON.stringify(detailsEditedAnswers) !== JSON.stringify(selectedReg.custom_answers || {})
+    ? JSON.stringify(detailsEditedAnswers) !== JSON.stringify(selectedReg.custom_answers || {}) ||
+      editedFirstName !== (selectedReg.attendee?.first_name || "") ||
+      editedLastName !== (selectedReg.attendee?.last_name || "") ||
+      editedEmail !== (selectedReg.attendee?.email || "") ||
+      editedCompany !== (selectedReg.attendee?.company || "") ||
+      editedPin !== (selectedReg.pin || "") ||
+      editedStatus !== (selectedReg.status || "confirmed")
     : false;
 
   const [resendingRegId, setResendingRegId] = useState<string | null>(null);
@@ -784,6 +848,9 @@ export default function EventDetailsPage() {
     try {
       const res = await fetch(`/api/py/registrations/${regId}/resend-email`, {
         method: "POST",
+        headers: {
+          "x-user-email": session?.user?.email || ""
+        }
       });
       if (res.ok) {
         alert("Confirmation email containing PIN and QR code has been resent!");
@@ -813,6 +880,9 @@ export default function EventDetailsPage() {
     try {
       const res = await fetch(`/api/py/events/${event.id}/resend-all-tickets`, {
         method: "POST",
+        headers: {
+          "x-user-email": session?.user?.email || ""
+        }
       });
       if (res.ok) {
         alert("Bulk ticket dispatch started successfully in the background.");
@@ -2869,28 +2939,69 @@ export default function EventDetailsPage() {
                 </button>
               </div>
               <div className="p-10 max-h-[60vh] overflow-y-auto space-y-8">
-                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-                    <div>
-                       <p className="text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-widest mb-1">Status</p>
-                       <p className="font-bold text-[#0f172a] dark:text-white capitalize">{selectedReg.status}</p>
-                    </div>
-                    <div>
-                       <p className="text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-widest mb-1">Company</p>
-                       <p className="font-bold text-[#0f172a] dark:text-white">{selectedReg.attendee?.company || "—"}</p>
-                    </div>
-                    <div>
-                       <p className="text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-widest mb-1">Email Address</p>
-                       <p className="font-bold text-[#0f172a] dark:text-white">{selectedReg.attendee?.email || ""}</p>
-                    </div>
-                    <div>
-                       <p className="text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-widest mb-1">Registered On</p>
-                       <p className="font-bold text-[#0f172a] dark:text-white">{selectedReg.created_at ? new Date(selectedReg.created_at).toLocaleString() : "—"}</p>
-                    </div>
-                    <div>
-                       <p className="text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-widest mb-1">Clearance ID (PIN)</p>
-                       <p className="font-mono font-bold text-[#0f172a] dark:text-white bg-slate-50 dark:bg-slate-800 px-3 py-1 rounded border border-slate-100 dark:border-slate-700 inline-block text-lg tracking-wider">{selectedReg.pin || "—"}</p>
-                    </div>
-                 </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+                     <div>
+                        <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">First Name</p>
+                        <input 
+                          type="text"
+                          value={editedFirstName}
+                          onChange={(e) => setEditedFirstName(e.target.value)}
+                          className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400 outline-none font-bold text-[#0f172a] dark:text-white text-sm"
+                        />
+                     </div>
+                     <div>
+                        <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">Last Name</p>
+                        <input 
+                          type="text"
+                          value={editedLastName}
+                          onChange={(e) => setEditedLastName(e.target.value)}
+                          className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400 outline-none font-bold text-[#0f172a] dark:text-white text-sm"
+                        />
+                     </div>
+                     <div>
+                        <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">Email Address</p>
+                        <input 
+                          type="email"
+                          value={editedEmail}
+                          onChange={(e) => setEditedEmail(e.target.value)}
+                          className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400 outline-none font-bold text-[#0f172a] dark:text-white text-sm"
+                        />
+                     </div>
+                     <div>
+                        <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">Company</p>
+                        <input 
+                          type="text"
+                          value={editedCompany}
+                          onChange={(e) => setEditedCompany(e.target.value)}
+                          className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400 outline-none font-bold text-[#0f172a] dark:text-white text-sm"
+                        />
+                     </div>
+                     <div>
+                        <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">Clearance ID (PIN)</p>
+                        <input 
+                          type="text"
+                          value={editedPin}
+                          onChange={(e) => setEditedPin(e.target.value)}
+                          className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-850 rounded-xl border border-slate-200 dark:border-slate-700 focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400 outline-none font-mono font-bold text-[#0f172a] dark:text-white text-sm tracking-wider"
+                        />
+                     </div>
+                     <div>
+                        <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">Status</p>
+                        <select 
+                          value={editedStatus}
+                          onChange={(e) => setEditedStatus(e.target.value)}
+                          className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400 outline-none font-bold text-[#0f172a] dark:text-white text-sm capitalize"
+                        >
+                          <option value="confirmed">confirmed</option>
+                          <option value="waitlisted">waitlisted</option>
+                          <option value="cancelled">cancelled</option>
+                        </select>
+                     </div>
+                     <div>
+                        <p className="text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-widest mb-1">Registered On</p>
+                        <p className="font-bold text-slate-400 dark:text-slate-500 text-sm mt-2">{selectedReg.created_at ? new Date(selectedReg.created_at).toLocaleString() : "—"}</p>
+                     </div>
+                  </div>
 
                  <div className="pt-8 border-t border-slate-50 dark:border-slate-800/80">
                     <h4 className="text-[10px] font-black text-slate-300 dark:text-slate-500 uppercase tracking-[0.2em] mb-6">Custom Field Responses</h4>
@@ -2976,7 +3087,7 @@ export default function EventDetailsPage() {
                         className="px-8 py-4 bg-green-500 hover:bg-green-600 disabled:bg-slate-200 dark:disabled:bg-slate-800 text-white text-[10px] font-black uppercase tracking-widest rounded-2xl transition-all flex items-center gap-2 shadow-xl shadow-green-200 dark:shadow-none"
                       >
                         {isSavingDetailsAnswers ? <Loader2 size={14} className="animate-spin" /> : null}
-                        Save Answers
+                        Save Details
                       </button>
                     </>
                   ) : (
