@@ -26,6 +26,7 @@ def tasks_worker(payload: TaskPayload):
             
     elif task_name == "send_broadcast_email":
         try:
+            print(f"[WORKER_LOG] send_broadcast_email: template_key={args.get('template_key')}, subject={args.get('subject')}, body_len={len(args.get('body', ''))}")
             res = send_broadcast_email(**args)
             return {"status": "success", "task": task_name, "result": res}
         except Exception as e:

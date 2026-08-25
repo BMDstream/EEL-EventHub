@@ -916,10 +916,14 @@ def send_broadcast_email(
         db_template_from_key = get_template_from_db(template_key)
         if db_template_from_key:
             body = db_template_from_key.body_html
+            print(f"[SERVICE_LOG] send_broadcast_email: loaded template_key={template_key}, template_found=True, body_len={len(body)}")
             # Use template's default subject if none is provided or if it is just a fallback subject
             if not subject or subject == f"Update for {event_title}" or subject == f"Reminder: {event_title}":
                 if db_template_from_key.subject:
                     subject = db_template_from_key.subject
+                    print(f"[SERVICE_LOG] send_broadcast_email: updated subject to template default='{subject}'")
+        else:
+            print(f"[SERVICE_LOG] send_broadcast_email: template_key={template_key} NOT found in DB!")
 
     if not resend.api_key or MOCK_EMAIL_SERVICE:
         print(f"MOCK BROADCAST to {len(registrations_data)} users: {subject}")

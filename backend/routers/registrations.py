@@ -1231,6 +1231,8 @@ def broadcast_to_attendees(
     signature = data.get("signature", "")
     attachments = data.get("attachments", [])
     target = data.get("target", "confirmed") # confirmed, checked_in
+    
+    print(f"[API_LOG] BROADCAST: event_id={event_id}, template_key={template_key}, subject={subject}, body_len={len(body)}")
     survey_url = data.get("survey_url", "")
     
     query = (
