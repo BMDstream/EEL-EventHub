@@ -564,7 +564,19 @@ def test_send_template(
             success = res is not None
             details = f"Banner email send result: {res}"
         else:
-            raise HTTPException(status_code=400, detail="Unknown template key")
+            # Fallback for reminder_main, reminder_invitation, and any custom templates
+            res = send_broadcast_email(
+                registrations_data=[{"email": test_email, "first_name": "John", "last_name": "Doe", "pin": "123456"}],
+                subject=template.subject or "Test Broadcast Subject",
+                body="",
+                event_title="Padels Tournament 2026",
+                signature="Event Logistics Admin Team",
+                event_details={"start_date": "2026-06-25T10:00:00Z", "location": "Arena Center"},
+                config=config,
+                template_key=key
+            )
+            success = res is True
+            details = f"Template '{key}' broadcast test send result: {res}"
             
         return {"status": "success", "success": success, "details": details}
     except Exception as e:
