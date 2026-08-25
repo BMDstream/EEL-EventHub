@@ -16,7 +16,9 @@ vercel_url = os.getenv("VERCEL_URL", "")
 if vercel_env == "preview" and vercel_url:
     APP_BASE_URL = f"https://{vercel_url}"
 elif not APP_BASE_URL:
-    if vercel_url:
+    if vercel_env == "production":
+        APP_BASE_URL = "https://eel-event-hub-q61e.vercel.app"
+    elif vercel_url:
         APP_BASE_URL = f"https://{vercel_url}"
     else:
         APP_BASE_URL = "http://localhost:8000"
@@ -93,12 +95,11 @@ def dispatch_send_confirmation_email(
         return
  
     # Fallback: Use FastAPI BackgroundTasks so the email is sent AFTER the HTTP response
-    # is returned to the client. This prevents the Vercel serverless function from timing out
-    # while waiting for the Resend API call to complete inline.
-    if background_tasks is not None:
+    # is returned to the client. In Vercel preview environments, BackgroundTasks are frozen
+    # immediately, so we execute inline/synchronously on preview to guarantee delivery.
+    if background_tasks is not None and vercel_env != "preview":
         background_tasks.add_task(execute_with_retries, send_confirmation_email, **args)
     else:
-        # Last resort: synchronous call (e.g. in test/local contexts without background tasks)
         execute_with_retries(send_confirmation_email, **args)
 
 def dispatch_send_broadcast_email(
@@ -151,8 +152,9 @@ def dispatch_send_broadcast_email(
         return
 
     # Fallback: Use FastAPI BackgroundTasks so the email is sent AFTER the HTTP response
-    # is returned to the client, preventing Vercel serverless timeout.
-    if background_tasks is not None:
+    # is returned to the client. In Vercel preview environments, BackgroundTasks are frozen
+    # immediately, so we execute inline/synchronously on preview to guarantee delivery.
+    if background_tasks is not None and vercel_env != "preview":
         background_tasks.add_task(execute_with_retries, send_broadcast_email, **args)
     else:
         execute_with_retries(send_broadcast_email, **args)
@@ -191,7 +193,9 @@ def dispatch_send_confirmation_sms(
         return
  
     # Fallback: Use FastAPI BackgroundTasks so the SMS is sent AFTER the HTTP response
-    if background_tasks is not None:
+    # is returned to the client. In Vercel preview environments, BackgroundTasks are frozen
+    # immediately, so we execute inline/synchronously on preview to guarantee delivery.
+    if background_tasks is not None and vercel_env != "preview":
         background_tasks.add_task(execute_with_retries, send_confirmation_sms, **args)
     else:
         execute_with_retries(send_confirmation_sms, **args)
