@@ -906,10 +906,21 @@ def send_broadcast_email(
     config: Dict[str, Any] = None,
     attachments: List[Dict[str, Any]] = None,
     event_details: Dict[str, Any] = None,
-    survey_url: str = None
+    survey_url: str = None,
+    template_key: str = None
 ):
     """Sends a personalized broadcast email to multiple attendees with premium styling and optional attachments."""
     event_title = ' '.join(w.capitalize() for w in re.sub(r'<[^>]*>', '', event_title).split())
+    
+    if template_key:
+        db_template_from_key = get_template_from_db(template_key)
+        if db_template_from_key:
+            body = db_template_from_key.body_html
+            # Use template's default subject if none is provided or if it is just a fallback subject
+            if not subject or subject == f"Update for {event_title}" or subject == f"Reminder: {event_title}":
+                if db_template_from_key.subject:
+                    subject = db_template_from_key.subject
+
     if not resend.api_key or MOCK_EMAIL_SERVICE:
         print(f"MOCK BROADCAST to {len(registrations_data)} users: {subject}")
         for reg in registrations_data:

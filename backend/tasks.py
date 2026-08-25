@@ -106,7 +106,8 @@ def dispatch_send_broadcast_email(
     config: dict = None,
     attachments: list = None,
     event_details: dict = None,
-    survey_url: str = None
+    survey_url: str = None,
+    template_key: str = None
 ):
     """Abstraction layer to dispatch broadcast email tasks inline synchronously on serverless environments."""
     args = {
@@ -118,10 +119,14 @@ def dispatch_send_broadcast_email(
         "config": config,
         "attachments": attachments,
         "event_details": event_details,
-        "survey_url": survey_url
+        "survey_url": survey_url,
+        "template_key": template_key
     }
     
     if QSTASH_TOKEN and vercel_env != "preview":
+        if template_key:
+            # Clear body to save QStash payload size (limit is 1MB)
+            args["body"] = ""
         url = f"https://qstash.upstash.io/v2/publish/{APP_BASE_URL}/api/py/tasks/worker"
         headers = {
             "Authorization": f"Bearer {QSTASH_TOKEN}",

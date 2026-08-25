@@ -2571,7 +2571,7 @@ export default function EventDetailsPage() {
                       if (selectedBroadcastKey) {
                         const tmpl = emailTemplates.find(t => t.key === selectedBroadcastKey);
                         if (tmpl) {
-                          bodyPayload = tmpl.body_html || "";
+                          bodyPayload = ""; // Clear body to prevent 1MB payload size limits
                           subjectPayload = tmpl.subject || `Update for ${event.title}`;
                         }
                       }
@@ -2585,6 +2585,7 @@ export default function EventDetailsPage() {
                         body: JSON.stringify({ 
                           subject: subjectPayload, 
                           body: bodyPayload, 
+                          template_key: selectedBroadcastKey || undefined,
                           signature: selectedBroadcastKey ? "" : broadcastSignature, 
                           attachments 
                         })

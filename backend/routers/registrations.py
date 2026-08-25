@@ -1227,6 +1227,7 @@ def broadcast_to_attendees(
     
     subject = data.get("subject", f"Reminder: {event.title}")
     body = data.get("body", "")
+    template_key = data.get("template_key")
     signature = data.get("signature", "")
     attachments = data.get("attachments", [])
     target = data.get("target", "confirmed") # confirmed, checked_in
@@ -1270,7 +1271,8 @@ def broadcast_to_attendees(
         config=config,
         attachments=attachments,
         event_details=event_details,
-        survey_url=survey_url
+        survey_url=survey_url,
+        template_key=template_key
     )
     
     return {"ok": True, "sent": len(registrations_data), "message": "Broadcast queued in background"}
