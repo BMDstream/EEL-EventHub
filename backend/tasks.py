@@ -60,6 +60,11 @@ def dispatch_send_confirmation_email(
     registration_id: str = None
 ):
     """Abstraction layer to dispatch confirmation email tasks inline synchronously on serverless environments."""
+    if event_details and "start_date" in event_details:
+        sd = event_details["start_date"]
+        if hasattr(sd, "isoformat"):
+            event_details = {**event_details, "start_date": sd.isoformat()}
+
     args = {
         "to_email": to_email,
         "first_name": first_name,
@@ -110,6 +115,11 @@ def dispatch_send_broadcast_email(
     template_key: str = None
 ):
     """Abstraction layer to dispatch broadcast email tasks inline synchronously on serverless environments."""
+    if event_details and "start_date" in event_details:
+        sd = event_details["start_date"]
+        if hasattr(sd, "isoformat"):
+            event_details = {**event_details, "start_date": sd.isoformat()}
+
     args = {
         "registrations_data": registrations_data,
         "subject": subject,
