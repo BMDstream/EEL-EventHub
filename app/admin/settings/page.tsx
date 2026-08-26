@@ -412,6 +412,28 @@ const resolveBaseTemplateKey = (key: string, templates: EmailTemplate[] = []): s
   const bodyHtml = tpl?.body_html || "";
   const name = tpl?.name || "";
   
+  // Check the key / name strings first
+  const lowerStr = (key + " " + name).toLowerCase();
+  if (lowerStr.includes("confirmed") || lowerStr.includes("confirm") || lowerStr.includes("attendee")) {
+    return "registration_confirmed";
+  }
+  if (lowerStr.includes("declined") || lowerStr.includes("decline")) {
+    return "registration_declined";
+  }
+  if (lowerStr.includes("partner") || lowerStr.includes("pending")) {
+    return "partner_pending";
+  }
+  if (lowerStr.includes("broadcast") || lowerStr.includes("reminder") || lowerStr.includes("survey") || lowerStr.includes("update") || lowerStr.includes("announcement")) {
+    return "broadcast";
+  }
+  if (lowerStr.includes("matchup") || lowerStr.includes("tournament") || lowerStr.includes("match")) {
+    return "tournament_matchup";
+  }
+  if (lowerStr.includes("banner") || lowerStr.includes("invite") || lowerStr.includes("golf") || lowerStr.includes("sports")) {
+    return "banner_email";
+  }
+  
+  // Check content strings as fallback
   if (bodyHtml) {
     if (bodyHtml.includes("Attendee Pass") || bodyHtml.includes("qr_block_html") || bodyHtml.includes("warning_block_html")) {
       return "registration_confirmed";
@@ -431,27 +453,6 @@ const resolveBaseTemplateKey = (key: string, templates: EmailTemplate[] = []): s
     if (bodyHtml.includes("itinerary_title") || bodyHtml.includes("included_title") || bodyHtml.includes("included_body") || bodyHtml.includes("banner_email")) {
       return "banner_email";
     }
-  }
-  
-  // Check the key / name strings
-  const lowerStr = (key + " " + name).toLowerCase();
-  if (lowerStr.includes("confirmed") || lowerStr.includes("confirm") || lowerStr.includes("attendee")) {
-    return "registration_confirmed";
-  }
-  if (lowerStr.includes("declined") || lowerStr.includes("decline")) {
-    return "registration_declined";
-  }
-  if (lowerStr.includes("partner") || lowerStr.includes("pending")) {
-    return "partner_pending";
-  }
-  if (lowerStr.includes("broadcast")) {
-    return "broadcast";
-  }
-  if (lowerStr.includes("matchup") || lowerStr.includes("tournament") || lowerStr.includes("match")) {
-    return "tournament_matchup";
-  }
-  if (lowerStr.includes("banner") || lowerStr.includes("invite") || lowerStr.includes("golf") || lowerStr.includes("sports")) {
-    return "banner_email";
   }
   
   return "registration_confirmed";

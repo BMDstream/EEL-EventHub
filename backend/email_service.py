@@ -930,7 +930,6 @@ def send_broadcast_email(
         for reg in registrations_data:
             print(f"  -> MOCK SEND to {reg['email']} | Hello {reg['first_name']} {reg['last_name']}! Pin is {reg['pin']}. Attachments: {len(attachments) if attachments else 0}")
         return True
-
     if not config:
         config = {
             "primary_color": "#0f172a",
@@ -939,13 +938,23 @@ def send_broadcast_email(
 
     db_template = get_template_from_db("broadcast")
     
-    is_prebuilt_html = body.strip().startswith("<!DOCTYPE") or body.strip().startswith("<html") or "<!-- TEMPLATE_META" in body or body.strip().startswith("<div") or body.strip().startswith("<table")
+    # Prebuilt HTML emails must have outer tags like <html>, <table, <div, or <!DOCTYPE.
+    # A raw text message that starts with a TEMPLATE_META comment is NOT prebuilt HTML;
+    # it should be wrapped in the default broadcast template envelope.
+    is_prebuilt_html = (
+        body.strip().startswith("<!DOCTYPE") or 
+        body.strip().startswith("<html") or 
+        body.strip().startswith("<div") or 
+        body.strip().startswith("<table") or 
+        "<html>" in body or 
+        "<table" in body
+    )
     
-    meta = {}
-    if is_prebuilt_html:
-        meta = parse_template_meta(body) or {}
-    elif db_template:
-        meta = parse_template_meta(db_template.body_html) if db_template else {}
+    # Try parsing metadata from the custom body first (even if it's not a prebuilt HTML wrapper,
+    # as custom bodies can define template meta overrides), and fall back to the broadcast base template meta.
+    meta = parse_template_meta(body) or {}
+    if not meta and db_template:
+        meta = parse_template_meta(db_template.body_html) or {}
 
     primary_color = config.get("primary_color", "#0f172a")
     accent_color = config.get("accent_color", "#94a3b8")
