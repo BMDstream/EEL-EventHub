@@ -14,6 +14,7 @@ import {
 import { motion } from "framer-motion";
 import { useSession } from "next-auth/react";
 import AdminLayout from "@/components/AdminLayout";
+import { cleanHtmlText } from "@/lib/utils";
 
 interface Event {
   id: number;
@@ -139,7 +140,7 @@ export default function FormsHubPage() {
                     <Sparkles size={24} />
                   </div>
                   <div>
-                    <h3 className="text-xl font-black text-[#0f172a] leading-tight">{(event.title || "").replace(/<[^>]*>/g, "")}</h3>
+                    <h3 className="text-xl font-black text-[#0f172a] leading-tight">{cleanHtmlText(event.title || "")}</h3>
                     <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">
                       {new Date(event.start_date).toLocaleDateString()}
                     </p>

@@ -38,10 +38,13 @@ import FormBuilder from "@/components/FormBuilder";
 import QRScanner from "@/components/QRScanner";
 import StaffAssignment from "@/components/StaffAssignment";
 import * as dbOffline from "@/lib/indexedDb";
-import { unescapeHtmlLinks } from "@/lib/utils";
+import { unescapeHtmlLinks, cleanHtmlText } from "@/lib/utils";
 
 const getAnswerString = (ans: any): string => {
   if (ans === null || ans === undefined) return "—";
+  if (Array.isArray(ans)) {
+    return ans.join(", ");
+  }
   if (typeof ans === "object") {
     if (ans.first_name || ans.last_name || ans.email) {
       return `${ans.first_name || ""} ${ans.last_name || ""} (${ans.email || ""})`.trim();
@@ -432,7 +435,7 @@ export default function EventDetailsPage() {
     const vars: Record<string, string> = {
       first_name: "John",
       last_name: "Doe",
-      event_title: event?.title?.replace(/<[^>]*>/g, "") || "Golf Invitational 2026",
+      event_title: cleanHtmlText(event?.title) || "Golf Invitational 2026",
       location: event?.location || "Highland Gate Golf Estate",
       start_date: event?.start_date ? new Date(event.start_date).toLocaleDateString() : "TBA",
       primary_color: brandPrimary,
@@ -464,7 +467,7 @@ export default function EventDetailsPage() {
   // Initialize subjects when event changes
   useEffect(() => {
     if (event?.title) {
-      const cleanTitle = event.title.replace(/<[^>]*>/g, "").trim();
+      const cleanTitle = cleanHtmlText(event.title);
       setBroadcastSubject(`Update for ${cleanTitle}`);
       setSurveySubject(`Thank you for attending ${cleanTitle} - Feedback Survey`);
     }
@@ -1417,7 +1420,7 @@ export default function EventDetailsPage() {
                 <h1 
                   className={`text-3xl sm:text-4xl md:text-5xl font-black text-[#0f172a] dark:text-white tracking-tighter italic font-bricolage leading-[1.1] ${(userRole === "admin" || userRole === "manager") ? "mb-6" : "mb-10"}`}
                 >
-                  {(event.title || "").replace(/<[^>]*>/g, "")}
+                  {cleanHtmlText(event.title || "")}
                 </h1>
                 {(userRole === "admin" || userRole === "manager") && (
                   <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mb-10 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-800/80 group min-w-0">
@@ -2691,7 +2694,7 @@ export default function EventDetailsPage() {
                             name="subject" 
                             value={broadcastSubject}
                             onChange={(e) => setBroadcastSubject(e.target.value)}
-                            placeholder={`Update for ${(event.title || "").replace(/<[^>]*>/g, "")}`} 
+                            placeholder={`Update for ${cleanHtmlText(event.title || "")}`} 
                             className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a]" 
                           />
                        </div>
@@ -3043,7 +3046,7 @@ export default function EventDetailsPage() {
                                 const keys = Object.keys(selectedReg.custom_answers);
                                 for (const k of keys) {
                                   if (k.toLowerCase().trim() === cleanLabel) {
-                                    targetKey = k;
+                                  targetKey = k;
                                     break;
                                   }
                                 }
@@ -3051,10 +3054,14 @@ export default function EventDetailsPage() {
                             }
 
                             const val = getCustomAnswer(detailsEditedAnswers, field);
-                            const valStr = val === undefined || val === null ? "" : String(val);
+                            const valStr = val === undefined || val === null ? "" : (Array.isArray(val) ? val.join(", ") : String(val));
                             
                             const handleChange = (newVal: string) => {
-                              handleDetailsAnswerChange(targetKey, newVal);
+                              let valueToSave: any = newVal;
+                              if (field.type === "multiselect" && typeof newVal === "string") {
+                                valueToSave = newVal.split(",").map((s: string) => s.trim()).filter(Boolean);
+                              }
+                              handleDetailsAnswerChange(targetKey, valueToSave);
                             };
 
                             return (
@@ -3135,6 +3142,16 @@ export default function EventDetailsPage() {
               <form 
                 onSubmit={async (e) => {
                   e.preventDefault();
+                  // Validate required multiselect custom fields
+                  for (const field of customFields) {
+                    if (field.required && field.type === "multiselect") {
+                      const val = walkinFormData.custom_answers[field.key || field.id];
+                      if (!val || !Array.isArray(val) || val.length === 0) {
+                        alert(`Please select at least one option for "${field.label.replace(/<[^>]*>/g, "")}".`);
+                        return;
+                      }
+                    }
+                  }
                   setIsSubmittingWalkin(true);
                   try {
                     const res = await fetch(`/api/py/events/${event.id}/registrations/walk-in`, {
@@ -3233,22 +3250,51 @@ export default function EventDetailsPage() {
                           <label className="text-[9px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
                             {label} {field.required && "*"}
                           </label>
-                          {field.type === "select" && field.options && field.options.length > 0 ? (
-                            <select
-                              required={field.required}
-                              value={val}
-                              onChange={(e) => setWalkinFormData(prev => ({
-                                ...prev,
-                                custom_answers: { ...prev.custom_answers, [fieldKey]: e.target.value }
-                              }))}
-                              className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-yellow-400 focus:bg-white dark:focus:bg-slate-900 outline-none transition-all cursor-pointer"
-                            >
-                              <option value="">Select option...</option>
-                              {field.options.map((opt: string) => (
-                                <option key={opt} value={opt}>{opt}</option>
-                              ))}
-                            </select>
-                          ) : field.type === "checkbox" ? (
+                           {field.type === "select" && field.options && field.options.length > 0 ? (
+                             <select
+                               required={field.required}
+                               value={val}
+                               onChange={(e) => setWalkinFormData(prev => ({
+                                 ...prev,
+                                 custom_answers: { ...prev.custom_answers, [fieldKey]: e.target.value }
+                               }))}
+                               className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-yellow-400 focus:bg-white dark:focus:bg-slate-900 outline-none transition-all cursor-pointer"
+                             >
+                               <option value="">Select option...</option>
+                               {field.options.map((opt: string) => (
+                                 <option key={opt} value={opt}>{opt}</option>
+                               ))}
+                             </select>
+                           ) : field.type === "multiselect" && field.options && field.options.length > 0 ? (
+                             <div className="space-y-1.5 pt-1.5">
+                               {field.options.map((opt: string) => {
+                                 const currentArray = Array.isArray(val) ? val : [];
+                                 const isChecked = currentArray.includes(opt);
+                                 return (
+                                   <label key={opt} className="flex items-center gap-2 cursor-pointer select-none text-xs font-bold text-slate-700 dark:text-slate-350">
+                                     <input
+                                       type="checkbox"
+                                       checked={isChecked}
+                                       onChange={(e) => {
+                                         let nextVal: string[];
+                                         if (e.target.checked) {
+                                           nextVal = [...currentArray, opt];
+                                         } else {
+                                           nextVal = currentArray.filter((item: string) => item !== opt);
+                                         }
+                                         setWalkinFormData(prev => ({
+                                           ...prev,
+                                           custom_answers: { ...prev.custom_answers, [fieldKey]: nextVal }
+                                         }));
+                                       }}
+                                       className="w-4 h-4 rounded text-[#0f172a] border-slate-300 focus:ring-yellow-400 dark:bg-slate-800 dark:border-slate-700"
+                                     />
+                                     {opt}
+                                   </label>
+                                 );
+                               })}
+                             </div>
+                           ) : field.type === "checkbox" ? (
                             <label className="flex items-center gap-2 cursor-pointer select-none text-xs font-bold text-slate-700 dark:text-slate-350">
                               <input
                                 type="checkbox"

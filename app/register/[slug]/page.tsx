@@ -490,6 +490,34 @@ function PublicRegistrationPageContent() {
             </label>
           )}
 
+          {field.type === "multiselect" && (
+            <div className="space-y-3 pt-1">
+              {field.options?.map((opt: string) => {
+                const currentArray = Array.isArray(value) ? value : [];
+                const isChecked = currentArray.includes(opt);
+                return (
+                  <label key={opt} className={`${style.checkbox || "flex items-center cursor-pointer select-none text-sm font-bold text-white mb-2"} ${event?.registration_form_template?.theme_config?.force_text_visibility ? "text-black" : ""} flex items-center`}>
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={(e) => {
+                        let nextVal: string[];
+                        if (e.target.checked) {
+                          nextVal = [...currentArray, opt];
+                        } else {
+                          nextVal = currentArray.filter((item: string) => item !== opt);
+                        }
+                        handleFieldChange(nextVal);
+                      }}
+                      className={style.checkboxInput || "w-6 h-6 rounded-lg bg-zinc-900 border-white/10 client-checkbox transition-all"}
+                    />
+                    <span className="select-none font-bold ml-3">{opt}</span>
+                  </label>
+                );
+              })}
+            </div>
+          )}
+
           {field.type === "partner_card" && (
             <div className={`p-8 rounded-[2rem] border ${
               isLightTheme 
@@ -681,6 +709,13 @@ function PublicRegistrationPageContent() {
     if (isAttending && flatFields.length > 0) {
       for (const field of flatFields) {
         if (field.inactive) continue;
+        if (field.type === "multiselect") {
+          const val = customAnswers[field.key || field.id];
+          if (field.required && (!val || !Array.isArray(val) || val.length === 0)) {
+            setSubmitError(`Please select at least one option for "${field.label.replace(/<[^>]*>/g, "")}".`);
+            return;
+          }
+        }
         if (field.type === "partner_card") {
           if (isUpdateFlow) continue;
           const partnerData = customAnswers[field.id];

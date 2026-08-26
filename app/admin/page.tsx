@@ -22,6 +22,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { useSession } from "next-auth/react";
 import AdminLayout from "@/components/AdminLayout";
+import { cleanHtmlText } from "@/lib/utils";
 
 interface Event {
   id: number;
@@ -298,7 +299,7 @@ export default function AdminDashboard() {
                            <div className="w-7 h-7 rounded-lg border-2 border-white dark:border-slate-900 bg-slate-100 dark:bg-slate-800 text-[8px] flex items-center justify-center font-bold text-slate-600 dark:text-slate-300 shrink-0">+12</div>
                         </div>
                       </div>
-                      <h3 className="text-xl font-black text-[#0f172a] mb-4 group-hover:text-yellow-500 transition-colors dark:text-white">{(event.title || "").replace(/<[^>]*>/g, "")}</h3>
+                      <h3 className="text-xl font-black text-[#0f172a] mb-4 group-hover:text-yellow-500 transition-colors dark:text-white">{cleanHtmlText(event.title || "")}</h3>
                       <div className="space-y-3 mb-8">
                         <div className="flex items-center gap-3 text-slate-500 text-xs font-medium dark:text-slate-400">
                           <Calendar size={14} className="text-slate-400 dark:text-yellow-400/60" />

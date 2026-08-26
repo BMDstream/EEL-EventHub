@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { 
   Plus, Trash2, Type, List, CheckSquare, Save, Loader2, 
-  Sparkles, ArrowUp, ArrowDown, Users, Hash, FileText, ChevronDown
+  Sparkles, ArrowUp, ArrowDown, Users, Hash, FileText, ChevronDown, ListTodo
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSession } from "next-auth/react";
@@ -12,7 +12,7 @@ import RichTextEditor from "./RichTextEditor";
 interface FormField {
   id: string;
   label: string;
-  type: "text" | "select" | "checkbox" | "partner_card" | "numeric";
+  type: "text" | "select" | "checkbox" | "partner_card" | "numeric" | "multiselect";
   required: boolean;
   options?: string[]; // For select type
   dependsOn?: {
@@ -197,20 +197,20 @@ export default function FormBuilder({
   };
 
   // Field Management
-  const addField = (secId: string, type: "text" | "select" | "checkbox" | "partner_card" | "numeric") => {
+  const addField = (secId: string, type: "text" | "select" | "checkbox" | "partner_card" | "numeric" | "multiselect") => {
     const newField: FormField = {
       id: `field_${Date.now()}`,
       label: type === "partner_card" ? "Partner Details" : "New Question",
       type,
       required: type === "partner_card",
-      options: type === "select" ? ["Option 1", "Option 2"] : undefined
+      options: (type === "select" || type === "multiselect") ? ["Option 1", "Option 2"] : undefined
     };
     setSections(
       sections.map((s) => (s.id === secId ? { ...s, fields: [...s.fields, newField] } : s))
     );
   };
 
-  const addFieldToLastSection = (type: "text" | "select" | "checkbox" | "partner_card" | "numeric") => {
+  const addFieldToLastSection = (type: "text" | "select" | "checkbox" | "partner_card" | "numeric" | "multiselect") => {
     if (sections.length === 0) {
       const newSecId = `section_${Date.now()}`;
       const newField: FormField = {
@@ -218,7 +218,7 @@ export default function FormBuilder({
         label: type === "partner_card" ? "Partner Details" : "New Question",
         type,
         required: type === "partner_card",
-        options: type === "select" ? ["Option 1", "Option 2"] : undefined
+        options: (type === "select" || type === "multiselect") ? ["Option 1", "Option 2"] : undefined
       };
       setSections([
         {
@@ -284,7 +284,7 @@ export default function FormBuilder({
     for (const sec of sections) {
       for (const f of sec.fields) {
         if (f.id === currentFieldId) {
-          return allFields.filter((pf) => pf.type === "select" || pf.type === "checkbox");
+          return allFields.filter((pf) => pf.type === "select" || pf.type === "checkbox" || pf.type === "multiselect");
         }
         allFields.push(f);
       }
@@ -402,6 +402,7 @@ export default function FormBuilder({
              { type: "text" as const, label: "Short Answer", icon: Type },
              { type: "numeric" as const, label: "Phone / Numeric Input", icon: Hash },
              { type: "select" as const, label: "Dropdown Menu", icon: List },
+             { type: "multiselect" as const, label: "Multiple Selection", icon: ListTodo },
              { type: "checkbox" as const, label: "Toggle / Check", icon: CheckSquare },
              { type: "partner_card" as const, label: "Partner Card", icon: Users },
            ].map((tool) => (
@@ -515,7 +516,7 @@ export default function FormBuilder({
                                             const newType = e.target.value as any;
                                             updateField(section.id, field.id, { 
                                               type: newType,
-                                              options: newType === "select" ? (field.options || ["Option 1", "Option 2"]) : undefined
+                                              options: (newType === "select" || newType === "multiselect") ? (field.options || ["Option 1", "Option 2"]) : undefined
                                             });
                                           }}
                                           className="w-full px-4 py-3 bg-white rounded-xl border border-slate-150 font-bold text-[#0f172a] text-[10px] uppercase tracking-widest outline-none appearance-none cursor-pointer pr-10 focus:border-[#1e293b] focus:ring-2 focus:ring-[#1e293b]/5 dark:bg-slate-800 dark:border-slate-700 dark:text-white disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
@@ -524,6 +525,7 @@ export default function FormBuilder({
                                           <option value="numeric">Number Field</option>
                                           <option value="email">Email Field</option>
                                           <option value="select">Select Dropdown</option>
+                                          <option value="multiselect">Multiple Selection</option>
                                           <option value="checkbox">Checkbox</option>
                                           <option value="partner_card">Partner Card</option>
                                           <option value="section_header">Section Header</option>
@@ -583,9 +585,9 @@ export default function FormBuilder({
                                  </div>
 
                                  {/* Option lists for Dropdowns */}
-                                 {field.type === "select" && (
+                                 {(field.type === "select" || field.type === "multiselect") && (
                                    <div className="space-y-1.5 pt-2">
-                                     <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Dropdown Options (Comma separated)</label>
+                                     <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Question Options (Comma separated)</label>
                                      <input 
                                        type="text" 
                                        value={field.options?.join(", ")}
@@ -757,6 +759,7 @@ export default function FormBuilder({
                              { type: "text" as const, label: "Text" },
                              { type: "numeric" as const, label: "Numeric" },
                              { type: "select" as const, label: "Dropdown" },
+                             { type: "multiselect" as const, label: "Multi-Select" },
                              { type: "checkbox" as const, label: "Toggle" },
                              { type: "partner_card" as const, label: "Partner" },
                            ].map((item) => (

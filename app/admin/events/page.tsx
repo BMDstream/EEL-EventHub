@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useSession } from "next-auth/react";
 import AdminLayout from "@/components/AdminLayout";
 import useSWR from "swr";
+import { cleanHtmlText } from "@/lib/utils";
 
 const fetcher = (url: string, email: string): Promise<Event[]> =>
   fetch(url, { headers: { "x-user-email": email } }).then((res) => res.json());
@@ -114,7 +115,7 @@ export default function EventsListPage() {
                    <tr key={event.id} className="hover:bg-slate-50/50 transition-colors group dark:hover:bg-slate-800/50">
                       <td className="px-10 py-8">
                          <div>
-                            <p className="text-lg font-black text-[#0f172a] dark:text-white group-hover:text-yellow-500 transition-colors">{(event.title || "").replace(/<[^>]*>/g, "")}</p>
+                            <p className="text-lg font-black text-[#0f172a] dark:text-white group-hover:text-yellow-500 transition-colors">{cleanHtmlText(event.title || "")}</p>
                             <div className="flex items-center gap-2 mt-1">
                               <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest dark:text-slate-500">Slug: {event.slug}</span>
                               {event.client && (
@@ -168,7 +169,7 @@ export default function EventsListPage() {
                          {userRole !== "staff" && (
                            <button 
                              onClick={async () => {
-                               if (confirm(`Are you sure you want to duplicate the event "${(event.title || "").replace(/<[^>]*>/g, "")}"?`)) {
+                               if (confirm(`Are you sure you want to duplicate the event "${cleanHtmlText(event.title || "")}"?`)) {
                                  try {
                                    const res = await fetch(`/api/py/events/${event.id}/duplicate`, {
                                      method: "POST",

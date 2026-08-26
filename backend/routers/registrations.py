@@ -145,7 +145,7 @@ def register_attendee(
                             continue
 
                     if field.get("visible", True) and field.get("required"):
-                        if val is None or (isinstance(val, str) and not val.strip()):
+                        if val is None or (isinstance(val, str) and not val.strip()) or (isinstance(val, list) and not val):
                             if field.get("type") == "partner_card":
                                 if not isinstance(val, dict) or not val.get("first_name") or not val.get("last_name") or not val.get("email"):
                                     raise HTTPException(
@@ -751,10 +751,10 @@ def create_registrations_bulk(
                 .where(Registration.attendee_id == attendee.id)
             ).first()
             
-            # Clean empty answers from payload (treating None, "", or whitespace-only as empty)
+            # Clean empty answers from payload (treating None, "", whitespace-only, or empty list as empty)
             cleaned_custom_answers = {}
             for k, v in custom_answers.items():
-                is_empty = v is None or (isinstance(v, str) and not v.strip())
+                is_empty = v is None or (isinstance(v, str) and not v.strip()) or (isinstance(v, list) and not v)
                 if not is_empty:
                     cleaned_custom_answers[k] = v
             

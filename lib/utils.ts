@@ -28,3 +28,19 @@ export function unescapeHtmlLinks(htmlContent: string): string {
   res = res.replace(/&lt;br\s*\/?[^&]*&gt;/gi, "<br />");
   return res;
 }
+
+export function cleanHtmlText(html: string): string {
+  if (!html) return "";
+  let text = html.replace(/<[^>]*>/g, "");
+  // Decode common HTML entities (case-insensitive)
+  text = text
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#x27;/gi, "'")
+    .replace(/&#39;/gi, "'");
+  return text.trim();
+}
+
