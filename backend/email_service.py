@@ -128,6 +128,9 @@ _template_cache: dict = {}
 TEMPLATE_CACHE_TTL = 60 # seconds
 
 def get_template_from_db(key: str) -> Optional[EmailTemplate]:
+    if not key:
+        return None
+    key = key.lower()
     import time
     now = time.time()
     if key in _template_cache:
@@ -166,7 +169,7 @@ def invalidate_template_cache(key: str = None):
     """Call this after any template update so the next email uses fresh data."""
     global _template_cache
     if key:
-        _template_cache.pop(key, None)
+        _template_cache.pop(key.lower(), None)
     else:
         _template_cache.clear()
 
@@ -1225,7 +1228,10 @@ def send_broadcast_email(
             if "{qr_code}" in p_body:
                 p_body = p_body.replace("{qr_code}", qr_code_html)
 
-            signature_html = f'<div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #f1f5f9; font-style: italic; color: #64748b; font-size: 14px;">{signature.replace("\n", "<br>")}</div>' if signature else ""
+            p_body_html = p_body.replace("\n", "<br>")
+
+            sig_replaced = signature.replace("\n", "<br>") if signature else ""
+            signature_html = f'<div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #f1f5f9; font-style: italic; color: #64748b; font-size: 14px;">{sig_replaced}</div>' if signature else ""
 
             html_content = f"""
             <table width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; table-layout: fixed; margin: 0; padding: 0;">
@@ -1253,7 +1259,7 @@ def send_broadcast_email(
                             Update: <span style="color: {accent_color};">{event_title}</span>
                         </h2>
                         <div style="font-size: {font_size}; {main_body_styles} line-height: 1.8; color: #334155; margin-bottom: 40px;">
-                            {p_body.replace("\n", "<br>")}
+                            {p_body_html}
                         </div>
                         {signature_html}
                         <hr style="border: 0; border-top: 1px solid #f1f5f9; margin-bottom: 40px; margin-top: 40px;" />

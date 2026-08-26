@@ -316,6 +316,7 @@ def create_template(
     if not current_user or current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Only admins can create email templates")
     # Validate key uniqueness
+    payload.key = payload.key.lower()
     existing = session.exec(select(EmailTemplate).where(EmailTemplate.key == payload.key)).first()
     if existing:
         raise HTTPException(status_code=400, detail=f"A template with key '{payload.key}' already exists")
@@ -351,6 +352,7 @@ def delete_template(
 ):
     if not current_user or current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Only admins can delete email templates")
+    key = key.lower()
     if key in SYSTEM_TEMPLATE_KEYS:
         raise HTTPException(status_code=400, detail="System default templates cannot be deleted")
     template = session.exec(select(EmailTemplate).where(EmailTemplate.key == key)).first()
@@ -380,6 +382,7 @@ def get_template(
 ):
     if not current_user:
         raise HTTPException(status_code=403, detail="Only authenticated users can view email templates")
+    key = key.lower()
     template = session.exec(select(EmailTemplate).where(EmailTemplate.key == key)).first()
     if not template:
         # Self-healing: Check if this is a default template and seed it
@@ -412,6 +415,7 @@ def update_template(
 ):
     if not current_user or current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Only admins can edit email templates")
+    key = key.lower()
     template = session.exec(select(EmailTemplate).where(EmailTemplate.key == key)).first()
     if not template:
         raise HTTPException(status_code=404, detail="Email template not found")
@@ -435,6 +439,7 @@ def reset_template(
 ):
     if not current_user or current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Only admins can reset email templates")
+    key = key.lower()
     template = session.exec(select(EmailTemplate).where(EmailTemplate.key == key)).first()
     if not template:
         raise HTTPException(status_code=404, detail="Email template not found")
@@ -464,6 +469,7 @@ def test_send_template(
 ):
     if not current_user or current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Only admins can send test emails")
+    key = key.lower()
     
     # Verify template exists
     template = session.exec(select(EmailTemplate).where(EmailTemplate.key == key)).first()

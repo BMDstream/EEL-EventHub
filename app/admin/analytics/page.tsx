@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import AdminLayout from "@/components/AdminLayout";
+import { cleanHtmlText } from "@/lib/utils";
 import { 
   TrendingUp, 
   Users, 
@@ -390,7 +391,7 @@ export default function AnalyticsDashboard() {
                   return (
                     <div key={e.id} className="space-y-2">
                       <div className="flex justify-between items-center">
-                        <span className="text-xs font-black text-[#0f172a] dark:text-white truncate max-w-[240px] md:max-w-md">{e.title}</span>
+                        <span className="text-xs font-black text-[#0f172a] dark:text-white truncate max-w-[240px] md:max-w-md">{cleanHtmlText(e.title || "")}</span>
                         <div className="flex items-center gap-3 text-[10px] font-bold text-slate-400">
                           <span>{e.registrations} / {e.capacity} RSVPs</span>
                           <span className={`px-2 py-0.5 rounded-lg border text-[8px] font-black uppercase tracking-wider ${

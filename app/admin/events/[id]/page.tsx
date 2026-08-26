@@ -2575,7 +2575,7 @@ export default function EventDetailsPage() {
                         const tmpl = emailTemplates.find(t => t.key === selectedBroadcastKey);
                         if (tmpl) {
                           bodyPayload = ""; // Clear body to prevent 1MB payload size limits
-                          subjectPayload = tmpl.subject || `Update for ${event.title}`;
+                          subjectPayload = tmpl.subject || `Update for ${cleanHtmlText(event.title || "")}`;
                         }
                       }
                       

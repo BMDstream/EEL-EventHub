@@ -799,6 +799,7 @@ const compileTemplateHtml = (key: string, values: Record<string, any> = {}, font
                 ${greetingHtml}${(values.body_text || "").replace(/\n/g, "<br>")}
             </p>
             ${values.show_details_card !== "false" ? "{details_html}" : ""}
+            {qr_block_html}
             <p style="font-size: 15px; font-weight: 800; color: ${values.primary_color || ""}; margin-top: 30px;">
                 ${(values.signature || "").replace(/\n/g, "<br>")}
             </p>

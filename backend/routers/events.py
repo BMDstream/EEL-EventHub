@@ -100,7 +100,7 @@ def resolve_event_template_metas(event, session, event_dict):
     else:
         conf_tpl_key = getattr(event, "confirmation_template_key", None)
         if conf_tpl_key and conf_tpl_key != "global":
-            tpl = session.exec(select(EmailTemplate).where(EmailTemplate.key == conf_tpl_key)).first()
+            tpl = session.exec(select(EmailTemplate).where(EmailTemplate.key == conf_tpl_key.lower())).first()
             if tpl:
                 conf_tpl_meta = parse_template_meta(tpl.body_html)
                 
@@ -114,7 +114,7 @@ def resolve_event_template_metas(event, session, event_dict):
     else:
         decline_tpl_key = getattr(event, "decline_template_key", None)
         if decline_tpl_key and decline_tpl_key != "global":
-            tpl = session.exec(select(EmailTemplate).where(EmailTemplate.key == decline_tpl_key)).first()
+            tpl = session.exec(select(EmailTemplate).where(EmailTemplate.key == decline_tpl_key.lower())).first()
             if tpl:
                 decline_tpl_meta = parse_template_meta(tpl.body_html)
                 
