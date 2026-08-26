@@ -121,14 +121,22 @@ def apply_template_meta_controls(html_content: str, meta: dict) -> str:
         
     return html_content
 
-# Simple in-process template cache — only caches successfully fetched templates.
-# Unlike lru_cache, this will NOT cache None, so the self-healing seeder can
-# always retry on the next call if a template was missing on a cold start.
+# Simple in-process template cache with a 60-second Time-To-Live (TTL).
+# On serverless environments (like Vercel), warm containers hold memory indefinitely.
+# This TTL prevents containers from serving stale or corrupted templates after database updates.
 _template_cache: dict = {}
+TEMPLATE_CACHE_TTL = 60 # seconds
 
 def get_template_from_db(key: str) -> Optional[EmailTemplate]:
+    import time
+    now = time.time()
     if key in _template_cache:
-        return _template_cache[key]
+        cached_tpl, cached_time = _template_cache[key]
+        if now - cached_time < TEMPLATE_CACHE_TTL:
+            return cached_tpl
+        else:
+            _template_cache.pop(key, None)
+            
     try:
         with Session(engine) as session:
             template = session.exec(select(EmailTemplate).where(EmailTemplate.key == key)).first()
@@ -148,7 +156,7 @@ def get_template_from_db(key: str) -> Optional[EmailTemplate]:
                     session.refresh(template)
                     print(f"Auto-seeded missing template '{key}' during email dispatch.")
             if template:
-                _template_cache[key] = template
+                _template_cache[key] = (template, now)
             return template
     except Exception as e:
         print(f"Error fetching/seeding email template '{key}': {e}")
