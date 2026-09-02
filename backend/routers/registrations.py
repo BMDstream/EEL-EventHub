@@ -1402,6 +1402,7 @@ class UpdateRegistrationPayload(BaseModel):
     company: Optional[str] = None
     pin: Optional[str] = None
     status: Optional[str] = None
+    custom_answers: Optional[Dict[str, Any]] = None
 
 @router.put("/registrations/{registration_id}")
 def update_registration(
@@ -1439,15 +1440,25 @@ def update_registration(
         registration.pin = payload.pin.strip()
     if payload.status is not None:
         registration.status = payload.status.strip()
+
+    # Update custom answers if provided
+    if payload.custom_answers is not None:
+        existing_answers = decrypt_dict(registration.custom_answers) if registration.custom_answers else {}
+        existing_answers.update(payload.custom_answers)
+        registration.custom_answers = encrypt_dict(existing_answers)
+        from sqlalchemy.orm.attributes import flag_modified
+        flag_modified(registration, "custom_answers")
         
     session.add(registration)
     session.commit()
     session.refresh(registration)
     
+    first_name_str = registration.attendee.first_name if registration.attendee else ""
+    last_name_str = registration.attendee.last_name if registration.attendee else ""
     log_audit(
         current_user.email,
         "update_registration",
-        f"Updated registration details for {registration.attendee.first_name} {registration.attendee.last_name}",
+        f"Updated registration details for {first_name_str} {last_name_str}",
         registration.event_id
     )
     
@@ -1457,12 +1468,13 @@ def update_registration(
             "id": str(registration.id),
             "status": registration.status,
             "pin": registration.pin,
+            "custom_answers": decrypt_dict(registration.custom_answers),
             "attendee": {
-                "id": registration.attendee.id,
-                "first_name": registration.attendee.first_name,
-                "last_name": registration.attendee.last_name,
-                "email": registration.attendee.email,
-                "company": registration.attendee.company
+                "id": registration.attendee.id if registration.attendee else None,
+                "first_name": registration.attendee.first_name if registration.attendee else "",
+                "last_name": registration.attendee.last_name if registration.attendee else "",
+                "email": registration.attendee.email if registration.attendee else "",
+                "company": registration.attendee.company if registration.attendee else ""
             }
         }
     }
@@ -1485,9 +1497,9 @@ def update_registration_custom_answers(
     if not registration:
         raise HTTPException(status_code=404, detail="Registration not found")
         
-    custom_answers = registration.custom_answers or {}
-    custom_answers.update(payload)
-    registration.custom_answers = custom_answers
+    existing_answers = decrypt_dict(registration.custom_answers) if registration.custom_answers else {}
+    existing_answers.update(payload)
+    registration.custom_answers = encrypt_dict(existing_answers)
     
     from sqlalchemy.orm.attributes import flag_modified
     flag_modified(registration, "custom_answers")
@@ -1496,14 +1508,16 @@ def update_registration_custom_answers(
     session.commit()
     session.refresh(registration)
     
+    first_name_str = registration.attendee.first_name if registration.attendee else ""
+    last_name_str = registration.attendee.last_name if registration.attendee else ""
     log_audit(
         current_user.email,
         "update_answers",
-        f"Updated registration custom answers for {registration.attendee.first_name} {registration.attendee.last_name}",
+        f"Updated registration custom answers for {first_name_str} {last_name_str}",
         registration.event_id
     )
     
-    return {"ok": True, "custom_answers": registration.custom_answers}
+    return {"ok": True, "custom_answers": existing_answers}
 
 @router.post("/events/{event_id}/registrations/walk-in", response_model=Registration)
 def create_walkin_registration(

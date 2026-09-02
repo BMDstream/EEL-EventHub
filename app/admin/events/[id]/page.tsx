@@ -228,7 +228,7 @@ export default function EventDetailsPage() {
     if (!selectedReg) return;
     setIsSavingDetailsAnswers(true);
     try {
-      // 1. Save general registration/attendee details
+      // Save registration, attendee, and custom answers in a single atomic request
       const detailsRes = await fetch(`/api/py/registrations/${selectedReg.id}`, {
         method: "PUT",
         headers: {
@@ -241,33 +241,24 @@ export default function EventDetailsPage() {
           email: editedEmail,
           company: editedCompany,
           pin: editedPin,
-          status: editedStatus
+          status: editedStatus,
+          custom_answers: detailsEditedAnswers
         }),
       });
 
       if (!detailsRes.ok) {
-        const errorData = await detailsRes.json();
-        throw new Error(errorData.detail || "Failed to save registration details");
+        let errorMsg = "Failed to save registration details";
+        try {
+          const errorData = await detailsRes.json();
+          errorMsg = errorData.detail || errorMsg;
+        } catch {
+          const text = await detailsRes.text();
+          if (text) errorMsg = text;
+        }
+        throw new Error(errorMsg);
       }
 
       const detailsData = await detailsRes.json();
-
-      // 2. Save custom answers
-      const answersRes = await fetch(`/api/py/registrations/${selectedReg.id}/custom-answers`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          "x-user-email": session?.user?.email || ""
-        },
-        body: JSON.stringify(detailsEditedAnswers),
-      });
-
-      if (!answersRes.ok) {
-        const errorData = await answersRes.json();
-        throw new Error(errorData.detail || "Failed to save answers");
-      }
-
-      const answersData = await answersRes.json();
       
       const updatedReg = {
         ...selectedReg,
@@ -280,7 +271,7 @@ export default function EventDetailsPage() {
           email: detailsData.registration.attendee.email,
           company: detailsData.registration.attendee.company
         },
-        custom_answers: answersData.custom_answers
+        custom_answers: detailsData.registration.custom_answers || detailsEditedAnswers
       };
       setSelectedReg(updatedReg);
       setRegistrations(prev => prev.map(r => r.id === selectedReg.id ? updatedReg : r));
