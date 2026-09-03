@@ -1054,9 +1054,16 @@ export default function EventDetailsPage() {
     const fetchData = async () => {
       try {
         setError(null);
-        const eventRes = await fetch(`/api/py/events/id/${id}`, {
-          headers: { "x-user-email": session.user.email || "" }
-        });
+        const headers = { "x-user-email": session.user.email || "" };
+        const [eventRes, regRes, templatesRes] = await Promise.all([
+          fetch(`/api/py/events/id/${id}`, { headers }),
+          fetch(`/api/py/events/${id}/registrations`, { headers }),
+          fetch(`/api/py/settings/templates`, { headers }).catch((err) => {
+            console.error("Failed to load email templates", err);
+            return null;
+          })
+        ]);
+
         if (!eventRes.ok) {
           const detail = await eventRes.text();
           throw new Error(`Failed to fetch Event Details: HTTP ${eventRes.status} - ${detail}`);
@@ -1065,9 +1072,6 @@ export default function EventDetailsPage() {
         setEvent(eventData);
         setEventUserRole(eventData.user_role_for_client || "staff");
 
-        const regRes = await fetch(`/api/py/events/${id}/registrations`, {
-          headers: { "x-user-email": session.user.email || "" }
-        });
         if (!regRes.ok) {
           const detail = await regRes.text();
           throw new Error(`Failed to fetch Event Registrations: HTTP ${regRes.status} - ${detail}`);
@@ -1075,17 +1079,13 @@ export default function EventDetailsPage() {
         const regData = await regRes.json();
         setRegistrations(regData);
 
-        // Load global email templates
-        try {
-          const templatesRes = await fetch(`/api/py/settings/templates`, {
-            headers: { "x-user-email": session.user.email || "" }
-          });
-          if (templatesRes.ok) {
+        if (templatesRes && templatesRes.ok) {
+          try {
             const templatesData = await templatesRes.json();
             setEmailTemplates(Array.isArray(templatesData) ? templatesData : []);
+          } catch (templateErr) {
+            console.error("Failed to parse email templates", templateErr);
           }
-        } catch (templateErr) {
-          console.error("Failed to load email templates", templateErr);
         }
       } catch (err: any) {
         console.error("Failed to fetch event details", err);

@@ -284,7 +284,12 @@ def run_db_initialization(session: Session, check_only_migrations: bool = False)
             ("idx_event_checkins_player_id", "event_checkins", "player_id"),
             ("idx_matches_challenger_id", "matches", "challenger_id"),
             ("idx_matches_partner_id", "matches", "partner_id"),
-            ("idx_matches_status", "matches", "status")
+            ("idx_matches_status", "matches", "status"),
+            ("idx_registration_event_status", "registration", "event_id, status"),
+            ("idx_registration_event_created", "registration", "event_id, created_at DESC"),
+            ("idx_registration_checked_in", "registration", "event_id, checked_in"),
+            ("idx_userclientlink_user_role", "userclientlink", "user_id, role"),
+            ("idx_usereventlink_user_role", "usereventlink", "user_id, role")
         ]
         for idx_name, table, column in indexes_to_create:
             try:
