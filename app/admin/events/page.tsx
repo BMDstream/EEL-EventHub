@@ -115,7 +115,12 @@ export default function EventsListPage() {
                    <tr key={event.id} className="hover:bg-slate-50/50 transition-colors group dark:hover:bg-slate-800/50">
                       <td className="px-10 py-8">
                          <div>
-                            <p className="text-lg font-black text-[#0f172a] dark:text-white group-hover:text-yellow-500 transition-colors">{cleanHtmlText(event.title || "")}</p>
+                            <Link 
+                              href={`/admin/events/${event.id}`}
+                              className="text-lg font-black text-[#0f172a] dark:text-white group-hover:text-yellow-500 hover:text-yellow-500 transition-colors block cursor-pointer"
+                            >
+                              {cleanHtmlText(event.title || "")}
+                            </Link>
                             <div className="flex items-center gap-2 mt-1">
                               <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest dark:text-slate-500">Slug: {event.slug}</span>
                               {event.client && (
