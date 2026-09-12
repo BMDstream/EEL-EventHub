@@ -382,9 +382,12 @@ def get_stats(
     if not current_user:
         raise HTTPException(status_code=401, detail="Authentication required")
         
+    from sqlalchemy import func, case
+
     if current_user.role == "admin":
-        events = session.exec(select(Event)).all()
-        clients_count = len(session.exec(select(Client)).all())
+        event_ids = list(session.exec(select(Event.id)).all())
+        clients_count = session.exec(select(func.count(Client.id))).one()
+        events_count = len(event_ids)
     else:
         # Get all client links with roles
         stmt = text('SELECT client_id, role FROM "userclientlink" WHERE user_id = :user_id')
@@ -397,24 +400,22 @@ def get_stats(
         event_rows = session.execute(event_stmt, {"user_id": current_user.id}).all()
         assigned_event_ids = [r[0] for r in event_rows]
         
-        events = []
+        event_ids_set = set(assigned_event_ids)
         if manager_client_ids:
-            mgr_events = session.exec(select(Event).where(Event.client_id.in_(manager_client_ids))).all()
-            events.extend(mgr_events)
+            mgr_event_ids = session.exec(select(Event.id).where(Event.client_id.in_(manager_client_ids))).all()
+            event_ids_set.update(mgr_event_ids)
             
-        if assigned_event_ids:
-            ass_events = session.exec(select(Event).where(Event.id.in_(assigned_event_ids))).all()
-            for ae in ass_events:
-                if ae not in events:
-                    events.append(ae)
+        event_ids = list(event_ids_set)
+        events_count = len(event_ids)
                     
         accessible_client_ids = set(manager_client_ids)
-        for e in events:
-            if e.client_id:
-                accessible_client_ids.add(e.client_id)
+        if event_ids:
+            client_id_rows = session.exec(select(Event.client_id).where(Event.id.in_(event_ids))).all()
+            for cid in client_id_rows:
+                if cid:
+                    accessible_client_ids.add(cid)
         clients_count = len(accessible_client_ids)
         
-    event_ids = [e.id for e in events]
     if not event_ids:
         return {
             "events": 0,
@@ -424,7 +425,6 @@ def get_stats(
             "clients": clients_count
         }
         
-    from sqlalchemy import func, case
     stats = session.exec(
         select(
             func.sum(case((Registration.status == "confirmed", 1), else_=0)),
@@ -444,7 +444,7 @@ def get_stats(
         check_in_rate = round((checked_in_count / registrations_count) * 100, 1)
         
     return {
-        "events": len(events),
+        "events": events_count,
         "registrations": registrations_count,
         "check_in_rate": f"{check_in_rate}%",
         "revenue": "R0.00",
@@ -461,21 +461,18 @@ def get_recent_activities(
         raise HTTPException(status_code=401, detail="Authentication required")
         
     if current_user.role == "admin":
-        events = session.exec(select(Event)).all()
+        event_ids = list(session.exec(select(Event.id)).all())
     elif current_user.role == "manager":
         stmt = text('SELECT client_id FROM "userclientlink" WHERE user_id = :user_id')
         rows = session.execute(stmt, {"user_id": current_user.id}).all()
         allowed_client_ids = [row[0] for row in rows]
-        events = session.exec(select(Event).where(Event.client_id.in_(allowed_client_ids))).all()
+        event_ids = list(session.exec(select(Event.id).where(Event.client_id.in_(allowed_client_ids))).all())
     elif current_user.role == "staff":
         stmt = text('SELECT event_id FROM "usereventlink" WHERE user_id = :user_id')
         rows = session.execute(stmt, {"user_id": current_user.id}).all()
-        allowed_event_ids = [row[0] for row in rows]
-        events = session.exec(select(Event).where(Event.id.in_(allowed_event_ids))).all()
+        event_ids = [row[0] for row in rows]
     else:
-        events = []
-        
-    event_ids = [e.id for e in events]
+        event_ids = []
     if not event_ids:
         return []
 

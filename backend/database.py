@@ -144,6 +144,22 @@ def run_db_initialization(session: Session, check_only_migrations: bool = False)
                 except Exception:
                     session.rollback()
 
+    # Ensure high-performance composite indexes exist
+    try:
+        indexes = [
+            'CREATE INDEX IF NOT EXISTS idx_reg_event_status ON registration(event_id, status)',
+            'CREATE INDEX IF NOT EXISTS idx_reg_event_pin ON registration(event_id, pin)',
+            'CREATE INDEX IF NOT EXISTS idx_reg_event_checked_in ON registration(event_id, checked_in)',
+            'CREATE INDEX IF NOT EXISTS idx_reg_event_created_at ON registration(event_id, created_at DESC)',
+            'CREATE INDEX IF NOT EXISTS idx_event_client_id ON event(client_id)'
+        ]
+        for idx in indexes:
+            session.execute(text(idx))
+        session.commit()
+    except Exception as e:
+        session.rollback()
+        print(f"Performance index check warning: {e}")
+
     if check_only_migrations:
         return
 

@@ -28,9 +28,15 @@ app.add_middleware(
 def on_startup():
     """
     On-startup initialization.
-    For serverless, we run self-healing column alterations to ensure database columns
-    exist, but skip full seeding sweeps to optimize cold start latencies.
+    In serverless environments, we skip schema introspection on cold starts to achieve sub-second
+    response times. Schema migrations and seeding are triggered on-demand via the Admin Control Panel
+    (/api/py/settings/refresh-db) or when RUN_DB_MIGRATIONS_ON_STARTUP=true.
     """
+    import os
+    run_on_startup = os.getenv("RUN_DB_MIGRATIONS_ON_STARTUP", "").lower() in ("true", "1")
+    if IS_SERVERLESS and not run_on_startup:
+        return
+
     try:
         from backend.database import run_db_initialization
         with Session(engine) as session:

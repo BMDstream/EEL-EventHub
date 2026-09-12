@@ -31,14 +31,41 @@ import {
   ArrowDownAZ,
   X,
   Printer,
-  Mail
+  Mail,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
+import dynamic from "next/dynamic";
 import AdminLayout from "@/components/AdminLayout";
-import FormBuilder from "@/components/FormBuilder";
-import QRScanner from "@/components/QRScanner";
-import StaffAssignment from "@/components/StaffAssignment";
 import * as dbOffline from "@/lib/indexedDb";
 import { unescapeHtmlLinks, cleanHtmlText } from "@/lib/utils";
+
+const FormBuilder = dynamic(() => import("@/components/FormBuilder"), {
+  loading: () => (
+    <div className="p-16 flex items-center justify-center">
+      <Loader2 className="animate-spin text-slate-300" size={32} />
+    </div>
+  ),
+  ssr: false
+});
+
+const QRScanner = dynamic(() => import("@/components/QRScanner"), {
+  loading: () => (
+    <div className="p-16 flex items-center justify-center">
+      <Loader2 className="animate-spin text-slate-300" size={32} />
+    </div>
+  ),
+  ssr: false
+});
+
+const StaffAssignment = dynamic(() => import("@/components/StaffAssignment"), {
+  loading: () => (
+    <div className="p-16 flex items-center justify-center">
+      <Loader2 className="animate-spin text-slate-300" size={32} />
+    </div>
+  ),
+  ssr: false
+});
 
 const getAnswerString = (ans: any): string => {
   if (ans === null || ans === undefined) return "—";
@@ -155,6 +182,8 @@ export default function EventDetailsPage() {
   const [selectedReg, setSelectedReg] = useState<Registration | null>(null);
   const [hideResendButton, setHideResendButton] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
   const { data: session } = useSession();
   const sessionRole = (session?.user as any)?.role || "staff";
   const [eventUserRole, setEventUserRole] = useState<string>("staff");
@@ -1325,6 +1354,15 @@ export default function EventDetailsPage() {
       }
     });
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, checkInFilter, companyFilter, dateFilter, sortBy, sortOrder]);
+
+  const totalPages = Math.ceil(filteredRegistrations.length / (pageSize === -1 ? (filteredRegistrations.length || 1) : pageSize)) || 1;
+  const paginatedRegistrations = pageSize === -1 
+    ? filteredRegistrations 
+    : filteredRegistrations.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
   if (loading) {
     return (
       <AdminLayout>
@@ -1909,7 +1947,7 @@ export default function EventDetailsPage() {
                       </td>
                     </tr>
                   ) : (
-                    filteredRegistrations.map((reg) => (
+                    paginatedRegistrations.map((reg) => (
                       <tr key={reg.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/40 transition-colors group">
                         {(userRole === "admin" || userRole === "manager") && (
                           <td className="pl-10 pr-2 py-8 text-center">
@@ -2041,6 +2079,61 @@ export default function EventDetailsPage() {
                 </tbody>
               </table>
             </div>
+
+            {/* Pagination Controls */}
+            {filteredRegistrations.length > 0 && (
+              <div className="px-8 py-5 bg-white dark:bg-[#0d1527] border-t border-slate-100 dark:border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs">
+                <div className="flex items-center gap-3 text-slate-500 font-bold">
+                  <span>
+                    Showing {filteredRegistrations.length === 0 ? 0 : (currentPage - 1) * (pageSize === -1 ? filteredRegistrations.length : pageSize) + 1} to {pageSize === -1 ? filteredRegistrations.length : Math.min(currentPage * pageSize, filteredRegistrations.length)} of {filteredRegistrations.length} registrants
+                  </span>
+                  <div className="flex items-center gap-1.5 ml-2">
+                    <span className="text-slate-400 font-medium">Per page:</span>
+                    <select
+                      value={pageSize}
+                      onChange={(e) => {
+                        setPageSize(Number(e.target.value));
+                        setCurrentPage(1);
+                      }}
+                      className="px-2 py-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg font-bold text-xs text-[#0f172a] dark:text-white outline-none cursor-pointer"
+                    >
+                      <option value={25}>25</option>
+                      <option value={50}>50</option>
+                      <option value={100}>100</option>
+                      <option value={-1}>All</option>
+                    </select>
+                  </div>
+                </div>
+
+                {pageSize !== -1 && totalPages > 1 && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                      className="p-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed transition-all font-bold flex items-center gap-1 cursor-pointer"
+                      title="Previous Page"
+                    >
+                      <ChevronLeft size={16} />
+                      <span className="hidden sm:inline text-xs">Prev</span>
+                    </button>
+
+                    <span className="px-3 py-1 font-black text-xs text-[#0f172a] dark:text-slate-200">
+                      Page {currentPage} of {totalPages}
+                    </span>
+
+                    <button
+                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                      disabled={currentPage === totalPages}
+                      className="p-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed transition-all font-bold flex items-center gap-1 cursor-pointer"
+                      title="Next Page"
+                    >
+                      <span className="hidden sm:inline text-xs">Next</span>
+                      <ChevronRight size={16} />
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
         ) : activeTab === "form" ? (
