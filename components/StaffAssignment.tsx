@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { Loader2, Save, Users, CheckCircle2, Shield } from "lucide-react";
+import { Loader2, Save, Users, CheckCircle2, Shield, Search, X } from "lucide-react";
 import { motion } from "framer-motion";
 
 interface StaffMember {
@@ -15,9 +15,16 @@ interface StaffMember {
 export default function StaffAssignment({ eventId, clientId }: { eventId: string; clientId?: number }) {
   const { data: session } = useSession();
   const [staff, setStaff] = useState<StaffMember[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  const filteredStaff = staff.filter((member) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase().trim();
+    return member.email.toLowerCase().includes(q) || member.role.toLowerCase().includes(q);
+  });
 
   useEffect(() => {
     if (!session?.user?.email) return;
@@ -135,6 +142,29 @@ export default function StaffAssignment({ eventId, clientId }: { eventId: string
         </motion.div>
       )}
 
+      {/* Search Bar */}
+      {staff.length > 0 && (
+        <div className="bg-white p-3 md:p-4 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-3">
+          <Search className="text-slate-400 shrink-0 ml-2" size={18} />
+          <input 
+            type="text" 
+            placeholder="Search staff by name or email..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-transparent border-none outline-none font-bold text-sm text-[#0f172a] placeholder-slate-400"
+          />
+          {searchQuery && (
+            <button 
+              onClick={() => setSearchQuery("")}
+              className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 transition-all text-xs font-bold flex items-center gap-1 cursor-pointer"
+            >
+              <X size={14} />
+              <span className="hidden sm:inline">Clear</span>
+            </button>
+          )}
+        </div>
+      )}
+
       <div className="bg-white rounded-3xl border border-slate-100 overflow-hidden shadow-sm">
         {staff.length === 0 ? (
           <div className="p-16 text-center">
@@ -146,9 +176,25 @@ export default function StaffAssignment({ eventId, clientId }: { eventId: string
               Add users under Team Management and link them to this client space to assign them to events.
             </p>
           </div>
+        ) : filteredStaff.length === 0 ? (
+          <div className="p-16 text-center">
+            <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-slate-100">
+              <Search className="text-slate-300" size={24} />
+            </div>
+            <h3 className="text-lg font-bold text-[#0f172a]">No matching staff found</h3>
+            <p className="text-slate-400 text-sm mt-2 max-w-xs mx-auto">
+              No staff members match &quot;{searchQuery}&quot;.
+            </p>
+            <button
+              onClick={() => setSearchQuery("")}
+              className="mt-4 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-[#0f172a] rounded-xl text-xs font-black uppercase tracking-wider transition-all"
+            >
+              Clear Search
+            </button>
+          </div>
         ) : (
           <div className="divide-y divide-slate-50">
-            {staff.map((member) => (
+            {filteredStaff.map((member) => (
               <div
                 key={member.id}
                 className="flex items-center justify-between p-6 hover:bg-slate-50/50 transition-colors group"

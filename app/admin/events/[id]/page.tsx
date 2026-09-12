@@ -1969,7 +1969,7 @@ export default function EventDetailsPage() {
                                     disabled={reg.status === "declined"}
                                     onClick={async () => {
                                       try {
-                                        const res = await fetch(`/api/py/registrations/${reg.id}/checkin?day=${dayNum}`, { method: "PUT" });
+                                        const res = await fetch(`/api/py/registrations/${reg.id}/checkin?day=${dayNum}&event_id=${id}`, { method: "PUT" });
                                         if (res.ok) {
                                           const updated = await res.json();
                                           setRegistrations(prev => prev.map(r => r.id === reg.id ? { ...r, checked_in: updated.checked_in, checked_in_days: updated.checked_in_days ?? [] } : r));
@@ -1996,7 +1996,7 @@ export default function EventDetailsPage() {
                               disabled={reg.status === "declined"}
                               onClick={async () => {
                                 try {
-                                  const res = await fetch(`/api/py/registrations/${reg.id}/checkin`, { method: "PUT" });
+                                  const res = await fetch(`/api/py/registrations/${reg.id}/checkin?event_id=${id}`, { method: "PUT" });
                                   if (res.ok) {
                                     const updated = await res.json();
                                     setRegistrations(prev => prev.map(r => r.id === reg.id ? { ...r, checked_in: updated.checked_in, checked_in_days: updated.checked_in_days ?? [] } : r));
@@ -2143,9 +2143,9 @@ export default function EventDetailsPage() {
                        const targetDay = selectedScanDay === "auto" ? 1 : selectedScanDay;
                        
                        if (!isOnline) {
-                         const localReg = await dbOffline.getLocalRegistration(regId);
+                         const localReg = await dbOffline.getLocalRegistration(regId, Number(id));
                          if (!localReg) {
-                           throw new Error("Clearance credential not found in local offline cache.");
+                           throw new Error("Clearance credential not found in local offline cache for this event.");
                          }
                          if (localReg.status === "declined") {
                            throw new Error("Declined registrations cannot be checked in.");
@@ -2180,8 +2180,10 @@ export default function EventDetailsPage() {
                          };
                        }
                        
-                       const query = selectedScanDay === "auto" ? "mode=checkin" : `mode=checkin&day=${selectedScanDay}`;
-                       const res = await fetch(`/api/py/registrations/${regId}/checkin?${query}`, { 
+                       const query = selectedScanDay === "auto" 
+                         ? `mode=checkin&event_id=${id}` 
+                         : `mode=checkin&day=${selectedScanDay}&event_id=${id}`;
+                       const res = await fetch(`/api/py/registrations/${encodeURIComponent(regId)}/checkin?${query}`, { 
                          method: "PUT",
                          headers: { "x-user-email": session?.user?.email || "" }
                        });
@@ -2237,7 +2239,7 @@ export default function EventDetailsPage() {
                            
                            if (!isOnline) {
                              try {
-                               const localReg = await dbOffline.getLocalRegistration(pin);
+                               const localReg = await dbOffline.getLocalRegistration(pin, Number(id));
                                if (!localReg) {
                                  setPinStatus("error");
                                  setPinMessage("Clearance PIN not found in offline cache.");

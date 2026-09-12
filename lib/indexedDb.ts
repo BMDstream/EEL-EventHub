@@ -81,7 +81,7 @@ export async function saveOfflineEvent(event: any, registrations: any[]): Promis
   });
 }
 
-export async function getLocalRegistration(idOrPin: string): Promise<any | null> {
+export async function getLocalRegistration(idOrPin: string, eventId?: number): Promise<any | null> {
   const db = await initDb();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(["registrations"], "readonly");
@@ -93,13 +93,23 @@ export async function getLocalRegistration(idOrPin: string): Promise<any | null>
     const getReq = store.get(idOrPin);
     getReq.onsuccess = () => {
       if (getReq.result) {
-        resolve(getReq.result);
+        if (eventId && getReq.result.event_id && Number(getReq.result.event_id) !== Number(eventId)) {
+          resolve(null);
+        } else {
+          resolve(getReq.result);
+        }
       } else {
         // Fall back to looking up by PIN index
         const pinIndex = store.index("pin");
-        const pinReq = pinIndex.get(idOrPin);
+        const pinReq = pinIndex.getAll(idOrPin);
         pinReq.onsuccess = () => {
-          resolve(pinReq.result || null);
+          const results: any[] = pinReq.result || [];
+          if (eventId) {
+            const match = results.find((r: any) => Number(r.event_id) === Number(eventId));
+            resolve(match || null);
+          } else {
+            resolve(results[0] || null);
+          }
         };
         pinReq.onerror = () => reject(pinReq.error);
       }

@@ -920,6 +920,7 @@ def toggle_checkin(
     background_tasks: BackgroundTasks,
     mode: str = "toggle",
     day: Optional[int] = None,
+    event_id: Optional[int] = None,
     session: Session = Depends(get_session)
 ):
     registration = None
@@ -930,12 +931,20 @@ def toggle_checkin(
         pass
     
     if not registration:
-        registration = session.exec(
-            select(Registration).where(Registration.pin == registration_id)
-        ).first()
+        # Search by PIN, strictly scoping to event_id if provided to avoid cross-event collisions
+        pin_query = select(Registration).where(Registration.pin == registration_id)
+        if event_id:
+            pin_query = pin_query.where(Registration.event_id == event_id)
+        registration = session.exec(pin_query).first()
         
     if not registration:
         raise HTTPException(status_code=404, detail="Registration not found")
+        
+    if event_id and registration.event_id != event_id:
+        raise HTTPException(
+            status_code=400, 
+            detail="This registration credential belongs to a different event."
+        )
         
     if registration.status == "declined":
         raise HTTPException(status_code=400, detail="Declined registrations cannot be checked in")
