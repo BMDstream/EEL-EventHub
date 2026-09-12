@@ -715,8 +715,20 @@ export default function EditEventPage() {
     if (!confirm("Are you sure you want to delete this event? This action cannot be undone and will delete all registrations.")) return;
     try {
       const response = await fetch(`/api/py/events/${id}`, { method: "DELETE", headers: { "x-user-email": session?.user?.email || "" } });
-      if (response.ok) { router.push("/admin"); } else { alert("Failed to delete event."); }
-    } catch (err) { console.error("Failed to delete event", err); alert("An error occurred."); }
+      if (response.ok) { 
+        router.push("/admin"); 
+      } else { 
+        let errorMessage = "Failed to delete event.";
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.detail || errorMessage;
+        } catch {}
+        alert(errorMessage); 
+      }
+    } catch (err) { 
+      console.error("Failed to delete event", err); 
+      alert("An error occurred while deleting the event."); 
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {

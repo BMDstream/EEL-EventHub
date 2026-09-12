@@ -308,7 +308,16 @@ def delete_event(
         raise HTTPException(status_code=404, detail="Event not found")
     verify_client_access(current_user, event.client_id, session)
     
-    # Clean up usereventlink entries first to prevent foreign key errors
+    event_title = event.title
+    event_slug = event.slug
+
+    # 1. Unlink audit logs to preserve historical audit trail while clearing FK constraint
+    session.execute(text('UPDATE "audit_logs" SET event_id = NULL WHERE event_id = :event_id'), {"event_id": event_id})
+
+    # 2. Clean up registrations for this event to satisfy foreign key constraint
+    session.execute(text('DELETE FROM "registration" WHERE event_id = :event_id'), {"event_id": event_id})
+
+    # 3. Clean up usereventlink entries to prevent foreign key errors
     session.execute(text('DELETE FROM "usereventlink" WHERE event_id = :event_id'), {"event_id": event_id})
     
     session.delete(event)
@@ -316,13 +325,13 @@ def delete_event(
     
     # Invalidate Redis cache
     from backend.cache_service import clear_cached_event
-    clear_cached_event(event.slug)
+    clear_cached_event(event_slug)
     
     log_audit(
         current_user.email,
         "delete_event",
-        f"Deleted event: {event.title}",
-        event.id
+        f"Deleted event: {event_title}",
+        None
     )
     
     return {"ok": True}
