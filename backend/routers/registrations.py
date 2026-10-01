@@ -627,6 +627,7 @@ def get_event_registrations(
     return [
         {
             "id": reg.id,
+            "event_id": reg.event_id,
             "status": reg.status,
             "checked_in": reg.checked_in,
             "checked_in_days": reg.checked_in_days if isinstance(reg.checked_in_days, list) else [],
@@ -990,6 +991,7 @@ def toggle_checkin(
 
     return {
         "id": str(registration.id),
+        "event_id": registration.event_id,
         "status": registration.status,
         "checked_in": registration.checked_in,
         "checked_in_days": registration.checked_in_days if isinstance(registration.checked_in_days, list) else [],
@@ -1069,6 +1071,7 @@ def checkin_by_pin(
 
     return {
         "id": str(registration.id),
+        "event_id": registration.event_id,
         "status": registration.status,
         "checked_in": registration.checked_in,
         "checked_in_days": registration.checked_in_days if isinstance(registration.checked_in_days, list) else [],

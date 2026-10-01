@@ -964,9 +964,9 @@ export default function EventDetailsPage() {
 
   const updateOfflineStats = async () => {
     try {
-      const stats = await dbOffline.getOfflineStats();
+      const stats = await dbOffline.getOfflineStats(Number(id));
       setOfflineStats(stats);
-      const pending = await dbOffline.getPendingScans();
+      const pending = await dbOffline.getPendingScans(Number(id));
       setPendingSyncCount(pending.length);
       
       const cachedTime = localStorage.getItem(`eel_cached_time_${id}`);
@@ -1007,7 +1007,7 @@ export default function EventDetailsPage() {
     if (isSyncing) return;
     
     try {
-      const pending = await dbOffline.getPendingScans();
+      const pending = await dbOffline.getPendingScans(Number(id));
       if (pending.length === 0) return;
       
       setIsSyncing(true);
@@ -1043,7 +1043,7 @@ export default function EventDetailsPage() {
     }
     setIsSyncing(true);
     try {
-      const pending = await dbOffline.getPendingScans();
+      const pending = await dbOffline.getPendingScans(Number(id));
       if (pending.length === 0) {
         alert("No pending offline scans to sync.");
         return;
@@ -2213,6 +2213,22 @@ export default function EventDetailsPage() {
                    {isCaching ? <Loader2 size={12} className="animate-spin" /> : <Download size={12} />}
                    {isCaching ? "Downloading..." : "Cache offline manifest"}
                  </button>
+                 <button
+                   onClick={async () => {
+                     if (window.confirm("Are you sure you want to clear the local offline cache for this event on this device?")) {
+                       await dbOffline.clearOfflineCache(Number(id));
+                       localStorage.removeItem(`eel_cached_time_${id}`);
+                       setLastCachedAt(null);
+                       await updateOfflineStats();
+                       alert("Local offline cache cleared for this event.");
+                     }
+                   }}
+                   disabled={isCaching}
+                   className="px-5 py-3.5 bg-white border border-slate-200/80 hover:border-red-400 hover:text-red-600 rounded-xl text-[10px] font-black uppercase tracking-widest text-[#0f172a] disabled:text-slate-300 transition-all flex items-center gap-2"
+                 >
+                   <Trash2 size={12} />
+                   Clear Cache
+                 </button>
                  {pendingSyncCount > 0 && (
                    <button
                      onClick={forceSyncOfflineScans}
@@ -2250,6 +2266,7 @@ export default function EventDetailsPage() {
                          
                          const scanObj: dbOffline.OfflineScan = {
                            registration_id: localReg.id,
+                           event_id: Number(id),
                            day: targetDay,
                            timestamp: new Date().toISOString(),
                            mode: "checkin",
@@ -2287,10 +2304,13 @@ export default function EventDetailsPage() {
                        const updated = await res.json();
                        setRegistrations(prev => prev.map(r => r.id === updated.id ? { ...r, checked_in: updated.checked_in, checked_in_days: updated.checked_in_days ?? [] } : r));
                        
-                       dbOffline.initDb().then(async (db) => {
-                         const tx = db.transaction(["registrations"], "readwrite");
-                         tx.objectStore("registrations").put(updated);
-                       }).catch(() => {});
+                        dbOffline.initDb().then(async (db) => {
+                          const tx = db.transaction(["registrations"], "readwrite");
+                          tx.objectStore("registrations").put({
+                            ...updated,
+                            event_id: updated.event_id || Number(id)
+                          });
+                        }).catch(() => {});
                        
                        return {
                          ...updated,
@@ -2353,6 +2373,7 @@ export default function EventDetailsPage() {
                                
                                const scanObj: dbOffline.OfflineScan = {
                                  registration_id: localReg.id,
+                                 event_id: Number(id),
                                  day: targetDay,
                                  timestamp: new Date().toISOString(),
                                  mode: "checkin",
@@ -2394,7 +2415,10 @@ export default function EventDetailsPage() {
                                setPin("");
                                dbOffline.initDb().then(async (db) => {
                                  const tx = db.transaction(["registrations"], "readwrite");
-                                 tx.objectStore("registrations").put(updated);
+                                 tx.objectStore("registrations").put({
+                                   ...updated,
+                                   event_id: updated.event_id || Number(id)
+                                 });
                                }).catch(() => {});
                              } else {
                                const err = await res.json().catch(() => ({}));

@@ -1,8 +1,9 @@
 const DB_NAME = "EEL_EventHub_Offline";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 export interface OfflineScan {
   id?: number;
+  event_id?: number;
   registration_id: string;
   day: number | null;
   timestamp: string;
@@ -31,14 +32,28 @@ export function initDb(): Promise<IDBDatabase> {
       }
 
       // Store registrations list
+      let regStore: IDBObjectStore;
       if (!db.objectStoreNames.contains("registrations")) {
-        const regStore = db.createObjectStore("registrations", { keyPath: "id" });
+        regStore = db.createObjectStore("registrations", { keyPath: "id" });
+      } else {
+        regStore = event.target.transaction.objectStore("registrations");
+      }
+      if (!regStore.indexNames.contains("pin")) {
         regStore.createIndex("pin", "pin", { unique: false });
+      }
+      if (!regStore.indexNames.contains("event_id")) {
+        regStore.createIndex("event_id", "event_id", { unique: false });
       }
 
       // Store pending scan queues
+      let scanStore: IDBObjectStore;
       if (!db.objectStoreNames.contains("offline_scans")) {
-        db.createObjectStore("offline_scans", { keyPath: "id", autoIncrement: true });
+        scanStore = db.createObjectStore("offline_scans", { keyPath: "id", autoIncrement: true });
+      } else {
+        scanStore = event.target.transaction.objectStore("offline_scans");
+      }
+      if (!scanStore.indexNames.contains("event_id")) {
+        scanStore.createIndex("event_id", "event_id", { unique: false });
       }
     };
   });
@@ -65,19 +80,31 @@ export async function saveOfflineEvent(event: any, registrations: any[]): Promis
       custom_fields_schema: event.custom_fields_schema
     });
 
-    // Clear previous registrations for this event to avoid stale data
-    // (We will write all new registrations downloaded)
-    registrations.forEach(reg => {
-      regStore.put({
-        id: reg.id,
-        event_id: reg.event_id,
-        pin: reg.pin,
-        status: reg.status,
-        checked_in: reg.checked_in,
-        checked_in_days: reg.checked_in_days || [],
-        attendee: reg.attendee
+    const targetEventId = Number(event.id);
+
+    // Clear previous registrations for this specific event to eliminate stale/deleted data
+    const getAllReq = regStore.getAll();
+    getAllReq.onsuccess = () => {
+      const existing = getAllReq.result || [];
+      existing.forEach((item: any) => {
+        if (item.event_id !== undefined && Number(item.event_id) === targetEventId) {
+          regStore.delete(item.id);
+        }
       });
-    });
+
+      // Write fresh registrations, strictly ensuring event_id is always assigned
+      registrations.forEach(reg => {
+        regStore.put({
+          id: String(reg.id),
+          event_id: Number(reg.event_id ?? event.id),
+          pin: reg.pin,
+          status: reg.status,
+          checked_in: Boolean(reg.checked_in),
+          checked_in_days: reg.checked_in_days || [],
+          attendee: reg.attendee
+        });
+      });
+    };
   });
 }
 
@@ -93,10 +120,11 @@ export async function getLocalRegistration(idOrPin: string, eventId?: number): P
     const getReq = store.get(idOrPin);
     getReq.onsuccess = () => {
       if (getReq.result) {
-        if (eventId && getReq.result.event_id && Number(getReq.result.event_id) !== Number(eventId)) {
+        const reg = getReq.result;
+        if (eventId !== undefined && reg.event_id !== undefined && Number(reg.event_id) !== Number(eventId)) {
           resolve(null);
         } else {
-          resolve(getReq.result);
+          resolve(reg);
         }
       } else {
         // Fall back to looking up by PIN index
@@ -104,8 +132,11 @@ export async function getLocalRegistration(idOrPin: string, eventId?: number): P
         const pinReq = pinIndex.getAll(idOrPin);
         pinReq.onsuccess = () => {
           const results: any[] = pinReq.result || [];
-          if (eventId) {
-            const match = results.find((r: any) => Number(r.event_id) === Number(eventId));
+          if (eventId !== undefined) {
+            const match = results.find((r: any) => {
+              if (r.event_id === undefined || r.event_id === null) return true;
+              return Number(r.event_id) === Number(eventId);
+            });
             resolve(match || null);
           } else {
             resolve(results[0] || null);
@@ -164,7 +195,7 @@ export async function addOfflineScan(scan: OfflineScan): Promise<number> {
   });
 }
 
-export async function getPendingScans(): Promise<OfflineScan[]> {
+export async function getPendingScans(eventId?: number): Promise<OfflineScan[]> {
   const db = await initDb();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(["offline_scans"], "readonly");
@@ -173,7 +204,11 @@ export async function getPendingScans(): Promise<OfflineScan[]> {
 
     request.onerror = () => reject(request.error);
     request.onsuccess = () => {
-      resolve(request.result || []);
+      let results: OfflineScan[] = request.result || [];
+      if (eventId !== undefined) {
+        results = results.filter(s => s.event_id === undefined || Number(s.event_id) === Number(eventId));
+      }
+      resolve(results);
     };
   });
 }
@@ -193,7 +228,7 @@ export async function markScansSynced(ids: number[]): Promise<void> {
   });
 }
 
-export async function getOfflineStats(): Promise<{ cachedCount: number; checkedInCount: number }> {
+export async function getOfflineStats(eventId?: number): Promise<{ cachedCount: number; checkedInCount: number }> {
   const db = await initDb();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(["registrations"], "readonly");
@@ -202,7 +237,10 @@ export async function getOfflineStats(): Promise<{ cachedCount: number; checkedI
 
     req.onerror = () => reject(req.error);
     req.onsuccess = () => {
-      const list = req.result || [];
+      let list: any[] = req.result || [];
+      if (eventId !== undefined) {
+        list = list.filter(r => Number(r.event_id) === Number(eventId));
+      }
       const checkedIn = list.filter(r => r.checked_in).length;
       resolve({
         cachedCount: list.length,
@@ -212,15 +250,40 @@ export async function getOfflineStats(): Promise<{ cachedCount: number; checkedI
   });
 }
 
-export async function clearOfflineCache(): Promise<void> {
+export async function clearOfflineCache(eventId?: number): Promise<void> {
   const db = await initDb();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(["events", "registrations", "offline_scans"], "readwrite");
     tx.onerror = () => reject(tx.error);
     tx.oncomplete = () => resolve();
 
-    tx.objectStore("events").clear();
-    tx.objectStore("registrations").clear();
-    tx.objectStore("offline_scans").clear();
+    if (eventId !== undefined) {
+      const targetId = Number(eventId);
+      tx.objectStore("events").delete(targetId);
+
+      const regStore = tx.objectStore("registrations");
+      const regReq = regStore.getAll();
+      regReq.onsuccess = () => {
+        (regReq.result || []).forEach((r: any) => {
+          if (Number(r.event_id) === targetId) {
+            regStore.delete(r.id);
+          }
+        });
+      };
+
+      const scanStore = tx.objectStore("offline_scans");
+      const scanReq = scanStore.getAll();
+      scanReq.onsuccess = () => {
+        (scanReq.result || []).forEach((s: any) => {
+          if (s.event_id !== undefined && Number(s.event_id) === targetId) {
+            scanStore.delete(s.id);
+          }
+        });
+      };
+    } else {
+      tx.objectStore("events").clear();
+      tx.objectStore("registrations").clear();
+      tx.objectStore("offline_scans").clear();
+    }
   });
 }
