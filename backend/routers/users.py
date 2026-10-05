@@ -64,7 +64,7 @@ def create_users_bulk(
     session: Session = Depends(get_session),
     current_user: Optional[User] = Depends(get_current_user_from_request)
 ):
-    if current_user and current_user.role != "admin":
+    if not current_user or current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Forbidden: Only administrators can create users")
         
     created = []

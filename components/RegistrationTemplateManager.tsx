@@ -146,15 +146,27 @@ export default function RegistrationTemplateManager() {
   const uploadImageFile = async (file: File): Promise<string> => {
     const formData = new FormData();
     formData.append("file", file);
-    const res = await fetch("/api/py/media/upload", {
-      method: "POST",
-      body: formData,
-    });
-    if (!res.ok) {
-      throw new Error(`Upload failed: ${res.statusText}`);
+    try {
+      const res = await fetch("/api/py/media/upload", {
+        method: "POST",
+        headers: {
+          "x-user-email": session?.user?.email || ""
+        },
+        body: formData,
+      });
+      if (res.ok) {
+        const data = await res.json();
+        return data.url;
+      }
+    } catch (err) {
+      console.warn("Media server upload failed, falling back to base64 encoding", err);
     }
-    const data = await res.json();
-    return data.url;
+    // Fallback to base64 data URL
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.readAsDataURL(file);
+    });
   };
 
   const handleTemplateImageUpload = async (secId: string, fieldId: string, file: File) => {

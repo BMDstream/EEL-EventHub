@@ -369,11 +369,16 @@ const compileTemplatePreview = (
   return unescapeHtmlLinks(finalHtml);
 };
 
-const uploadImageFile = async (file: File): Promise<string> => {
+const uploadImageFile = async (file: File, userEmail?: string): Promise<string> => {
   const formData = new FormData();
   formData.append("file", file);
+  const headers: Record<string, string> = {};
+  if (userEmail) {
+    headers["x-user-email"] = userEmail;
+  }
   const res = await fetch("/api/py/media/upload", {
     method: "POST",
+    headers,
     body: formData,
   });
   if (!res.ok) {
@@ -927,7 +932,7 @@ export default function EditEventPage() {
                         const file = e.target.files?.[0];
                         if (file) {
                           try {
-                            const url = await uploadImageFile(file);
+                            const url = await uploadImageFile(file, session?.user?.email || "");
                             setFormData(prev => ({ ...prev, banner_url: url }));
                           } catch {
                             try { const compressed = await compressImage(file, 1600, 1600, 0.85); setFormData(prev => ({ ...prev, banner_url: compressed })); }
@@ -960,7 +965,7 @@ export default function EditEventPage() {
                         const file = e.target.files?.[0];
                         if (file) {
                           try {
-                            const url = await uploadImageFile(file);
+                            const url = await uploadImageFile(file, session?.user?.email || "");
                             setFormData(prev => ({ ...prev, background_url: url }));
                           } catch {
                             try { const compressed = await compressImage(file, 1600, 1600, 0.85); setFormData(prev => ({ ...prev, background_url: compressed })); }
@@ -1034,7 +1039,7 @@ export default function EditEventPage() {
                         const file = e.target.files?.[0];
                         if (file) {
                           try {
-                            const url = await uploadImageFile(file);
+                            const url = await uploadImageFile(file, session?.user?.email || "");
                             setFormData(prev => ({ ...prev, logo_url: url }));
                           } catch {
                             try { const compressed = await compressImage(file, 800, 800, 0.85); setFormData(prev => ({ ...prev, logo_url: compressed })); }

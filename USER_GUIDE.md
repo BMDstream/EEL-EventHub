@@ -27,7 +27,19 @@ Every event has unique data requirements. Use the **Form Studio** tab within an 
 Track your guest manifest in real-time under the **Registrants** tab.
 
 - **Search & Filter**: Quickly find guests by name, email, or organization using the search bar.
-- **Export Manifest**: Download the complete guest list as a CSV file for offline use or reporting.
+- **Export Manifest**: Download the complete guest list as a CSV or Excel file for offline use, badge printing, or reporting.
+- **Manual 1–2 Changes**: Click on any attendee row in the manifest table to open the **Registration Details & Edit** drawer. You can instantly adjust First Name, Last Name, Email, Organization, Clearance PIN, Status, and all custom questionnaire answers.
+- **Last-Minute Bulk Changes & Sync**:
+  - Click **"Bulk Upload & Changes"** to upload an Excel (`.xlsx`, `.xls`) or CSV sheet with multiple attendee changes.
+  - **Live Manifest Round-Trip**: Click **"Download Live Manifest"** directly inside the modal to get a spreadsheet pre-populated with current guests and Clearance PINs. Edit the rows in Excel, save, and drop the file back in.
+  - **Automatic Matching & Live Diff**: The system matches records by **Clearance PIN** or **Email Address**, showing an instant breakdown:
+    - 🔄 **To Update**: Highlights exact before-and-after changes per attendee (names, organizations, dietary requirements, table numbers, status).
+    - ➕ **New Additions**: Highlights newly added attendees who will receive fresh Clearance PINs.
+    - ⏸️ **Unchanged**: Attendees whose records match the current database.
+    - ⚠️ **Issues / Errors**: Highlights any missing required fields before processing.
+  - **Ticket & PIN Preservation**: Existing attendees retain their original Clearance PINs and QR codes so pre-printed badges or existing guest tickets remain valid.
+  - **Notification Safeguards**: Emails to new or modified attendees are opt-in and unchecked by default, ensuring last-minute roster adjustments do not trigger unexpected email blasts.
+  - **On-The-Fly Sync**: Click **"Confirm & Apply Changes On The Fly"** to atomically sync all changes directly into the live manifest.
 - **Manual Control**: If a guest arrives without their QR code, you can manually click **"Check In"** next to their name. You can also click it again to **"Check Out"** if needed.
 
 ---

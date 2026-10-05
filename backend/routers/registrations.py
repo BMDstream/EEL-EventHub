@@ -2,8 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Request,
 from fastapi.responses import StreamingResponse
 from sqlmodel import Session, select, SQLModel
 from sqlalchemy import func
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Union
 from pydantic import BaseModel
+from sqlalchemy.orm.attributes import flag_modified
 import random
 import zipfile
 from io import BytesIO
@@ -30,11 +31,25 @@ from backend.utils import (
 router = APIRouter()
 
 class BulkRegistrantItem(BaseModel):
-    email: str
-    first_name: str
-    last_name: str
+    email: Optional[str] = ""
+    first_name: Optional[str] = ""
+    last_name: Optional[str] = ""
     company: Optional[str] = None
+    pin: Optional[str] = None
+    registration_id: Optional[str] = None
+    status: Optional[str] = None
+    checked_in: Optional[bool] = None
     custom_answers: Optional[Dict[str, Any]] = None
+
+class BulkImportOptions(BaseModel):
+    send_emails_to_new: bool = False
+    send_emails_to_updated: bool = False
+    merge_custom_answers: bool = True
+    match_strategy: str = "auto" # "auto" (pin/id first, then email), "email", "pin"
+
+class BulkImportRequest(BaseModel):
+    registrants: List[BulkRegistrantItem]
+    options: Optional[BulkImportOptions] = None
 
 @router.post("/register")
 @limiter.limit("30/minute")
@@ -688,18 +703,158 @@ def download_event_qrcodes_zip(
     }
     return StreamingResponse(zip_buffer, media_type="application/x-zip-compressed", headers=headers)
 
+@router.post("/events/{event_id}/registrations/bulk-preview")
+def preview_registrations_bulk(
+    event_id: int,
+    payload: Union[BulkImportRequest, List[BulkRegistrantItem]],
+    session: Session = Depends(get_session),
+    current_user: Optional[User] = Depends(get_current_user_from_request)
+):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    if current_user.role not in ["admin", "manager"]:
+        raise HTTPException(status_code=403, detail="Forbidden: Only administrators and managers can preview registrants")
+        
+    event = session.get(Event, event_id)
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+        
+    items = payload if isinstance(payload, list) else payload.registrants
+    options = BulkImportOptions() if isinstance(payload, list) else (payload.options or BulkImportOptions())
+    
+    # Pre-fetch existing registrations for fast in-memory matching and diffing
+    registrations = session.exec(
+        select(Registration)
+        .where(Registration.event_id == event_id)
+    ).all()
+    
+    reg_by_id = {str(r.id): r for r in registrations}
+    reg_by_pin = {r.pin: r for r in registrations if r.pin}
+    reg_by_email = {r.attendee.email.lower(): r for r in registrations if r.attendee and r.attendee.email}
+    
+    to_update = []
+    to_create = []
+    unchanged = []
+    errors = []
+    
+    for idx, item in enumerate(items):
+        raw_email = (item.email or "").strip().lower()
+        first_name = (item.first_name or "").strip()
+        last_name = (item.last_name or "").strip()
+        company = item.company.strip() if item.company else None
+        pin = (item.pin or "").strip()
+        registration_id = (item.registration_id or "").strip()
+        status_val = (item.status or "").strip().lower()
+        checked_in = item.checked_in
+        custom_answers = item.custom_answers or {}
+        
+        cleaned_custom_answers = {
+            k: v for k, v in custom_answers.items()
+            if v is not None and not (isinstance(v, str) and not v.strip()) and not (isinstance(v, list) and not v)
+        }
+        
+        match_reg: Optional[Registration] = None
+        match_by = ""
+        
+        if options.match_strategy in ["auto", "pin"]:
+            if registration_id and registration_id in reg_by_id:
+                match_reg = reg_by_id[registration_id]
+                match_by = "id"
+            elif pin and pin in reg_by_pin:
+                match_reg = reg_by_pin[pin]
+                match_by = "pin"
+                
+        if not match_reg and options.match_strategy in ["auto", "email"]:
+            if raw_email and raw_email in reg_by_email:
+                match_reg = reg_by_email[raw_email]
+                match_by = "email"
+                
+        if match_reg:
+            attendee = match_reg.attendee
+            changes = []
+            
+            if first_name and attendee and first_name.lower() != (attendee.first_name or "").lower():
+                changes.append({"field": "First Name", "old": attendee.first_name or "", "new": first_name})
+            if last_name and attendee and last_name.lower() != (attendee.last_name or "").lower():
+                changes.append({"field": "Last Name", "old": attendee.last_name or "", "new": last_name})
+            if company is not None and attendee and company != (attendee.company or ""):
+                changes.append({"field": "Organization", "old": attendee.company or "", "new": company})
+            if raw_email and attendee and raw_email != (attendee.email or "").lower() and match_by != "email":
+                changes.append({"field": "Email", "old": attendee.email or "", "new": raw_email})
+            if status_val and status_val in ["confirmed", "waitlisted", "cancelled"] and status_val != (match_reg.status or "").lower():
+                changes.append({"field": "Status", "old": match_reg.status or "", "new": status_val})
+            if checked_in is not None and checked_in != match_reg.checked_in:
+                changes.append({"field": "Checked In", "old": "Yes" if match_reg.checked_in else "No", "new": "Yes" if checked_in else "No"})
+                
+            existing_custom = decrypt_dict(match_reg.custom_answers) if match_reg.custom_answers else {}
+            for k, new_v in cleaned_custom_answers.items():
+                old_v = existing_custom.get(k)
+                old_v_str = str(old_v) if old_v is not None else ""
+                new_v_str = str(new_v) if new_v is not None else ""
+                if old_v_str.strip().lower() != new_v_str.strip().lower():
+                    changes.append({"field": k, "old": old_v_str, "new": new_v_str})
+                    
+            if changes:
+                to_update.append({
+                    "row_index": idx + 1,
+                    "registration_id": str(match_reg.id),
+                    "pin": match_reg.pin,
+                    "matched_by": match_by,
+                    "attendee_name": f"{attendee.first_name if attendee else ''} {attendee.last_name if attendee else ''}".strip(),
+                    "email": attendee.email if attendee else raw_email,
+                    "changes": changes
+                })
+            else:
+                unchanged.append({
+                    "row_index": idx + 1,
+                    "registration_id": str(match_reg.id),
+                    "pin": match_reg.pin,
+                    "attendee_name": f"{attendee.first_name if attendee else ''} {attendee.last_name if attendee else ''}".strip(),
+                    "email": attendee.email if attendee else raw_email
+                })
+        else:
+            if not raw_email:
+                errors.append(f"Row {idx + 1}: Missing email address.")
+                continue
+            if not first_name and not last_name:
+                errors.append(f"Row {idx + 1} ({raw_email}): Missing attendee name.")
+                continue
+            to_create.append({
+                "row_index": idx + 1,
+                "email": raw_email,
+                "first_name": first_name or "Guest",
+                "last_name": last_name or "",
+                "company": company or "",
+                "pin": pin or "(Auto-generated)",
+                "custom_answers_count": len(cleaned_custom_answers)
+            })
+            
+    return {
+        "summary": {
+            "total_rows": len(items),
+            "to_update_count": len(to_update),
+            "to_create_count": len(to_create),
+            "unchanged_count": len(unchanged),
+            "error_count": len(errors)
+        },
+        "to_update": to_update,
+        "to_create": to_create,
+        "unchanged": unchanged,
+        "errors": errors
+    }
+
 @router.post("/events/{event_id}/registrations/bulk")
 def create_registrations_bulk(
     event_id: int,
-    registrants_data: List[BulkRegistrantItem],
+    payload: Union[BulkImportRequest, List[BulkRegistrantItem]],
     background_tasks: BackgroundTasks,
     session: Session = Depends(get_session),
     current_user: Optional[User] = Depends(get_current_user_from_request)
 ):
     if not current_user:
         raise HTTPException(status_code=401, detail="Authentication required")
-    if current_user.role != "admin":
-        raise HTTPException(status_code=403, detail="Forbidden: Only administrators can import registrants in bulk")
+    if current_user.role not in ["admin", "manager"]:
+        raise HTTPException(status_code=403, detail="Forbidden: Only administrators and managers can update or import registrants in bulk")
         
     event = session.get(Event, event_id)
     if not event:
@@ -707,146 +862,257 @@ def create_registrations_bulk(
         
     config = get_event_email_config(event, session)
     
+    items = payload if isinstance(payload, list) else payload.registrants
+    options = BulkImportOptions() if isinstance(payload, list) else (payload.options or BulkImportOptions())
+    
     created = []
+    updated = []
     errors = []
     
-    for item in registrants_data:
-        email = item.email.strip().lower()
-        first_name = item.first_name.strip()
-        last_name = item.last_name.strip()
+    registrations = session.exec(
+        select(Registration)
+        .where(Registration.event_id == event_id)
+    ).all()
+    
+    reg_by_id = {str(r.id): r for r in registrations}
+    reg_by_pin = {r.pin: r for r in registrations if r.pin}
+    reg_by_email = {r.attendee.email.lower(): r for r in registrations if r.attendee and r.attendee.email}
+    
+    for idx, item in enumerate(items):
+        raw_email = (item.email or "").strip().lower()
+        first_name = (item.first_name or "").strip()
+        last_name = (item.last_name or "").strip()
         company = item.company.strip() if item.company else None
+        pin = (item.pin or "").strip()
+        registration_id = (item.registration_id or "").strip()
+        status_val = (item.status or "").strip().lower()
+        checked_in = item.checked_in
         custom_answers = item.custom_answers or {}
         
-        if not email or not first_name or not last_name:
-            errors.append("Row missing required fields (email, first_name, or last_name)")
-            continue
-            
+        cleaned_custom_answers = {
+            k: v for k, v in custom_answers.items()
+            if v is not None and not (isinstance(v, str) and not v.strip()) and not (isinstance(v, list) and not v)
+        }
+        
+        match_reg: Optional[Registration] = None
+        
+        if options.match_strategy in ["auto", "pin"]:
+            if registration_id and registration_id in reg_by_id:
+                match_reg = reg_by_id[registration_id]
+            elif pin and pin in reg_by_pin:
+                match_reg = reg_by_pin[pin]
+                
+        if not match_reg and options.match_strategy in ["auto", "email"]:
+            if raw_email and raw_email in reg_by_email:
+                match_reg = reg_by_email[raw_email]
+                
         try:
-            attendee = session.exec(
-                select(Attendee)
-                .where(func.lower(Attendee.email) == email)
-                .where(func.lower(Attendee.first_name) == first_name.lower())
-                .where(func.lower(Attendee.last_name) == last_name.lower())
-            ).first()
-            
-            if not attendee:
-                attendee = Attendee(
-                    email=email,
-                    first_name=first_name,
-                    last_name=last_name,
-                    company=company
-                )
-                session.add(attendee)
+            if match_reg:
+                # UPDATE existing registration
+                attendee = match_reg.attendee
+                if attendee:
+                    if first_name:
+                        attendee.first_name = first_name
+                    if last_name:
+                        attendee.last_name = last_name
+                    if company is not None:
+                        attendee.company = company
+                    if raw_email and raw_email != attendee.email.lower():
+                        attendee.email = raw_email
+                    session.add(attendee)
+                    
+                if status_val in ["confirmed", "waitlisted", "cancelled"]:
+                    match_reg.status = status_val
+                if checked_in is not None:
+                    match_reg.checked_in = checked_in
+                    
+                if cleaned_custom_answers:
+                    if options.merge_custom_answers:
+                        existing_answers = decrypt_dict(match_reg.custom_answers) if match_reg.custom_answers else {}
+                        merged_answers = {**existing_answers, **cleaned_custom_answers}
+                    else:
+                        merged_answers = cleaned_custom_answers
+                    match_reg.custom_answers = encrypt_dict(merged_answers)
+                    flag_modified(match_reg, "custom_answers")
+                    
+                session.add(match_reg)
                 session.commit()
-                session.refresh(attendee)
+                session.refresh(match_reg)
+                
+                reg_by_id[str(match_reg.id)] = match_reg
+                if match_reg.pin:
+                    reg_by_pin[match_reg.pin] = match_reg
+                if attendee and attendee.email:
+                    reg_by_email[attendee.email.lower()] = match_reg
+                    
+                webhook_payload = {
+                    "registration_id": str(match_reg.id),
+                    "pin": match_reg.pin,
+                    "status": match_reg.status,
+                    "created_at": match_reg.created_at.isoformat() + "Z" if match_reg.created_at else "",
+                    "attendee": {
+                        "first_name": attendee.first_name if attendee else "",
+                        "last_name": attendee.last_name if attendee else "",
+                        "email": attendee.email if attendee else raw_email,
+                        "company": attendee.company if attendee else company
+                    },
+                    "event_id": event.id,
+                    "event_slug": event.slug,
+                    "event_title": event.title
+                }
+                trigger_webhooks("registration.updated", webhook_payload, session, background_tasks, client_id=event.client_id)
+                
+                if options.send_emails_to_updated and attendee and attendee.email:
+                    dispatch_send_confirmation_email(
+                        background_tasks=background_tasks,
+                        to_email=attendee.email,
+                        first_name=attendee.first_name,
+                        event_title=event.title,
+                        clearance_id=match_reg.pin,
+                        event_details={
+                            "start_date": event.start_date,
+                            "location": event.location,
+                            "address": event.address
+                        },
+                        config=config,
+                        registration_id=str(match_reg.id)
+                    )
+                updated.append(attendee.email if attendee else raw_email)
+                
             else:
-                if company:
-                    attendee.company = company
+                # CREATE new registration
+                if not raw_email:
+                    errors.append(f"Row {idx + 1}: Missing email address.")
+                    continue
+                if not first_name and not last_name:
+                    errors.append(f"Row {idx + 1} ({raw_email}): Missing attendee name.")
+                    continue
+                    
+                attendee = session.exec(
+                    select(Attendee)
+                    .where(func.lower(Attendee.email) == raw_email)
+                ).first()
+                
+                if not attendee:
+                    attendee = Attendee(
+                        email=raw_email,
+                        first_name=first_name or "Guest",
+                        last_name=last_name or "",
+                        company=company
+                    )
                     session.add(attendee)
                     session.commit()
                     session.refresh(attendee)
-            
-            registration = session.exec(
-                select(Registration)
-                .where(Registration.event_id == event_id)
-                .where(Registration.attendee_id == attendee.id)
-            ).first()
-            
-            # Clean empty answers from payload (treating None, "", whitespace-only, or empty list as empty)
-            cleaned_custom_answers = {}
-            for k, v in custom_answers.items():
-                is_empty = v is None or (isinstance(v, str) and not v.strip()) or (isinstance(v, list) and not v)
-                if not is_empty:
-                    cleaned_custom_answers[k] = v
-            
-            is_new = True
-            
-            if registration:
-                is_new = False
-                existing_answers = decrypt_dict(registration.custom_answers) if registration.custom_answers else {}
-                merged_answers = {**existing_answers, **cleaned_custom_answers}
-                registration.custom_answers = encrypt_dict(merged_answers)
-                registration.status = "confirmed"
-                session.add(registration)
-                session.commit()
-                session.refresh(registration)
-            else:
-                # Generate a unique PIN for this event
-                capacity = event.capacity or 0
-                if capacity >= 5000 or capacity == 0:
-                    pin_min, pin_max = 100000, 999999
                 else:
-                    pin_min, pin_max = 1000, 9999
-
-                while True:
-                    pin = str(random.randint(pin_min, pin_max))
-                    exists = session.exec(
+                    if company:
+                        attendee.company = company
+                    if first_name:
+                        attendee.first_name = first_name
+                    if last_name:
+                        attendee.last_name = last_name
+                    session.add(attendee)
+                    session.commit()
+                    session.refresh(attendee)
+                    
+                assigned_pin = pin if pin else None
+                if assigned_pin:
+                    exists_pin = session.exec(
                         select(Registration)
                         .where(Registration.event_id == event_id)
-                        .where(Registration.pin == pin)
+                        .where(Registration.pin == assigned_pin)
                     ).first()
-                    if not exists:
-                        break
-                registration = Registration(
+                    if exists_pin:
+                        assigned_pin = None
+                        
+                if not assigned_pin:
+                    capacity = event.capacity or 0
+                    pin_min, pin_max = (100000, 999999) if (capacity >= 5000 or capacity == 0) else (1000, 9999)
+                    while True:
+                        new_pin = str(random.randint(pin_min, pin_max))
+                        exists = session.exec(
+                            select(Registration)
+                            .where(Registration.event_id == event_id)
+                            .where(Registration.pin == new_pin)
+                        ).first()
+                        if not exists:
+                            assigned_pin = new_pin
+                            break
+                            
+                new_reg = Registration(
                     event_id=event_id,
                     attendee_id=attendee.id,
                     custom_answers=encrypt_dict(cleaned_custom_answers),
-                    pin=pin,
-                    status="confirmed"
+                    pin=assigned_pin,
+                    status=status_val if status_val in ["confirmed", "waitlisted", "cancelled"] else "confirmed",
+                    checked_in=checked_in if checked_in is not None else False
                 )
-                session.add(registration)
+                session.add(new_reg)
                 session.commit()
-                session.refresh(registration)
-            
-            # Dispatch webhook subscription triggers
-            webhook_event = "registration.created" if is_new else "registration.updated"
-            webhook_payload = {
-                "registration_id": str(registration.id),
-                "pin": registration.pin,
-                "status": registration.status,
-                "created_at": registration.created_at.isoformat() + "Z" if registration.created_at else "",
-                "attendee": {
-                    "first_name": attendee.first_name,
-                    "last_name": attendee.last_name,
-                    "email": attendee.email,
-                    "company": attendee.company
-                },
-                "event_id": event.id,
-                "event_slug": event.slug,
-                "event_title": event.title
-            }
-            trigger_webhooks(webhook_event, webhook_payload, session, background_tasks, client_id=event.client_id)
-
-            # Asynchronous email dispatch via tasks.py helper
-            dispatch_send_confirmation_email(
-                background_tasks=background_tasks,
-                to_email=attendee.email,
-                first_name=attendee.first_name,
-                event_title=event.title,
-                clearance_id=registration.pin,
-                event_details={
-                    "start_date": event.start_date,
-                    "location": event.location,
-                    "address": event.address
-                },
-                config=config,
-                registration_id=str(registration.id)
-            )
-            created.append(email)
-            
+                session.refresh(new_reg)
+                
+                reg_by_id[str(new_reg.id)] = new_reg
+                if new_reg.pin:
+                    reg_by_pin[new_reg.pin] = new_reg
+                reg_by_email[raw_email] = new_reg
+                
+                webhook_payload = {
+                    "registration_id": str(new_reg.id),
+                    "pin": new_reg.pin,
+                    "status": new_reg.status,
+                    "created_at": new_reg.created_at.isoformat() + "Z" if new_reg.created_at else "",
+                    "attendee": {
+                        "first_name": attendee.first_name,
+                        "last_name": attendee.last_name,
+                        "email": attendee.email,
+                        "company": attendee.company
+                    },
+                    "event_id": event.id,
+                    "event_slug": event.slug,
+                    "event_title": event.title
+                }
+                trigger_webhooks("registration.created", webhook_payload, session, background_tasks, client_id=event.client_id)
+                
+                if options.send_emails_to_new:
+                    dispatch_send_confirmation_email(
+                        background_tasks=background_tasks,
+                        to_email=attendee.email,
+                        first_name=attendee.first_name,
+                        event_title=event.title,
+                        clearance_id=new_reg.pin,
+                        event_details={
+                            "start_date": event.start_date,
+                            "location": event.location,
+                            "address": event.address
+                        },
+                        config=config,
+                        registration_id=str(new_reg.id)
+                    )
+                created.append(raw_email)
+                
         except Exception as e:
             session.rollback()
-            errors.append(f"Error registering {email}: {str(e)}")
+            errors.append(f"Row {idx + 1} ({raw_email}): {str(e)}")
             
-    if created:
+    if created or updated:
         log_audit(
             current_user.email,
-            "bulk_import",
-            f"Bulk imported {len(created)} registrants successfully",
+            "bulk_sync",
+            f"Bulk sync completed for event: {len(updated)} updated, {len(created)} created, {len(errors)} errors",
             event_id
         )
-            
-    return {"created": created, "errors": errors}
+        
+    return {
+        "ok": True,
+        "created": created,
+        "updated": updated,
+        "errors": errors,
+        "summary": {
+            "created_count": len(created),
+            "updated_count": len(updated),
+            "error_count": len(errors),
+            "total_processed": len(created) + len(updated)
+        }
+    }
 
 class BulkDeleteRequest(SQLModel):
     registration_ids: List[str]

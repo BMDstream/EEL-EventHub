@@ -134,9 +134,29 @@ export default function ClientsPage() {
     setModalOpen(true);
   };
 
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      try {
+        const uploadData = new FormData();
+        uploadData.append("file", file);
+        const res = await fetch("/api/py/media/upload", {
+          method: "POST",
+          headers: {
+            "x-user-email": session?.user?.email || ""
+          },
+          body: uploadData,
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.url) {
+            setFormData(prev => ({ ...prev, logo_url: data.url }));
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn("Media server upload failed, falling back to base64 encoding", err);
+      }
       const reader = new FileReader();
       reader.onloadend = () => {
         setFormData(prev => ({ ...prev, logo_url: reader.result as string }));

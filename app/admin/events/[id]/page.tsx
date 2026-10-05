@@ -33,7 +33,10 @@ import {
   Printer,
   Mail,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  FileSpreadsheet,
+  Layers,
+  Info
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import AdminLayout from "@/components/AdminLayout";
@@ -327,6 +330,18 @@ export default function EventDetailsPage() {
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [parsedRegistrants, setParsedRegistrants] = useState<any[]>([]);
   const [importing, setImporting] = useState(false);
+  const [importPreviewData, setImportPreviewData] = useState<{
+    summary?: any;
+    to_update?: any[];
+    to_create?: any[];
+    unchanged?: any[];
+    errors?: string[];
+  } | null>(null);
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+  const [activeImportTab, setActiveImportTab] = useState<"update" | "create" | "unchanged" | "errors">("update");
+  const [sendEmailsToNew, setSendEmailsToNew] = useState(false);
+  const [sendEmailsToUpdated, setSendEmailsToUpdated] = useState(false);
+  const [importFileName, setImportFileName] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [selectedMetric, setSelectedMetric] = useState<"date" | "venue" | "enrollment" | "declined" | "checked_in" | null>(null);
@@ -455,7 +470,7 @@ export default function EventDetailsPage() {
     const vars: Record<string, string> = {
       first_name: "John",
       last_name: "Doe",
-      event_title: cleanHtmlText(event?.title) || "Golf Invitational 2026",
+      event_title: cleanHtmlText(event?.title || "") || "Golf Invitational 2026",
       location: event?.location || "Highland Gate Golf Estate",
       start_date: event?.start_date ? new Date(event.start_date).toLocaleDateString() : "TBA",
       primary_color: brandPrimary,
@@ -704,20 +719,22 @@ export default function EventDetailsPage() {
     import("xlsx").then((XLSX) => {
       const customFields = event?.custom_fields_schema || [];
       const customHeaders = customFields.map(f => f.label || f.id);
-      const headers = ["first_name", "last_name", "email", "company", ...customHeaders];
+      const headers = ["first_name", "last_name", "email", "company", "clearance_pin", ...customHeaders];
       
       const sampleRow1: any = {
         first_name: "John",
         last_name: "Doe",
         email: "john.doe@example.com",
-        company: "Acme Corp"
+        company: "Acme Corp",
+        clearance_pin: "1001"
       };
       
       const sampleRow2: any = {
         first_name: "Jane",
         last_name: "Smith",
         email: "jane.smith@example.com",
-        company: "Innovate LLC"
+        company: "Innovate LLC",
+        clearance_pin: ""
       };
       
       // Add blank or option hints for custom questions
@@ -745,20 +762,22 @@ export default function EventDetailsPage() {
         { wch: 15 },
         { wch: 15 },
         { wch: 25 },
-        { wch: 20 }
+        { wch: 20 },
+        { wch: 15 }
       ];
       customHeaders.forEach(() => {
         cols.push({ wch: 25 });
       });
       worksheet["!cols"] = cols;
       
-      XLSX.writeFile(workbook, `registrants_import_template.xlsx`);
+      XLSX.writeFile(workbook, `registrants_template_${event?.slug || "event"}.xlsx`);
     });
   };
 
   const handleImportFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    const currentEvent = event;
+    if (!file || !currentEvent) return;
 
     const reader = new FileReader();
     reader.onload = (evt) => {
@@ -770,52 +789,118 @@ export default function EventDetailsPage() {
           const worksheet = workbook.Sheets[firstSheetName];
           const jsonData = XLSX.utils.sheet_to_json<any>(worksheet);
 
-          const customFields = event?.custom_fields_schema || [];
+          const customFields = currentEvent.custom_fields_schema || [];
+
+          const standardKeys = [
+            "email", "first_name", "last_name", "company", "organization", "company name",
+            "pin", "clearance pin", "clearance id", "unique clearance id", "clearance_pin",
+            "id", "registration_id", "registration id", "status",
+            "checked_in", "checked in", "checked in (any)", "checked in days",
+            "day 1 check in", "day 2 check in", "day 3 check in", "day 4 check in", "day 5 check in",
+            "qr code link", "qr link", "registered at"
+          ];
 
           const parsed = jsonData.map((row: any) => {
-            const email = row.email || row.Email || row.EMAIL || row["Email"] || "";
-            const first_name = row.first_name || row.First_Name || row["First Name"] || row.firstName || row.FirstName || "";
-            const last_name = row.last_name || row.Last_Name || row["Last Name"] || row.lastName || row.LastName || "";
-            const company = row.company || row.Company || row.COMPANY || row["Organization"] || row["Company Name"] || "";
+            const email = String(row.email || row.Email || row.EMAIL || row["Email"] || "").trim().toLowerCase();
+            const first_name = String(row.first_name || row.First_Name || row["First Name"] || row.firstName || row.FirstName || "").trim();
+            const last_name = String(row.last_name || row.Last_Name || row["Last Name"] || row.lastName || row.LastName || "").trim();
+            const company = String(row.company || row.Company || row.COMPANY || row["Organization"] || row["Company Name"] || "").trim();
+            const pin = String(row.pin || row.PIN || row.Pin || row["Clearance PIN"] || row["Clearance ID"] || row["Unique Clearance ID"] || row["Clearance Pin"] || row["pin"] || "").trim();
+            const registration_id = String(row.id || row.ID || row.registration_id || row["Registration ID"] || row["Registration Id"] || row["registration_id"] || "").trim();
+            const status = String(row.status || row.Status || row.STATUS || "").trim().toLowerCase();
             
-            // Gather custom field answers, mapping the spreadsheet headers to standard schema field IDs
-            const standardKeys = ["email", "first_name", "last_name", "company", "Email", "First_Name", "Last_Name", "Company", "EMAIL", "COMPANY", "firstName", "lastName", "FirstName", "LastName", "First Name", "Last Name", "Organization", "Company Name"];
+            // Check-in status
+            let checked_in: boolean | undefined = undefined;
+            const rawCheckedIn = row.checked_in ?? row.Checked_In ?? row["Checked In"] ?? row["Checked In (Any)"];
+            if (rawCheckedIn !== undefined && rawCheckedIn !== null && rawCheckedIn !== "") {
+              const strVal = String(rawCheckedIn).trim().toLowerCase();
+              if (["yes", "true", "1", "checked", "checked in"].includes(strVal)) checked_in = true;
+              else if (["no", "false", "0", "not checked in"].includes(strVal)) checked_in = false;
+            }
+
+            // Gather custom field answers
             const custom_answers: Record<string, any> = {};
-            Object.keys(row).forEach(key => {
-              if (!standardKeys.includes(key)) {
-                // Check if key matches a label or ID in event.custom_fields_schema (supporting fuzzy prefix matches for truncated keys)
-                const matchedField = customFields.find(
-                  f => {
-                    const cleanLabel = (f.label || "").toLowerCase().trim();
-                    const cleanKey = key.toLowerCase().trim();
-                    if (cleanLabel === cleanKey) return true;
-                    if (cleanLabel.length >= 4 && cleanKey.length >= 4 && (cleanLabel.startsWith(cleanKey) || cleanKey.startsWith(cleanLabel))) return true;
-                    return f.id.toLowerCase().trim() === cleanKey;
-                  }
-                );
+            Object.keys(row).forEach(rawKey => {
+              const cleanKey = rawKey.trim().toLowerCase();
+              if (!standardKeys.includes(cleanKey)) {
+                const matchedField = customFields.find((f: any) => {
+                  const fieldId = (f.id || "").toLowerCase().trim();
+                  const fieldKey = (f.key || "").toLowerCase().trim();
+                  const cleanLabel = (f.label || f.title || "").replace(/<[^>]*>/g, "").toLowerCase().trim();
+                  if (fieldId && fieldId === cleanKey) return true;
+                  if (fieldKey && fieldKey === cleanKey) return true;
+                  if (cleanLabel && cleanLabel === cleanKey) return true;
+                  if (cleanLabel.length >= 4 && (cleanKey.startsWith(cleanLabel) || cleanLabel.startsWith(cleanKey))) return true;
+                  return false;
+                });
                 if (matchedField) {
-                  custom_answers[matchedField.id] = row[key];
+                  custom_answers[matchedField.id || matchedField.key] = row[rawKey];
                 } else {
-                  custom_answers[key] = row[key];
+                  custom_answers[rawKey.trim()] = row[rawKey];
                 }
               }
             });
 
             return {
-              email: email.toString().trim(),
-              first_name: first_name.toString().trim(),
-              last_name: last_name.toString().trim(),
-              company: company.toString().trim(),
+              email,
+              first_name,
+              last_name,
+              company: company || undefined,
+              pin: pin || undefined,
+              registration_id: registration_id || undefined,
+              status: status || undefined,
+              checked_in,
               custom_answers
             };
-          }).filter(u => u.email !== "");
+          }).filter(u => u.email !== "" || u.pin || u.registration_id);
 
           if (parsed.length === 0) {
-            alert("No valid rows found. Make sure headers are: email, first_name, last_name, company.");
+            alert("No valid rows found. Make sure your sheet contains attendees with an email or Clearance PIN.");
             return;
           }
 
           setParsedRegistrants(parsed);
+          setImportFileName(file.name);
+
+          // Fetch preview immediately from server for real-time diff & validation
+          setIsPreviewLoading(true);
+          fetch(`/api/py/events/${currentEvent.id}/registrations/bulk-preview`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-user-email": session?.user?.email || ""
+            },
+            body: JSON.stringify({
+              registrants: parsed,
+              options: {
+                send_emails_to_new: false,
+                send_emails_to_updated: false,
+                match_strategy: "auto",
+                merge_custom_answers: true
+              }
+            })
+          })
+          .then(async (res) => {
+            if (res.ok) {
+              const preview = await res.json();
+              setImportPreviewData(preview);
+              if (preview.to_update && preview.to_update.length > 0) {
+                setActiveImportTab("update");
+              } else if (preview.to_create && preview.to_create.length > 0) {
+                setActiveImportTab("create");
+              } else if (preview.errors && preview.errors.length > 0) {
+                setActiveImportTab("errors");
+              } else {
+                setActiveImportTab("unchanged");
+              }
+            }
+          })
+          .catch(err => {
+            console.error("Preview error:", err);
+          })
+          .finally(() => {
+            setIsPreviewLoading(false);
+          });
         });
       } catch (err) {
         console.error(err);
@@ -829,21 +914,36 @@ export default function EventDetailsPage() {
     if (!parsedRegistrants.length || !event) return;
     setImporting(true);
     try {
+      const payload = {
+        registrants: parsedRegistrants,
+        options: {
+          send_emails_to_new: sendEmailsToNew,
+          send_emails_to_updated: sendEmailsToUpdated,
+          match_strategy: "auto",
+          merge_custom_answers: true
+        }
+      };
+
       const res = await fetch(`/api/py/events/${event.id}/registrations/bulk`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "x-user-email": session?.user?.email || ""
         },
-        body: JSON.stringify(parsedRegistrants)
+        body: JSON.stringify(payload)
       });
       if (res.ok) {
         const result = await res.json();
-        if (result.errors.length > 0) {
-          alert(`Successfully imported ${result.created.length} registrants.\n\nErrors encountered:\n- ${result.errors.join("\n- ")}`);
-        } else {
-          alert(`Successfully imported ${result.created.length} registrants!`);
+        const updatedCount = result.updated?.length || result.summary?.updated_count || 0;
+        const createdCount = result.created?.length || result.summary?.created_count || 0;
+        const errorCount = result.errors?.length || result.summary?.error_count || 0;
+
+        let msg = `Bulk Sync Complete!\n\n• ${updatedCount} Registrants Updated on the fly\n• ${createdCount} New Registrants Added`;
+        if (errorCount > 0) {
+          msg += `\n\nErrors encountered (${errorCount}):\n- ${result.errors.slice(0, 5).join("\n- ")}`;
+          if (result.errors.length > 5) msg += `\n...and ${result.errors.length - 5} more.`;
         }
+        alert(msg);
         
         // Refresh registrants list
         const regRes = await fetch(`/api/py/events/${id}/registrations`, {
@@ -854,13 +954,15 @@ export default function EventDetailsPage() {
         
         setIsImportModalOpen(false);
         setParsedRegistrants([]);
+        setImportPreviewData(null);
+        setImportFileName("");
       } else {
         const err = await res.json();
-        alert(`Import failed: ${err.detail || "Unknown error"}`);
+        alert(`Sync failed: ${err.detail || "Unknown error"}`);
       }
     } catch (err) {
       console.error(err);
-      alert("Error importing registrants");
+      alert("Error importing or updating registrants");
     } finally {
       setImporting(false);
     }
@@ -1299,7 +1401,7 @@ export default function EventDetailsPage() {
     new Set(
       registrations
         .map((r) => r.attendee?.company?.trim())
-        .filter(Boolean)
+        .filter((c): c is string => Boolean(c))
     )
   ).sort((a, b) => a.localeCompare(b));
 
@@ -1308,7 +1410,7 @@ export default function EventDetailsPage() {
     new Set(
       registrations
         .map((r) => r.created_at ? new Date(r.created_at).toISOString().split('T')[0] : "")
-        .filter(Boolean)
+        .filter((d): d is string => Boolean(d))
     )
   ).sort((a, b) => b.localeCompare(a));
 
@@ -1898,13 +2000,13 @@ export default function EventDetailsPage() {
                       Add Registrant
                     </button>
                   )}
-                  {userRole === "admin" && (
+                  {(userRole === "admin" || userRole === "manager") && (
                     <button 
                       onClick={() => setIsImportModalOpen(true)}
-                      className="flex items-center gap-2 bg-[#0f172a] hover:bg-black text-white dark:text-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all border dark:border-slate-700"
+                      className="flex items-center gap-2 bg-[#0f172a] hover:bg-black text-white dark:text-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all border dark:border-slate-700 shadow-sm"
                     >
                       <Upload size={14} />
-                      Import Registrants
+                      Bulk Upload & Changes
                     </button>
                   )}
                 </div>
@@ -3458,105 +3560,395 @@ export default function EventDetailsPage() {
           </div>
         )}
         {isImportModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm font-outfit">
-            <div className="bg-white dark:bg-[#0f172a] rounded-[2.5rem] shadow-2xl border border-slate-100 dark:border-slate-800 w-full max-w-2xl overflow-hidden flex flex-col max-h-[85vh] animate-in fade-in zoom-in-95 duration-200">
-              <div className="px-10 py-8 border-b border-slate-50 dark:border-slate-800/80 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
-                  <div>
-                    <h3 className="text-xl font-black text-[#0f172a] dark:text-white font-bricolage italic uppercase tracking-tight">Bulk Import <span className="text-slate-300 dark:text-slate-650">Registrants</span></h3>
-                    <p className="text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest text-[9px] mt-1">Upload CSV or Excel file</p>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-md font-outfit">
+            <div className="bg-white dark:bg-[#0f172a] rounded-[2.5rem] shadow-2xl border border-slate-100 dark:border-slate-800 w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-200">
+              {/* Modal Header */}
+              <div className="px-8 py-6 border-b border-slate-100 dark:border-slate-800/80 flex justify-between items-center bg-slate-50/60 dark:bg-slate-900/60">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-yellow-400/10 dark:bg-yellow-400/20 text-yellow-600 dark:text-yellow-400 flex items-center justify-center border border-yellow-400/20">
+                    <FileSpreadsheet size={20} />
                   </div>
-                  <button 
-                    onClick={() => {
-                      setIsImportModalOpen(false);
-                      setParsedRegistrants([]);
-                    }}
-                    className="w-10 h-10 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full flex items-center justify-center text-slate-400 dark:text-slate-300 hover:text-slate-600 dark:hover:text-white transition-colors"
-                  >
-                    <X size={20} />
-                  </button>
+                  <div>
+                    <h3 className="text-xl font-black text-[#0f172a] dark:text-white font-bricolage italic uppercase tracking-tight">
+                      Bulk Upload & <span className="text-yellow-600 dark:text-yellow-400">Changes</span>
+                    </h3>
+                    <p className="text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest text-[9px] mt-0.5">
+                      Apply last-minute attendee updates and additions on the fly
+                    </p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => {
+                    setIsImportModalOpen(false);
+                    setParsedRegistrants([]);
+                    setImportPreviewData(null);
+                    setImportFileName("");
+                  }}
+                  className="w-9 h-9 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full flex items-center justify-center text-slate-400 dark:text-slate-300 hover:text-slate-600 dark:hover:text-white transition-colors"
+                >
+                  <X size={18} />
+                </button>
               </div>
 
-              <div className="p-10 overflow-y-auto space-y-6 flex-1">
-                <p className="text-slate-500 dark:text-slate-450 font-medium text-sm">
-                  Import a bulk register of attendees. The system will automatically add them, generate a unique clearance PIN, create a QR code, and send the registration confirmation email.
-                </p>
-
-                <div className="bg-slate-50 dark:bg-slate-900/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-800/80">
-                  <h4 className="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">Supported Columns</h4>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mb-4 leading-relaxed">
-                    Must contain headers: <code className="bg-slate-200/60 dark:bg-slate-800 px-1.5 py-0.5 rounded font-bold">first_name</code>, <code className="bg-slate-200/60 dark:bg-slate-800 px-1.5 py-0.5 rounded font-bold">last_name</code>, <code className="bg-slate-200/60 dark:bg-slate-800 px-1.5 py-0.5 rounded font-bold">email</code>, and <code className="bg-slate-200/60 dark:bg-slate-800 px-1.5 py-0.5 rounded font-bold">company</code>. Additional columns are automatically parsed as custom responses.
-                  </p>
-                  <button
-                    onClick={downloadRegistrantTemplate}
-                    className="flex items-center gap-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-[#0f172a] dark:text-slate-200 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all"
-                  >
-                    <Download size={14} />
-                    Download Excel Template
-                  </button>
-                </div>
-
+              {/* Modal Body */}
+              <div className="p-8 overflow-y-auto space-y-6 flex-1 text-slate-600 dark:text-slate-300">
                 {!parsedRegistrants.length ? (
-                  <div className="border-2 border-dashed border-slate-200 dark:border-slate-800 hover:border-yellow-400 rounded-3xl p-12 text-center transition-all cursor-pointer relative bg-slate-50/30 dark:bg-slate-900/30 hover:bg-slate-50/50 dark:hover:bg-slate-900/50">
-                    <input
-                      type="file"
-                      accept=".csv, .xlsx, .xls"
-                      onChange={handleImportFileUpload}
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                    />
-                    <Upload className="mx-auto text-slate-300 dark:text-slate-600 mb-4" size={48} />
-                    <p className="text-sm font-bold text-[#0f172a] dark:text-white">Choose a file or drag it here</p>
-                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Supports CSV, XLSX, and XLS formats</p>
+                  <div className="space-y-6">
+                    {/* Guidance Card */}
+                    <div className="bg-slate-50 dark:bg-slate-900/60 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-4">
+                      <div className="flex items-start gap-3">
+                        <Info size={18} className="text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" />
+                        <div className="text-xs space-y-1">
+                          <p className="font-bold text-[#0f172a] dark:text-white">
+                            Intelligent Roster Matching & Live Changes
+                          </p>
+                          <p className="text-slate-500 dark:text-slate-400 leading-relaxed">
+                            Upload a spreadsheet (CSV or Excel) containing your updated guest list. BMD EventHub automatically detects existing guests by <span className="font-bold text-slate-700 dark:text-slate-200">Clearance PIN</span> or <span className="font-bold text-slate-700 dark:text-slate-200">Email Address</span> and applies any changes to names, organizations, dietary requirements, table numbers, or status directly on the fly. Existing PINs and QR codes remain fully preserved.
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Download Quick Actions */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                        <button
+                          onClick={exportToExcel}
+                          type="button"
+                          className="flex items-center justify-between p-3.5 bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 hover:border-yellow-400 rounded-xl transition-all group text-left"
+                        >
+                          <div>
+                            <span className="block text-[10px] font-black uppercase tracking-wider text-[#0f172a] dark:text-slate-200 group-hover:text-yellow-600 dark:group-hover:text-yellow-400">
+                              Download Live Manifest
+                            </span>
+                            <span className="block text-[9px] text-slate-400 dark:text-slate-500 mt-0.5 font-medium">
+                              Current guests with PINs ready for editing
+                            </span>
+                          </div>
+                          <Download size={16} className="text-slate-400 group-hover:text-yellow-600 dark:group-hover:text-yellow-400 ml-2 flex-shrink-0" />
+                        </button>
+
+                        <button
+                          onClick={downloadRegistrantTemplate}
+                          type="button"
+                          className="flex items-center justify-between p-3.5 bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 hover:border-yellow-400 rounded-xl transition-all group text-left"
+                        >
+                          <div>
+                            <span className="block text-[10px] font-black uppercase tracking-wider text-[#0f172a] dark:text-slate-200 group-hover:text-yellow-600 dark:group-hover:text-yellow-400">
+                              Download Blank Template
+                            </span>
+                            <span className="block text-[9px] text-slate-400 dark:text-slate-500 mt-0.5 font-medium">
+                              Clean format for adding new attendees
+                            </span>
+                          </div>
+                          <Download size={16} className="text-slate-400 group-hover:text-yellow-600 dark:group-hover:text-yellow-400 ml-2 flex-shrink-0" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* File Dropzone */}
+                    <div className="border-2 border-dashed border-slate-200 dark:border-slate-800 hover:border-yellow-400 rounded-3xl p-10 text-center transition-all cursor-pointer relative bg-slate-50/30 dark:bg-slate-900/30 hover:bg-slate-50/60 dark:hover:bg-slate-900/60">
+                      <input
+                        type="file"
+                        accept=".csv, .xlsx, .xls"
+                        onChange={handleImportFileUpload}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      />
+                      <Upload className="mx-auto text-yellow-500/70 mb-3" size={44} />
+                      <p className="text-sm font-black text-[#0f172a] dark:text-white uppercase tracking-wider">
+                        Drop updated spreadsheet here
+                      </p>
+                      <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+                        Supports Excel (.xlsx, .xls) and CSV files
+                      </p>
+                    </div>
                   </div>
                 ) : (
                   <div className="space-y-6">
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Parsed Attendees ({parsedRegistrants.length})</span>
-                      <button 
-                        onClick={() => setParsedRegistrants([])}
-                        className="text-xs font-bold text-red-500 hover:underline uppercase"
+                    {/* File Header Bar */}
+                    <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-slate-50 dark:bg-slate-900/80 rounded-2xl border border-slate-100 dark:border-slate-800">
+                      <div className="flex items-center gap-3">
+                        <FileSpreadsheet className="text-yellow-500" size={20} />
+                        <div>
+                          <p className="text-xs font-black text-[#0f172a] dark:text-white">
+                            {importFileName || "Uploaded Spreadsheet"}
+                          </p>
+                          <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">
+                            {parsedRegistrants.length} attendees detected
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setParsedRegistrants([]);
+                          setImportPreviewData(null);
+                          setImportFileName("");
+                        }}
+                        className="text-[10px] font-black uppercase tracking-wider text-red-500 hover:text-red-600 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 px-3 py-1.5 rounded-lg transition-colors"
                       >
-                        Clear File
+                        Change File
                       </button>
                     </div>
-                    
-                    <div className="max-h-[220px] overflow-y-auto pr-2 border border-slate-100 dark:border-slate-850 rounded-2xl divide-y divide-slate-100 dark:divide-slate-800/80">
-                      {parsedRegistrants.map((u, index) => (
-                        <div key={index} className="p-4 flex items-center justify-between hover:bg-slate-50/50 dark:hover:bg-slate-800/20">
-                          <div>
-                            <p className="font-bold text-sm text-[#0f172a] dark:text-white">{u.first_name} {u.last_name}</p>
-                            <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest">{u.email}</p>
-                          </div>
-                          {u.company && (
-                            <span className="px-2.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-100 dark:border-slate-700">
-                              {u.company}
+
+                    {/* Preview Diff Cards */}
+                    {isPreviewLoading ? (
+                      <div className="py-12 flex flex-col items-center justify-center gap-3 text-slate-400">
+                        <Loader2 className="animate-spin text-yellow-500" size={32} />
+                        <span className="text-xs font-bold uppercase tracking-wider">
+                          Analyzing changes against current event roster...
+                        </span>
+                      </div>
+                    ) : (
+                      <>
+                        {/* Summary Badges */}
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                          <button
+                            type="button"
+                            onClick={() => setActiveImportTab("update")}
+                            className={`p-3.5 rounded-2xl border text-left transition-all ${
+                              activeImportTab === "update"
+                                ? "bg-amber-500/10 border-amber-500/50 ring-2 ring-amber-500/20"
+                                : "bg-slate-50 dark:bg-slate-900/50 border-slate-100 dark:border-slate-800 hover:border-slate-300"
+                            }`}
+                          >
+                            <span className="block text-2xl font-black text-amber-600 dark:text-amber-400">
+                              {importPreviewData?.summary?.to_update_count ?? 0}
                             </span>
+                            <span className="block text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 mt-1">
+                              To Update
+                            </span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setActiveImportTab("create")}
+                            className={`p-3.5 rounded-2xl border text-left transition-all ${
+                              activeImportTab === "create"
+                                ? "bg-emerald-500/10 border-emerald-500/50 ring-2 ring-emerald-500/20"
+                                : "bg-slate-50 dark:bg-slate-900/50 border-slate-100 dark:border-slate-800 hover:border-slate-300"
+                            }`}
+                          >
+                            <span className="block text-2xl font-black text-emerald-600 dark:text-emerald-400">
+                              {importPreviewData?.summary?.to_create_count ?? 0}
+                            </span>
+                            <span className="block text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 mt-1">
+                              New Additions
+                            </span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setActiveImportTab("unchanged")}
+                            className={`p-3.5 rounded-2xl border text-left transition-all ${
+                              activeImportTab === "unchanged"
+                                ? "bg-slate-500/10 border-slate-500/50 ring-2 ring-slate-500/20"
+                                : "bg-slate-50 dark:bg-slate-900/50 border-slate-100 dark:border-slate-800 hover:border-slate-300"
+                            }`}
+                          >
+                            <span className="block text-2xl font-black text-slate-600 dark:text-slate-400">
+                              {importPreviewData?.summary?.unchanged_count ?? 0}
+                            </span>
+                            <span className="block text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 mt-1">
+                              Unchanged
+                            </span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setActiveImportTab("errors")}
+                            className={`p-3.5 rounded-2xl border text-left transition-all ${
+                              activeImportTab === "errors"
+                                ? "bg-red-500/10 border-red-500/50 ring-2 ring-red-500/20"
+                                : "bg-slate-50 dark:bg-slate-900/50 border-slate-100 dark:border-slate-800 hover:border-slate-300"
+                            }`}
+                          >
+                            <span className="block text-2xl font-black text-red-600 dark:text-red-400">
+                              {importPreviewData?.summary?.error_count ?? 0}
+                            </span>
+                            <span className="block text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 mt-1">
+                              Issues / Errors
+                            </span>
+                          </button>
+                        </div>
+
+                        {/* Tab Content Area */}
+                        <div className="border border-slate-100 dark:border-slate-800 rounded-2xl overflow-hidden bg-slate-50/30 dark:bg-slate-900/30">
+                          {activeImportTab === "update" && (
+                            <div className="max-h-[260px] overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/80">
+                              {(!importPreviewData?.to_update || importPreviewData.to_update.length === 0) ? (
+                                <div className="p-8 text-center text-xs text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">
+                                  No existing attendee modifications detected
+                                </div>
+                              ) : (
+                                importPreviewData.to_update.map((item: any, idx: number) => (
+                                  <div key={idx} className="p-4 hover:bg-slate-50/70 dark:hover:bg-slate-800/30 space-y-2">
+                                    <div className="flex items-center justify-between">
+                                      <div>
+                                        <span className="font-bold text-sm text-[#0f172a] dark:text-white mr-2">
+                                          {item.attendee_name || "Attendee"}
+                                        </span>
+                                        <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">
+                                          {item.email}
+                                        </span>
+                                      </div>
+                                      {item.pin && (
+                                        <span className="px-2 py-0.5 rounded-md text-[9px] font-mono font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                                          PIN: {item.pin}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="flex flex-wrap gap-1.5 pt-1">
+                                      {item.changes?.map((ch: any, cIdx: number) => (
+                                        <span 
+                                          key={cIdx} 
+                                          className="inline-flex items-center gap-1.5 text-[10px] bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20 px-2.5 py-1 rounded-lg font-medium"
+                                        >
+                                          <span className="font-bold">{ch.field}:</span>
+                                          <span className="line-through opacity-70">{ch.old || "(empty)"}</span>
+                                          <span>➔</span>
+                                          <span className="font-bold text-amber-900 dark:text-amber-100">{ch.new}</span>
+                                        </span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                ))
+                              )}
+                            </div>
+                          )}
+
+                          {activeImportTab === "create" && (
+                            <div className="max-h-[260px] overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/80">
+                              {(!importPreviewData?.to_create || importPreviewData.to_create.length === 0) ? (
+                                <div className="p-8 text-center text-xs text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">
+                                  No new registrations to create
+                                </div>
+                              ) : (
+                                importPreviewData.to_create.map((item: any, idx: number) => (
+                                  <div key={idx} className="p-4 flex items-center justify-between hover:bg-slate-50/70 dark:hover:bg-slate-800/30">
+                                    <div>
+                                      <p className="font-bold text-sm text-[#0f172a] dark:text-white">
+                                        {item.first_name} {item.last_name}
+                                      </p>
+                                      <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">
+                                        {item.email}
+                                      </p>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      {item.company && (
+                                        <span className="px-2.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+                                          {item.company}
+                                        </span>
+                                      )}
+                                      <span className="px-2 py-0.5 rounded-md text-[9px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 uppercase tracking-wider">
+                                        New Registration
+                                      </span>
+                                    </div>
+                                  </div>
+                                ))
+                              )}
+                            </div>
+                          )}
+
+                          {activeImportTab === "unchanged" && (
+                            <div className="max-h-[260px] overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/80">
+                              {(!importPreviewData?.unchanged || importPreviewData.unchanged.length === 0) ? (
+                                <div className="p-8 text-center text-xs text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">
+                                  No unchanged rows
+                                </div>
+                              ) : (
+                                importPreviewData.unchanged.map((item: any, idx: number) => (
+                                  <div key={idx} className="p-3.5 flex items-center justify-between opacity-70 hover:opacity-100">
+                                    <div>
+                                      <span className="font-bold text-xs text-[#0f172a] dark:text-white mr-2">
+                                        {item.attendee_name}
+                                      </span>
+                                      <span className="text-[10px] text-slate-400 dark:text-slate-500">
+                                        {item.email}
+                                      </span>
+                                    </div>
+                                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+                                      Identical
+                                    </span>
+                                  </div>
+                                ))
+                              )}
+                            </div>
+                          )}
+
+                          {activeImportTab === "errors" && (
+                            <div className="max-h-[260px] overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/80">
+                              {(!importPreviewData?.errors || importPreviewData.errors.length === 0) ? (
+                                <div className="p-8 text-center text-xs text-emerald-500 font-bold uppercase tracking-wider flex items-center justify-center gap-2">
+                                  <CheckCircle2 size={16} /> All rows valid and ready to sync!
+                                </div>
+                              ) : (
+                                importPreviewData.errors.map((errStr: string, idx: number) => (
+                                  <div key={idx} className="p-3.5 flex items-center gap-3 text-red-600 dark:text-red-400 text-xs">
+                                    <AlertCircle size={16} className="flex-shrink-0" />
+                                    <span>{errStr}</span>
+                                  </div>
+                                ))
+                              )}
+                            </div>
                           )}
                         </div>
-                      ))}
-                    </div>
+
+                        {/* Email Notification Toggles */}
+                        <div className="bg-slate-50 dark:bg-slate-900/60 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-3">
+                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">
+                            Notification Safeguards (Optional)
+                          </p>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                            <label className="flex items-center gap-2.5 cursor-pointer text-slate-700 dark:text-slate-300 select-none">
+                              <input
+                                type="checkbox"
+                                checked={sendEmailsToNew}
+                                onChange={(e) => setSendEmailsToNew(e.target.checked)}
+                                className="w-4 h-4 rounded text-yellow-500 focus:ring-yellow-400 bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 cursor-pointer"
+                              />
+                              <span className="font-bold">Email confirmation to NEW registrants</span>
+                            </label>
+
+                            <label className="flex items-center gap-2.5 cursor-pointer text-slate-700 dark:text-slate-300 select-none">
+                              <input
+                                type="checkbox"
+                                checked={sendEmailsToUpdated}
+                                onChange={(e) => setSendEmailsToUpdated(e.target.checked)}
+                                className="w-4 h-4 rounded text-yellow-500 focus:ring-yellow-400 bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 cursor-pointer"
+                              />
+                              <span className="font-bold">Email notification to MODIFIED attendees</span>
+                            </label>
+                          </div>
+                          <p className="text-[9px] text-slate-400 dark:text-slate-500 italic">
+                            * Left unchecked by default so last-minute manifest adjustments execute silently without blasting emails.
+                          </p>
+                        </div>
+                      </>
+                    )}
                   </div>
                 )}
               </div>
 
-              <div className="p-10 bg-slate-50 dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center">
+              {/* Modal Footer */}
+              <div className="p-6 bg-slate-50 dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center">
                 <button
                   type="button"
                   onClick={() => {
                     setIsImportModalOpen(false);
                     setParsedRegistrants([]);
+                    setImportPreviewData(null);
+                    setImportFileName("");
                   }}
-                  className="px-8 py-4 bg-white dark:bg-slate-850 border border-slate-200 dark:border-slate-750 text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-widest rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
+                  className="px-6 py-3.5 bg-white dark:bg-slate-850 border border-slate-200 dark:border-slate-750 text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-widest rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
                 >
                   Cancel
                 </button>
                 <button
                   type="button"
                   onClick={handleBulkRegistrantsImport}
-                  disabled={!parsedRegistrants.length || importing}
-                  className="px-8 py-4 bg-[#0f172a] dark:bg-slate-800 text-white dark:text-slate-200 text-[10px] font-black uppercase tracking-widest rounded-2xl hover:bg-black dark:hover:bg-slate-750 transition-all disabled:bg-slate-200 dark:disabled:bg-slate-850 dark:disabled:text-slate-500 flex items-center gap-2 shadow-xl shadow-slate-200 dark:shadow-none border dark:border-slate-700"
+                  disabled={!parsedRegistrants.length || importing || isPreviewLoading}
+                  className="px-8 py-3.5 bg-[#0f172a] dark:bg-yellow-500 text-white dark:text-[#0f172a] text-[10px] font-black uppercase tracking-widest rounded-2xl hover:bg-black dark:hover:bg-yellow-400 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-xl shadow-slate-200 dark:shadow-none"
                 >
                   {importing ? <Loader2 size={14} className="animate-spin" /> : null}
-                  Confirm & Sync Attendees
+                  Confirm & Apply Changes On The Fly
                 </button>
               </div>
             </div>

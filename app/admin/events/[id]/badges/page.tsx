@@ -35,7 +35,7 @@ export default function BadgePrintPage() {
         
         // Fetch Event Details
         const eventRes = await fetch(`/api/py/events/id/${id}`, {
-          headers: { "x-user-email": session.user.email }
+          headers: { "x-user-email": session.user?.email || "" }
         });
         if (!eventRes.ok) throw new Error("Failed to load event details");
         const eventData = await eventRes.json();
@@ -43,7 +43,7 @@ export default function BadgePrintPage() {
 
         // Fetch Event Registrations
         const regRes = await fetch(`/api/py/events/${id}/registrations`, {
-          headers: { "x-user-email": session.user.email }
+          headers: { "x-user-email": session.user?.email || "" }
         });
         if (!regRes.ok) throw new Error("Failed to load registrants");
         const regData = await regRes.json();
