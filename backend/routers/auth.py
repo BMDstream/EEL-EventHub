@@ -15,16 +15,16 @@ load_dotenv()
 router = APIRouter()
 
 # Azure Configuration
-CLIENT_ID = os.getenv("AZURE_AD_CLIENT_ID")
-CLIENT_SECRET = os.getenv("AZURE_AD_CLIENT_SECRET")
-TENANT_ID = os.getenv("AZURE_AD_TENANT_ID", "common")
+CLIENT_ID = (os.getenv("AZURE_AD_CLIENT_ID") or "").strip()
+CLIENT_SECRET = (os.getenv("AZURE_AD_CLIENT_SECRET") or "").strip()
+TENANT_ID = (os.getenv("AZURE_AD_TENANT_ID") or "common").strip()
 # Redirect URI for local development or production
 # This should match what's registered in Azure Portal
-BASE_URL = os.getenv("NEXTAUTH_URL", "http://localhost:3000").rstrip("/")
+BASE_URL = (os.getenv("NEXTAUTH_URL") or "http://localhost:3000").strip().rstrip("/")
 REDIRECT_URI = f"{BASE_URL}/api/py/auth/azure/callback"
 
 # Local JWT Configuration
-SECRET_KEY = os.getenv("NEXTAUTH_SECRET", "your-secret-key")
+SECRET_KEY = (os.getenv("NEXTAUTH_SECRET") or "your-secret-key").strip()
 ALGORITHM = "HS256"
 
 @router.get("/azure/login")
