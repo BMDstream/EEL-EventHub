@@ -440,7 +440,7 @@ function PublicRegistrationPageContent() {
               placeholder={field.placeholder || "Enter your answer"}
               value={value as string}
               onChange={(e) => handleFieldChange(e.target.value)}
-              className={style.input}
+              className={`${style.input} ${isFormLight ? '!text-slate-900 !placeholder-slate-400' : ''}`}
             />
           )}
 
@@ -455,7 +455,7 @@ function PublicRegistrationPageContent() {
                 const cleaned = e.target.value.replace(/[^0-9]/g, '');
                 handleFieldChange(cleaned);
               }}
-              className={style.input}
+              className={`${style.input} ${isFormLight ? '!text-slate-900 !placeholder-slate-400' : ''}`}
             />
           )}
 
@@ -465,16 +465,16 @@ function PublicRegistrationPageContent() {
                 required={isAttending !== false && field.required}
                 value={value as string}
                 onChange={(e) => handleFieldChange(e.target.value)}
-                className={style.select}
+                className={`${style.select} ${isFormLight ? '!text-slate-900' : ''}`}
               >
-                <option value="">{field.placeholder || "Select Option"}</option>
+                <option value="" className={isFormLight ? "text-slate-900 bg-white" : "text-white bg-slate-900"}>{field.placeholder || "Select Option"}</option>
                 {field.options?.map((opt: string) => (
-                  <option key={opt} value={opt}>
+                  <option key={opt} value={opt} className={isFormLight ? "text-slate-900 bg-white" : "text-white bg-slate-900"}>
                     {opt}
                   </option>
                 ))}
               </select>
-              <ChevronDown className="absolute right-6 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" size={20} />
+              <ChevronDown className={`absolute right-6 top-1/2 -translate-y-1/2 ${isFormLight ? 'text-slate-500' : 'text-zinc-500'} pointer-events-none`} size={20} />
             </div>
           )}
 
@@ -544,7 +544,7 @@ function PublicRegistrationPageContent() {
                       const prev = (value as any) || {};
                       handleFieldChange({ ...prev, first_name: e.target.value });
                     }}
-                    className={style.input}
+                    className={`${style.input} ${isFormLight ? '!text-slate-900 !placeholder-slate-400' : ''}`}
                   />
                 </div>
                 <div className="space-y-2">
@@ -558,7 +558,7 @@ function PublicRegistrationPageContent() {
                       const prev = (value as any) || {};
                       handleFieldChange({ ...prev, last_name: e.target.value });
                     }}
-                    className={style.input}
+                    className={`${style.input} ${isFormLight ? '!text-slate-900 !placeholder-slate-400' : ''}`}
                   />
                 </div>
               </div>
@@ -574,7 +574,7 @@ function PublicRegistrationPageContent() {
                     const prev = (value as any) || {};
                     handleFieldChange({ ...prev, email: e.target.value });
                   }}
-                  className={style.input}
+                  className={`${style.input} ${isFormLight ? '!text-slate-900 !placeholder-slate-400' : ''}`}
                 />
               </div>
             </div>
@@ -832,6 +832,34 @@ function PublicRegistrationPageContent() {
                        theme === "corporate_mono" || 
                        theme === "nordic_alabaster" || 
                        theme === "champagne_lounge";
+
+  const isColorLight = (colorStr?: string | null): boolean => {
+    if (!colorStr) return false;
+    const c = colorStr.trim().toLowerCase();
+    if (c === "white" || c === "#fff" || c === "#ffffff") return true;
+    if (c === "transparent" || c === "none") return false;
+    if (c.startsWith("#")) {
+      const hex = c.replace("#", "");
+      const r = parseInt(hex.length === 3 ? hex[0] + hex[0] : hex.substring(0, 2), 16);
+      const g = parseInt(hex.length === 3 ? hex[1] + hex[1] : hex.substring(2, 4), 16);
+      const b = parseInt(hex.length === 3 ? hex[2] + hex[2] : hex.substring(4, 6), 16);
+      if (isNaN(r) || isNaN(g) || isNaN(b)) return false;
+      const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+      return brightness > 150;
+    }
+    if (c.startsWith("rgb")) {
+      const match = c.match(/\d+/g);
+      if (match && match.length >= 3) {
+        const [r, g, b] = match.map(Number);
+        const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+        return brightness > 150;
+      }
+    }
+    return false;
+  };
+
+  const customFormBg = event?.registration_form_template?.theme_config?.form_bg_color;
+  const isFormLight = isColorLight(customFormBg) || (!customFormBg && isLightTheme);
 
   // Page background: ONLY use background_url — never fall back to banner_url
   const bannerUrl = event?.background_url || null;
@@ -1103,11 +1131,21 @@ function PublicRegistrationPageContent() {
       ) : null,
       rightPanel: "p-12 lg:p-24 flex flex-col justify-center bg-slate-950/20 backdrop-blur-sm border-l border-[#d4af37]/15 relative",
       title: "text-3xl sm:text-4xl md:text-5xl font-serif font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-yellow-100 to-amber-300 leading-tight font-serif break-normal",
-      heading: "text-4xl font-serif font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-200 to-yellow-100 mb-4 tracking-tight uppercase font-serif",
-      subHeading: "text-slate-400 text-sm font-medium leading-relaxed font-serif italic",
-      label: "text-[10px] font-bold uppercase tracking-[0.2em] text-[#d4af37]/80 ml-1 block font-serif",
-      input: "w-full px-5 py-4 bg-transparent border-b-2 border-amber-500/20 focus:border-amber-500 outline-none transition-all font-medium text-white placeholder-slate-700 rounded-none font-serif",
-      select: "w-full px-5 py-4 bg-transparent border-b-2 border-amber-500/20 focus:border-amber-500 outline-none transition-all font-medium text-white appearance-none cursor-pointer rounded-none font-serif",
+      heading: isFormLight
+        ? "text-4xl font-serif font-black text-amber-950 mb-4 tracking-tight uppercase font-serif"
+        : "text-4xl font-serif font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-200 to-yellow-100 mb-4 tracking-tight uppercase font-serif",
+      subHeading: isFormLight
+        ? "text-slate-600 text-sm font-medium leading-relaxed font-serif italic"
+        : "text-slate-400 text-sm font-medium leading-relaxed font-serif italic",
+      label: isFormLight
+        ? "text-[10px] font-bold uppercase tracking-[0.2em] text-amber-900 ml-1 block font-serif"
+        : "text-[10px] font-bold uppercase tracking-[0.2em] text-[#d4af37]/80 ml-1 block font-serif",
+      input: isFormLight
+        ? "w-full px-5 py-4 bg-transparent border-b-2 border-amber-500/40 focus:border-amber-600 outline-none transition-all font-medium text-slate-900 placeholder-slate-400 rounded-none font-serif"
+        : "w-full px-5 py-4 bg-transparent border-b-2 border-amber-500/20 focus:border-amber-500 outline-none transition-all font-medium text-white placeholder-slate-700 rounded-none font-serif",
+      select: isFormLight
+        ? "w-full px-5 py-4 bg-transparent border-b-2 border-amber-500/40 focus:border-amber-600 outline-none transition-all font-medium text-slate-900 appearance-none cursor-pointer rounded-none font-serif"
+        : "w-full px-5 py-4 bg-transparent border-b-2 border-amber-500/20 focus:border-amber-500 outline-none transition-all font-medium text-white appearance-none cursor-pointer rounded-none font-serif",
       checkbox: "flex items-center gap-4 cursor-pointer group p-4 bg-slate-950/60 rounded-xl border border-slate-900 hover:border-[#d4af37]/30 transition-all font-serif",
       checkboxText: "text-xs font-medium text-slate-400 group-hover:text-white font-serif",
       checkboxInput: "w-5 h-5 rounded-full bg-slate-950 border border-amber-500/30 text-amber-500 accent-amber-500 shrink-0",
@@ -1789,8 +1827,6 @@ function PublicRegistrationPageContent() {
     </div>
   );
 
-  const customFormBg = event?.registration_form_template?.theme_config?.form_bg_color;
-
   const rawHeading = event?.registration_form_template?.theme_config?.form_heading;
   const formHeadingText = rawHeading !== undefined && rawHeading !== null ? rawHeading : (event?.registration_form_template?.name || "");
   const isHeadingEmpty = !formHeadingText || formHeadingText.replace(/<[^>]*>/g, "").trim() === "";
@@ -2026,13 +2062,47 @@ function PublicRegistrationPageContent() {
           background-color: ${eventAccentColor} !important;
           border-color: ${eventAccentColor} !important;
         }
-        ${eventTextColor ? `
-          .client-form-text-custom:not([style*="color"]),
-          .client-form-text-custom *:not(option):not([style*="color"]) {
-            color: ${eventTextColor} !important;
+        /* Ensure inputs, selects, and textareas have high-contrast readable text regardless of theme */
+        ${isFormLight ? `
+          .client-form-text-custom input,
+          .client-form-text-custom select,
+          .client-form-text-custom textarea {
+            color: #0f172a !important;
+            -webkit-text-fill-color: #0f172a !important;
           }
-          .client-form-text-custom input::placeholder {
-            color: ${eventTextColor}80 !important;
+          .client-form-text-custom input::placeholder,
+          .client-form-text-custom textarea::placeholder {
+            color: #94a3b8 !important;
+            -webkit-text-fill-color: #94a3b8 !important;
+          }
+          .client-form-text-custom .client-question-label,
+          .client-form-text-custom .client-question-label * {
+            color: #78350f !important;
+          }
+        ` : `
+          .client-form-text-custom input,
+          .client-form-text-custom select,
+          .client-form-text-custom textarea {
+            color: #ffffff !important;
+            -webkit-text-fill-color: #ffffff !important;
+          }
+          .client-form-text-custom input::placeholder,
+          .client-form-text-custom textarea::placeholder {
+            color: #64748b !important;
+            -webkit-text-fill-color: #64748b !important;
+          }
+        `}
+        ${eventTextColor ? `
+          .client-form-text-custom h1:not([style*="color"]),
+          .client-form-text-custom h2:not([style*="color"]),
+          .client-form-text-custom h3:not([style*="color"]),
+          .client-form-text-custom h4:not([style*="color"]),
+          .client-form-text-custom p:not([style*="color"]),
+          .client-form-text-custom span:not([style*="color"]),
+          .client-form-text-custom label:not([style*="color"]),
+          .client-form-text-custom li:not([style*="color"]),
+          .client-form-text-custom legend:not([style*="color"]) {
+            color: ${eventTextColor} !important;
           }
         ` : ""}
       `}} />
