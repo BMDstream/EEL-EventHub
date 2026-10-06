@@ -1497,7 +1497,7 @@ export default function EventDetailsPage() {
 
   return (
     <AdminLayout>
-      <div className="max-w-7xl mx-auto font-outfit">
+      <div className={`max-w-7xl mx-auto font-outfit ${isPresentationOpen ? 'presentation-no-print print:hidden' : ''}`}>
         <Link 
           href="/admin/events" 
           className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] hover:text-[#0f172a] transition-colors mb-4 block"
@@ -4371,317 +4371,490 @@ export default function EventDetailsPage() {
         )}
 
         {/* Post-Event Executive Presentation Deck Modal */}
-        {isPresentationOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
-            <div className="bg-slate-950 border border-amber-500/30 text-white w-full max-w-5xl rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
-              {/* Deck Header */}
-              <div className="px-6 sm:px-10 py-5 sm:py-6 bg-gradient-to-r from-slate-900 via-slate-900 to-slate-950 border-b border-slate-800 flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="p-2.5 bg-amber-500/10 text-amber-400 rounded-xl border border-amber-500/20 shrink-0">
-                    <Presentation size={20} />
+        {isPresentationOpen && (() => {
+          const turnoutRate = confirmedCount > 0 ? Math.round((checkedInCount / confirmedCount) * 100) : 0;
+          const capacityRate = event.capacity > 0 ? Math.round((confirmedCount / event.capacity) * 100) : 0;
+          const declineRate = registrations.length > 0 ? Math.round((declinedCount / registrations.length) * 100) : 0;
+          const cleanTitle = cleanHtmlText(event.title || "");
+          const formattedDate = event.start_date ? new Date(event.start_date).toLocaleDateString(undefined, { dateStyle: 'full' }) : "";
+
+          const renderSlideOverview = (isPrint = false) => (
+            <div className={`space-y-6 ${isPrint ? 'text-slate-900' : 'text-white'}`}>
+              <div className={`flex flex-col md:flex-row md:items-end justify-between gap-4 border-b ${isPrint ? 'border-slate-200 pb-4' : 'border-slate-800/80 pb-6'}`}>
+                <div>
+                  <span className={`text-[10px] font-black uppercase tracking-[0.3em] ${isPrint ? 'text-slate-500' : 'text-slate-400'}`}>
+                    Slide 01 // Executive Summary
+                  </span>
+                  <h2 className={`text-2xl sm:text-3xl font-black font-bricolage italic tracking-tight mt-1 ${isPrint ? 'text-slate-900' : 'text-white'}`}>
+                    Key Performance Indicators
+                  </h2>
+                </div>
+                <div className={`text-xs font-bold ${isPrint ? 'text-slate-600' : 'text-slate-400'}`}>
+                  <span>{formattedDate}</span>
+                  {event.location && <span className={`block font-mono text-[11px] ${isPrint ? 'text-slate-500' : 'text-slate-500'}`}>{event.location}</span>}
+                </div>
+              </div>
+
+              {/* KPI Hero Grid */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className={`p-5 rounded-2xl border ${isPrint ? 'bg-slate-50 border-slate-200' : 'bg-slate-900/80 border-slate-800'}`}>
+                  <span className={`text-[9px] font-black uppercase tracking-widest block mb-1 ${isPrint ? 'text-slate-500' : 'text-slate-400'}`}>
+                    Total Registrations
+                  </span>
+                  <p className={`text-3xl font-black ${isPrint ? 'text-slate-900' : 'text-white'}`}>{registrations.length}</p>
+                  <span className={`text-[10px] font-semibold mt-1 block ${isPrint ? 'text-slate-600' : 'text-slate-500'}`}>Confirmed: {confirmedCount}</span>
+                </div>
+
+                <div className={`p-5 rounded-2xl border ${isPrint ? 'bg-slate-50 border-slate-200' : 'bg-slate-900/80 border-slate-800'}`}>
+                  <span className={`text-[9px] font-black uppercase tracking-widest block mb-1 ${isPrint ? 'text-slate-500' : 'text-slate-400'}`}>
+                    Verified Check-Ins
+                  </span>
+                  <p className="text-3xl font-black text-emerald-500">{checkedInCount}</p>
+                  <span className={`text-[10px] font-semibold mt-1 block ${isPrint ? 'text-slate-600' : 'text-slate-500'}`}>Cleared at door</span>
+                </div>
+
+                <div className={`p-5 rounded-2xl border ${isPrint ? 'bg-slate-50 border-slate-200' : 'bg-slate-900/80 border-slate-800'}`}>
+                  <span className="text-[9px] font-black uppercase tracking-widest text-amber-500 block mb-1">
+                    Turnout Conversion
+                  </span>
+                  <p className="text-3xl font-black text-amber-500">{turnoutRate}%</p>
+                  <span className={`text-[10px] font-semibold mt-1 block ${isPrint ? 'text-slate-600' : 'text-slate-500'}`}>Of confirmed attendees</span>
+                </div>
+
+                <div className={`p-5 rounded-2xl border ${isPrint ? 'bg-slate-50 border-slate-200' : 'bg-slate-900/80 border-slate-800'}`}>
+                  <span className={`text-[9px] font-black uppercase tracking-widest block mb-1 ${isPrint ? 'text-slate-500' : 'text-slate-400'}`}>
+                    Capacity Utilization
+                  </span>
+                  <p className="text-3xl font-black text-blue-500">{capacityRate}%</p>
+                  <span className={`text-[10px] font-semibold mt-1 block ${isPrint ? 'text-slate-600' : 'text-slate-500'}`}>{confirmedCount} of {event.capacity} max</span>
+                </div>
+              </div>
+
+              {/* Progress Visuals */}
+              <div className={`p-6 rounded-2xl border space-y-4 ${isPrint ? 'bg-slate-50 border-slate-200' : 'bg-slate-900/50 border-slate-800'}`}>
+                <h4 className={`text-xs font-black uppercase tracking-wider ${isPrint ? 'text-slate-700' : 'text-slate-300'}`}>
+                  Turnout Funnel Overview
+                </h4>
+                <div className="space-y-4">
+                  <div>
+                    <div className="flex justify-between text-xs font-bold mb-1.5">
+                      <span className={isPrint ? 'text-slate-600' : 'text-slate-400'}>Attendance Rate ({checkedInCount} / {confirmedCount})</span>
+                      <span className="text-emerald-500 font-mono font-bold">{turnoutRate}%</span>
+                    </div>
+                    <div className={`h-3 rounded-full overflow-hidden ${isPrint ? 'bg-slate-200' : 'bg-slate-800'}`}>
+                      <div 
+                        className="h-full bg-emerald-500 rounded-full transition-all duration-500" 
+                        style={{ width: `${Math.min(100, turnoutRate)}%` }}
+                      />
+                    </div>
                   </div>
-                  <div className="min-w-0">
-                    <span className="text-[9px] font-black uppercase tracking-[0.25em] text-amber-400 block">
-                      Executive Post-Event Briefing
+
+                  <div>
+                    <div className="flex justify-between text-xs font-bold mb-1.5">
+                      <span className={isPrint ? 'text-slate-600' : 'text-slate-400'}>Declined Invitations ({declinedCount} / {registrations.length})</span>
+                      <span className="text-rose-500 font-mono font-bold">{declineRate}%</span>
+                    </div>
+                    <div className={`h-3 rounded-full overflow-hidden ${isPrint ? 'bg-slate-200' : 'bg-slate-800'}`}>
+                      <div 
+                        className="h-full bg-rose-500 rounded-full transition-all duration-500" 
+                        style={{ width: `${Math.min(100, declineRate)}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+
+          const renderSlideAttendance = (isPrint = false) => (
+            <div className={`space-y-6 ${isPrint ? 'text-slate-900' : 'text-white'}`}>
+              <div className={`flex flex-col md:flex-row md:items-end justify-between gap-4 border-b ${isPrint ? 'border-slate-200 pb-4' : 'border-slate-800/80 pb-6'}`}>
+                <div>
+                  <span className={`text-[10px] font-black uppercase tracking-[0.3em] ${isPrint ? 'text-slate-500' : 'text-slate-400'}`}>
+                    Slide 02 // Check-In Analytics
+                  </span>
+                  <h2 className={`text-2xl sm:text-3xl font-black font-bricolage italic tracking-tight mt-1 ${isPrint ? 'text-slate-900' : 'text-white'}`}>
+                    Attendance & Velocity Breakdown
+                  </h2>
+                </div>
+                <div className={`text-xs font-bold ${isPrint ? 'text-slate-600' : 'text-slate-400'}`}>
+                  <span>Verified at door: {checkedInCount}</span>
+                </div>
+              </div>
+
+              {event.duration_days && event.duration_days > 1 ? (
+                <div className="space-y-4">
+                  <h4 className={`text-xs font-black uppercase tracking-wider ${isPrint ? 'text-slate-700' : 'text-slate-300'}`}>
+                    Multi-Day Attendance Performance
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {Array.from({ length: event.duration_days }, (_, i) => i + 1).map(d => {
+                      const dailyCount = registrations.filter(r => r.checked_in_days?.includes(d)).length;
+                      const dailyRate = confirmedCount > 0 ? Math.round((dailyCount / confirmedCount) * 100) : 0;
+                      return (
+                        <div key={d} className={`p-5 rounded-2xl border space-y-3 ${isPrint ? 'bg-slate-50 border-slate-200' : 'bg-slate-900/80 border-slate-800'}`}>
+                          <div className="flex justify-between items-center">
+                            <span className="text-xs font-black uppercase tracking-wider text-amber-500">Day {d}</span>
+                            <span className={`text-xs font-mono font-bold ${isPrint ? 'text-slate-600' : 'text-slate-400'}`}>{dailyRate}%</span>
+                          </div>
+                          <p className={`text-2xl font-black ${isPrint ? 'text-slate-900' : 'text-white'}`}>
+                            {dailyCount} <span className={`text-xs font-bold ${isPrint ? 'text-slate-500' : 'text-slate-500'}`}>Attendees</span>
+                          </p>
+                          <div className={`h-2 rounded-full overflow-hidden ${isPrint ? 'bg-slate-200' : 'bg-slate-800'}`}>
+                            <div className="h-full bg-amber-500 rounded-full" style={{ width: `${Math.min(100, dailyRate)}%` }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <div className={`p-6 rounded-2xl border text-center space-y-4 ${isPrint ? 'bg-slate-50 border-slate-200' : 'bg-slate-900/80 border-slate-800'}`}>
+                  <span className={`text-xs font-black uppercase tracking-widest ${isPrint ? 'text-slate-600' : 'text-slate-400'}`}>
+                    Single Day Event Performance
+                  </span>
+                  <div className="max-w-md mx-auto grid grid-cols-2 gap-4">
+                    <div className={`p-4 rounded-xl border ${isPrint ? 'bg-white border-slate-200' : 'bg-slate-800/60 border-slate-700/50'}`}>
+                      <span className={`text-[10px] font-bold block ${isPrint ? 'text-slate-500' : 'text-slate-400'}`}>Present</span>
+                      <span className="text-2xl font-black text-emerald-500">{checkedInCount}</span>
+                    </div>
+                    <div className={`p-4 rounded-xl border ${isPrint ? 'bg-white border-slate-200' : 'bg-slate-800/60 border-slate-700/50'}`}>
+                      <span className={`text-[10px] font-bold block ${isPrint ? 'text-slate-500' : 'text-slate-400'}`}>No-Show</span>
+                      <span className={`text-2xl font-black ${isPrint ? 'text-slate-700' : 'text-slate-400'}`}>{Math.max(0, confirmedCount - checkedInCount)}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Registration Status Breakdown */}
+              <div className={`p-6 rounded-2xl border space-y-3 ${isPrint ? 'bg-slate-50 border-slate-200' : 'bg-slate-900/50 border-slate-800'}`}>
+                <h4 className={`text-xs font-black uppercase tracking-wider ${isPrint ? 'text-slate-700' : 'text-slate-300'}`}>
+                  Registration Status Breakdown
+                </h4>
+                <div className="grid grid-cols-3 gap-3 text-center">
+                  <div className={`p-4 rounded-xl border ${isPrint ? 'bg-white border-slate-200' : 'bg-slate-800/50 border-slate-800'}`}>
+                    <span className="text-[9px] uppercase font-bold text-emerald-500 block">Confirmed</span>
+                    <span className={`text-xl font-black ${isPrint ? 'text-slate-900' : 'text-white'}`}>{confirmedCount}</span>
+                  </div>
+                  <div className={`p-4 rounded-xl border ${isPrint ? 'bg-white border-slate-200' : 'bg-slate-800/50 border-slate-800'}`}>
+                    <span className="text-[9px] uppercase font-bold text-rose-500 block">Declined</span>
+                    <span className={`text-xl font-black ${isPrint ? 'text-slate-900' : 'text-white'}`}>{declinedCount}</span>
+                  </div>
+                  <div className={`p-4 rounded-xl border ${isPrint ? 'bg-white border-slate-200' : 'bg-slate-800/50 border-slate-800'}`}>
+                    <span className="text-[9px] uppercase font-bold text-amber-500 block">Pending</span>
+                    <span className={`text-xl font-black ${isPrint ? 'text-slate-900' : 'text-white'}`}>{registrations.filter(r => r.status !== 'confirmed' && r.status !== 'declined').length}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+
+          const renderSlideDemographics = (isPrint = false) => {
+            const orgCounts: Record<string, number> = {};
+            registrations.forEach(r => {
+              const c = r.attendee?.company?.trim();
+              if (c) orgCounts[c] = (orgCounts[c] || 0) + 1;
+            });
+            const sortedOrgs = Object.entries(orgCounts).sort((a, b) => b[1] - a[1]).slice(0, 8);
+            const maxCount = sortedOrgs.length > 0 ? sortedOrgs[0][1] : 1;
+
+            return (
+              <div className={`space-y-6 ${isPrint ? 'text-slate-900' : 'text-white'}`}>
+                <div className={`flex flex-col md:flex-row md:items-end justify-between gap-4 border-b ${isPrint ? 'border-slate-200 pb-4' : 'border-slate-800/80 pb-6'}`}>
+                  <div>
+                    <span className={`text-[10px] font-black uppercase tracking-[0.3em] ${isPrint ? 'text-slate-500' : 'text-slate-400'}`}>
+                      Slide 03 // Demographics
                     </span>
-                    <h3 className="text-base sm:text-lg font-black truncate tracking-tight text-white font-bricolage italic">
-                      {cleanHtmlText(event.title || "")}
-                    </h3>
+                    <h2 className={`text-2xl sm:text-3xl font-black font-bricolage italic tracking-tight mt-1 ${isPrint ? 'text-slate-900' : 'text-white'}`}>
+                      Corporate Representation
+                    </h2>
+                  </div>
+                  <div className={`text-xs font-bold ${isPrint ? 'text-slate-600' : 'text-slate-400'}`}>
+                    {uniqueCompanies.length} Unique Organizations Represented
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-                  <button
-                    onClick={() => window.print()}
-                    className="flex items-center gap-2 px-3.5 sm:px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border border-slate-700"
-                    title="Print Deck to PDF"
-                  >
-                    <Printer size={14} />
-                    <span className="hidden sm:inline">Export PDF</span>
-                  </button>
-                  <button
-                    onClick={() => setIsPresentationOpen(false)}
-                    className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-all"
-                  >
-                    <X size={20} />
-                  </button>
-                </div>
-              </div>
-
-              {/* Slide Navigation Tabs */}
-              <div className="px-6 sm:px-10 py-3 bg-slate-900/50 border-b border-slate-800/80 flex items-center gap-2 overflow-x-auto scrollbar-hide">
-                {[
-                  { id: 0, label: "1. Overview & KPIs" },
-                  { id: 1, label: "2. Attendance & Velocity" },
-                  { id: 2, label: "3. Corporate Demographics" }
-                ].map((s) => (
-                  <button
-                    key={s.id}
-                    onClick={() => setCurrentSlide(s.id)}
-                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shrink-0 ${
-                      currentSlide === s.id
-                        ? "bg-amber-400 text-slate-950 font-black shadow-sm"
-                        : "text-slate-400 hover:text-white hover:bg-slate-800/60"
-                    }`}
-                  >
-                    {s.label}
-                  </button>
-                ))}
-              </div>
-
-              {/* Slide Content Viewport */}
-              <div className="p-6 sm:p-10 overflow-y-auto flex-1">
-                {currentSlide === 0 && (
-                  <div className="space-y-8 animate-in fade-in duration-200">
-                    <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-slate-800/80 pb-6">
-                      <div>
-                        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Slide 01 // Executive Summary</span>
-                        <h2 className="text-2xl sm:text-4xl font-black text-white font-bricolage italic tracking-tight mt-1">
-                          Key Performance Indicators
-                        </h2>
-                      </div>
-                      <div className="text-xs text-slate-400 font-bold">
-                        <span>{new Date(event.start_date).toLocaleDateString(undefined, { dateStyle: 'full' })}</span>
-                        {event.location && <span className="block text-slate-500 font-mono text-[11px]">{event.location}</span>}
-                      </div>
+                {/* Top Companies List */}
+                <div className="space-y-3">
+                  <h4 className={`text-xs font-black uppercase tracking-wider ${isPrint ? 'text-slate-700' : 'text-slate-300'}`}>
+                    Top Participating Organizations
+                  </h4>
+                  {sortedOrgs.length === 0 ? (
+                    <div className={`p-8 rounded-2xl text-center font-bold text-xs uppercase border ${isPrint ? 'bg-slate-50 border-slate-200 text-slate-500' : 'bg-slate-900/60 border-slate-800 text-slate-500'}`}>
+                      No company affiliations recorded for this event.
                     </div>
-
-                    {/* KPI Hero Grid */}
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                      <div className="bg-slate-900/80 border border-slate-800 p-5 rounded-2xl">
-                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 block mb-1">Total Registrations</span>
-                        <p className="text-3xl font-black text-white">{registrations.length}</p>
-                        <span className="text-[10px] text-slate-500 font-semibold mt-1 block">Confirmed: {confirmedCount}</span>
-                      </div>
-
-                      <div className="bg-slate-900/80 border border-slate-800 p-5 rounded-2xl">
-                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 block mb-1">Verified Check-Ins</span>
-                        <p className="text-3xl font-black text-emerald-400">{checkedInCount}</p>
-                        <span className="text-[10px] text-slate-500 font-semibold mt-1 block">Cleared at door</span>
-                      </div>
-
-                      <div className="bg-slate-900/80 border border-slate-800 p-5 rounded-2xl">
-                        <span className="text-[9px] font-black uppercase tracking-widest text-amber-400 block mb-1">Turnout Conversion</span>
-                        <p className="text-3xl font-black text-amber-400">
-                          {confirmedCount > 0 ? Math.round((checkedInCount / confirmedCount) * 100) : 0}%
-                        </p>
-                        <span className="text-[10px] text-slate-500 font-semibold mt-1 block">Of confirmed attendees</span>
-                      </div>
-
-                      <div className="bg-slate-900/80 border border-slate-800 p-5 rounded-2xl">
-                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 block mb-1">Capacity Utilization</span>
-                        <p className="text-3xl font-black text-blue-400">
-                          {event.capacity > 0 ? Math.round((confirmedCount / event.capacity) * 100) : 0}%
-                        </p>
-                        <span className="text-[10px] text-slate-500 font-semibold mt-1 block">{confirmedCount} of {event.capacity} max</span>
-                      </div>
-                    </div>
-
-                    {/* Progress Visuals */}
-                    <div className="bg-slate-900/50 border border-slate-800 p-6 rounded-2xl space-y-4">
-                      <h4 className="text-xs font-black uppercase tracking-wider text-slate-300">Turnout Funnel Overview</h4>
-                      <div className="space-y-3">
-                        <div>
-                          <div className="flex justify-between text-xs font-bold mb-1">
-                            <span className="text-slate-400">Attendance Rate ({checkedInCount} / {confirmedCount})</span>
-                            <span className="text-emerald-400 font-mono">{confirmedCount > 0 ? Math.round((checkedInCount / confirmedCount) * 100) : 0}%</span>
-                          </div>
-                          <div className="h-3 bg-slate-800 rounded-full overflow-hidden">
-                            <div 
-                              className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full transition-all duration-500" 
-                              style={{ width: `${confirmedCount > 0 ? Math.min(100, Math.round((checkedInCount / confirmedCount) * 100)) : 0}%` }}
-                            />
-                          </div>
-                        </div>
-
-                        <div>
-                          <div className="flex justify-between text-xs font-bold mb-1">
-                            <span className="text-slate-400">Declined Invitations ({declinedCount} / {registrations.length})</span>
-                            <span className="text-rose-400 font-mono">{registrations.length > 0 ? Math.round((declinedCount / registrations.length) * 100) : 0}%</span>
-                          </div>
-                          <div className="h-3 bg-slate-800 rounded-full overflow-hidden">
-                            <div 
-                              className="h-full bg-gradient-to-r from-rose-500 to-red-400 rounded-full transition-all duration-500" 
-                              style={{ width: `${registrations.length > 0 ? Math.min(100, Math.round((declinedCount / registrations.length) * 100)) : 0}%` }}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {currentSlide === 1 && (
-                  <div className="space-y-8 animate-in fade-in duration-200">
-                    <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-slate-800/80 pb-6">
-                      <div>
-                        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Slide 02 // Check-In Analytics</span>
-                        <h2 className="text-2xl sm:text-4xl font-black text-white font-bricolage italic tracking-tight mt-1">
-                          Attendance & Velocity Breakdown
-                        </h2>
-                      </div>
-                    </div>
-
-                    {event.duration_days && event.duration_days > 1 ? (
-                      <div className="space-y-4">
-                        <h4 className="text-xs font-black uppercase tracking-wider text-slate-300">Multi-Day Attendance Performance</h4>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                          {Array.from({ length: event.duration_days }, (_, i) => i + 1).map(d => {
-                            const dailyCount = registrations.filter(r => r.checked_in_days?.includes(d)).length;
-                            const dailyRate = confirmedCount > 0 ? Math.round((dailyCount / confirmedCount) * 100) : 0;
-                            return (
-                              <div key={d} className="bg-slate-900/80 border border-slate-800 p-5 rounded-2xl space-y-3">
-                                <div className="flex justify-between items-center">
-                                  <span className="text-xs font-black uppercase tracking-wider text-amber-400">Day {d}</span>
-                                  <span className="text-xs font-mono font-bold text-slate-400">{dailyRate}%</span>
-                                </div>
-                                <p className="text-2xl font-black text-white">{dailyCount} <span className="text-xs text-slate-500 font-bold">Attendees</span></p>
-                                <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
-                                  <div className="h-full bg-amber-400 rounded-full" style={{ width: `${Math.min(100, dailyRate)}%` }} />
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="bg-slate-900/80 border border-slate-800 p-8 rounded-2xl text-center space-y-4">
-                        <span className="text-xs font-black uppercase tracking-widest text-slate-400">Single Day Event Performance</span>
-                        <div className="max-w-md mx-auto grid grid-cols-2 gap-4">
-                          <div className="bg-slate-800/60 p-4 rounded-xl">
-                            <span className="text-[10px] text-slate-400 font-bold block">Present</span>
-                            <span className="text-2xl font-black text-emerald-400">{checkedInCount}</span>
-                          </div>
-                          <div className="bg-slate-800/60 p-4 rounded-xl">
-                            <span className="text-[10px] text-slate-400 font-bold block">No-Show</span>
-                            <span className="text-2xl font-black text-slate-400">{Math.max(0, confirmedCount - checkedInCount)}</span>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Registration Status Breakdown */}
-                    <div className="bg-slate-900/50 border border-slate-800 p-6 rounded-2xl space-y-3">
-                      <h4 className="text-xs font-black uppercase tracking-wider text-slate-300">Registration Status Breakdown</h4>
-                      <div className="grid grid-cols-3 gap-3 text-center">
-                        <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-800">
-                          <span className="text-[9px] uppercase font-bold text-emerald-400 block">Confirmed</span>
-                          <span className="text-xl font-black text-white">{confirmedCount}</span>
-                        </div>
-                        <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-800">
-                          <span className="text-[9px] uppercase font-bold text-rose-400 block">Declined</span>
-                          <span className="text-xl font-black text-white">{declinedCount}</span>
-                        </div>
-                        <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-800">
-                          <span className="text-[9px] uppercase font-bold text-amber-400 block">Pending</span>
-                          <span className="text-xl font-black text-white">{registrations.filter(r => r.status !== 'confirmed' && r.status !== 'declined').length}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {currentSlide === 2 && (
-                  <div className="space-y-8 animate-in fade-in duration-200">
-                    <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-slate-800/80 pb-6">
-                      <div>
-                        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Slide 03 // Demographics</span>
-                        <h2 className="text-2xl sm:text-4xl font-black text-white font-bricolage italic tracking-tight mt-1">
-                          Corporate Representation
-                        </h2>
-                      </div>
-                      <div className="text-xs text-slate-400 font-bold">
-                        {uniqueCompanies.length} Unique Organizations Represented
-                      </div>
-                    </div>
-
-                    {/* Top Companies List */}
-                    <div className="space-y-3">
-                      <h4 className="text-xs font-black uppercase tracking-wider text-slate-300">Top Participating Organizations</h4>
-                      {(() => {
-                        const orgCounts: Record<string, number> = {};
-                        registrations.forEach(r => {
-                          const c = r.attendee?.company?.trim();
-                          if (c) orgCounts[c] = (orgCounts[c] || 0) + 1;
-                        });
-                        const sortedOrgs = Object.entries(orgCounts).sort((a, b) => b[1] - a[1]).slice(0, 8);
-                        const maxCount = sortedOrgs.length > 0 ? sortedOrgs[0][1] : 1;
-
-                        if (sortedOrgs.length === 0) {
-                          return (
-                            <div className="bg-slate-900/60 p-8 rounded-2xl text-center text-slate-500 font-bold text-xs uppercase">
-                              No company affiliations recorded for this event.
-                            </div>
-                          );
-                        }
-
+                  ) : (
+                    <div className="space-y-2.5">
+                      {sortedOrgs.map(([name, count]) => {
+                        const pct = Math.round((count / maxCount) * 100);
                         return (
-                          <div className="space-y-2.5">
-                            {sortedOrgs.map(([name, count]) => {
-                              const pct = Math.round((count / maxCount) * 100);
-                              return (
-                                <div key={name} className="bg-slate-900/70 border border-slate-800/80 p-3.5 rounded-xl flex items-center justify-between gap-4">
-                                  <div className="min-w-0 flex-1">
-                                    <div className="flex justify-between text-xs font-bold mb-1">
-                                      <span className="text-white truncate">{name}</span>
-                                      <span className="text-amber-400 font-mono ml-2 shrink-0">{count} {count === 1 ? 'attendee' : 'attendees'}</span>
-                                    </div>
-                                    <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                                      <div className="h-full bg-amber-400 rounded-full" style={{ width: `${pct}%` }} />
-                                    </div>
-                                  </div>
-                                </div>
-                              );
-                            })}
+                          <div key={name} className={`p-3.5 rounded-xl border flex items-center justify-between gap-4 ${isPrint ? 'bg-slate-50 border-slate-200' : 'bg-slate-900/70 border-slate-800/80'}`}>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex justify-between text-xs font-bold mb-1">
+                                <span className={`truncate ${isPrint ? 'text-slate-900' : 'text-white'}`}>{name}</span>
+                                <span className="text-amber-500 font-mono ml-2 shrink-0">{count} {count === 1 ? 'attendee' : 'attendees'}</span>
+                              </div>
+                              <div className={`h-1.5 rounded-full overflow-hidden ${isPrint ? 'bg-slate-200' : 'bg-slate-800'}`}>
+                                <div className="h-full bg-amber-500 rounded-full" style={{ width: `${pct}%` }} />
+                              </div>
+                            </div>
                           </div>
                         );
-                      })()}
+                      })}
                     </div>
+                  )}
+                </div>
 
-                    <div className="bg-amber-400/10 border border-amber-400/20 p-5 rounded-2xl">
-                      <p className="text-xs text-amber-200/90 leading-relaxed font-medium">
-                        ✦ <strong>Executive Summary Note:</strong> Presentation data is synchronized directly from live check-in logs and door scan timestamps. For complete record sheets and custom questionnaire answers, export the full master catalog to Excel from the Command Panel.
-                      </p>
+                <div className={`p-4 rounded-xl border ${isPrint ? 'bg-amber-50 border-amber-200 text-amber-900' : 'bg-amber-400/10 border-amber-400/20 text-amber-200/90'}`}>
+                  <p className="text-xs leading-relaxed font-medium">
+                    ✦ <strong>Executive Summary Note:</strong> Presentation data is synchronized directly from live check-in logs and door scan timestamps. For complete record sheets and custom questionnaire answers, export the full master catalog to Excel from the Command Panel.
+                  </p>
+                </div>
+              </div>
+            );
+          };
+
+          return (
+            <div className="presentation-modal-overlay fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
+              <style jsx global>{`
+                @media print {
+                  @page {
+                    margin: 12mm 15mm;
+                    size: auto;
+                  }
+                  body {
+                    background: #ffffff !important;
+                    color: #0f172a !important;
+                    margin: 0 !important;
+                    padding: 0 !important;
+                    -webkit-print-color-adjust: exact !important;
+                    print-color-adjust: exact !important;
+                  }
+                  aside, header, nav, .presentation-no-print {
+                    display: none !important;
+                  }
+                  .presentation-modal-overlay {
+                    position: static !important;
+                    background: #ffffff !important;
+                    padding: 0 !important;
+                    margin: 0 !important;
+                    overflow: visible !important;
+                    display: block !important;
+                    backdrop-filter: none !important;
+                    inset: auto !important;
+                    z-index: auto !important;
+                  }
+                  .presentation-modal-card {
+                    position: static !important;
+                    max-height: none !important;
+                    overflow: visible !important;
+                    border: none !important;
+                    box-shadow: none !important;
+                    border-radius: 0 !important;
+                    width: 100% !important;
+                    max-width: 100% !important;
+                    background: #ffffff !important;
+                    color: #0f172a !important;
+                    padding: 0 !important;
+                    margin: 0 !important;
+                  }
+                  .presentation-slide-page {
+                    page-break-after: always !important;
+                    break-after: page !important;
+                    box-sizing: border-box !important;
+                    min-height: 92vh !important;
+                    display: flex !important;
+                    flex-direction: column !important;
+                    justify-content: space-between !important;
+                    padding: 5mm 0 !important;
+                  }
+                  .presentation-slide-page:last-child {
+                    page-break-after: avoid !important;
+                    break-after: avoid !important;
+                  }
+                }
+              `}</style>
+
+              <div className="presentation-modal-card bg-slate-950 border border-amber-500/30 text-white w-full max-w-5xl rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
+                {/* Deck Header */}
+                <div className="px-6 sm:px-10 py-5 sm:py-6 bg-gradient-to-r from-slate-900 via-slate-900 to-slate-950 border-b border-slate-800 flex items-center justify-between gap-4 print:hidden">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="p-2.5 bg-amber-500/10 text-amber-400 rounded-xl border border-amber-500/20 shrink-0">
+                      <Presentation size={20} />
+                    </div>
+                    <div className="min-w-0">
+                      <span className="text-[9px] font-black uppercase tracking-[0.25em] text-amber-400 block">
+                        Executive Post-Event Briefing
+                      </span>
+                      <h3 className="text-base sm:text-lg font-black truncate tracking-tight text-white font-bricolage italic">
+                        {cleanTitle}
+                      </h3>
                     </div>
                   </div>
-                )}
-              </div>
 
-              {/* Deck Footer Controls */}
-              <div className="px-6 sm:px-10 py-4 bg-slate-900 border-t border-slate-800 flex items-center justify-between">
-                <button
-                  onClick={() => setCurrentSlide(prev => Math.max(0, prev - 1))}
-                  disabled={currentSlide === 0}
-                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed rounded-xl text-[10px] font-black uppercase tracking-wider transition-all text-white flex items-center gap-1.5"
-                >
-                  <ChevronLeft size={14} />
-                  <span>Prev</span>
-                </button>
-
-                <div className="flex items-center gap-2">
-                  {[0, 1, 2].map(idx => (
+                  <div className="flex items-center gap-2 sm:gap-3 shrink-0 print:hidden">
                     <button
-                      key={idx}
-                      onClick={() => setCurrentSlide(idx)}
-                      className={`w-2.5 h-2.5 rounded-full transition-all ${
-                        currentSlide === idx ? "bg-amber-400 w-6" : "bg-slate-700 hover:bg-slate-600"
+                      onClick={() => window.print()}
+                      className="flex items-center gap-2 px-3.5 sm:px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border border-slate-700"
+                      title="Print Deck to PDF"
+                    >
+                      <Printer size={14} />
+                      <span className="hidden sm:inline">Export PDF</span>
+                    </button>
+                    <button
+                      onClick={() => setIsPresentationOpen(false)}
+                      className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-all"
+                    >
+                      <X size={20} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Slide Navigation Tabs */}
+                <div className="px-6 sm:px-10 py-3 bg-slate-900/50 border-b border-slate-800/80 flex items-center gap-2 overflow-x-auto scrollbar-hide print:hidden">
+                  {[
+                    { id: 0, label: "1. Overview & KPIs" },
+                    { id: 1, label: "2. Attendance & Velocity" },
+                    { id: 2, label: "3. Corporate Demographics" }
+                  ].map((s) => (
+                    <button
+                      key={s.id}
+                      onClick={() => setCurrentSlide(s.id)}
+                      className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shrink-0 ${
+                        currentSlide === s.id
+                          ? "bg-amber-400 text-slate-950 font-black shadow-sm"
+                          : "text-slate-400 hover:text-white hover:bg-slate-800/60"
                       }`}
-                    />
+                    >
+                      {s.label}
+                    </button>
                   ))}
                 </div>
 
-                <button
-                  onClick={() => setCurrentSlide(prev => Math.min(2, prev + 1))}
-                  disabled={currentSlide === 2}
-                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed rounded-xl text-[10px] font-black uppercase tracking-wider transition-all text-white flex items-center gap-1.5"
-                >
-                  <span>Next</span>
-                  <ChevronRight size={14} />
-                </button>
+                {/* Interactive Slide Viewport (On Screen Only) */}
+                <div className="p-6 sm:p-10 overflow-y-auto flex-1 print:hidden">
+                  {currentSlide === 0 && renderSlideOverview(false)}
+                  {currentSlide === 1 && renderSlideAttendance(false)}
+                  {currentSlide === 2 && renderSlideDemographics(false)}
+                </div>
+
+                {/* Deck Footer Controls (On Screen Only) */}
+                <div className="px-6 sm:px-10 py-4 bg-slate-900 border-t border-slate-800 flex items-center justify-between print:hidden">
+                  <button
+                    onClick={() => setCurrentSlide(prev => Math.max(0, prev - 1))}
+                    disabled={currentSlide === 0}
+                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed rounded-xl text-[10px] font-black uppercase tracking-wider transition-all text-white flex items-center gap-1.5"
+                  >
+                    <ChevronLeft size={14} />
+                    <span>Prev</span>
+                  </button>
+
+                  <div className="flex items-center gap-2">
+                    {[0, 1, 2].map(idx => (
+                      <button
+                        key={idx}
+                        onClick={() => setCurrentSlide(idx)}
+                        className={`w-2.5 h-2.5 rounded-full transition-all ${
+                          currentSlide === idx ? "bg-amber-400 w-6" : "bg-slate-700 hover:bg-slate-600"
+                        }`}
+                      />
+                    ))}
+                  </div>
+
+                  <button
+                    onClick={() => setCurrentSlide(prev => Math.min(2, prev + 1))}
+                    disabled={currentSlide === 2}
+                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed rounded-xl text-[10px] font-black uppercase tracking-wider transition-all text-white flex items-center gap-1.5"
+                  >
+                    <span>Next</span>
+                    <ChevronRight size={14} />
+                  </button>
+                </div>
+
+                {/* 3-Page Executive PDF Report (Printed Only, Clean without Chrome) */}
+                <div className="hidden print:block w-full">
+                  {/* Page 1: Overview & KPIs */}
+                  <div className="presentation-slide-page">
+                    <div>
+                      <div className="flex items-center justify-between border-b border-slate-200 pb-3 mb-5">
+                        <div>
+                          <span className="text-[9px] font-black uppercase tracking-[0.25em] text-amber-600 block">
+                            Executive Post-Event Briefing
+                          </span>
+                          <h2 className="text-xl font-black text-slate-900 font-bricolage italic">
+                            {cleanTitle}
+                          </h2>
+                        </div>
+                        <div className="text-right text-[11px] text-slate-500 font-bold">
+                          <span>{formattedDate}</span>
+                          {event.location && <span className="block text-slate-400 font-mono text-[10px]">{event.location}</span>}
+                        </div>
+                      </div>
+                      {renderSlideOverview(true)}
+                    </div>
+                    <div className="border-t border-slate-200 pt-3 mt-6 flex items-center justify-between text-[9px] text-slate-400 uppercase tracking-widest font-bold">
+                      <span>Confidential • Executive Briefing</span>
+                      <span>Overview & KPIs</span>
+                      <span>Page 1 of 3</span>
+                    </div>
+                  </div>
+
+                  {/* Page 2: Attendance & Velocity */}
+                  <div className="presentation-slide-page">
+                    <div>
+                      <div className="flex items-center justify-between border-b border-slate-200 pb-3 mb-5">
+                        <div>
+                          <span className="text-[9px] font-black uppercase tracking-[0.25em] text-amber-600 block">
+                            Executive Post-Event Briefing
+                          </span>
+                          <h2 className="text-xl font-black text-slate-900 font-bricolage italic">
+                            {cleanTitle}
+                          </h2>
+                        </div>
+                        <div className="text-right text-[11px] text-slate-500 font-bold">
+                          <span>{formattedDate}</span>
+                          {event.location && <span className="block text-slate-400 font-mono text-[10px]">{event.location}</span>}
+                        </div>
+                      </div>
+                      {renderSlideAttendance(true)}
+                    </div>
+                    <div className="border-t border-slate-200 pt-3 mt-6 flex items-center justify-between text-[9px] text-slate-400 uppercase tracking-widest font-bold">
+                      <span>Confidential • Executive Briefing</span>
+                      <span>Attendance & Velocity</span>
+                      <span>Page 2 of 3</span>
+                    </div>
+                  </div>
+
+                  {/* Page 3: Corporate Demographics */}
+                  <div className="presentation-slide-page">
+                    <div>
+                      <div className="flex items-center justify-between border-b border-slate-200 pb-3 mb-5">
+                        <div>
+                          <span className="text-[9px] font-black uppercase tracking-[0.25em] text-amber-600 block">
+                            Executive Post-Event Briefing
+                          </span>
+                          <h2 className="text-xl font-black text-slate-900 font-bricolage italic">
+                            {cleanTitle}
+                          </h2>
+                        </div>
+                        <div className="text-right text-[11px] text-slate-500 font-bold">
+                          <span>{formattedDate}</span>
+                          {event.location && <span className="block text-slate-400 font-mono text-[10px]">{event.location}</span>}
+                        </div>
+                      </div>
+                      {renderSlideDemographics(true)}
+                    </div>
+                    <div className="border-t border-slate-200 pt-3 mt-6 flex items-center justify-between text-[9px] text-slate-400 uppercase tracking-widest font-bold">
+                      <span>Confidential • Executive Briefing</span>
+                      <span>Corporate Demographics</span>
+                      <span>Page 3 of 3</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
       </div>
     </AdminLayout>
   );
