@@ -2,31 +2,47 @@
 
 import { ShieldCheck, ArrowRight, Lock, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
-import { useState, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { MSLoginHandler } from "@/components/MSLoginHandler";
 
-export default function LoginPage() {
+function LoginForm() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
+  useEffect(() => {
+    const err = searchParams.get("error");
+    if (err) {
+      setError("Invalid email or password. Please try again.");
+    }
+  }, [searchParams]);
+
   const handleCredentialsLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
 
-    const result = await signIn("credentials", {
-      email,
-      password,
-      redirect: true,
-      callbackUrl: "/admin",
-    });
+    try {
+      const result = await signIn("credentials", {
+        email: email.trim(),
+        password,
+        redirect: false,
+      });
 
-    if (result?.error) {
-      setError("Invalid email or password. Please try again.");
+      if (result?.ok) {
+        window.location.href = "/admin";
+      } else {
+        setError("Invalid email or password. Please try again.");
+        setLoading(false);
+      }
+    } catch (err: any) {
+      setError(err?.message || "Authentication failed. Please try again.");
       setLoading(false);
     }
   };
@@ -130,5 +146,17 @@ export default function LoginPage() {
         <MSLoginHandler />
       </Suspense>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
   );
 }
