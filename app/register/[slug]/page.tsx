@@ -216,13 +216,17 @@ function PublicRegistrationPageContent() {
   const [disclaimerAccepted, setDisclaimerAccepted] = useState(false);
 
   const getFlatFields = (): any[] => {
-    if (!event?.custom_fields_schema) return [];
-    if (event.custom_fields_schema.length > 0 && "fields" in event.custom_fields_schema[0]) {
-      return (event.custom_fields_schema as any).reduce((acc: any[], sec: any) => {
+    const template = event?.registration_form_template;
+    const activeSchema = (event?.custom_fields_schema && event.custom_fields_schema.length > 0)
+      ? event.custom_fields_schema
+      : (template?.layout_schema || []);
+    if (!activeSchema || activeSchema.length === 0) return [];
+    if (activeSchema.length > 0 && typeof activeSchema[0] === "object" && "fields" in activeSchema[0]) {
+      return (activeSchema as any).reduce((acc: any[], sec: any) => {
         return [...acc, ...(sec.fields || [])];
       }, []);
     }
-    return event.custom_fields_schema;
+    return activeSchema;
   };
 
   const getPostSubmitTitle = () => {
@@ -319,20 +323,24 @@ function PublicRegistrationPageContent() {
 
   const renderFormFields = (showBefore?: boolean) => {
     const template = event?.registration_form_template;
-    const activeSchema = (template?.layout_schema && template.layout_schema.length > 0)
-      ? template.layout_schema
-      : (event?.custom_fields_schema || []);
+    const activeSchema = (event?.custom_fields_schema && event.custom_fields_schema.length > 0)
+      ? event.custom_fields_schema
+      : (template?.layout_schema || []);
     
     let flatFields: any[] = [];
     for (const item of activeSchema) {
       if (item && typeof item === "object" && "fields" in item && Array.isArray(item.fields)) {
-        if (item.title) {
+        if (item.title && item.title !== "Registration Details" && item.id !== "default_section") {
+          const allFieldsBefore = item.fields.every((f: any) => 
+            ["first_name", "last_name", "email", "company"].includes(f.key || f.id || "") || !!f.showBeforeAttendance
+          );
           flatFields.push({
             id: item.id || `section_${Date.now()}`,
             key: item.id,
             label: item.title,
             type: "section_header",
-            visible: true
+            visible: true,
+            showBeforeAttendance: allFieldsBefore
           });
         }
         flatFields.push(...item.fields);
@@ -636,8 +644,8 @@ function PublicRegistrationPageContent() {
     if (changed) {
       setCustomAnswers(newAnswers);
     }
-  }, [customAnswers, event?.custom_fields_schema]);
-  const [isAttending, setIsAttending] = useState<boolean | null>(null);
+  }, [customAnswers, event?.custom_fields_schema, event?.registration_form_template]);
+  const [isAttending, setIsAttending] = useState<boolean | null>(true);
 
   // Check if registration is active or scheduled
   let registrationClosed = false;
@@ -1892,10 +1900,10 @@ function PublicRegistrationPageContent() {
           </div>
         </div>
 
-        {isAttending && renderFormFields(false)}
+        {isAttending !== false && renderFormFields(false)}
 
         {/* Disclaimer & Indemnity */}
-        {isAttending && event.disclaimer_enabled && event.disclaimer_text && (
+        {isAttending !== false && event.disclaimer_enabled && event.disclaimer_text && (
           <div className={style.disclaimerContainer || `space-y-4 p-6 rounded-[1.5rem] border ${isLightTheme ? 'bg-slate-100 border-slate-200 text-slate-900' : 'bg-black/30 border-white/10 text-white'} mt-6`}>
             <p className={`text-[10px] font-black uppercase tracking-[0.3em] ${isLightTheme ? "client-text-primary" : "client-text-accent"}`}>Disclaimer & Indemnity</p>
             <div 
