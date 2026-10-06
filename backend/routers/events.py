@@ -122,6 +122,60 @@ def resolve_event_template_metas(event, session, event_dict):
     event_dict["decline_template_meta"] = decline_tpl_meta
 
 
+def find_event_by_slug_or_id(slug_or_id: str, session: Session) -> Optional[Event]:
+    """
+    Robustly resolves an Event by slug or ID, handling:
+    - Exact slug match
+    - URL percent-decoding (e.g. 'RydEx%20Launch' -> 'RydEx Launch')
+    - Space vs hyphen vs underscore permutations ('rydex-launch', 'rydex launch', 'RydEx Launch')
+    - Case-insensitive comparison
+    - Numeric event ID fallback
+    """
+    import urllib.parse
+    from sqlalchemy import func, or_
+    
+    if not slug_or_id:
+        return None
+        
+    raw = str(slug_or_id).strip()
+    candidates = set()
+    candidates.add(raw)
+    
+    unquoted = urllib.parse.unquote(raw).strip()
+    unquoted_plus = urllib.parse.unquote_plus(raw).strip()
+    candidates.add(unquoted)
+    candidates.add(unquoted_plus)
+    
+    # Generate space, hyphen, and underscore variations
+    for c in list(candidates):
+        candidates.add(c.replace("-", " "))
+        candidates.add(c.replace(" ", "-"))
+        candidates.add(c.replace("_", " "))
+        candidates.add(c.replace(" ", "_"))
+        candidates.add(c.replace("%20", " "))
+        candidates.add(c.replace(" ", "%20"))
+    
+    # 1. Exact match on any candidate string
+    event = session.exec(select(Event).where(Event.slug.in_(list(candidates)))).first()
+    if event:
+        return event
+
+    # 2. Case-insensitive match on any candidate
+    conditions = [func.lower(Event.slug) == c.lower() for c in candidates if c]
+    if conditions:
+        event = session.exec(select(Event).where(or_(*conditions))).first()
+        if event:
+            return event
+
+    # 3. Numeric ID fallback
+    if raw.isdigit():
+        return session.get(Event, int(raw))
+    if unquoted.isdigit():
+        return session.get(Event, int(unquoted))
+
+    return None
+
+
 @router.get("/{slug}")
 def read_event(slug: str, session: Session = Depends(get_session)):
     from backend.cache_service import get_cached_event, set_cached_event
@@ -142,7 +196,7 @@ def read_event(slug: str, session: Session = Depends(get_session)):
             cached_event["registrations_count"] = 0
         return cached_event
         
-    event = session.exec(select(Event).where(Event.slug == slug)).first()
+    event = find_event_by_slug_or_id(slug, session)
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
     client = session.get(Client, event.client_id) if event.client_id else None
@@ -338,7 +392,7 @@ def delete_event(
 
 @router.get("/{slug}/public-stats")
 def get_public_stats(slug: str, session: Session = Depends(get_session)):
-    event = session.exec(select(Event).where(Event.slug == slug)).first()
+    event = find_event_by_slug_or_id(slug, session)
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
     

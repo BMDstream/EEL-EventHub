@@ -667,9 +667,22 @@ function PublicRegistrationPageContent() {
   }
 
   useEffect(() => {
-    fetch(`/api/py/events/${slug}`)
-      .then((res) => {
-        if (!res.ok) throw new Error("Event not found");
+    const rawSlug = Array.isArray(slug) ? slug[0] : (slug || "");
+    let decodedSlug = rawSlug;
+    try {
+      decodedSlug = decodeURIComponent(rawSlug);
+    } catch {
+      decodedSlug = rawSlug;
+    }
+
+    fetch(`/api/py/events/${encodeURIComponent(decodedSlug)}`)
+      .then(async (res) => {
+        if (!res.ok) {
+          // If first attempt fails, attempt with hyphen substitution
+          const fallbackRes = await fetch(`/api/py/events/${encodeURIComponent(decodedSlug.replace(/\s+/g, "-"))}`);
+          if (!fallbackRes.ok) throw new Error("Event not found");
+          return fallbackRes.json();
+        }
         return res.json();
       })
       .then((data) => {

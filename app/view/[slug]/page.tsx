@@ -38,7 +38,10 @@ export default function ClientViewPage() {
     if (showGlobalLoading) setLoading(true);
     else setRefreshing(true);
     try {
-      const res = await fetch(`/api/py/events/${slug}/public-stats`);
+      const rawSlug = Array.isArray(slug) ? slug[0] : (slug || "");
+      let decodedSlug = rawSlug;
+      try { decodedSlug = decodeURIComponent(rawSlug); } catch {}
+      const res = await fetch(`/api/py/events/${encodeURIComponent(decodedSlug)}/public-stats`);
       if (res.ok) {
         const data = await res.json();
         setStats(data);

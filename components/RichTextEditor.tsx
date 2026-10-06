@@ -503,40 +503,16 @@ export default function RichTextEditor({
   return (
     <div ref={wrapperRef} className={`flex flex-col border border-slate-200 dark:border-slate-700 rounded-2xl bg-white dark:bg-[#0f172a] shadow-lg ${className}`}>
       
-      {/* Rich Text Toolbar */}
+      {/* Rich Text Toolbar - Uncluttered, fully visible without horizontal scrolling */}
       {(toolbarMode === "always" || isFocused) && (
-        <div className="flex flex-col gap-2 p-2 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 select-none rounded-t-2xl">
-          <style dangerouslySetInnerHTML={{ __html: `
-            .toolbar-scroll::-webkit-scrollbar {
-              height: 6px !important;
-              display: block !important;
-            }
-            .toolbar-scroll::-webkit-scrollbar-track {
-              background: #eff6ff !important;
-              border-radius: 3px !important;
-            }
-            .toolbar-scroll::-webkit-scrollbar-thumb {
-              background: #3b82f6 !important;
-              border-radius: 3px !important;
-            }
-            .toolbar-scroll::-webkit-scrollbar-thumb:hover {
-              background: #1d4ed8 !important;
-            }
-            .toolbar-scroll {
-              -ms-overflow-style: auto !important;
-              scrollbar-width: thin !important;
-              scrollbar-color: #3b82f6 #eff6ff !important;
-            }
-          `}} />
-
-          {/* Unified horizontal scroll list for all editors in the system */}
-          <div className="flex items-center gap-2 overflow-x-auto flex-nowrap toolbar-scroll pt-2 pb-3 px-1.5">
+        <div className="p-2 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 select-none rounded-t-2xl">
+          <div className="flex flex-wrap items-center gap-1.5">
             {/* 1. Custom Font Family Select */}
             <div className="shrink-0">
               <select
                 value={activeFont}
                 onChange={(e) => applyFontFamily(e.target.value)}
-                className="px-2 py-1 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-[10px] font-bold outline-none cursor-pointer focus:ring-1 focus:ring-slate-350"
+                className="px-2 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-[10px] font-bold outline-none cursor-pointer focus:ring-1 focus:ring-yellow-400 max-w-[110px]"
               >
                 {FONTS.map((f) => (
                   <option key={f.value} value={f.value}>{f.label}</option>
@@ -549,7 +525,7 @@ export default function RichTextEditor({
               <select
                 value={activeSize}
                 onChange={(e) => applyFontSize(e.target.value)}
-                className="px-2 py-1 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-[10px] font-bold outline-none cursor-pointer focus:ring-1 focus:ring-slate-350"
+                className="px-2 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-[10px] font-bold outline-none cursor-pointer focus:ring-1 focus:ring-yellow-400 w-14"
               >
                 {FONT_SIZES.map((size) => (
                   <option key={size} value={size}>{size.replace("px", "")}px</option>
@@ -558,88 +534,72 @@ export default function RichTextEditor({
             </div>
 
             {/* 3. Size Increment Buttons */}
-            <div className="flex items-center gap-1 shrink-0">
+            <div className="flex items-center gap-0.5 shrink-0">
               <button
                 type="button"
                 onMouseDown={(e) => { e.preventDefault(); adjustFontSize(true); }}
-                className="flex items-center p-1.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-350 transition-all font-black text-[9px]"
+                className="flex items-center px-1.5 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-350 transition-all font-black text-[9px]"
                 title="Increase font size"
               >
-                <Type size={11} className="pointer-events-none" />
-                <ChevronUp size={8} className="-ml-0.5 pointer-events-none" />
+                <Type size={10} className="pointer-events-none" />
+                <ChevronUp size={7} className="-ml-0.5 pointer-events-none" />
               </button>
               <button
                 type="button"
                 onMouseDown={(e) => { e.preventDefault(); adjustFontSize(false); }}
-                className="flex items-center p-1.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-350 transition-all font-black text-[9px]"
+                className="flex items-center px-1.5 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-350 transition-all font-black text-[9px]"
                 title="Decrease font size"
               >
-                <Type size={11} className="pointer-events-none" />
-                <ChevronDown size={8} className="-ml-0.5 pointer-events-none" />
+                <Type size={10} className="pointer-events-none" />
+                <ChevronDown size={7} className="-ml-0.5 pointer-events-none" />
               </button>
             </div>
 
-            <div className="w-px h-4 bg-slate-200 dark:bg-slate-800 mx-0.5 shrink-0" />
+            <div className="w-px h-3.5 bg-slate-200 dark:bg-slate-800 mx-0.5 hidden sm:block shrink-0" />
 
-            {/* 4. Text Color Select */}
-            <div className="shrink-0">
-              <select
-                onChange={(e) => applyTextColor(e.target.value)}
-                defaultValue=""
-                className="px-2 py-1 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-[10px] font-bold outline-none cursor-pointer focus:ring-1 focus:ring-slate-350"
-              >
-                <option value="" disabled>Text Color</option>
-                {TEXT_COLORS.map((color) => (
-                  <option key={color.value} value={color.value}>{color.name}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="w-px h-4 bg-slate-200 dark:bg-slate-800 mx-0.5 shrink-0" />
-
-            {/* 5. Bold, Italic Buttons */}
-            <div className="flex items-center bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-0.5 shrink-0">
+            {/* 4. Bold, Italic Buttons */}
+            <div className="flex items-center bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-0.5 shrink-0">
               <button
                 type="button"
                 onMouseDown={(e) => { e.preventDefault(); applyBold(); }}
-                className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-755 text-slate-705 dark:text-slate-200"
+                className="p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200"
                 title="Bold"
               >
-                <BoldIcon size={12} className="pointer-events-none" />
+                <BoldIcon size={11} className="pointer-events-none" />
               </button>
               <button
                 type="button"
                 onMouseDown={(e) => { e.preventDefault(); applyItalic(); }}
-                className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-755 text-slate-755 dark:text-slate-200 italic"
+                className="p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 italic"
                 title="Italic"
               >
-                <ItalicIcon size={12} className="pointer-events-none" />
+                <ItalicIcon size={11} className="pointer-events-none" />
               </button>
             </div>
 
-            {/* 6. Underline Style Select */}
+            {/* 5. Underline Style Select */}
             <div className="shrink-0">
               <select
                 onChange={(e) => applyUnderline(e.target.value as any)}
                 defaultValue="solid"
-                className="px-2 py-1 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-[10px] font-bold outline-none cursor-pointer focus:ring-1 focus:ring-slate-350"
+                className="px-2 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-[10px] font-bold outline-none cursor-pointer focus:ring-1 focus:ring-yellow-400"
               >
-                <option value="solid">Underline: Solid</option>
-                <option value="double">Underline: Double</option>
-                <option value="wavy">Underline: Wavy</option>
-                <option value="dashed">Underline: Dashed</option>
-                <option value="none">Underline: Clear</option>
+                <option value="solid">Underline</option>
+                <option value="double">Double</option>
+                <option value="wavy">Wavy</option>
+                <option value="dashed">Dashed</option>
+                <option value="none">None</option>
               </select>
             </div>
 
-            <div className="w-px h-4 bg-slate-200 dark:bg-slate-800 mx-0.5 shrink-0" />
+            <div className="w-px h-3.5 bg-slate-200 dark:bg-slate-800 mx-0.5 hidden sm:block shrink-0" />
 
-            {/* 7. Light, Regular, Bold Weight Shortcuts */}
-            <div className="flex bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-0.5 shrink-0">
+            {/* 6. Light, Regular, Bold Weight Shortcuts */}
+            <div className="flex bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-0.5 shrink-0">
               <button
                 type="button"
                 onMouseDown={(e) => { e.preventDefault(); applyFontWeight("Light"); }}
-                className="px-1.5 py-0.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-[9px] font-light text-slate-500 dark:text-slate-400"
+                className="px-1.5 py-0.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-[9px] font-light text-slate-500 dark:text-slate-400"
                 title="Font Weight Light (300)"
               >
                 Light
@@ -647,49 +607,63 @@ export default function RichTextEditor({
               <button
                 type="button"
                 onMouseDown={(e) => { e.preventDefault(); applyFontWeight("Regular"); }}
-                className="px-1.5 py-0.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-[9px] font-normal text-slate-500 dark:text-slate-400"
+                className="px-1.5 py-0.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-[9px] font-normal text-slate-500 dark:text-slate-400"
                 title="Font Weight Regular (400)"
               >
-                Regular
+                Reg
               </button>
               <button
                 type="button"
                 onMouseDown={(e) => { e.preventDefault(); applyFontWeight("Bold"); }}
-                className="px-1.5 py-0.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-[9px] font-bold text-slate-600 dark:text-slate-300"
+                className="px-1.5 py-0.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-[9px] font-bold text-slate-600 dark:text-slate-300"
                 title="Font Weight Bold (700)"
               >
                 Bold
               </button>
             </div>
 
-            {/* 8. Card Block Borders Select */}
+            <div className="w-px h-3.5 bg-slate-200 dark:bg-slate-800 mx-0.5 hidden sm:block shrink-0" />
+
+            {/* 7. Text Color Select */}
             <div className="shrink-0">
               <select
-                onChange={(e) => applyBorderBlock(e.target.value as any)}
-                defaultValue="none"
-                className="px-2 py-1 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-[10px] font-bold outline-none cursor-pointer focus:ring-1 focus:ring-slate-350"
+                onChange={(e) => applyTextColor(e.target.value)}
+                defaultValue=""
+                className="px-2 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-[10px] font-bold outline-none cursor-pointer focus:ring-1 focus:ring-yellow-400"
               >
-                <option value="none">Container: None</option>
-                <option value="solid">Container: Solid Card</option>
-                <option value="dashed">Container: Dashed Card</option>
-                <option value="alert">Container: Alert Box</option>
-                <option value="dark">Container: Dark Box</option>
+                <option value="" disabled>Color</option>
+                {TEXT_COLORS.map((color) => (
+                  <option key={color.value} value={color.value}>{color.name}</option>
+                ))}
               </select>
             </div>
 
-            <div className="w-px h-4 bg-slate-200 dark:bg-slate-800 mx-0.5 shrink-0" />
-
-            {/* 9. Highlight Color Select */}
+            {/* 8. Highlight Color Select */}
             <div className="shrink-0">
               <select
                 onChange={(e) => applyHighlightColor(e.target.value)}
                 defaultValue=""
-                className="px-2 py-1 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-[10px] font-bold outline-none cursor-pointer focus:ring-1 focus:ring-slate-350"
+                className="px-2 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-[10px] font-bold outline-none cursor-pointer focus:ring-1 focus:ring-yellow-400"
               >
                 <option value="" disabled>Highlight</option>
                 {HIGHLIGHT_COLORS.map((color) => (
                   <option key={color.value} value={color.value}>{color.name}</option>
                 ))}
+              </select>
+            </div>
+
+            {/* 9. Card Block Borders Select */}
+            <div className="shrink-0">
+              <select
+                onChange={(e) => applyBorderBlock(e.target.value as any)}
+                defaultValue="none"
+                className="px-2 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-[10px] font-bold outline-none cursor-pointer focus:ring-1 focus:ring-yellow-400"
+              >
+                <option value="none">Container: None</option>
+                <option value="solid">Card: Solid</option>
+                <option value="dashed">Card: Dashed</option>
+                <option value="alert">Card: Alert</option>
+                <option value="dark">Card: Dark</option>
               </select>
             </div>
           </div>

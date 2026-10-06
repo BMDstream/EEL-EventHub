@@ -36,7 +36,8 @@ import {
   ChevronRight,
   FileSpreadsheet,
   Layers,
-  Info
+  Info,
+  Presentation
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import AdminLayout from "@/components/AdminLayout";
@@ -207,6 +208,8 @@ export default function EventDetailsPage() {
   const [editedCompany, setEditedCompany] = useState("");
   const [editedPin, setEditedPin] = useState("");
   const [editedStatus, setEditedStatus] = useState("");
+  const [isPresentationOpen, setIsPresentationOpen] = useState(false);
+  const [currentSlide, setCurrentSlide] = useState(0);
 
   useEffect(() => {
     if (checkedInReg) {
@@ -1557,11 +1560,11 @@ export default function EventDetailsPage() {
                   <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mb-10 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-800/80 group min-w-0">
                      <p className="text-[10px] font-black text-slate-300 dark:text-slate-500 uppercase tracking-widest ml-1 shrink-0">Public Link:</p>
                      <code className="text-xs font-bold text-[#0f172a] dark:text-slate-300 bg-white dark:bg-slate-800 px-3 py-1 rounded-lg border border-slate-100 dark:border-slate-700 flex-1 min-w-0 truncate">
-                       {typeof window !== 'undefined' ? `${window.location.origin}/register/${event.slug}` : `/register/${event.slug}`}
+                       {typeof window !== 'undefined' ? `${window.location.origin}/register/${encodeURIComponent(event.slug)}` : `/register/${encodeURIComponent(event.slug)}`}
                      </code>
                      <button 
                        onClick={() => {
-                         const url = `${window.location.origin}/register/${event.slug}`;
+                         const url = `${window.location.origin}/register/${encodeURIComponent(event.slug)}`;
                          navigator.clipboard.writeText(url);
                          alert("Link copied!");
                        }}
@@ -1570,7 +1573,7 @@ export default function EventDetailsPage() {
                        Copy Link
                      </button>
                      <a 
-                       href={`/register/${event.slug}`} 
+                       href={`/register/${encodeURIComponent(event.slug)}`} 
                        target="_blank" 
                        className="p-2 text-slate-400 hover:text-[#0f172a] dark:hover:text-white transition-all shrink-0"
                      >
@@ -1715,6 +1718,16 @@ export default function EventDetailsPage() {
                   >
                     <Eye size={20} />
                     Share Client Link
+                  </button>
+                  <button
+                    onClick={() => {
+                      setCurrentSlide(0);
+                      setIsPresentationOpen(true);
+                    }}
+                    className="flex items-center justify-center gap-3 bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-600 hover:to-yellow-500 text-slate-950 px-8 py-5 rounded-2xl font-black transition-all shadow-xl shadow-yellow-500/20 uppercase tracking-widest text-xs"
+                  >
+                    <Presentation size={20} />
+                    Post-Event Presentation
                   </button>
                   <Link
                     href={`/admin/events/${id}/badges`}
@@ -1896,7 +1909,7 @@ export default function EventDetailsPage() {
                        Not Checked In ({registrations.filter(r => !r.checked_in).length})
                      </button>
                    </div>
-                   <div className="flex items-center gap-3">
+                   <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
                       <button 
                         onClick={fetchRegistrations}
                         disabled={refreshing}
@@ -1974,9 +1987,9 @@ export default function EventDetailsPage() {
             </div>
 
             <div className="bg-white dark:bg-[#0d1527] rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-800/80 overflow-hidden">
-              <div className="px-10 py-8 border-b border-slate-50 dark:border-slate-800/80 flex justify-between items-center bg-slate-50/30 dark:bg-slate-900/30">
+              <div className="px-5 sm:px-10 py-5 sm:py-8 border-b border-slate-50 dark:border-slate-800/80 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-50/30 dark:bg-slate-900/30">
                 <h2 className="text-xl font-black text-[#0f172a] dark:text-white font-bricolage italic uppercase tracking-tight">Active <span className="text-slate-300 dark:text-slate-600">Registrants</span></h2>
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
                   {selectedIds.length > 0 && (userRole === "admin" || userRole === "manager") && (
                     <button
                       onClick={handleBulkDelete}
@@ -2011,7 +2024,7 @@ export default function EventDetailsPage() {
                   )}
                 </div>
               </div>
-              <div className="overflow-auto max-h-[650px] pb-4 relative">
+              <div className="hidden md:block overflow-auto max-h-[650px] pb-4 relative">
                 <table className="w-full text-left min-w-[1100px] border-collapse">
                 <thead className="sticky top-0 bg-white dark:bg-[#0d1527] z-10">
                   <tr className="text-slate-400 dark:text-slate-500 text-[10px] font-black uppercase tracking-[0.2em] bg-white dark:bg-[#0d1527]">
@@ -2181,6 +2194,166 @@ export default function EventDetailsPage() {
                 </tbody>
               </table>
             </div>
+              {/* Mobile Card List (md:hidden) */}
+              <div className="block md:hidden divide-y divide-slate-100 dark:divide-slate-800/60">
+                {filteredRegistrations.length === 0 ? (
+                  <div className="p-8 text-center">
+                    <div className="bg-slate-50 dark:bg-slate-800/50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Users className="text-slate-300 dark:text-slate-600" size={24} />
+                    </div>
+                    <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">No matching registrations found.</p>
+                  </div>
+                ) : (
+                  paginatedRegistrations.map((reg) => (
+                    <div key={reg.id} className="p-4 space-y-3 bg-white dark:bg-[#0d1527] hover:bg-slate-50/50 dark:hover:bg-slate-900/30 transition-colors">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                          {(userRole === "admin" || userRole === "manager") && (
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.includes(reg.id)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedIds((prev) => [...prev, reg.id]);
+                                } else {
+                                  setSelectedIds((prev) => prev.filter((id) => id !== reg.id));
+                                }
+                              }}
+                              className="w-4 h-4 text-yellow-500 bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 rounded focus:ring-yellow-500 focus:ring-2 cursor-pointer shrink-0 mt-0.5"
+                            />
+                          )}
+                          <div className="w-10 h-10 shrink-0 bg-[#0f172a] dark:bg-slate-800 text-white rounded-xl flex items-center justify-center font-bold text-xs uppercase border dark:border-slate-700">
+                            {reg.attendee.first_name[0]}{reg.attendee.last_name[0]}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-bold text-[#0f172a] dark:text-white text-sm truncate">
+                              {reg.attendee.first_name} {reg.attendee.last_name}
+                            </p>
+                            <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider truncate">
+                              {reg.attendee.email}
+                            </p>
+                          </div>
+                        </div>
+                        
+                        <span className={`shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border ${
+                          reg.status === "confirmed" 
+                            ? "bg-green-50 dark:bg-green-950/20 text-green-600 dark:text-green-400 border-green-100 dark:border-green-900/30" 
+                            : reg.status === "declined"
+                              ? "bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 border-red-100 dark:border-red-900/30"
+                              : "bg-yellow-50 dark:bg-yellow-950/20 text-yellow-600 dark:text-yellow-400 border-yellow-100 dark:border-yellow-900/30"
+                        }`}>
+                          <div className={`w-1.5 h-1.5 rounded-full ${
+                            reg.status === "confirmed" ? "bg-green-500" : reg.status === "declined" ? "bg-red-500" : "bg-yellow-500"
+                          }`}></div>
+                          {reg.status}
+                        </span>
+                      </div>
+
+                      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400 pt-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] uppercase font-bold text-slate-400">Org:</span>
+                          <span className="font-semibold text-slate-700 dark:text-slate-300 text-xs truncate max-w-[150px]">
+                            {reg.attendee.company || "—"}
+                          </span>
+                        </div>
+                        {reg.pin && (
+                          <div className="flex items-center gap-1.5 font-mono text-[10px] bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md text-slate-700 dark:text-slate-300">
+                            <span className="text-[9px] uppercase font-bold text-slate-400">PIN:</span>
+                            <strong className="tracking-wider">{reg.pin}</strong>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Action Row */}
+                      <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-50 dark:border-slate-800/40">
+                        <div className="flex items-center gap-2 flex-1">
+                          {event.duration_days && event.duration_days > 1 ? (
+                            <div className="flex flex-wrap gap-1.5">
+                              {Array.from({ length: event.duration_days }, (_, i) => i + 1).map(dayNum => {
+                                const isCheckedInForDay = reg.checked_in_days?.includes(dayNum);
+                                return (
+                                  <button
+                                    key={dayNum}
+                                    disabled={reg.status === "declined"}
+                                    onClick={async () => {
+                                      try {
+                                        const res = await fetch(`/api/py/registrations/${reg.id}/checkin?day=${dayNum}&event_id=${id}`, { method: "PUT" });
+                                        if (res.ok) {
+                                          const updated = await res.json();
+                                          setRegistrations(prev => prev.map(r => r.id === reg.id ? { ...r, checked_in: updated.checked_in, checked_in_days: updated.checked_in_days ?? [] } : r));
+                                        }
+                                      } catch (err) {
+                                        console.error(err);
+                                      }
+                                    }}
+                                    className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all ${
+                                      reg.status === "declined"
+                                        ? "bg-slate-100 dark:bg-slate-800 text-slate-300 dark:text-slate-650 cursor-not-allowed opacity-55"
+                                        : isCheckedInForDay 
+                                          ? "bg-green-500 text-white shadow-sm shadow-green-500/20" 
+                                          : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
+                                    }`}
+                                  >
+                                    Day {dayNum}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            <button
+                              disabled={reg.status === "declined"}
+                              onClick={async () => {
+                                try {
+                                  const res = await fetch(`/api/py/registrations/${reg.id}/checkin?event_id=${id}`, { method: "PUT" });
+                                  if (res.ok) {
+                                    const updated = await res.json();
+                                    setRegistrations(prev => prev.map(r => r.id === reg.id ? { ...r, checked_in: updated.checked_in, checked_in_days: updated.checked_in_days ?? [] } : r));
+                                  }
+                                } catch (err) {
+                                  console.error(err);
+                                }
+                              }}
+                              className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                                reg.status === "declined"
+                                  ? "bg-slate-100 dark:bg-slate-800 text-slate-300 dark:text-slate-600 cursor-not-allowed opacity-55"
+                                  : reg.checked_in 
+                                    ? "bg-green-500 text-white shadow-sm shadow-green-500/20" 
+                                    : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
+                              }`}
+                            >
+                              {reg.checked_in ? "Checked In" : "Check In"}
+                            </button>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            onClick={() => {
+                              setHideResendButton(false);
+                              setSelectedReg(reg);
+                            }}
+                            className="p-2 text-slate-400 hover:text-[#0f172a] dark:hover:text-white transition-all rounded-lg"
+                            title="View & Edit Details"
+                          >
+                            <Eye size={18} />
+                          </button>
+                          {(userRole === "admin" || userRole === "manager") && (
+                            <button
+                              onClick={() => handleDeleteRegistration(reg.id)}
+                              disabled={deletingId === reg.id}
+                              className="p-2 text-slate-400 hover:text-red-500 transition-all rounded-lg"
+                              title="Delete Registration"
+                            >
+                              {deletingId === reg.id ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
 
             {/* Pagination Controls */}
             {filteredRegistrations.length > 0 && (
@@ -2248,9 +2421,9 @@ export default function EventDetailsPage() {
              />
           </div>
         ) : activeTab === "scanner" ? (
-          <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 p-10 lg:p-24">
+          <div className="bg-white dark:bg-[#0d1527] rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-800/80 p-4 sm:p-8 lg:p-16">
              <div className="max-w-2xl mx-auto text-center mb-10">
-                <h2 className="text-5xl font-black text-[#0f172a] mb-6 tracking-tight font-bricolage italic uppercase">LIVE <span className="text-slate-300">SCANNER</span></h2>
+                <h2 className="text-3xl sm:text-5xl font-black text-[#0f172a] dark:text-white mb-4 sm:mb-6 tracking-tight font-bricolage italic uppercase">LIVE <span className="text-slate-300 dark:text-slate-600">SCANNER</span></h2>
                 <p className="text-slate-500 font-medium">Scan attendee QR codes or enter their Unique Clearance ID for instantaneous verification.</p>
              </div>
              
@@ -2432,7 +2605,7 @@ export default function EventDetailsPage() {
                </div>
 
                <div className="space-y-8">
-                 <div className="bg-slate-50 p-10 rounded-[2rem] border border-slate-100">
+                 <div className="bg-slate-50 dark:bg-slate-900/50 p-5 sm:p-10 rounded-[2rem] border border-slate-100 dark:border-slate-800/80">
                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 ml-1">Manual PIN Entry</h3>
                    {pinStatus === "idle" ? (
                      <div className="space-y-4">
@@ -2442,7 +2615,7 @@ export default function EventDetailsPage() {
                          placeholder="ENTER CLEARANCE PIN"
                          value={pin}
                          onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
-                         className="w-full text-center text-2xl md:text-4xl font-black py-8 bg-white rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none text-[#0f172a] placeholder-slate-200 tracking-[0.2em] md:tracking-[0.5em]"
+                         className="w-full text-center text-xl sm:text-2xl md:text-4xl font-black py-4 sm:py-6 md:py-8 bg-white dark:bg-slate-800 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none text-[#0f172a] dark:text-white placeholder-slate-200 dark:placeholder-slate-600 tracking-[0.2em] md:tracking-[0.5em]"
                        />
                        <button 
                          onClick={async () => {
@@ -3564,7 +3737,7 @@ export default function EventDetailsPage() {
             <div className="bg-white dark:bg-[#0f172a] rounded-[2.5rem] shadow-2xl border border-slate-100 dark:border-slate-800 w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-200">
               {/* Modal Header */}
               <div className="px-8 py-6 border-b border-slate-100 dark:border-slate-800/80 flex justify-between items-center bg-slate-50/60 dark:bg-slate-900/60">
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
                   <div className="w-10 h-10 rounded-2xl bg-yellow-400/10 dark:bg-yellow-400/20 text-yellow-600 dark:text-yellow-400 flex items-center justify-center border border-yellow-400/20">
                     <FileSpreadsheet size={20} />
                   </div>
@@ -3665,7 +3838,7 @@ export default function EventDetailsPage() {
                   <div className="space-y-6">
                     {/* File Header Bar */}
                     <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-slate-50 dark:bg-slate-900/80 rounded-2xl border border-slate-100 dark:border-slate-800">
-                      <div className="flex items-center gap-3">
+                      <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
                         <FileSpreadsheet className="text-yellow-500" size={20} />
                         <div>
                           <p className="text-xs font-black text-[#0f172a] dark:text-white">
@@ -4191,6 +4364,319 @@ export default function EventDetailsPage() {
                     </div>
                   </div>
                 )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Post-Event Executive Presentation Deck Modal */}
+        {isPresentationOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
+            <div className="bg-slate-950 border border-amber-500/30 text-white w-full max-w-5xl rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
+              {/* Deck Header */}
+              <div className="px-6 sm:px-10 py-5 sm:py-6 bg-gradient-to-r from-slate-900 via-slate-900 to-slate-950 border-b border-slate-800 flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="p-2.5 bg-amber-500/10 text-amber-400 rounded-xl border border-amber-500/20 shrink-0">
+                    <Presentation size={20} />
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-[9px] font-black uppercase tracking-[0.25em] text-amber-400 block">
+                      Executive Post-Event Briefing
+                    </span>
+                    <h3 className="text-base sm:text-lg font-black truncate tracking-tight text-white font-bricolage italic">
+                      {cleanHtmlText(event.title || "")}
+                    </h3>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+                  <button
+                    onClick={() => window.print()}
+                    className="flex items-center gap-2 px-3.5 sm:px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border border-slate-700"
+                    title="Print Deck to PDF"
+                  >
+                    <Printer size={14} />
+                    <span className="hidden sm:inline">Export PDF</span>
+                  </button>
+                  <button
+                    onClick={() => setIsPresentationOpen(false)}
+                    className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-all"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Slide Navigation Tabs */}
+              <div className="px-6 sm:px-10 py-3 bg-slate-900/50 border-b border-slate-800/80 flex items-center gap-2 overflow-x-auto scrollbar-hide">
+                {[
+                  { id: 0, label: "1. Overview & KPIs" },
+                  { id: 1, label: "2. Attendance & Velocity" },
+                  { id: 2, label: "3. Corporate Demographics" }
+                ].map((s) => (
+                  <button
+                    key={s.id}
+                    onClick={() => setCurrentSlide(s.id)}
+                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shrink-0 ${
+                      currentSlide === s.id
+                        ? "bg-amber-400 text-slate-950 font-black shadow-sm"
+                        : "text-slate-400 hover:text-white hover:bg-slate-800/60"
+                    }`}
+                  >
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Slide Content Viewport */}
+              <div className="p-6 sm:p-10 overflow-y-auto flex-1">
+                {currentSlide === 0 && (
+                  <div className="space-y-8 animate-in fade-in duration-200">
+                    <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-slate-800/80 pb-6">
+                      <div>
+                        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Slide 01 // Executive Summary</span>
+                        <h2 className="text-2xl sm:text-4xl font-black text-white font-bricolage italic tracking-tight mt-1">
+                          Key Performance Indicators
+                        </h2>
+                      </div>
+                      <div className="text-xs text-slate-400 font-bold">
+                        <span>{new Date(event.start_date).toLocaleDateString(undefined, { dateStyle: 'full' })}</span>
+                        {event.location && <span className="block text-slate-500 font-mono text-[11px]">{event.location}</span>}
+                      </div>
+                    </div>
+
+                    {/* KPI Hero Grid */}
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                      <div className="bg-slate-900/80 border border-slate-800 p-5 rounded-2xl">
+                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 block mb-1">Total Registrations</span>
+                        <p className="text-3xl font-black text-white">{registrations.length}</p>
+                        <span className="text-[10px] text-slate-500 font-semibold mt-1 block">Confirmed: {confirmedCount}</span>
+                      </div>
+
+                      <div className="bg-slate-900/80 border border-slate-800 p-5 rounded-2xl">
+                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 block mb-1">Verified Check-Ins</span>
+                        <p className="text-3xl font-black text-emerald-400">{checkedInCount}</p>
+                        <span className="text-[10px] text-slate-500 font-semibold mt-1 block">Cleared at door</span>
+                      </div>
+
+                      <div className="bg-slate-900/80 border border-slate-800 p-5 rounded-2xl">
+                        <span className="text-[9px] font-black uppercase tracking-widest text-amber-400 block mb-1">Turnout Conversion</span>
+                        <p className="text-3xl font-black text-amber-400">
+                          {confirmedCount > 0 ? Math.round((checkedInCount / confirmedCount) * 100) : 0}%
+                        </p>
+                        <span className="text-[10px] text-slate-500 font-semibold mt-1 block">Of confirmed attendees</span>
+                      </div>
+
+                      <div className="bg-slate-900/80 border border-slate-800 p-5 rounded-2xl">
+                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 block mb-1">Capacity Utilization</span>
+                        <p className="text-3xl font-black text-blue-400">
+                          {event.capacity > 0 ? Math.round((confirmedCount / event.capacity) * 100) : 0}%
+                        </p>
+                        <span className="text-[10px] text-slate-500 font-semibold mt-1 block">{confirmedCount} of {event.capacity} max</span>
+                      </div>
+                    </div>
+
+                    {/* Progress Visuals */}
+                    <div className="bg-slate-900/50 border border-slate-800 p-6 rounded-2xl space-y-4">
+                      <h4 className="text-xs font-black uppercase tracking-wider text-slate-300">Turnout Funnel Overview</h4>
+                      <div className="space-y-3">
+                        <div>
+                          <div className="flex justify-between text-xs font-bold mb-1">
+                            <span className="text-slate-400">Attendance Rate ({checkedInCount} / {confirmedCount})</span>
+                            <span className="text-emerald-400 font-mono">{confirmedCount > 0 ? Math.round((checkedInCount / confirmedCount) * 100) : 0}%</span>
+                          </div>
+                          <div className="h-3 bg-slate-800 rounded-full overflow-hidden">
+                            <div 
+                              className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full transition-all duration-500" 
+                              style={{ width: `${confirmedCount > 0 ? Math.min(100, Math.round((checkedInCount / confirmedCount) * 100)) : 0}%` }}
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <div className="flex justify-between text-xs font-bold mb-1">
+                            <span className="text-slate-400">Declined Invitations ({declinedCount} / {registrations.length})</span>
+                            <span className="text-rose-400 font-mono">{registrations.length > 0 ? Math.round((declinedCount / registrations.length) * 100) : 0}%</span>
+                          </div>
+                          <div className="h-3 bg-slate-800 rounded-full overflow-hidden">
+                            <div 
+                              className="h-full bg-gradient-to-r from-rose-500 to-red-400 rounded-full transition-all duration-500" 
+                              style={{ width: `${registrations.length > 0 ? Math.min(100, Math.round((declinedCount / registrations.length) * 100)) : 0}%` }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {currentSlide === 1 && (
+                  <div className="space-y-8 animate-in fade-in duration-200">
+                    <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-slate-800/80 pb-6">
+                      <div>
+                        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Slide 02 // Check-In Analytics</span>
+                        <h2 className="text-2xl sm:text-4xl font-black text-white font-bricolage italic tracking-tight mt-1">
+                          Attendance & Velocity Breakdown
+                        </h2>
+                      </div>
+                    </div>
+
+                    {event.duration_days && event.duration_days > 1 ? (
+                      <div className="space-y-4">
+                        <h4 className="text-xs font-black uppercase tracking-wider text-slate-300">Multi-Day Attendance Performance</h4>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {Array.from({ length: event.duration_days }, (_, i) => i + 1).map(d => {
+                            const dailyCount = registrations.filter(r => r.checked_in_days?.includes(d)).length;
+                            const dailyRate = confirmedCount > 0 ? Math.round((dailyCount / confirmedCount) * 100) : 0;
+                            return (
+                              <div key={d} className="bg-slate-900/80 border border-slate-800 p-5 rounded-2xl space-y-3">
+                                <div className="flex justify-between items-center">
+                                  <span className="text-xs font-black uppercase tracking-wider text-amber-400">Day {d}</span>
+                                  <span className="text-xs font-mono font-bold text-slate-400">{dailyRate}%</span>
+                                </div>
+                                <p className="text-2xl font-black text-white">{dailyCount} <span className="text-xs text-slate-500 font-bold">Attendees</span></p>
+                                <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
+                                  <div className="h-full bg-amber-400 rounded-full" style={{ width: `${Math.min(100, dailyRate)}%` }} />
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="bg-slate-900/80 border border-slate-800 p-8 rounded-2xl text-center space-y-4">
+                        <span className="text-xs font-black uppercase tracking-widest text-slate-400">Single Day Event Performance</span>
+                        <div className="max-w-md mx-auto grid grid-cols-2 gap-4">
+                          <div className="bg-slate-800/60 p-4 rounded-xl">
+                            <span className="text-[10px] text-slate-400 font-bold block">Present</span>
+                            <span className="text-2xl font-black text-emerald-400">{checkedInCount}</span>
+                          </div>
+                          <div className="bg-slate-800/60 p-4 rounded-xl">
+                            <span className="text-[10px] text-slate-400 font-bold block">No-Show</span>
+                            <span className="text-2xl font-black text-slate-400">{Math.max(0, confirmedCount - checkedInCount)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Registration Status Breakdown */}
+                    <div className="bg-slate-900/50 border border-slate-800 p-6 rounded-2xl space-y-3">
+                      <h4 className="text-xs font-black uppercase tracking-wider text-slate-300">Registration Status Breakdown</h4>
+                      <div className="grid grid-cols-3 gap-3 text-center">
+                        <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-800">
+                          <span className="text-[9px] uppercase font-bold text-emerald-400 block">Confirmed</span>
+                          <span className="text-xl font-black text-white">{confirmedCount}</span>
+                        </div>
+                        <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-800">
+                          <span className="text-[9px] uppercase font-bold text-rose-400 block">Declined</span>
+                          <span className="text-xl font-black text-white">{declinedCount}</span>
+                        </div>
+                        <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-800">
+                          <span className="text-[9px] uppercase font-bold text-amber-400 block">Pending</span>
+                          <span className="text-xl font-black text-white">{registrations.filter(r => r.status !== 'confirmed' && r.status !== 'declined').length}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {currentSlide === 2 && (
+                  <div className="space-y-8 animate-in fade-in duration-200">
+                    <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-slate-800/80 pb-6">
+                      <div>
+                        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Slide 03 // Demographics</span>
+                        <h2 className="text-2xl sm:text-4xl font-black text-white font-bricolage italic tracking-tight mt-1">
+                          Corporate Representation
+                        </h2>
+                      </div>
+                      <div className="text-xs text-slate-400 font-bold">
+                        {uniqueCompanies.length} Unique Organizations Represented
+                      </div>
+                    </div>
+
+                    {/* Top Companies List */}
+                    <div className="space-y-3">
+                      <h4 className="text-xs font-black uppercase tracking-wider text-slate-300">Top Participating Organizations</h4>
+                      {(() => {
+                        const orgCounts: Record<string, number> = {};
+                        registrations.forEach(r => {
+                          const c = r.attendee?.company?.trim();
+                          if (c) orgCounts[c] = (orgCounts[c] || 0) + 1;
+                        });
+                        const sortedOrgs = Object.entries(orgCounts).sort((a, b) => b[1] - a[1]).slice(0, 8);
+                        const maxCount = sortedOrgs.length > 0 ? sortedOrgs[0][1] : 1;
+
+                        if (sortedOrgs.length === 0) {
+                          return (
+                            <div className="bg-slate-900/60 p-8 rounded-2xl text-center text-slate-500 font-bold text-xs uppercase">
+                              No company affiliations recorded for this event.
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <div className="space-y-2.5">
+                            {sortedOrgs.map(([name, count]) => {
+                              const pct = Math.round((count / maxCount) * 100);
+                              return (
+                                <div key={name} className="bg-slate-900/70 border border-slate-800/80 p-3.5 rounded-xl flex items-center justify-between gap-4">
+                                  <div className="min-w-0 flex-1">
+                                    <div className="flex justify-between text-xs font-bold mb-1">
+                                      <span className="text-white truncate">{name}</span>
+                                      <span className="text-amber-400 font-mono ml-2 shrink-0">{count} {count === 1 ? 'attendee' : 'attendees'}</span>
+                                    </div>
+                                    <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                                      <div className="h-full bg-amber-400 rounded-full" style={{ width: `${pct}%` }} />
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })()}
+                    </div>
+
+                    <div className="bg-amber-400/10 border border-amber-400/20 p-5 rounded-2xl">
+                      <p className="text-xs text-amber-200/90 leading-relaxed font-medium">
+                        ✦ <strong>Executive Summary Note:</strong> Presentation data is synchronized directly from live check-in logs and door scan timestamps. For complete record sheets and custom questionnaire answers, export the full master catalog to Excel from the Command Panel.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Deck Footer Controls */}
+              <div className="px-6 sm:px-10 py-4 bg-slate-900 border-t border-slate-800 flex items-center justify-between">
+                <button
+                  onClick={() => setCurrentSlide(prev => Math.max(0, prev - 1))}
+                  disabled={currentSlide === 0}
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed rounded-xl text-[10px] font-black uppercase tracking-wider transition-all text-white flex items-center gap-1.5"
+                >
+                  <ChevronLeft size={14} />
+                  <span>Prev</span>
+                </button>
+
+                <div className="flex items-center gap-2">
+                  {[0, 1, 2].map(idx => (
+                    <button
+                      key={idx}
+                      onClick={() => setCurrentSlide(idx)}
+                      className={`w-2.5 h-2.5 rounded-full transition-all ${
+                        currentSlide === idx ? "bg-amber-400 w-6" : "bg-slate-700 hover:bg-slate-600"
+                      }`}
+                    />
+                  ))}
+                </div>
+
+                <button
+                  onClick={() => setCurrentSlide(prev => Math.min(2, prev + 1))}
+                  disabled={currentSlide === 2}
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed rounded-xl text-[10px] font-black uppercase tracking-wider transition-all text-white flex items-center gap-1.5"
+                >
+                  <span>Next</span>
+                  <ChevronRight size={14} />
+                </button>
               </div>
             </div>
           </div>

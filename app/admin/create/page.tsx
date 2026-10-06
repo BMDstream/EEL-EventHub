@@ -173,48 +173,50 @@ export default function CreateEventPage() {
                  <FileText size={16} /> Core Information
               </h3>
               
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-                  <div className="space-y-3">
-                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Event Title</label>
-                     <RichTextEditor 
-                        value={formData.title || ""} 
-                        onChange={(val) => setFormData(prev => ({ ...prev, title: val }))} 
-                        placeholder="e.g. Excellence Gala 2026"
-                        minHeight="80px"
-                     />
-                  </div>
+              <div className="space-y-8">
+                <div className="space-y-3">
+                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Event Title</label>
+                   <RichTextEditor 
+                      value={formData.title || ""} 
+                      onChange={(val) => setFormData(prev => ({ ...prev, title: val }))} 
+                      placeholder="e.g. Excellence Gala 2026"
+                      minHeight="80px"
+                   />
+                </div>
 
-                  <div className="space-y-3">
-                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
-                        <Globe size={14} /> URL Slug
-                     </label>
-                     <input
-                       required
-                       type="text"
-                       name="slug"
-                       value={formData.slug}
-                       onChange={handleChange}
-                       placeholder="excellence-gala-2026"
-                       className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a] transition-all"
-                     />
-                  </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                   <div className="space-y-3">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                         <Globe size={14} /> URL Slug
+                      </label>
+                      <input
+                        required
+                        type="text"
+                        name="slug"
+                        value={formData.slug}
+                        onChange={handleChange}
+                        placeholder="excellence-gala-2026"
+                        className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a] transition-all"
+                      />
+                   </div>
 
-                  <div className="space-y-3">
-                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
-                        <Building2 size={14} /> Brand Client
-                     </label>
-                     <select
-                       name="client_id"
-                       value={formData.client_id}
-                       onChange={handleChange}
-                       className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a] transition-all appearance-none cursor-pointer"
-                     >
-                       {clients.map((c) => (
-                         <option key={c.id} value={c.id.toString()}>{c.name}</option>
-                       ))}
-                     </select>
-                  </div>
-               </div>
+                   <div className="space-y-3">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                         <Building2 size={14} /> Brand Client
+                      </label>
+                      <select
+                        name="client_id"
+                        value={formData.client_id}
+                        onChange={handleChange}
+                        className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a] transition-all appearance-none cursor-pointer"
+                      >
+                        {clients.map((c) => (
+                          <option key={c.id} value={c.id.toString()}>{c.name}</option>
+                        ))}
+                      </select>
+                   </div>
+                </div>
+              </div>
 
                 {(userRole === "admin" || userRole === "manager") && (
                   <div className="mt-10 grid grid-cols-1 md:grid-cols-2 gap-10">

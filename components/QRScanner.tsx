@@ -120,24 +120,24 @@ export default function QRScanner({ onScan, onViewDetails, operatorConfig }: QRS
   }, [scanning, onScan]);
 
   return (
-    <div className="flex flex-col items-center gap-8 py-10">
+    <div className="flex flex-col items-center gap-6 sm:gap-8 py-4 sm:py-10 w-full">
       {!scanning && status === "idle" && (
         <button
           onClick={() => setScanning(true)}
-          className="flex flex-col items-center gap-6 p-16 rounded-[3rem] bg-slate-50 border-2 border-dashed border-slate-200 hover:border-yellow-400 hover:bg-yellow-50/30 transition-all group w-full max-w-md"
+          className="flex flex-col items-center gap-4 sm:gap-6 p-8 sm:p-16 rounded-[2rem] sm:rounded-[3rem] bg-slate-50 border-2 border-dashed border-slate-200 hover:border-yellow-400 hover:bg-yellow-50/30 transition-all group w-full max-w-md"
         >
-          <div className="p-6 bg-white rounded-3xl shadow-xl group-hover:scale-110 transition-transform">
-            <Camera size={48} className="text-slate-400 group-hover:text-yellow-500" />
+          <div className="p-4 sm:p-6 bg-white rounded-2xl sm:rounded-3xl shadow-xl group-hover:scale-110 transition-transform">
+            <Camera size={40} className="sm:w-12 sm:h-12 text-slate-400 group-hover:text-yellow-500" />
           </div>
           <div className="text-center">
-            <p className="text-lg font-black text-[#0f172a] uppercase tracking-tighter italic font-bricolage">Initialize Scanner</p>
-            <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-2">Ready for live check-in</p>
+            <p className="text-base sm:text-lg font-black text-[#0f172a] uppercase tracking-tighter italic font-bricolage">Initialize Scanner</p>
+            <p className="text-[11px] sm:text-xs text-slate-400 font-bold uppercase tracking-widest mt-1 sm:mt-2">Ready for live check-in</p>
           </div>
         </button>
       )}
 
       {scanning && (
-        <div className="w-full max-w-md overflow-hidden rounded-[2.5rem] shadow-2xl border-4 border-yellow-400 relative bg-black aspect-square flex items-center justify-center">
+        <div className="w-full max-w-md overflow-hidden rounded-[2rem] sm:rounded-[2.5rem] shadow-2xl border-2 sm:border-4 border-yellow-400 relative bg-black aspect-square flex items-center justify-center">
           <style dangerouslySetInnerHTML={{ __html: `
             #qr-reader {
               border: none !important;

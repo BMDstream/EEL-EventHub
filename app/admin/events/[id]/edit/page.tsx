@@ -443,6 +443,7 @@ export default function EditEventPage() {
   const [previewHtml, setPreviewHtml] = useState("");
   const [declinePreviewHtml, setDeclinePreviewHtml] = useState("");
   const [saveEmailNotification, setSaveEmailNotification] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [saveNotification, setSaveNotification] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const previewFrameRef = useRef<HTMLIFrameElement>(null);
   const declinePreviewFrameRef = useRef<HTMLIFrameElement>(null);
   const [regTemplates, setRegTemplates] = useState<any[]>([]);
@@ -702,14 +703,19 @@ export default function EditEventPage() {
       });
 
       if (response.ok) {
-        router.push(`/admin/events/${id}`);
+        setSaveNotification({ type: "success", text: "✓ Event settings saved successfully!" });
+        setOriginalBanner(formData.banner_url);
+        setOriginalLogo(formData.logo_url);
+        setOriginalBg(formData.background_url);
       } else {
         let errorMessage = "Failed to update event";
         try { const error = await response.json(); errorMessage = error.detail || errorMessage; } catch { try { errorMessage = await response.text(); } catch { } }
+        setSaveNotification({ type: "error", text: `Error: ${errorMessage}` });
         alert(`Error: ${errorMessage}`);
       }
     } catch (err) {
       console.error("Failed to update event", err);
+      setSaveNotification({ type: "error", text: "An unexpected error occurred while saving." });
       alert("An unexpected error occurred.");
     } finally {
       setSaving(false);
@@ -846,6 +852,22 @@ export default function EditEventPage() {
           {/* ===== DETAILS TAB ===== */}
           {activeTab === "details" && (
             <form onSubmit={handleSubmit} className="p-10 space-y-12">
+              {saveNotification && (
+                <div className={`p-5 rounded-2xl flex items-center justify-between transition-all ${
+                  saveNotification.type === "success" 
+                    ? "bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 shadow-sm"
+                    : "bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-300 shadow-sm"
+                }`}>
+                  <div className="flex items-center gap-3">
+                    {saveNotification.type === "success" ? <CheckCircle2 size={20} className="text-emerald-600 dark:text-emerald-400 shrink-0" /> : <AlertCircle size={20} className="text-red-600 dark:text-red-400 shrink-0" />}
+                    <span className="font-bold text-sm">{saveNotification.text}</span>
+                  </div>
+                  <button type="button" onClick={() => setSaveNotification(null)} className="text-xs uppercase tracking-widest font-black opacity-60 hover:opacity-100 transition-opacity ml-4">
+                    Dismiss
+                  </button>
+                </div>
+              )}
+
               {/* 1. Core Parameters */}
               <div className="space-y-6">
                 <div className="border-b border-slate-100 dark:border-white/5 pb-3">
@@ -1276,10 +1298,19 @@ export default function EditEventPage() {
             <form onSubmit={handleSubmit} className="p-10 space-y-8">
 
               {/* Notification */}
-              {saveEmailNotification && (
-                <div className={`flex items-center gap-3 p-4 rounded-2xl text-sm font-bold ${saveEmailNotification.type === "success" ? "bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-450 border border-emerald-100 dark:border-emerald-900/30" : "bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-450 border border-red-100 dark:border-red-900/30"}`}>
-                  {saveEmailNotification.type === "success" ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
-                  {saveEmailNotification.text}
+              {(saveNotification || saveEmailNotification) && (
+                <div className={`flex items-center justify-between p-4 rounded-2xl text-sm font-bold ${
+                  (saveNotification?.type || saveEmailNotification?.type) === "success" 
+                    ? "bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-450 border border-emerald-100 dark:border-emerald-900/30 shadow-sm" 
+                    : "bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-450 border border-red-100 dark:border-red-900/30 shadow-sm"
+                }`}>
+                  <div className="flex items-center gap-3">
+                    {(saveNotification?.type || saveEmailNotification?.type) === "success" ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
+                    <span>{saveNotification?.text || saveEmailNotification?.text}</span>
+                  </div>
+                  <button type="button" onClick={() => { setSaveNotification(null); setSaveEmailNotification(null); }} className="text-xs uppercase tracking-widest font-black opacity-60 hover:opacity-100 transition-opacity ml-4">
+                    Dismiss
+                  </button>
                 </div>
               )}
 
