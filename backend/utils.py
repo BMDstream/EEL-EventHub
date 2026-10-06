@@ -207,6 +207,9 @@ def get_event_email_config(event: Event, session: Session):
     # Override with event-specific logo if provided
     if getattr(event, "logo_url", None):
         config["logo_url"] = event.logo_url
+        config["event_logo_url"] = event.logo_url
+    else:
+        config["event_logo_url"] = None
 
     # Override with event-specific banner settings (colors) if provided
     if getattr(event, "banner_settings", None) and isinstance(event.banner_settings, dict):

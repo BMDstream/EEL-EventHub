@@ -122,7 +122,8 @@ const compileTemplatePreview = (
     : "";
 
   const showLogo = meta.show_logo !== "false";
-  const logoUrl = eventLogoUrl || meta.logo_image_url || "";
+  const rawTemplateLogo = meta.logo_image_url && meta.logo_image_url !== "https://" ? meta.logo_image_url : "";
+  const logoUrl = eventLogoUrl || rawTemplateLogo || "";
   const logoText = meta.logo_text || "BMD";
 
   const logoHtml = showLogo

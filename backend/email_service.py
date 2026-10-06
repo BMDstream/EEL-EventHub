@@ -237,20 +237,24 @@ def get_logo_html(config: Optional[dict], meta: dict, primary_color: str) -> str
     show_logo = meta.get("show_logo", "true") != "false"
     if not show_logo:
         return ""
-    logo_url = config.get("logo_url") if config else None
+    # Logo precedence:
+    # 1. Event-specific custom logo uploaded for the event
+    # 2. Template logo defined in template metadata (e.g. Excellence)
+    # 3. Client or system fallback logo from config
+    event_logo = config.get("event_logo_url") if config else None
+    template_logo = meta.get("logo_image_url") if meta else None
+    if template_logo and str(template_logo).strip() in ("", "https://", "http://"):
+        template_logo = None
+    fallback_logo = config.get("logo_url") if config else None
+
+    logo_url = event_logo or template_logo or fallback_logo
     if logo_url:
         return f"""
         <td align="right" valign="middle" style="padding-bottom: 0px;">
-            <img src="{logo_url}" style="max-height: 48px; max-width: 140px; object-fit: contain; display: block;" alt="Client Logo" />
+            <img src="{logo_url}" style="max-height: 48px; max-width: 140px; object-fit: contain; display: block;" alt="Logo" />
         </td>
         """
-    logo_image_url = meta.get("logo_image_url")
-    if logo_image_url:
-        return f"""
-        <td align="right" valign="middle" style="padding-bottom: 0px;">
-            <img src="{logo_image_url}" style="max-height: 48px; max-width: 140px; object-fit: contain; display: block;" alt="Logo" />
-        </td>
-        """
+
     logo_text = meta.get("logo_text", "BMD")
     logo_bg = primary_color or meta.get("primary_color", "#0f172a")
     font_family = "'Carlito', Calibri, Candara, Segoe, 'Segoe UI', Optima, Arial, sans-serif"

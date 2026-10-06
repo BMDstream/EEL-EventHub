@@ -414,8 +414,9 @@ export default function EventDetailsPage() {
     const showLogo = meta.show_logo !== "false";
     let logoHtmlStr = "";
     if (showLogo) {
-      if (meta.logo_image_url) {
-        logoHtmlStr = `<td align="right" valign="middle"><img src="${meta.logo_image_url}" style="max-height: 48px; max-width: 140px; object-fit: contain; display: block;" alt="Logo" /></td>`;
+      const activeLogoUrl = event?.logo_url || (meta.logo_image_url && meta.logo_image_url !== "https://" ? meta.logo_image_url : null);
+      if (activeLogoUrl) {
+        logoHtmlStr = `<td align="right" valign="middle"><img src="${activeLogoUrl}" style="max-height: 48px; max-width: 140px; object-fit: contain; display: block;" alt="Logo" /></td>`;
       } else {
         logoHtmlStr = `<td align="right" valign="middle"><div style="background-color:${brandPrimary};padding:8px 16px;border-radius:8px;color:#fff;font-weight:bold;font-size:14px;display:inline-block;font-family:sans-serif;">${meta.logo_text || "BMD"}</div></td>`;
       }
