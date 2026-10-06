@@ -38,7 +38,22 @@ async def azure_login(request: Request):
         base_url = f"{x_forwarded_proto}://{x_forwarded_host}"
     else:
         base_url = str(request.base_url).rstrip("/")
+        
     redirect_uri = f"{base_url}/api/py/auth/azure/callback"
+    state = base_url
+
+    # If this is a preview hash deployment (e.g. eel-event-hub-q61e-*.vercel.app),
+    # route the redirect_uri through the stable Git branch domain or configured URI
+    # so Azure AD does not fail on random commit hashes:
+    configured_preview_uri = os.getenv("AZURE_PREVIEW_REDIRECT_URI")
+    if configured_preview_uri:
+        redirect_uri = configured_preview_uri.strip()
+    elif x_forwarded_host and ".vercel.app" in x_forwarded_host:
+        # Check if it's a dynamic preview hash deployment
+        is_production_vercel = x_forwarded_host.startswith("eel-event-hub-q61e.vercel.app")
+        is_stable_preview = x_forwarded_host.startswith("eel-event-hub-git-preview")
+        if not is_production_vercel and not is_stable_preview:
+            redirect_uri = "https://eel-event-hub-git-preview-bmds-projects-e3482668.vercel.app/api/py/auth/azure/callback"
 
     scope = "User.Read openid profile email"
     auth_url = (
@@ -48,11 +63,12 @@ async def azure_login(request: Request):
         f"&redirect_uri={redirect_uri}"
         f"&response_mode=query"
         f"&scope={scope}"
+        f"&state={state}"
     )
     return RedirectResponse(url=auth_url)
 
 @router.get("/azure/callback")
-async def azure_callback(request: Request, code: str, session: Session = Depends(get_session)):
+async def azure_callback(request: Request, code: str, state: Optional[str] = None, session: Session = Depends(get_session)):
     """
     Handles the callback from Microsoft, exchanges code for token,
     fetches user info, and redirects back to frontend with local JWT.
@@ -137,8 +153,18 @@ async def azure_callback(request: Request, code: str, session: Session = Depends
     }
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
-    # 5. Return to Frontend
-    frontend_url = f"{base_url}/?token={encoded_jwt}"
+    # 5. Return to Frontend (relaying back to caller origin via state if valid)
+    target_origin = base_url
+    if state:
+        import urllib.parse
+        try:
+            parsed = urllib.parse.urlparse(state.strip())
+            if parsed.netloc and (parsed.netloc.endswith(".vercel.app") or "bmdcomputing.com" in parsed.netloc or "localhost" in parsed.netloc):
+                target_origin = f"{parsed.scheme or 'https'}://{parsed.netloc}"
+        except Exception:
+            pass
+
+    frontend_url = f"{target_origin}/?token={encoded_jwt}"
     return RedirectResponse(url=frontend_url)
 
 @router.get("/verify")
