@@ -105,6 +105,7 @@ export default function CreateEventPage() {
         },
         body: JSON.stringify({
           ...formData,
+          slug: formData.slug ? formData.slug.replace(/&nbsp;/g, " ").replace(/\u00a0/g, " ").trim() : formData.slug,
           client_id: formData.client_id ? parseInt(formData.client_id) : null,
           sender_email: formData.sender_email || null,
           sender_name: formData.sender_name || null,

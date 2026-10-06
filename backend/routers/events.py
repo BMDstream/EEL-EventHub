@@ -72,6 +72,8 @@ def create_event(
     if not current_user:
         raise HTTPException(status_code=401, detail="Authentication required")
     verify_client_access(current_user, event.client_id, session)
+    if event.slug:
+        event.slug = event.slug.replace("&nbsp;", " ").replace("\u00a0", " ").strip()
     
     session.add(event)
     session.commit()
@@ -124,12 +126,15 @@ def resolve_event_template_metas(event, session, event_dict):
 
 def find_event_by_slug_or_id(slug_or_id: str, session: Session) -> Optional[Event]:
     """
-    Robustly resolves an Event by slug or ID, handling:
+    Robustly resolves an Event by slug, ID, or title, handling:
     - Exact slug match
     - URL percent-decoding (e.g. 'RydEx%20Launch' -> 'RydEx Launch')
+    - Trailing and leading whitespace (e.g. 'RydEx Launch ')
     - Space vs hyphen vs underscore permutations ('rydex-launch', 'rydex launch', 'RydEx Launch')
-    - Case-insensitive comparison
+    - HTML entities and non-breaking spaces ('&nbsp;', '\u00a0')
+    - Case-insensitive comparison with func.trim
     - Numeric event ID fallback
+    - Event title fallback
     """
     import urllib.parse
     from sqlalchemy import func, or_
@@ -137,41 +142,51 @@ def find_event_by_slug_or_id(slug_or_id: str, session: Session) -> Optional[Even
     if not slug_or_id:
         return None
         
-    raw = str(slug_or_id).strip()
+    raw = str(slug_or_id).replace("&nbsp;", " ").replace("\u00a0", " ").strip()
+    if not raw:
+        return None
+
     candidates = set()
-    candidates.add(raw)
-    
     unquoted = urllib.parse.unquote(raw).strip()
     unquoted_plus = urllib.parse.unquote_plus(raw).strip()
-    candidates.add(unquoted)
-    candidates.add(unquoted_plus)
-    
-    # Generate space, hyphen, and underscore variations
-    for c in list(candidates):
-        candidates.add(c.replace("-", " "))
-        candidates.add(c.replace(" ", "-"))
-        candidates.add(c.replace("_", " "))
-        candidates.add(c.replace(" ", "_"))
-        candidates.add(c.replace("%20", " "))
-        candidates.add(c.replace(" ", "%20"))
-    
-    # 1. Exact match on any candidate string
+
+    for s in [raw, unquoted, unquoted_plus]:
+        if s:
+            candidates.add(s)
+            candidates.add(s.replace("-", " "))
+            candidates.add(s.replace(" ", "-"))
+            candidates.add(s.replace("_", " "))
+            candidates.add(s.replace(" ", "_"))
+            candidates.add(s.replace("%20", " "))
+            candidates.add(s.replace(" ", "%20"))
+
+    # 1. Exact match on raw candidates
     event = session.exec(select(Event).where(Event.slug.in_(list(candidates)))).first()
     if event:
         return event
 
-    # 2. Case-insensitive match on any candidate
-    conditions = [func.lower(Event.slug) == c.lower() for c in candidates if c]
+    # 2. Case-insensitive and trimmed match
+    clean_db_slug = func.trim(func.replace(func.replace(Event.slug, "&nbsp;", " "), "\u00a0", " "))
+    conditions = [func.lower(clean_db_slug) == c.lower() for c in candidates if c]
     if conditions:
         event = session.exec(select(Event).where(or_(*conditions))).first()
         if event:
             return event
 
     # 3. Numeric ID fallback
-    if raw.isdigit():
-        return session.get(Event, int(raw))
-    if unquoted.isdigit():
-        return session.get(Event, int(unquoted))
+    for val in [raw, unquoted]:
+        if val.isdigit():
+            e = session.get(Event, int(val))
+            if e:
+                return e
+
+    # 4. Fallback: match by Event title (case-insensitive and trimmed)
+    clean_db_title = func.trim(func.replace(func.replace(Event.title, "&nbsp;", " "), "\u00a0", " "))
+    title_conditions = [func.lower(clean_db_title) == c.lower() for c in candidates if c]
+    if title_conditions:
+        event = session.exec(select(Event).where(or_(*title_conditions))).first()
+        if event:
+            return event
 
     return None
 
@@ -301,6 +316,9 @@ def update_event(
     event_dict = event_data.dict(exclude_unset=True)
     for key, value in event_dict.items():
         setattr(db_event, key, value)
+    
+    if db_event.slug:
+        db_event.slug = db_event.slug.replace("&nbsp;", " ").replace("\u00a0", " ").strip()
     
     session.add(db_event)
     session.commit()

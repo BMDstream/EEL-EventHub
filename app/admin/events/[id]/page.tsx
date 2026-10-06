@@ -1557,31 +1557,34 @@ export default function EventDetailsPage() {
                 >
                   {cleanHtmlText(event.title || "")}
                 </h1>
-                {(userRole === "admin" || userRole === "manager") && (
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mb-10 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-800/80 group min-w-0">
-                     <p className="text-[10px] font-black text-slate-300 dark:text-slate-500 uppercase tracking-widest ml-1 shrink-0">Public Link:</p>
-                     <code className="text-xs font-bold text-[#0f172a] dark:text-slate-300 bg-white dark:bg-slate-800 px-3 py-1 rounded-lg border border-slate-100 dark:border-slate-700 flex-1 min-w-0 truncate">
-                       {typeof window !== 'undefined' ? `${window.location.origin}/register/${encodeURIComponent(event.slug)}` : `/register/${encodeURIComponent(event.slug)}`}
-                     </code>
-                     <button 
-                       onClick={() => {
-                         const url = `${window.location.origin}/register/${encodeURIComponent(event.slug)}`;
-                         navigator.clipboard.writeText(url);
-                         alert("Link copied!");
-                       }}
-                       className="px-4 py-2 bg-[#0f172a] dark:bg-yellow-400 text-white dark:text-black text-[9px] font-black uppercase tracking-widest rounded-xl hover:bg-black dark:hover:bg-yellow-500 transition-all shrink-0"
-                     >
-                       Copy Link
-                     </button>
-                     <a 
-                       href={`/register/${encodeURIComponent(event.slug)}`} 
-                       target="_blank" 
-                       className="p-2 text-slate-400 hover:text-[#0f172a] dark:hover:text-white transition-all shrink-0"
-                     >
-                       <ArrowUpRight size={16} />
-                     </a>
-                  </div>
-                )}
+                {(userRole === "admin" || userRole === "manager") && (() => {
+                  const cleanSlug = (event.slug || "").replace(/&nbsp;/g, " ").replace(/\u00a0/g, " ").trim() || String(event.id);
+                  const regUrl = typeof window !== 'undefined' ? `${window.location.origin}/register/${encodeURIComponent(cleanSlug)}` : `/register/${encodeURIComponent(cleanSlug)}`;
+                  return (
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mb-10 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-800/80 group min-w-0">
+                       <p className="text-[10px] font-black text-slate-300 dark:text-slate-500 uppercase tracking-widest ml-1 shrink-0">Public Link:</p>
+                       <code className="text-xs font-bold text-[#0f172a] dark:text-slate-300 bg-white dark:bg-slate-800 px-3 py-1 rounded-lg border border-slate-100 dark:border-slate-700 flex-1 min-w-0 truncate">
+                         {regUrl}
+                       </code>
+                       <button 
+                         onClick={() => {
+                           navigator.clipboard.writeText(regUrl);
+                           alert("Link copied!");
+                         }}
+                         className="px-4 py-2 bg-[#0f172a] dark:bg-yellow-400 text-white dark:text-black text-[9px] font-black uppercase tracking-widest rounded-xl hover:bg-black dark:hover:bg-yellow-500 transition-all shrink-0"
+                       >
+                         Copy Link
+                       </button>
+                       <a 
+                         href={`/register/${encodeURIComponent(cleanSlug)}`} 
+                         target="_blank" 
+                         className="p-2 text-slate-400 hover:text-[#0f172a] dark:hover:text-white transition-all shrink-0"
+                       >
+                         <ArrowUpRight size={16} />
+                       </a>
+                    </div>
+                  );
+                })()}
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-5 gap-y-8 gap-x-4 sm:gap-x-6">
                   {/* Date Button */}
                   <button 
@@ -1709,17 +1712,34 @@ export default function EventDetailsPage() {
                     <Download size={20} />
                     Download QR Codes (ZIP)
                   </button>
-                  <button
-                    onClick={() => {
-                      const url = `${window.location.origin}/view/${event.slug}`;
-                      navigator.clipboard.writeText(url);
-                      alert("Client dashboard link copied to clipboard!");
-                    }}
-                    className="flex items-center justify-center gap-3 bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-[#0f172a] dark:text-slate-200 px-8 py-5 rounded-2xl font-black transition-all border border-slate-200 dark:border-slate-700 uppercase tracking-widest text-xs"
-                  >
-                    <Eye size={20} />
-                    Share Client Link
-                  </button>
+                  {(() => {
+                    const cleanSlug = (event.slug || "").replace(/&nbsp;/g, " ").replace(/\u00a0/g, " ").trim() || String(event.id);
+                    const clientViewPath = `/view/${encodeURIComponent(cleanSlug)}`;
+                    return (
+                      <div className="flex items-stretch gap-1">
+                        <button
+                          onClick={() => {
+                            const url = `${window.location.origin}${clientViewPath}`;
+                            navigator.clipboard.writeText(url);
+                            alert("Client dashboard link copied to clipboard!");
+                          }}
+                          className="flex-1 flex items-center justify-center gap-3 bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-[#0f172a] dark:text-slate-200 px-6 py-5 rounded-2xl font-black transition-all border border-slate-200 dark:border-slate-700 uppercase tracking-widest text-xs"
+                        >
+                          <Eye size={20} />
+                          Share Client Link
+                        </button>
+                        <a
+                          href={clientViewPath}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title="Open Client Dashboard in new tab"
+                          className="flex items-center justify-center px-4 bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-400 hover:text-[#0f172a] dark:hover:text-white rounded-2xl border border-slate-200 dark:border-slate-700 transition-all"
+                        >
+                          <ArrowUpRight size={18} />
+                        </a>
+                      </div>
+                    );
+                  })()}
                   <button
                     onClick={() => {
                       setCurrentSlide(0);

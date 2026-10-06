@@ -668,6 +668,7 @@ export default function EditEventPage() {
       const { banner_size, banner_position, banner_theme, banner_primary_color, banner_accent_color, banner_layout, banner_text_color, banner_url, logo_url, background_url, disclaimer_checkbox_label, ...submitData } = formData;
       const payload: any = {
         ...submitData,
+        slug: formData.slug ? formData.slug.replace(/&nbsp;/g, " ").replace(/\u00a0/g, " ").trim() : formData.slug,
         client_id: formData.client_id ? parseInt(formData.client_id) : null,
         sender_email: formData.sender_email || null,
         sender_name: formData.sender_name || null,

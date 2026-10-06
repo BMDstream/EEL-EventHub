@@ -41,13 +41,22 @@ export default function ClientViewPage() {
       const rawSlug = Array.isArray(slug) ? slug[0] : (slug || "");
       let decodedSlug = rawSlug;
       try { decodedSlug = decodeURIComponent(rawSlug); } catch {}
-      const res = await fetch(`/api/py/events/${encodeURIComponent(decodedSlug)}/public-stats`);
+      const cleaned = decodedSlug.replace(/&nbsp;/g, " ").replace(/\u00a0/g, " ").trim();
+      
+      let res = await fetch(`/api/py/events/${encodeURIComponent(cleaned)}/public-stats`);
+      if (!res.ok && cleaned !== rawSlug) {
+        res = await fetch(`/api/py/events/${encodeURIComponent(rawSlug)}/public-stats`);
+      }
+      
       if (res.ok) {
         const data = await res.json();
         setStats(data);
+      } else {
+        setStats(null);
       }
     } catch (err) {
       console.error("Failed to fetch public stats", err);
+      setStats(null);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -68,8 +77,20 @@ export default function ClientViewPage() {
 
   if (!stats) {
     return (
-      <div className="min-h-screen bg-[#020617] flex items-center justify-center text-white">
-        <h1 className="text-2xl font-black">Event Not Found</h1>
+      <div className="min-h-screen bg-[#020617] flex flex-col items-center justify-center text-white px-6 text-center">
+        <div className="w-16 h-16 rounded-3xl bg-yellow-400/10 border border-yellow-400/20 flex items-center justify-center mb-6">
+          <Calendar className="text-yellow-400" size={32} />
+        </div>
+        <h1 className="text-3xl font-black font-bricolage italic tracking-tight mb-3">Event Not Found</h1>
+        <p className="text-zinc-400 max-w-md text-sm mb-8">
+          The event you are looking for could not be located or has expired. Please verify the URL link or contact the event organizer.
+        </p>
+        <button
+          onClick={() => fetchStats(true)}
+          className="px-6 py-3 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-black rounded-xl text-xs uppercase tracking-widest transition-all flex items-center gap-2"
+        >
+          <RefreshCw size={14} /> Retry
+        </button>
       </div>
     );
   }

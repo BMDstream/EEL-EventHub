@@ -509,9 +509,10 @@ def register_attendee(
             
             # Get host dynamically to construct absolute URLs
             host = request.headers.get("host", "eel-event-hub-q61e.vercel.app")
-            scheme = "http" if "localhost" in host else "https"
-            challenger_update_link = f"{scheme}://{host}/register/{event.slug}?email={email}&first_name={first_name}&last_name={last_name}"
-            partner_update_link = f"{scheme}://{host}/register/{event.slug}?email={partner_email}&first_name={partner_first}&last_name={partner_last}"
+            import urllib.parse
+            clean_slug = urllib.parse.quote(str(event.slug or "").replace("&nbsp;", " ").replace("\u00a0", " ").strip())
+            challenger_update_link = f"{scheme}://{host}/register/{clean_slug}?email={email}&first_name={first_name}&last_name={last_name}"
+            partner_update_link = f"{scheme}://{host}/register/{clean_slug}?email={partner_email}&first_name={partner_first}&last_name={partner_last}"
 
             # Send standardised confirmation emails using dispatch_send_confirmation_email
             config = get_event_email_config(event, session)
