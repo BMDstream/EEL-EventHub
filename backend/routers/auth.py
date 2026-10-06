@@ -4,6 +4,7 @@ from sqlmodel import Session, select
 from sqlalchemy import func
 from backend.database import get_session
 from backend.models import User
+from typing import Optional
 import os
 import httpx
 from datetime import datetime, timedelta
