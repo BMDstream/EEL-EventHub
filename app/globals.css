@@ -620,7 +620,17 @@ html, body, button, span, div, p, a, label, input, textarea, select, option,
     display: none !important;
   }
 
+  /* When printing the presentation report deck, hide everything else attached to body */
+  body.is-printing-presentation > *:not(#presentation-print-root) {
+    display: none !important;
+  }
+
+  body:has(#presentation-print-root) > *:not(#presentation-print-root) {
+    display: none !important;
+  }
+
   /* Make sure the presentation print deck is fully visible and clean */
+  #presentation-print-root,
   .presentation-print-deck {
     display: block !important;
     width: 100% !important;

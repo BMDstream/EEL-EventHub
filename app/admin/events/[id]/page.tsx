@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
@@ -210,6 +211,18 @@ export default function EventDetailsPage() {
   const [editedStatus, setEditedStatus] = useState("");
   const [isPresentationOpen, setIsPresentationOpen] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+    const handleAfterPrint = () => {
+      document.body.classList.remove("is-printing-presentation");
+    };
+    window.addEventListener("afterprint", handleAfterPrint);
+    return () => {
+      window.removeEventListener("afterprint", handleAfterPrint);
+    };
+  }, []);
 
   useEffect(() => {
     if (checkedInReg) {
@@ -4389,9 +4402,10 @@ export default function EventDetailsPage() {
             </div>
           </div>
         )}
+      </div>
 
-        {/* Post-Event Executive Presentation Deck Modal */}
-        {isPresentationOpen && (() => {
+      {/* Post-Event Executive Presentation Deck Modal */}
+      {isPresentationOpen && (() => {
           const turnoutRate = confirmedCount > 0 ? Math.round((checkedInCount / confirmedCount) * 100) : 0;
           const capacityRate = event.capacity > 0 ? Math.round((confirmedCount / event.capacity) * 100) : 0;
           const declineRate = registrations.length > 0 ? Math.round((declinedCount / registrations.length) * 100) : 0;
@@ -4657,7 +4671,10 @@ export default function EventDetailsPage() {
 
                     <div className="flex items-center gap-2 sm:gap-3 shrink-0">
                       <button
-                        onClick={() => window.print()}
+                        onClick={() => {
+                          document.body.classList.add("is-printing-presentation");
+                          window.print();
+                        }}
                         className="flex items-center gap-2 px-3.5 sm:px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border border-slate-700"
                         title="Print Deck to PDF"
                       >
@@ -4737,89 +4754,91 @@ export default function EventDetailsPage() {
               </div>
 
               {/* Dedicated 3-Page Executive PDF Report (Strictly for Print, Pure White Background) */}
-              <div className="presentation-print-deck hidden print:block w-full">
-                {/* Page 1: Overview & KPIs */}
-                <div className="presentation-slide-page">
-                  <div>
-                    <div className="flex items-center justify-between border-b border-slate-200 pb-3 mb-5">
-                      <div>
-                        <span className="text-[9px] font-black uppercase tracking-[0.25em] text-amber-600 block">
-                          Executive Post-Event Briefing
-                        </span>
-                        <h2 className="text-xl font-black text-slate-900 font-bricolage italic">
-                          {cleanTitle}
-                        </h2>
+              {isMounted && typeof document !== "undefined" && createPortal(
+                <div id="presentation-print-root" className="presentation-print-deck hidden print:block w-full">
+                  {/* Page 1: Overview & KPIs */}
+                  <div className="presentation-slide-page">
+                    <div>
+                      <div className="flex items-center justify-between border-b border-slate-200 pb-3 mb-5">
+                        <div>
+                          <span className="text-[9px] font-black uppercase tracking-[0.25em] text-amber-600 block">
+                            Executive Post-Event Briefing
+                          </span>
+                          <h2 className="text-xl font-black text-slate-900 font-bricolage italic">
+                            {cleanTitle}
+                          </h2>
+                        </div>
+                        <div className="text-right text-[11px] text-slate-500 font-bold">
+                          <span>{formattedDate}</span>
+                          {event.location && <span className="block text-slate-400 font-mono text-[10px]">{event.location}</span>}
+                        </div>
                       </div>
-                      <div className="text-right text-[11px] text-slate-500 font-bold">
-                        <span>{formattedDate}</span>
-                        {event.location && <span className="block text-slate-400 font-mono text-[10px]">{event.location}</span>}
-                      </div>
+                      {renderSlideOverview(true)}
                     </div>
-                    {renderSlideOverview(true)}
+                    <div className="border-t border-slate-200 pt-3 mt-6 flex items-center justify-between text-[9px] text-slate-400 uppercase tracking-widest font-bold">
+                      <span>Confidential • Executive Briefing</span>
+                      <span>Overview & KPIs</span>
+                      <span>Page 1 of 3</span>
+                    </div>
                   </div>
-                  <div className="border-t border-slate-200 pt-3 mt-6 flex items-center justify-between text-[9px] text-slate-400 uppercase tracking-widest font-bold">
-                    <span>Confidential • Executive Briefing</span>
-                    <span>Overview & KPIs</span>
-                    <span>Page 1 of 3</span>
-                  </div>
-                </div>
 
-                {/* Page 2: Attendance & Velocity */}
-                <div className="presentation-slide-page">
-                  <div>
-                    <div className="flex items-center justify-between border-b border-slate-200 pb-3 mb-5">
-                      <div>
-                        <span className="text-[9px] font-black uppercase tracking-[0.25em] text-amber-600 block">
-                          Executive Post-Event Briefing
-                        </span>
-                        <h2 className="text-xl font-black text-slate-900 font-bricolage italic">
-                          {cleanTitle}
-                        </h2>
+                  {/* Page 2: Attendance & Velocity */}
+                  <div className="presentation-slide-page">
+                    <div>
+                      <div className="flex items-center justify-between border-b border-slate-200 pb-3 mb-5">
+                        <div>
+                          <span className="text-[9px] font-black uppercase tracking-[0.25em] text-amber-600 block">
+                            Executive Post-Event Briefing
+                          </span>
+                          <h2 className="text-xl font-black text-slate-900 font-bricolage italic">
+                            {cleanTitle}
+                          </h2>
+                        </div>
+                        <div className="text-right text-[11px] text-slate-500 font-bold">
+                          <span>{formattedDate}</span>
+                          {event.location && <span className="block text-slate-400 font-mono text-[10px]">{event.location}</span>}
+                        </div>
                       </div>
-                      <div className="text-right text-[11px] text-slate-500 font-bold">
-                        <span>{formattedDate}</span>
-                        {event.location && <span className="block text-slate-400 font-mono text-[10px]">{event.location}</span>}
-                      </div>
+                      {renderSlideAttendance(true)}
                     </div>
-                    {renderSlideAttendance(true)}
+                    <div className="border-t border-slate-200 pt-3 mt-6 flex items-center justify-between text-[9px] text-slate-400 uppercase tracking-widest font-bold">
+                      <span>Confidential • Executive Briefing</span>
+                      <span>Attendance & Velocity</span>
+                      <span>Page 2 of 3</span>
+                    </div>
                   </div>
-                  <div className="border-t border-slate-200 pt-3 mt-6 flex items-center justify-between text-[9px] text-slate-400 uppercase tracking-widest font-bold">
-                    <span>Confidential • Executive Briefing</span>
-                    <span>Attendance & Velocity</span>
-                    <span>Page 2 of 3</span>
-                  </div>
-                </div>
 
-                {/* Page 3: Corporate Demographics */}
-                <div className="presentation-slide-page">
-                  <div>
-                    <div className="flex items-center justify-between border-b border-slate-200 pb-3 mb-5">
-                      <div>
-                        <span className="text-[9px] font-black uppercase tracking-[0.25em] text-amber-600 block">
-                          Executive Post-Event Briefing
-                        </span>
-                        <h2 className="text-xl font-black text-slate-900 font-bricolage italic">
-                          {cleanTitle}
-                        </h2>
+                  {/* Page 3: Corporate Demographics */}
+                  <div className="presentation-slide-page">
+                    <div>
+                      <div className="flex items-center justify-between border-b border-slate-200 pb-3 mb-5">
+                        <div>
+                          <span className="text-[9px] font-black uppercase tracking-[0.25em] text-amber-600 block">
+                            Executive Post-Event Briefing
+                          </span>
+                          <h2 className="text-xl font-black text-slate-900 font-bricolage italic">
+                            {cleanTitle}
+                          </h2>
+                        </div>
+                        <div className="text-right text-[11px] text-slate-500 font-bold">
+                          <span>{formattedDate}</span>
+                          {event.location && <span className="block text-slate-400 font-mono text-[10px]">{event.location}</span>}
+                        </div>
                       </div>
-                      <div className="text-right text-[11px] text-slate-500 font-bold">
-                        <span>{formattedDate}</span>
-                        {event.location && <span className="block text-slate-400 font-mono text-[10px]">{event.location}</span>}
-                      </div>
+                      {renderSlideDemographics(true)}
                     </div>
-                    {renderSlideDemographics(true)}
+                    <div className="border-t border-slate-200 pt-3 mt-6 flex items-center justify-between text-[9px] text-slate-400 uppercase tracking-widest font-bold">
+                      <span>Confidential • Executive Briefing</span>
+                      <span>Corporate Demographics</span>
+                      <span>Page 3 of 3</span>
+                    </div>
                   </div>
-                  <div className="border-t border-slate-200 pt-3 mt-6 flex items-center justify-between text-[9px] text-slate-400 uppercase tracking-widest font-bold">
-                    <span>Confidential • Executive Briefing</span>
-                    <span>Corporate Demographics</span>
-                    <span>Page 3 of 3</span>
-                  </div>
-                </div>
-              </div>
+                </div>,
+                document.body
+              )}
             </>
           );
         })()}
-      </div>
     </AdminLayout>
   );
 }
