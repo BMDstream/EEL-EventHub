@@ -4635,244 +4635,188 @@ export default function EventDetailsPage() {
           };
 
           return (
-            <div className="presentation-modal-overlay fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
-              <style jsx global>{`
-                @media print {
-                  @page {
-                    margin: 12mm 15mm;
-                    size: auto;
-                  }
-                  body {
-                    background: #ffffff !important;
-                    color: #0f172a !important;
-                    margin: 0 !important;
-                    padding: 0 !important;
-                    -webkit-print-color-adjust: exact !important;
-                    print-color-adjust: exact !important;
-                  }
-                  aside, header, nav, .presentation-no-print {
-                    display: none !important;
-                  }
-                  .presentation-modal-overlay {
-                    position: static !important;
-                    background: #ffffff !important;
-                    padding: 0 !important;
-                    margin: 0 !important;
-                    overflow: visible !important;
-                    display: block !important;
-                    backdrop-filter: none !important;
-                    inset: auto !important;
-                    z-index: auto !important;
-                  }
-                  .presentation-modal-card {
-                    position: static !important;
-                    max-height: none !important;
-                    overflow: visible !important;
-                    border: none !important;
-                    box-shadow: none !important;
-                    border-radius: 0 !important;
-                    width: 100% !important;
-                    max-width: 100% !important;
-                    background: #ffffff !important;
-                    color: #0f172a !important;
-                    padding: 0 !important;
-                    margin: 0 !important;
-                  }
-                  .presentation-slide-page {
-                    page-break-after: always !important;
-                    break-after: page !important;
-                    box-sizing: border-box !important;
-                    min-height: 92vh !important;
-                    display: flex !important;
-                    flex-direction: column !important;
-                    justify-content: space-between !important;
-                    padding: 5mm 0 !important;
-                  }
-                  .presentation-slide-page:last-child {
-                    page-break-after: avoid !important;
-                    break-after: avoid !important;
-                  }
-                }
-              `}</style>
-
-              <div className="presentation-modal-card bg-slate-950 border border-amber-500/30 text-white w-full max-w-5xl rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
-                {/* Deck Header */}
-                <div className="px-6 sm:px-10 py-5 sm:py-6 bg-gradient-to-r from-slate-900 via-slate-900 to-slate-950 border-b border-slate-800 flex items-center justify-between gap-4 print:hidden">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="p-2.5 bg-amber-500/10 text-amber-400 rounded-xl border border-amber-500/20 shrink-0">
-                      <Presentation size={20} />
+            <>
+              {/* Interactive Presentation Modal (Screen Only, Hidden on Print) */}
+              <div className="presentation-modal-overlay fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200 print:hidden">
+                <div className="presentation-modal-card bg-slate-950 border border-amber-500/30 text-white w-full max-w-5xl rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
+                  {/* Deck Header */}
+                  <div className="px-6 sm:px-10 py-5 sm:py-6 bg-gradient-to-r from-slate-900 via-slate-900 to-slate-950 border-b border-slate-800 flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="p-2.5 bg-amber-500/10 text-amber-400 rounded-xl border border-amber-500/20 shrink-0">
+                        <Presentation size={20} />
+                      </div>
+                      <div className="min-w-0">
+                        <span className="text-[9px] font-black uppercase tracking-[0.25em] text-amber-400 block">
+                          Executive Post-Event Briefing
+                        </span>
+                        <h3 className="text-base sm:text-lg font-black truncate tracking-tight text-white font-bricolage italic">
+                          {cleanTitle}
+                        </h3>
+                      </div>
                     </div>
-                    <div className="min-w-0">
-                      <span className="text-[9px] font-black uppercase tracking-[0.25em] text-amber-400 block">
-                        Executive Post-Event Briefing
-                      </span>
-                      <h3 className="text-base sm:text-lg font-black truncate tracking-tight text-white font-bricolage italic">
-                        {cleanTitle}
-                      </h3>
-                    </div>
-                  </div>
 
-                  <div className="flex items-center gap-2 sm:gap-3 shrink-0 print:hidden">
-                    <button
-                      onClick={() => window.print()}
-                      className="flex items-center gap-2 px-3.5 sm:px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border border-slate-700"
-                      title="Print Deck to PDF"
-                    >
-                      <Printer size={14} />
-                      <span className="hidden sm:inline">Export PDF</span>
-                    </button>
-                    <button
-                      onClick={() => setIsPresentationOpen(false)}
-                      className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-all"
-                    >
-                      <X size={20} />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Slide Navigation Tabs */}
-                <div className="px-6 sm:px-10 py-3 bg-slate-900/50 border-b border-slate-800/80 flex items-center gap-2 overflow-x-auto scrollbar-hide print:hidden">
-                  {[
-                    { id: 0, label: "1. Overview & KPIs" },
-                    { id: 1, label: "2. Attendance & Velocity" },
-                    { id: 2, label: "3. Corporate Demographics" }
-                  ].map((s) => (
-                    <button
-                      key={s.id}
-                      onClick={() => setCurrentSlide(s.id)}
-                      className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shrink-0 ${
-                        currentSlide === s.id
-                          ? "bg-amber-400 text-slate-950 font-black shadow-sm"
-                          : "text-slate-400 hover:text-white hover:bg-slate-800/60"
-                      }`}
-                    >
-                      {s.label}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Interactive Slide Viewport (On Screen Only) */}
-                <div className="p-6 sm:p-10 overflow-y-auto flex-1 print:hidden">
-                  {currentSlide === 0 && renderSlideOverview(false)}
-                  {currentSlide === 1 && renderSlideAttendance(false)}
-                  {currentSlide === 2 && renderSlideDemographics(false)}
-                </div>
-
-                {/* Deck Footer Controls (On Screen Only) */}
-                <div className="px-6 sm:px-10 py-4 bg-slate-900 border-t border-slate-800 flex items-center justify-between print:hidden">
-                  <button
-                    onClick={() => setCurrentSlide(prev => Math.max(0, prev - 1))}
-                    disabled={currentSlide === 0}
-                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed rounded-xl text-[10px] font-black uppercase tracking-wider transition-all text-white flex items-center gap-1.5"
-                  >
-                    <ChevronLeft size={14} />
-                    <span>Prev</span>
-                  </button>
-
-                  <div className="flex items-center gap-2">
-                    {[0, 1, 2].map(idx => (
+                    <div className="flex items-center gap-2 sm:gap-3 shrink-0">
                       <button
-                        key={idx}
-                        onClick={() => setCurrentSlide(idx)}
-                        className={`w-2.5 h-2.5 rounded-full transition-all ${
-                          currentSlide === idx ? "bg-amber-400 w-6" : "bg-slate-700 hover:bg-slate-600"
+                        onClick={() => window.print()}
+                        className="flex items-center gap-2 px-3.5 sm:px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border border-slate-700"
+                        title="Print Deck to PDF"
+                      >
+                        <Printer size={14} />
+                        <span className="hidden sm:inline">Export PDF</span>
+                      </button>
+                      <button
+                        onClick={() => setIsPresentationOpen(false)}
+                        className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-all"
+                      >
+                        <X size={20} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Slide Navigation Tabs */}
+                  <div className="px-6 sm:px-10 py-3 bg-slate-900/50 border-b border-slate-800/80 flex items-center gap-2 overflow-x-auto scrollbar-hide">
+                    {[
+                      { id: 0, label: "1. Overview & KPIs" },
+                      { id: 1, label: "2. Attendance & Velocity" },
+                      { id: 2, label: "3. Corporate Demographics" }
+                    ].map((s) => (
+                      <button
+                        key={s.id}
+                        onClick={() => setCurrentSlide(s.id)}
+                        className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shrink-0 ${
+                          currentSlide === s.id
+                            ? "bg-amber-400 text-slate-950 font-black shadow-sm"
+                            : "text-slate-400 hover:text-white hover:bg-slate-800/60"
                         }`}
-                      />
+                      >
+                        {s.label}
+                      </button>
                     ))}
                   </div>
 
-                  <button
-                    onClick={() => setCurrentSlide(prev => Math.min(2, prev + 1))}
-                    disabled={currentSlide === 2}
-                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed rounded-xl text-[10px] font-black uppercase tracking-wider transition-all text-white flex items-center gap-1.5"
-                  >
-                    <span>Next</span>
-                    <ChevronRight size={14} />
-                  </button>
-                </div>
-
-                {/* 3-Page Executive PDF Report (Printed Only, Clean without Chrome) */}
-                <div className="hidden print:block w-full">
-                  {/* Page 1: Overview & KPIs */}
-                  <div className="presentation-slide-page">
-                    <div>
-                      <div className="flex items-center justify-between border-b border-slate-200 pb-3 mb-5">
-                        <div>
-                          <span className="text-[9px] font-black uppercase tracking-[0.25em] text-amber-600 block">
-                            Executive Post-Event Briefing
-                          </span>
-                          <h2 className="text-xl font-black text-slate-900 font-bricolage italic">
-                            {cleanTitle}
-                          </h2>
-                        </div>
-                        <div className="text-right text-[11px] text-slate-500 font-bold">
-                          <span>{formattedDate}</span>
-                          {event.location && <span className="block text-slate-400 font-mono text-[10px]">{event.location}</span>}
-                        </div>
-                      </div>
-                      {renderSlideOverview(true)}
-                    </div>
-                    <div className="border-t border-slate-200 pt-3 mt-6 flex items-center justify-between text-[9px] text-slate-400 uppercase tracking-widest font-bold">
-                      <span>Confidential • Executive Briefing</span>
-                      <span>Overview & KPIs</span>
-                      <span>Page 1 of 3</span>
-                    </div>
+                  {/* Interactive Slide Viewport (On Screen Only) */}
+                  <div className="p-6 sm:p-10 overflow-y-auto flex-1">
+                    {currentSlide === 0 && renderSlideOverview(false)}
+                    {currentSlide === 1 && renderSlideAttendance(false)}
+                    {currentSlide === 2 && renderSlideDemographics(false)}
                   </div>
 
-                  {/* Page 2: Attendance & Velocity */}
-                  <div className="presentation-slide-page">
-                    <div>
-                      <div className="flex items-center justify-between border-b border-slate-200 pb-3 mb-5">
-                        <div>
-                          <span className="text-[9px] font-black uppercase tracking-[0.25em] text-amber-600 block">
-                            Executive Post-Event Briefing
-                          </span>
-                          <h2 className="text-xl font-black text-slate-900 font-bricolage italic">
-                            {cleanTitle}
-                          </h2>
-                        </div>
-                        <div className="text-right text-[11px] text-slate-500 font-bold">
-                          <span>{formattedDate}</span>
-                          {event.location && <span className="block text-slate-400 font-mono text-[10px]">{event.location}</span>}
-                        </div>
-                      </div>
-                      {renderSlideAttendance(true)}
-                    </div>
-                    <div className="border-t border-slate-200 pt-3 mt-6 flex items-center justify-between text-[9px] text-slate-400 uppercase tracking-widest font-bold">
-                      <span>Confidential • Executive Briefing</span>
-                      <span>Attendance & Velocity</span>
-                      <span>Page 2 of 3</span>
-                    </div>
-                  </div>
+                  {/* Deck Footer Controls (On Screen Only) */}
+                  <div className="px-6 sm:px-10 py-4 bg-slate-900 border-t border-slate-800 flex items-center justify-between">
+                    <button
+                      onClick={() => setCurrentSlide(prev => Math.max(0, prev - 1))}
+                      disabled={currentSlide === 0}
+                      className="px-4 py-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed rounded-xl text-[10px] font-black uppercase tracking-wider transition-all text-white flex items-center gap-1.5"
+                    >
+                      <ChevronLeft size={14} />
+                      <span>Prev</span>
+                    </button>
 
-                  {/* Page 3: Corporate Demographics */}
-                  <div className="presentation-slide-page">
-                    <div>
-                      <div className="flex items-center justify-between border-b border-slate-200 pb-3 mb-5">
-                        <div>
-                          <span className="text-[9px] font-black uppercase tracking-[0.25em] text-amber-600 block">
-                            Executive Post-Event Briefing
-                          </span>
-                          <h2 className="text-xl font-black text-slate-900 font-bricolage italic">
-                            {cleanTitle}
-                          </h2>
-                        </div>
-                        <div className="text-right text-[11px] text-slate-500 font-bold">
-                          <span>{formattedDate}</span>
-                          {event.location && <span className="block text-slate-400 font-mono text-[10px]">{event.location}</span>}
-                        </div>
-                      </div>
-                      {renderSlideDemographics(true)}
+                    <div className="flex items-center gap-2">
+                      {[0, 1, 2].map(idx => (
+                        <button
+                          key={idx}
+                          onClick={() => setCurrentSlide(idx)}
+                          className={`w-2.5 h-2.5 rounded-full transition-all ${
+                            currentSlide === idx ? "bg-amber-400 w-6" : "bg-slate-700 hover:bg-slate-600"
+                          }`}
+                        />
+                      ))}
                     </div>
-                    <div className="border-t border-slate-200 pt-3 mt-6 flex items-center justify-between text-[9px] text-slate-400 uppercase tracking-widest font-bold">
-                      <span>Confidential • Executive Briefing</span>
-                      <span>Corporate Demographics</span>
-                      <span>Page 3 of 3</span>
-                    </div>
+
+                    <button
+                      onClick={() => setCurrentSlide(prev => Math.min(2, prev + 1))}
+                      disabled={currentSlide === 2}
+                      className="px-4 py-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed rounded-xl text-[10px] font-black uppercase tracking-wider transition-all text-white flex items-center gap-1.5"
+                    >
+                      <span>Next</span>
+                      <ChevronRight size={14} />
+                    </button>
                   </div>
                 </div>
               </div>
-            </div>
+
+              {/* Dedicated 3-Page Executive PDF Report (Strictly for Print, Pure White Background) */}
+              <div className="presentation-print-deck hidden print:block w-full">
+                {/* Page 1: Overview & KPIs */}
+                <div className="presentation-slide-page">
+                  <div>
+                    <div className="flex items-center justify-between border-b border-slate-200 pb-3 mb-5">
+                      <div>
+                        <span className="text-[9px] font-black uppercase tracking-[0.25em] text-amber-600 block">
+                          Executive Post-Event Briefing
+                        </span>
+                        <h2 className="text-xl font-black text-slate-900 font-bricolage italic">
+                          {cleanTitle}
+                        </h2>
+                      </div>
+                      <div className="text-right text-[11px] text-slate-500 font-bold">
+                        <span>{formattedDate}</span>
+                        {event.location && <span className="block text-slate-400 font-mono text-[10px]">{event.location}</span>}
+                      </div>
+                    </div>
+                    {renderSlideOverview(true)}
+                  </div>
+                  <div className="border-t border-slate-200 pt-3 mt-6 flex items-center justify-between text-[9px] text-slate-400 uppercase tracking-widest font-bold">
+                    <span>Confidential • Executive Briefing</span>
+                    <span>Overview & KPIs</span>
+                    <span>Page 1 of 3</span>
+                  </div>
+                </div>
+
+                {/* Page 2: Attendance & Velocity */}
+                <div className="presentation-slide-page">
+                  <div>
+                    <div className="flex items-center justify-between border-b border-slate-200 pb-3 mb-5">
+                      <div>
+                        <span className="text-[9px] font-black uppercase tracking-[0.25em] text-amber-600 block">
+                          Executive Post-Event Briefing
+                        </span>
+                        <h2 className="text-xl font-black text-slate-900 font-bricolage italic">
+                          {cleanTitle}
+                        </h2>
+                      </div>
+                      <div className="text-right text-[11px] text-slate-500 font-bold">
+                        <span>{formattedDate}</span>
+                        {event.location && <span className="block text-slate-400 font-mono text-[10px]">{event.location}</span>}
+                      </div>
+                    </div>
+                    {renderSlideAttendance(true)}
+                  </div>
+                  <div className="border-t border-slate-200 pt-3 mt-6 flex items-center justify-between text-[9px] text-slate-400 uppercase tracking-widest font-bold">
+                    <span>Confidential • Executive Briefing</span>
+                    <span>Attendance & Velocity</span>
+                    <span>Page 2 of 3</span>
+                  </div>
+                </div>
+
+                {/* Page 3: Corporate Demographics */}
+                <div className="presentation-slide-page">
+                  <div>
+                    <div className="flex items-center justify-between border-b border-slate-200 pb-3 mb-5">
+                      <div>
+                        <span className="text-[9px] font-black uppercase tracking-[0.25em] text-amber-600 block">
+                          Executive Post-Event Briefing
+                        </span>
+                        <h2 className="text-xl font-black text-slate-900 font-bricolage italic">
+                          {cleanTitle}
+                        </h2>
+                      </div>
+                      <div className="text-right text-[11px] text-slate-500 font-bold">
+                        <span>{formattedDate}</span>
+                        {event.location && <span className="block text-slate-400 font-mono text-[10px]">{event.location}</span>}
+                      </div>
+                    </div>
+                    {renderSlideDemographics(true)}
+                  </div>
+                  <div className="border-t border-slate-200 pt-3 mt-6 flex items-center justify-between text-[9px] text-slate-400 uppercase tracking-widest font-bold">
+                    <span>Confidential • Executive Briefing</span>
+                    <span>Corporate Demographics</span>
+                    <span>Page 3 of 3</span>
+                  </div>
+                </div>
+              </div>
+            </>
           );
         })()}
       </div>

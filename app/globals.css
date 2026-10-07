@@ -579,3 +579,77 @@ html, body, button, span, div, p, a, label, input, textarea, select, option,
 .font-bricolage, .font-outfit, .font-serif, .font-mono, .font-sans {
   font-family: 'Fluent Calibri', Calibri, 'Carlito', sans-serif !important;
 }
+
+/* ======================================================== */
+/* EXECUTIVE PRESENTATION & UNIVERSAL PRINT STYLES */
+/* ======================================================== */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 8mm 12mm 10mm 12mm;
+  }
+
+  html, body {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    height: auto !important;
+    min-height: 100% !important;
+    overflow: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Reset all scrolling / clipping ancestors during print */
+  body, main, #__next, [class*="h-screen"], [class*="overflow-hidden"], [class*="overflow-y-auto"] {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Completely hide app shell, navigation, modals, and screen-only controls */
+  aside,
+  header,
+  nav,
+  .print\:hidden,
+  .presentation-modal-overlay,
+  .presentation-modal-card {
+    display: none !important;
+  }
+
+  /* Make sure the presentation print deck is fully visible and clean */
+  .presentation-print-deck {
+    display: block !important;
+    width: 100% !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Force each slide onto its own distinct printed page */
+  .presentation-slide-page {
+    page-break-after: always !important;
+    break-after: page !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    box-sizing: border-box !important;
+    min-height: 250mm !important;
+    height: auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    padding: 4mm 0 !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+  }
+
+  .presentation-slide-page:last-child {
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+  }
+}
+
