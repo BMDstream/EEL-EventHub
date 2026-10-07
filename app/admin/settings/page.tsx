@@ -957,7 +957,58 @@ export default function SettingsPage() {
   const userRole = (session?.user as any)?.role || "staff";
 
   // Tab State
-  const [activeTab, setActiveTab] = useState<"templates" | "global" | "registration">("templates");
+  const [activeTab, setActiveTab] = useState<"templates" | "global" | "registration" | "diagnostics">("templates");
+
+  // ==========================================
+  // E2E DIAGNOSTICS & SYSTEM TEST STATE
+  // ==========================================
+  const [e2eRunning, setE2eRunning] = useState<boolean>(false);
+  const [e2eResults, setE2eResults] = useState<{
+    run_id?: string;
+    timestamp?: string;
+    overall_status?: "passed" | "failed";
+    total_stages?: number;
+    passed_stages?: number;
+    failed_stages?: number;
+    total_duration_ms?: number;
+    stages?: Array<{
+      stage: number;
+      id: string;
+      name: string;
+      status: "passed" | "failed" | "running";
+      duration_ms: number;
+      details: string;
+      error?: string;
+      data?: any;
+    }>;
+  } | null>(null);
+  const [e2eError, setE2eError] = useState<string | null>(null);
+
+  const handleRunE2ETest = async () => {
+    setE2eRunning(true);
+    setE2eError(null);
+    try {
+      const res = await fetch("/api/py/settings/run-e2e-test", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-email": (session?.user as any)?.email || "",
+        },
+      });
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({ detail: "Unknown error" }));
+        throw new Error(errJson.detail || `Server returned status ${res.status}`);
+      }
+
+      const data = await res.json();
+      setE2eResults(data);
+    } catch (err: any) {
+      setE2eError(err.message || "Failed to execute E2E test suite");
+    } finally {
+      setE2eRunning(false);
+    }
+  };
 
   // ==========================================
   // EMAIL TEMPLATE STATES
@@ -1842,6 +1893,24 @@ export default function SettingsPage() {
             }`}
           >
             Registration Forms
+          </button>
+          <button
+            onClick={() => {
+              if (hasUnsavedChanges) {
+                if (!confirm("You have unsaved template changes. Switching tabs will lose these changes. Proceed?")) {
+                  return;
+                }
+              }
+              setActiveTab("diagnostics");
+            }}
+            className={`px-8 py-4 font-black uppercase tracking-widest text-xs transition-all border-b-2 -mb-[2px] flex items-center gap-2 ${
+              activeTab === "diagnostics"
+                ? "border-yellow-400 text-[#0f172a] dark:text-white"
+                : "border-transparent text-slate-400 hover:text-slate-650 dark:hover:text-slate-300"
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+            Diagnostics & E2E Test
           </button>
         </div>
 
@@ -3698,6 +3767,198 @@ export default function SettingsPage() {
         {activeTab === "registration" && (
           <div className="bg-slate-50/30 rounded-[2.5rem] p-8 border border-slate-100 dark:bg-slate-900/10 dark:border-slate-800">
             <RegistrationTemplateManager />
+          </div>
+        )}
+
+        {/* ======================================================== */}
+        {/* DIAGNOSTICS & SYSTEM E2E TEST TAB CONTENT */}
+        {/* ======================================================== */}
+        {activeTab === "diagnostics" && (
+          <div className="space-y-8">
+            {/* Header Hero Banner */}
+            <div className="bg-gradient-to-br from-slate-900 via-slate-850 to-indigo-950 text-white rounded-[2.5rem] p-8 md:p-10 border border-slate-800 shadow-xl relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
+              <div className="relative z-10 max-w-4xl">
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-black uppercase tracking-widest mb-4">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  Automated System Verification
+                </div>
+                <h2 className="text-2xl md:text-3xl font-black tracking-tight text-white mb-3">
+                  End-to-End System Test Suite
+                </h2>
+                <p className="text-slate-300 text-sm md:text-base leading-relaxed mb-6">
+                  Runs an automated end-to-end integration test validating the entire event lifecycle:
+                  scratch event creation, Form Studio custom questions schema, public registrations,
+                  individual & bulk attendee updates, bulk spreadsheet import, email template rendering & logos,
+                  event day door check-in, QR code ZIP archives, client view sync (<code className="text-amber-300 font-mono text-xs">/view/[slug]</code>),
+                  3-slide presentation reports, and Excel export with automated clean teardown.
+                </p>
+
+                <div className="flex flex-wrap items-center gap-4">
+                  <button
+                    onClick={handleRunE2ETest}
+                    disabled={e2eRunning}
+                    className="flex items-center gap-3 px-8 py-4 rounded-2xl bg-amber-400 hover:bg-amber-300 active:scale-[0.98] text-slate-950 font-black text-sm uppercase tracking-wider shadow-lg shadow-amber-400/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {e2eRunning ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        Running 13 System Test Stages...
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="w-5 h-5" />
+                        Run Full E2E Test Suite Now
+                      </>
+                    )}
+                  </button>
+
+                  <div className="text-xs text-slate-400 flex items-center gap-2 font-mono bg-slate-950/60 px-4 py-3 rounded-xl border border-slate-800">
+                    <Code className="w-4 h-4 text-amber-400" />
+                    <span>CLI command: python scripts/run_e2e_test.py</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Error Message */}
+            {e2eError && (
+              <div className="p-5 rounded-2xl bg-red-50 border border-red-200 dark:bg-red-950/30 dark:border-red-900/50 flex items-start gap-4">
+                <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+                <div className="text-sm">
+                  <h4 className="font-bold text-red-900 dark:text-red-200">Test Execution Error</h4>
+                  <p className="text-red-700 dark:text-red-300 mt-1">{e2eError}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Test Results Dashboard */}
+            {e2eResults && (
+              <div className="space-y-6">
+                {/* KPI Summary Cards */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="p-6 rounded-2xl border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-1">
+                      Overall Result
+                    </span>
+                    <div className="flex items-center gap-2 mt-1">
+                      {e2eResults.overall_status === "passed" ? (
+                        <>
+                          <CheckCircle2 className="w-6 h-6 text-emerald-500" />
+                          <span className="text-xl font-black text-emerald-600 dark:text-emerald-400">PASSED</span>
+                        </>
+                      ) : (
+                        <>
+                          <AlertCircle className="w-6 h-6 text-red-500" />
+                          <span className="text-xl font-black text-red-600 dark:text-red-400">FAILED</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="p-6 rounded-2xl border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-1">
+                      Stages Passed
+                    </span>
+                    <p className="text-2xl font-black text-slate-900 dark:text-white mt-1">
+                      {e2eResults.passed_stages} <span className="text-sm font-bold text-slate-400">/ {e2eResults.total_stages}</span>
+                    </p>
+                  </div>
+
+                  <div className="p-6 rounded-2xl border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-1">
+                      Execution Time
+                    </span>
+                    <p className="text-2xl font-black text-blue-600 dark:text-blue-400 mt-1">
+                      {((e2eResults.total_duration_ms || 0) / 1000).toFixed(1)}s
+                    </p>
+                  </div>
+
+                  <div className="p-6 rounded-2xl border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-1">
+                      Run ID
+                    </span>
+                    <p className="text-lg font-mono font-black text-amber-500 mt-1 truncate">
+                      {e2eResults.run_id}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Stage Breakdown Timeline */}
+                <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 md:p-8 shadow-sm">
+                  <div className="flex items-center justify-between pb-6 border-b border-slate-100 dark:border-slate-800 mb-6">
+                    <div>
+                      <h3 className="text-lg font-black text-slate-900 dark:text-white">
+                        Test Stage Verification Timeline
+                      </h3>
+                      <p className="text-xs text-slate-400 font-medium mt-0.5">
+                        Completed at {new Date(e2eResults.timestamp || "").toLocaleTimeString()} • Zero residual test data left in database
+                      </p>
+                    </div>
+                    <span className="text-xs font-mono font-bold px-3 py-1.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                      {e2eResults.passed_stages}/{e2eResults.total_stages} Verified
+                    </span>
+                  </div>
+
+                  <div className="space-y-3">
+                    {e2eResults.stages?.map((stage) => {
+                      const isPassed = stage.status === "passed";
+                      return (
+                        <div
+                          key={stage.id}
+                          className={`p-4 md:p-5 rounded-2xl border transition-all ${
+                            isPassed
+                              ? "bg-slate-50/60 dark:bg-slate-850/40 border-slate-200 dark:border-slate-800 hover:border-emerald-300 dark:hover:border-emerald-800"
+                              : "bg-red-50/60 dark:bg-red-950/20 border-red-200 dark:border-red-900"
+                          }`}
+                        >
+                          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                            <div className="flex items-start md:items-center gap-3">
+                              <span className="w-8 h-8 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-mono text-xs font-black flex items-center justify-center shrink-0">
+                                {String(stage.stage).padStart(2, "0")}
+                              </span>
+                              <div>
+                                <h4 className="text-sm font-black text-slate-900 dark:text-white">
+                                  {stage.name}
+                                </h4>
+                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                                  {stage.details}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-3 self-end md:self-center shrink-0">
+                              <span className="text-[11px] font-mono text-slate-400 font-semibold">
+                                {stage.duration_ms}ms
+                              </span>
+                              <span
+                                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider ${
+                                  isPassed
+                                    ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-400"
+                                    : "bg-red-100 text-red-800 dark:bg-red-950/50 dark:text-red-400"
+                                }`}
+                              >
+                                {isPassed ? (
+                                  <>
+                                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                                    Passed
+                                  </>
+                                ) : (
+                                  <>
+                                    <AlertCircle className="w-3.5 h-3.5 text-red-600 dark:text-red-400" />
+                                    Failed
+                                  </>
+                                )}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

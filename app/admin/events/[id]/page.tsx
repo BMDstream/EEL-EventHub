@@ -414,7 +414,7 @@ export default function EventDetailsPage() {
     const showLogo = meta.show_logo !== "false";
     let logoHtmlStr = "";
     if (showLogo) {
-      const activeLogoUrl = event?.logo_url || (meta.logo_image_url && meta.logo_image_url !== "https://" ? meta.logo_image_url : null);
+      const activeLogoUrl = (event as any)?.logo_url || (event as any)?.client?.logo_url || (meta.logo_image_url && meta.logo_image_url !== "https://" ? meta.logo_image_url : null);
       if (activeLogoUrl) {
         logoHtmlStr = `<td align="right" valign="middle"><img src="${activeLogoUrl}" style="max-height: 48px; max-width: 140px; object-fit: contain; display: block;" alt="Logo" /></td>`;
       } else {

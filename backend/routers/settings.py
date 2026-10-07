@@ -741,6 +741,21 @@ def delete_registration_template(
     session.commit()
     return {"ok": True, "message": "Template deleted successfully"}
 
+@router.post("/settings/run-e2e-test")
+def run_system_e2e_test(
+    session: Session = Depends(get_session),
+    current_user: Optional[User] = Depends(get_current_user_from_request)
+):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    if current_user.role not in ["admin", "manager"]:
+        raise HTTPException(status_code=403, detail="Only administrators and managers can run system diagnostics")
+
+    from backend.e2e_service import E2ETestRunner
+    runner = E2ETestRunner(session=session, current_user_email=current_user.email)
+    results = runner.execute_all()
+    return results
+
 @router.get("/settings/{key}")
 def get_setting(
     key: str,
