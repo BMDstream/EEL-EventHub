@@ -451,7 +451,7 @@ function PublicRegistrationPageContent() {
               placeholder={field.placeholder || "Enter your answer"}
               value={value as string}
               onChange={(e) => handleFieldChange(e.target.value)}
-              className={`${style.input} ${isFormLight ? '!text-slate-900 !placeholder-slate-400' : ''}`}
+              className={`${style.input} ${isFormLight ? '!bg-slate-50 !border-slate-300 !text-slate-900 !placeholder-slate-400 focus:!bg-white focus:!border-slate-500' : ''}`}
             />
           )}
 
@@ -466,7 +466,7 @@ function PublicRegistrationPageContent() {
                 const cleaned = e.target.value.replace(/[^0-9]/g, '');
                 handleFieldChange(cleaned);
               }}
-              className={`${style.input} ${isFormLight ? '!text-slate-900 !placeholder-slate-400' : ''}`}
+              className={`${style.input} ${isFormLight ? '!bg-slate-50 !border-slate-300 !text-slate-900 !placeholder-slate-400 focus:!bg-white focus:!border-slate-500' : ''}`}
             />
           )}
 
@@ -476,7 +476,7 @@ function PublicRegistrationPageContent() {
                 required={isAttending !== false && field.required}
                 value={value as string}
                 onChange={(e) => handleFieldChange(e.target.value)}
-                className={`${style.select} ${isFormLight ? '!text-slate-900' : ''}`}
+                className={`${style.select} ${isFormLight ? '!bg-slate-50 !border-slate-300 !text-slate-900 focus:!bg-white focus:!border-slate-500' : ''}`}
               >
                 <option value="" className={isFormLight ? "text-slate-900 bg-white" : "text-white bg-slate-900"}>{field.placeholder || "Select Option"}</option>
                 {field.options?.map((opt: string) => (
@@ -555,7 +555,7 @@ function PublicRegistrationPageContent() {
                       const prev = (value as any) || {};
                       handleFieldChange({ ...prev, first_name: e.target.value });
                     }}
-                    className={`${style.input} ${isFormLight ? '!text-slate-900 !placeholder-slate-400' : ''}`}
+                    className={`${style.input} ${isFormLight ? '!bg-slate-50 !border-slate-300 !text-slate-900 !placeholder-slate-400 focus:!bg-white focus:!border-slate-500' : ''}`}
                   />
                 </div>
                 <div className="space-y-2">
@@ -569,7 +569,7 @@ function PublicRegistrationPageContent() {
                       const prev = (value as any) || {};
                       handleFieldChange({ ...prev, last_name: e.target.value });
                     }}
-                    className={`${style.input} ${isFormLight ? '!text-slate-900 !placeholder-slate-400' : ''}`}
+                    className={`${style.input} ${isFormLight ? '!bg-slate-50 !border-slate-300 !text-slate-900 !placeholder-slate-400 focus:!bg-white focus:!border-slate-500' : ''}`}
                   />
                 </div>
               </div>
@@ -585,7 +585,7 @@ function PublicRegistrationPageContent() {
                     const prev = (value as any) || {};
                     handleFieldChange({ ...prev, email: e.target.value });
                   }}
-                  className={`${style.input} ${isFormLight ? '!text-slate-900 !placeholder-slate-400' : ''}`}
+                  className={`${style.input} ${isFormLight ? '!bg-slate-50 !border-slate-300 !text-slate-900 !placeholder-slate-400 focus:!bg-white focus:!border-slate-500' : ''}`}
                 />
               </div>
             </div>
@@ -877,7 +877,22 @@ function PublicRegistrationPageContent() {
   // Form card banner thumbnail: ONLY use banner_url — never fall back to background_url
   // Each field is fully independent — one uploaded image = shown in one place only.
   const formBannerUrl = event?.banner_url || null;
-  const eventTextColor = event?.registration_form_template?.theme_config?.form_text_color || event?.banner_settings?.text_color;
+  // Intelligent contrast resolution: ensure text color contrasts with card background
+  const rawTextColor = event?.banner_settings?.text_color || event?.registration_form_template?.theme_config?.form_text_color;
+  let resolvedTextColor = rawTextColor;
+  if (rawTextColor && rawTextColor.trim()) {
+    const isTextLight = isColorLight(rawTextColor);
+    if (isFormLight && isTextLight) {
+      // Incompatible contrast: light text on a light form card! Enforce high-contrast dark text
+      resolvedTextColor = "#0f172a";
+    } else if (!isFormLight && !isTextLight) {
+      // Incompatible contrast: dark text on a dark form card! Enforce high-contrast white text
+      resolvedTextColor = "#ffffff";
+    }
+  } else {
+    resolvedTextColor = isFormLight ? "#0f172a" : "#ffffff";
+  }
+  const eventTextColor = resolvedTextColor;
   const bannerSize = event?.banner_settings?.size;
   const bannerPosition = event?.banner_settings?.position;
   const bannerFit = event?.banner_settings?.banner_fit || "cover";
@@ -2102,25 +2117,39 @@ function PublicRegistrationPageContent() {
           background-color: ${eventAccentColor} !important;
           border-color: ${eventAccentColor} !important;
         }
-        /* Ensure inputs, selects, and textareas have high-contrast readable text regardless of theme */
+        /* Ensure inputs, selects, and textareas have high-contrast readable text and backgrounds */
         ${isFormLight ? `
-          .client-form-text-custom input,
+          .client-form-text-custom input:not([type="checkbox"]):not([type="radio"]),
           .client-form-text-custom select,
           .client-form-text-custom textarea {
+            background-color: #f8fafc !important;
+            border-color: #cbd5e1 !important;
             color: #0f172a !important;
             -webkit-text-fill-color: #0f172a !important;
+          }
+          .client-form-text-custom input:not([type="checkbox"]):not([type="radio"]):focus,
+          .client-form-text-custom select:focus,
+          .client-form-text-custom textarea:focus {
+            background-color: #ffffff !important;
+            border-color: #64748b !important;
           }
           .client-form-text-custom input::placeholder,
           .client-form-text-custom textarea::placeholder {
             color: #94a3b8 !important;
             -webkit-text-fill-color: #94a3b8 !important;
           }
+          .client-form-text-custom select option {
+            background-color: #ffffff !important;
+            color: #0f172a !important;
+          }
           .client-form-text-custom .client-question-label,
-          .client-form-text-custom .client-question-label * {
-            color: #78350f !important;
+          .client-form-text-custom .client-question-label *,
+          .client-form-text-custom label,
+          .client-form-text-custom label * {
+            color: ${resolvedTextColor} !important;
           }
         ` : `
-          .client-form-text-custom input,
+          .client-form-text-custom input:not([type="checkbox"]):not([type="radio"]),
           .client-form-text-custom select,
           .client-form-text-custom textarea {
             color: #ffffff !important;
@@ -2130,6 +2159,16 @@ function PublicRegistrationPageContent() {
           .client-form-text-custom textarea::placeholder {
             color: #64748b !important;
             -webkit-text-fill-color: #64748b !important;
+          }
+          .client-form-text-custom select option {
+            background-color: #09090b !important;
+            color: #ffffff !important;
+          }
+          .client-form-text-custom .client-question-label,
+          .client-form-text-custom .client-question-label *,
+          .client-form-text-custom label,
+          .client-form-text-custom label * {
+            color: ${resolvedTextColor} !important;
           }
         `}
         ${eventTextColor ? `

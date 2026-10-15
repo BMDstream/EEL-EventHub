@@ -502,15 +502,44 @@ export default function RegistrationTemplateManager() {
     }
   };
 
+  const isColorLight = (hex?: string) => {
+    if (!hex || typeof hex !== 'string') return true;
+    let c = hex.replace('#', '').trim();
+    if (c.length === 3) c = c.split('').map(x => x + x).join('');
+    if (c.length !== 6) return true;
+    const r = parseInt(c.substring(0, 2), 16);
+    const g = parseInt(c.substring(2, 4), 16);
+    const b = parseInt(c.substring(4, 6), 16);
+    if (isNaN(r) || isNaN(g) || isNaN(b)) return true;
+    const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    return lum > 0.65;
+  };
+
   // Update specific selectedTemplate sub-field
   const updateThemeConfig = (key: string, value: any) => {
     if (!selectedTemplate) return;
+    const newConfig = {
+      ...selectedTemplate.theme_config,
+      [key]: value
+    };
+
+    // If changing card background, ensure text color remains high-contrast
+    if (key === "form_bg_color" && typeof value === "string") {
+      const isNewBgLight = isColorLight(value);
+      const currentTextColor = newConfig.form_text_color;
+      if (currentTextColor) {
+        const isCurrentTextLight = isColorLight(currentTextColor);
+        if (isNewBgLight && isCurrentTextLight) {
+          newConfig.form_text_color = "#0f172a";
+        } else if (!isNewBgLight && !isCurrentTextLight) {
+          newConfig.form_text_color = "#ffffff";
+        }
+      }
+    }
+
     setSelectedTemplate({
       ...selectedTemplate,
-      theme_config: {
-        ...selectedTemplate.theme_config,
-        [key]: value
-      }
+      theme_config: newConfig
     });
     setHasUnsavedChanges(true);
   };
@@ -1955,6 +1984,20 @@ export default function RegistrationTemplateManager() {
             const successTitleStyle = parseWeightStyle(selectedTemplate.theme_config.success_title_weight, "700", "normal");
             const successDescStyle = parseWeightStyle(selectedTemplate.theme_config.success_desc_weight, "400", "normal");
 
+            const isPreviewCardLight = isColorLight(selectedTemplate.theme_config.form_bg_color || "#ffffff");
+            const rawTextColor = selectedTemplate.theme_config.form_text_color;
+            let resolvedPreviewTextColor = rawTextColor;
+            if (rawTextColor && rawTextColor.trim()) {
+              const isTextLight = isColorLight(rawTextColor);
+              if (isPreviewCardLight && isTextLight) {
+                resolvedPreviewTextColor = "#0f172a";
+              } else if (!isPreviewCardLight && !isTextLight) {
+                resolvedPreviewTextColor = "#ffffff";
+              }
+            } else {
+              resolvedPreviewTextColor = isPreviewCardLight ? "#0f172a" : "#ffffff";
+            }
+
             return (
               <div 
                 style={{
@@ -1963,20 +2006,36 @@ export default function RegistrationTemplateManager() {
                 className="rounded-[2.5rem] border border-slate-150 p-8 shadow-lg transition-all min-h-[480px] max-h-[750px] relative overflow-hidden flex flex-col justify-between preview-form-text-custom"
               >
                 <style dangerouslySetInnerHTML={{ __html: `
-                  ${selectedTemplate.theme_config.form_text_color ? `
-                    .preview-form-text-custom h1:not([style*="color"]),
-                    .preview-form-text-custom h2:not([style*="color"]),
-                    .preview-form-text-custom h3:not([style*="color"]),
-                    .preview-form-text-custom h4:not([style*="color"]),
-                    .preview-form-text-custom p:not([style*="color"]),
-                    .preview-form-text-custom span:not([style*="color"]),
-                    .preview-form-text-custom label:not([style*="color"]),
-                    .preview-form-text-custom li:not([style*="color"]),
-                    .preview-form-text-custom legend:not([style*="color"]),
-                    .preview-form-text-custom select:not([style*="color"]) {
-                      color: ${selectedTemplate.theme_config.form_text_color} !important;
+                  .preview-form-text-custom h1:not([style*="color"]),
+                  .preview-form-text-custom h2:not([style*="color"]),
+                  .preview-form-text-custom h3:not([style*="color"]),
+                  .preview-form-text-custom h4:not([style*="color"]),
+                  .preview-form-text-custom p:not([style*="color"]),
+                  .preview-form-text-custom span:not([style*="color"]),
+                  .preview-form-text-custom label:not([style*="color"]),
+                  .preview-form-text-custom li:not([style*="color"]),
+                  .preview-form-text-custom legend:not([style*="color"]) {
+                    color: ${resolvedPreviewTextColor} !important;
+                  }
+                  .preview-form-text-custom .client-question-label,
+                  .preview-form-text-custom .client-question-label * {
+                    color: ${resolvedPreviewTextColor} !important;
+                  }
+                  ${isPreviewCardLight ? `
+                    .preview-form-text-custom input:not([type="checkbox"]):not([type="radio"]),
+                    .preview-form-text-custom select {
+                      background-color: #f8fafc !important;
+                      border-color: #cbd5e1 !important;
+                      color: #0f172a !important;
                     }
-                  ` : ""}
+                  ` : `
+                    .preview-form-text-custom input:not([type="checkbox"]):not([type="radio"]),
+                    .preview-form-text-custom select {
+                      background-color: #18181b !important;
+                      border-color: #27272a !important;
+                      color: #ffffff !important;
+                    }
+                  `}
                   .preview-form-text-custom, 
                   .preview-form-text-custom p,
                   .preview-form-text-custom span,

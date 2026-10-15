@@ -25,7 +25,7 @@ def read_events(
         raise HTTPException(status_code=401, detail="Authentication required")
         
     if current_user.role == "admin":
-        events = session.exec(select(Event)).all()
+        events = session.exec(select(Event).order_by(Event.id.desc())).all()
     else:
         # Get all client links with roles
         stmt = text('SELECT client_id, role FROM "userclientlink" WHERE user_id = :user_id')
@@ -40,14 +40,16 @@ def read_events(
         
         events = []
         if manager_client_ids:
-            mgr_events = session.exec(select(Event).where(Event.client_id.in_(manager_client_ids))).all()
+            mgr_events = session.exec(select(Event).where(Event.client_id.in_(manager_client_ids)).order_by(Event.id.desc())).all()
             events.extend(mgr_events)
             
         if assigned_event_ids:
-            ass_events = session.exec(select(Event).where(Event.id.in_(assigned_event_ids))).all()
+            ass_events = session.exec(select(Event).where(Event.id.in_(assigned_event_ids)).order_by(Event.id.desc())).all()
             for ae in ass_events:
                 if ae not in events:
                     events.append(ae)
+        
+        events.sort(key=lambda e: e.id or 0, reverse=True)
         
     result = []
     # Batch-fetch clients to solve N+1 queries

@@ -48,7 +48,7 @@ export default function EventsListPage() {
     }
     
     return matchesSearch;
-  });
+  }).sort((a, b) => b.id - a.id);
 
   return (
     <AdminLayout>
