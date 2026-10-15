@@ -66,6 +66,7 @@ interface RegistrationFormTemplate {
     success_desc_weight?: string;
     disclaimerCheckboxLabel?: string;
     question_font_size?: string | number;
+    input_bg_color?: string;
   };
   layout_schema: FormField[];
   post_submit_config: {
@@ -1042,6 +1043,35 @@ export default function RegistrationTemplateManager() {
                               type="text" 
                               value={selectedTemplate.theme_config.form_bg_color || "#ffffff"} 
                               onChange={(e) => updateThemeConfig("form_bg_color", e.target.value)}
+                              className="w-24 shrink-0 px-3 py-2.5 rounded-xl border border-slate-100 font-mono font-bold text-xs bg-slate-50 dark:bg-slate-800" 
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-2 flex-1 min-w-[220px]">
+                          <div className="flex items-center justify-between">
+                            <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-1">Textbox / Input Background</label>
+                            {selectedTemplate.theme_config.input_bg_color && (
+                              <button
+                                type="button"
+                                onClick={() => updateThemeConfig("input_bg_color", "")}
+                                className="text-[9px] font-bold text-slate-400 hover:text-red-500 transition-colors"
+                              >
+                                Reset
+                              </button>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <input 
+                              type="color" 
+                              value={selectedTemplate.theme_config.input_bg_color || (isColorLight(selectedTemplate.theme_config.form_bg_color || "#ffffff") ? "#f8fafc" : "#18181b")} 
+                              onChange={(e) => updateThemeConfig("input_bg_color", e.target.value)}
+                              className="w-10 h-10 rounded-xl border border-slate-200 cursor-pointer p-0 bg-transparent shrink-0" 
+                            />
+                            <input 
+                              type="text" 
+                              placeholder="Default"
+                              value={selectedTemplate.theme_config.input_bg_color || ""} 
+                              onChange={(e) => updateThemeConfig("input_bg_color", e.target.value)}
                               className="w-24 shrink-0 px-3 py-2.5 rounded-xl border border-slate-100 font-mono font-bold text-xs bg-slate-50 dark:bg-slate-800" 
                             />
                           </div>
@@ -2058,7 +2088,14 @@ export default function RegistrationTemplateManager() {
                   .preview-form-text-custom .client-question-label * {
                     color: ${resolvedPreviewTextColor} !important;
                   }
-                  ${isPreviewCardLight ? `
+                  ${selectedTemplate.theme_config.input_bg_color ? `
+                    .preview-form-text-custom input:not([type="checkbox"]):not([type="radio"]),
+                    .preview-form-text-custom select {
+                      background-color: ${selectedTemplate.theme_config.input_bg_color} !important;
+                      border-color: ${isColorLight(selectedTemplate.theme_config.input_bg_color) ? '#cbd5e1' : '#3f3f46'} !important;
+                      color: ${isColorLight(selectedTemplate.theme_config.input_bg_color) ? '#0f172a' : '#ffffff'} !important;
+                    }
+                  ` : isPreviewCardLight ? `
                     .preview-form-text-custom input:not([type="checkbox"]):not([type="radio"]),
                     .preview-form-text-custom select {
                       background-color: #f8fafc !important;

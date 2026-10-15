@@ -491,7 +491,7 @@ function PublicRegistrationPageContent() {
               placeholder={field.placeholder || "Enter your answer"}
               value={value as string}
               onChange={(e) => handleFieldChange(e.target.value)}
-              className={`${style.input} ${isFormLight ? '!bg-slate-50 !border-slate-300 !text-slate-900 !placeholder-slate-400 focus:!bg-white focus:!border-slate-500' : ''}`}
+              className={`${style.input} ${!customInputBg && isFormLight ? '!bg-slate-50 !border-slate-300 !text-slate-900 !placeholder-slate-400 focus:!bg-white focus:!border-slate-500' : ''}`}
             />
           )}
 
@@ -506,7 +506,7 @@ function PublicRegistrationPageContent() {
                 const cleaned = e.target.value.replace(/[^0-9]/g, '');
                 handleFieldChange(cleaned);
               }}
-              className={`${style.input} ${isFormLight ? '!bg-slate-50 !border-slate-300 !text-slate-900 !placeholder-slate-400 focus:!bg-white focus:!border-slate-500' : ''}`}
+              className={`${style.input} ${!customInputBg && isFormLight ? '!bg-slate-50 !border-slate-300 !text-slate-900 !placeholder-slate-400 focus:!bg-white focus:!border-slate-500' : ''}`}
             />
           )}
 
@@ -516,7 +516,7 @@ function PublicRegistrationPageContent() {
                 required={isAttending !== false && field.required}
                 value={value as string}
                 onChange={(e) => handleFieldChange(e.target.value)}
-                className={`${style.select} ${isFormLight ? '!bg-slate-50 !border-slate-300 !text-slate-900 focus:!bg-white focus:!border-slate-500' : ''}`}
+                className={`${style.select} ${!customInputBg && isFormLight ? '!bg-slate-50 !border-slate-300 !text-slate-900 focus:!bg-white focus:!border-slate-500' : ''}`}
               >
                 <option value="" className={isFormLight ? "text-slate-900 bg-white" : "text-white bg-slate-900"}>{field.placeholder || "Select Option"}</option>
                 {field.options?.map((opt: string) => (
@@ -595,7 +595,7 @@ function PublicRegistrationPageContent() {
                       const prev = (value as any) || {};
                       handleFieldChange({ ...prev, first_name: e.target.value });
                     }}
-                    className={`${style.input} ${isFormLight ? '!bg-slate-50 !border-slate-300 !text-slate-900 !placeholder-slate-400 focus:!bg-white focus:!border-slate-500' : ''}`}
+                    className={`${style.input} ${!customInputBg && isFormLight ? '!bg-slate-50 !border-slate-300 !text-slate-900 !placeholder-slate-400 focus:!bg-white focus:!border-slate-500' : ''}`}
                   />
                 </div>
                 <div className="space-y-2">
@@ -609,7 +609,7 @@ function PublicRegistrationPageContent() {
                       const prev = (value as any) || {};
                       handleFieldChange({ ...prev, last_name: e.target.value });
                     }}
-                    className={`${style.input} ${isFormLight ? '!bg-slate-50 !border-slate-300 !text-slate-900 !placeholder-slate-400 focus:!bg-white focus:!border-slate-500' : ''}`}
+                    className={`${style.input} ${!customInputBg && isFormLight ? '!bg-slate-50 !border-slate-300 !text-slate-900 !placeholder-slate-400 focus:!bg-white focus:!border-slate-500' : ''}`}
                   />
                 </div>
               </div>
@@ -625,7 +625,7 @@ function PublicRegistrationPageContent() {
                     const prev = (value as any) || {};
                     handleFieldChange({ ...prev, email: e.target.value });
                   }}
-                  className={`${style.input} ${isFormLight ? '!bg-slate-50 !border-slate-300 !text-slate-900 !placeholder-slate-400 focus:!bg-white focus:!border-slate-500' : ''}`}
+                  className={`${style.input} ${!customInputBg && isFormLight ? '!bg-slate-50 !border-slate-300 !text-slate-900 !placeholder-slate-400 focus:!bg-white focus:!border-slate-500' : ''}`}
                 />
               </div>
             </div>
@@ -910,6 +910,8 @@ function PublicRegistrationPageContent() {
   };
 
   const customFormBg = event?.registration_form_template?.theme_config?.form_bg_color;
+  const customInputBg = event?.banner_settings?.input_bg_color || event?.registration_form_template?.theme_config?.input_bg_color;
+  const isInputLight = isColorLight(customInputBg);
   const isFormLight = isColorLight(customFormBg) || (!customFormBg && isLightTheme);
 
   // Page background: ONLY use background_url — never fall back to banner_url
@@ -2158,7 +2160,37 @@ function PublicRegistrationPageContent() {
           border-color: ${eventAccentColor} !important;
         }
         /* Ensure inputs, selects, and textareas have high-contrast readable text and backgrounds */
-        ${isFormLight ? `
+        ${customInputBg ? `
+          .client-form-text-custom input:not([type="checkbox"]):not([type="radio"]),
+          .client-form-text-custom select,
+          .client-form-text-custom textarea {
+            background-color: ${customInputBg} !important;
+            border-color: ${isInputLight ? '#cbd5e1' : 'rgba(255,255,255,0.2)'} !important;
+            color: ${isInputLight ? '#0f172a' : '#ffffff'} !important;
+            -webkit-text-fill-color: ${isInputLight ? '#0f172a' : '#ffffff'} !important;
+          }
+          .client-form-text-custom input:not([type="checkbox"]):not([type="radio"]):focus,
+          .client-form-text-custom select:focus,
+          .client-form-text-custom textarea:focus {
+            background-color: ${customInputBg} !important;
+            border-color: ${eventAccentColor || (isInputLight ? '#64748b' : '#a1a1aa')} !important;
+          }
+          .client-form-text-custom input::placeholder,
+          .client-form-text-custom textarea::placeholder {
+            color: ${isInputLight ? '#94a3b8' : '#64748b'} !important;
+            -webkit-text-fill-color: ${isInputLight ? '#94a3b8' : '#64748b'} !important;
+          }
+          .client-form-text-custom select option {
+            background-color: ${isInputLight ? '#ffffff' : '#09090b'} !important;
+            color: ${isInputLight ? '#0f172a' : '#ffffff'} !important;
+          }
+          .client-form-text-custom .client-question-label,
+          .client-form-text-custom .client-question-label *,
+          .client-form-text-custom label,
+          .client-form-text-custom label * {
+            color: ${resolvedTextColor} !important;
+          }
+        ` : isFormLight ? `
           .client-form-text-custom input:not([type="checkbox"]):not([type="radio"]),
           .client-form-text-custom select,
           .client-form-text-custom textarea {

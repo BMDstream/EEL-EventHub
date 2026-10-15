@@ -477,6 +477,7 @@ export default function EditEventPage() {
     banner_primary_color: "",
     banner_accent_color: "",
     banner_text_color: "",
+    banner_input_bg_color: "",
     banner_layout: "",
     registration_active: true,
     registration_start: "",
@@ -556,6 +557,7 @@ export default function EditEventPage() {
           banner_primary_color: data.banner_settings?.primary_color || "",
           banner_accent_color: data.banner_settings?.accent_color || "",
           banner_text_color: data.banner_settings?.text_color || "",
+          banner_input_bg_color: data.banner_settings?.input_bg_color || "",
           banner_layout: data.banner_settings?.layout || "",
           registration_active: data.registration_active !== false,
           registration_start: data.registration_start ? data.registration_start.slice(0, 16) : "",
@@ -678,7 +680,7 @@ export default function EditEventPage() {
       const { 
         banner_fit, banner_focus, banner_height,
         banner_size, banner_position, banner_theme, banner_primary_color, 
-        banner_accent_color, banner_layout, banner_text_color, 
+        banner_accent_color, banner_layout, banner_text_color, banner_input_bg_color,
         banner_url, logo_url, background_url, disclaimer_checkbox_label, 
         ...submitData 
       } = formData;
@@ -704,6 +706,7 @@ export default function EditEventPage() {
           accent_color: formData.banner_accent_color || "",
           layout: formData.banner_layout || "",
           text_color: formData.banner_text_color || "",
+          input_bg_color: formData.banner_input_bg_color || "",
           disclaimer_checkbox_label: formData.disclaimer_checkbox_label || "",
           show_qr_code: formData.show_qr_code,
           show_pin_code: formData.show_pin_code,
@@ -1286,14 +1289,26 @@ export default function EditEventPage() {
 
                   <div className="space-y-3 md:col-span-2">
                     <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">Custom Color Overrides</label>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50/50 dark:bg-slate-900/60 rounded-2xl border border-slate-100 dark:border-slate-800 p-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 bg-slate-50/50 dark:bg-slate-900/60 rounded-2xl border border-slate-100 dark:border-slate-800 p-6">
                       {[
-                        { name: "banner_primary_color", label: "Custom Primary Color Override", placeholder: "e.g. #0f172a" },
-                        { name: "banner_accent_color", label: "Custom Accent Color Override", placeholder: "e.g. #eab308" },
-                        { name: "banner_text_color", label: "Custom Text Color Override", placeholder: "e.g. #ffffff" },
+                        { name: "banner_primary_color", label: "Primary Brand Color", placeholder: "e.g. #0f172a" },
+                        { name: "banner_accent_color", label: "Accent Color", placeholder: "e.g. #eab308" },
+                        { name: "banner_text_color", label: "Heading Text Color", placeholder: "e.g. #ffffff" },
+                        { name: "banner_input_bg_color", label: "Textbox / Input Background", placeholder: "e.g. #ffffff or #1e293b" },
                       ].map((field) => (
                         <div key={field.name} className="space-y-2">
-                          <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 block">{field.label}</label>
+                          <div className="flex items-center justify-between">
+                            <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 block">{field.label}</label>
+                            {(formData as any)[field.name] && (
+                              <button
+                                type="button"
+                                onClick={() => setFormData(prev => ({ ...prev, [field.name]: "" }))}
+                                className="text-[9px] font-bold text-slate-400 hover:text-red-500 transition-colors"
+                              >
+                                Reset
+                              </button>
+                            )}
+                          </div>
                           <div className="flex items-center gap-3">
                             <input type="color" name={field.name} value={(formData as any)[field.name] || "#000000"} onChange={handleChange}
                               className="w-10 h-10 rounded-xl border border-slate-200 dark:border-slate-700 cursor-pointer p-0 bg-transparent shrink-0" />
