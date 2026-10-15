@@ -169,6 +169,9 @@ interface Event {
   banner_settings?: {
     size?: string;
     position?: string;
+    banner_fit?: string;
+    banner_focus?: string;
+    banner_height?: string;
     theme?: string;
     primary_color?: string;
     accent_color?: string;
@@ -877,6 +880,9 @@ function PublicRegistrationPageContent() {
   const eventTextColor = event?.registration_form_template?.theme_config?.form_text_color || event?.banner_settings?.text_color;
   const bannerSize = event?.banner_settings?.size;
   const bannerPosition = event?.banner_settings?.position;
+  const bannerFit = event?.banner_settings?.banner_fit || "cover";
+  const bannerFocus = event?.banner_settings?.banner_focus || "center";
+  const bannerHeightChoice = event?.banner_settings?.banner_height || "auto";
 
   const themeStyles = {
     cyber_dark: {
@@ -1841,11 +1847,37 @@ function PublicRegistrationPageContent() {
 
   const registrationForm = event ? (
     <div className={`${style.bodyBlock || "max-w-md w-full mx-auto relative z-10 py-12"} my-auto client-form-text-custom`} style={customFormBg ? { backgroundColor: customFormBg, padding: '2rem', borderRadius: '2.5rem' } : undefined}>
-      {formBannerUrl && (
-        <div className={`rounded-2xl overflow-hidden border border-slate-200/10 dark:border-white/5 shadow-lg transition-all ${isHeadingEmpty ? "mb-6 scale-102 max-h-[32rem]" : "mb-8 max-h-80 md:max-h-96"}`}>
-          <img src={formBannerUrl} alt="Event Banner" className="w-full h-auto object-cover" />
-        </div>
-      )}
+      {formBannerUrl && (() => {
+        const isContain = bannerFit === "contain";
+        const isFixed = bannerHeightChoice === "compact" || bannerHeightChoice === "standard" || bannerHeightChoice === "tall";
+        const heightClass = 
+          bannerHeightChoice === "compact" ? "h-40" :
+          bannerHeightChoice === "standard" ? "h-60" :
+          bannerHeightChoice === "tall" ? "h-80 md:h-96" :
+          (isHeadingEmpty ? "max-h-[32rem]" : "max-h-80 md:max-h-96");
+
+        const objectFitVal = isContain ? "contain" : (bannerFit === "100% 100%" ? "fill" : (bannerFit === "auto" ? "none" : "cover"));
+
+        return (
+          <div className={`rounded-2xl overflow-hidden border border-slate-200/10 dark:border-white/5 shadow-lg transition-all relative ${isHeadingEmpty ? "mb-6 scale-102" : "mb-8"} ${heightClass} ${isContain ? "bg-slate-950/40 backdrop-blur-sm" : ""}`}>
+            {isContain && (
+              <div 
+                className="absolute inset-0 scale-110 blur-xl opacity-30 bg-cover bg-center pointer-events-none" 
+                style={{ backgroundImage: `url(${formBannerUrl})` }}
+              />
+            )}
+            <img 
+              src={formBannerUrl} 
+              alt="Event Banner" 
+              className={`w-full ${isFixed ? "h-full" : "h-auto"} relative z-10 transition-all duration-300`}
+              style={{
+                objectFit: objectFitVal as any,
+                objectPosition: bannerFocus || "center"
+              }}
+            />
+          </div>
+        );
+      })()}
       <div className={isHeadingEmpty ? "mb-6" : "mb-12"}>
         {!isHeadingEmpty && (
           <h2 

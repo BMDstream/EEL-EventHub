@@ -468,6 +468,9 @@ export default function EditEventPage() {
     company_required: false,
     background_url: "",
     allowed_domains: "",
+    banner_fit: "cover",
+    banner_focus: "center",
+    banner_height: "auto",
     banner_size: "cover",
     banner_position: "center",
     banner_theme: "cyber_dark",
@@ -542,6 +545,9 @@ export default function EditEventPage() {
           company_required: !!data.company_required,
           background_url: data.background_url || "",
           allowed_domains: data.allowed_domains ? data.allowed_domains.join(", ") : "",
+          banner_fit: data.banner_settings?.banner_fit || "cover",
+          banner_focus: data.banner_settings?.banner_focus || "center",
+          banner_height: data.banner_settings?.banner_height || "auto",
           banner_size: data.banner_settings?.size || "cover",
           banner_position: data.banner_settings?.position || "center",
           banner_theme: data.banner_settings?.theme || "cyber_dark",
@@ -665,7 +671,13 @@ export default function EditEventPage() {
     e.preventDefault();
     setSaving(true);
     try {
-      const { banner_size, banner_position, banner_theme, banner_primary_color, banner_accent_color, banner_layout, banner_text_color, banner_url, logo_url, background_url, disclaimer_checkbox_label, ...submitData } = formData;
+      const { 
+        banner_fit, banner_focus, banner_height,
+        banner_size, banner_position, banner_theme, banner_primary_color, 
+        banner_accent_color, banner_layout, banner_text_color, 
+        banner_url, logo_url, background_url, disclaimer_checkbox_label, 
+        ...submitData 
+      } = formData;
       const payload: any = {
         ...submitData,
         slug: formData.slug ? formData.slug.replace(/&nbsp;/g, " ").replace(/\u00a0/g, " ").trim() : formData.slug,
@@ -678,8 +690,11 @@ export default function EditEventPage() {
           ? formData.allowed_domains.split(",").map(d => d.trim().toLowerCase()).filter(d => d)
           : [],
         banner_settings: {
-          size: formData.banner_size,
-          position: formData.banner_position,
+          banner_fit: formData.banner_fit || "cover",
+          banner_focus: formData.banner_focus || "center",
+          banner_height: formData.banner_height || "auto",
+          size: formData.banner_size || "cover",
+          position: formData.banner_position || "center",
           theme: formData.banner_theme,
           primary_color: formData.banner_primary_color || "",
           accent_color: formData.banner_accent_color || "",
@@ -711,7 +726,21 @@ export default function EditEventPage() {
         setOriginalBg(formData.background_url);
       } else {
         let errorMessage = "Failed to update event";
-        try { const error = await response.json(); errorMessage = error.detail || errorMessage; } catch { try { errorMessage = await response.text(); } catch { } }
+        try { 
+          const error = await response.json(); 
+          if (typeof error.detail === "string") {
+            errorMessage = error.detail;
+          } else if (Array.isArray(error.detail)) {
+            errorMessage = error.detail.map((d: any) => `${d.loc?.filter((l: string) => l !== "body").join(".") || "Field"}: ${d.msg}`).join("; ");
+          } else if (error.message) {
+            errorMessage = error.message;
+          }
+        } catch { 
+          try { 
+            const text = await response.text(); 
+            if (text) errorMessage = text;
+          } catch { } 
+        }
         setSaveNotification({ type: "error", text: `Error: ${errorMessage}` });
         alert(`Error: ${errorMessage}`);
       }
@@ -945,9 +974,10 @@ export default function EditEventPage() {
                     <Calendar size={16} className="text-slate-400 dark:text-slate-500" /> 2. Page Styling &amp; Background
                   </h3>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-3">
-                    <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 flex items-between justify-between">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                  {/* Left Column: Background Banner */}
+                  <div className="space-y-4">
+                    <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 flex items-center justify-between">
                       Background Banner
                       {formData.banner_url && <button type="button" onClick={() => setFormData({ ...formData, banner_url: "" })} className="text-red-500 hover:underline text-[9px] uppercase font-bold tracking-widest">Remove</button>}
                     </label>
@@ -964,22 +994,76 @@ export default function EditEventPage() {
                           }
                         }
                       }} className="absolute inset-0 opacity-0 cursor-pointer z-10" />
-                      <div className={`w-full h-24 rounded-2xl border-2 border-dashed ${formData.banner_url ? "border-green-500/30 bg-green-50/50 dark:bg-green-950/20" : "border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/60"} relative transition-all overflow-hidden`}>
+                      <div className={`w-full h-28 rounded-2xl border-2 border-dashed ${formData.banner_url ? "border-green-500/30 bg-green-50/50 dark:bg-green-950/20" : "border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/60"} relative transition-all overflow-hidden`}>
                         {formData.banner_url ? (
                           <div className="absolute inset-0">
-                            <div className="absolute inset-0" style={{ backgroundImage: `url(${formData.banner_url})`, backgroundSize: "cover", backgroundPosition: "center", backgroundRepeat: "no-repeat" }} />
+                            {formData.banner_fit === "contain" && (
+                              <div className="absolute inset-0 scale-110 blur-md opacity-40 bg-cover bg-center" style={{ backgroundImage: `url(${formData.banner_url})` }} />
+                            )}
+                            <div 
+                              className="absolute inset-0" 
+                              style={{ 
+                                backgroundImage: `url(${formData.banner_url})`, 
+                                backgroundSize: formData.banner_fit || "cover", 
+                                backgroundPosition: formData.banner_focus || "center", 
+                                backgroundRepeat: "no-repeat" 
+                              }} 
+                            />
                           </div>
                         ) : (
                           <div className="flex flex-col items-center justify-center h-full">
                             <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase">Upload Banner Image</p>
-                            <p className="text-[8px] text-slate-300 dark:text-slate-600 uppercase mt-1">Recommended: 1920x1080</p>
+                            <p className="text-[8px] text-slate-300 dark:text-slate-600 uppercase mt-1">Recommended: 1920x600 or 1200x400</p>
                           </div>
                         )}
                       </div>
                     </div>
+
+                    {/* Banner Specific Controls */}
+                    {formData.banner_url && (
+                      <div className="bg-slate-50/50 dark:bg-slate-900/40 rounded-2xl border border-slate-100 dark:border-slate-800 p-4 space-y-3">
+                        <span className="text-[9px] font-black text-amber-500 uppercase tracking-widest block">
+                          Banner Display Settings
+                        </span>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          <div>
+                            <label className="text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 block mb-1">Fit / Scale</label>
+                            <select name="banner_fit" value={formData.banner_fit} onChange={handleChange}
+                              className="w-full px-3 py-2.5 rounded-xl border border-slate-100 dark:border-slate-800 focus:border-[#1e293b] dark:focus:border-yellow-400 outline-none font-bold text-xs text-slate-700 dark:text-white bg-white dark:bg-slate-900 cursor-pointer">
+                              <option value="cover">Cover (Fill &amp; Crop)</option>
+                              <option value="contain">Contain (Full Image - No Crop)</option>
+                              <option value="100% 100%">Stretch to Fit</option>
+                              <option value="auto">Natural Scale</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 block mb-1">Focus / Position</label>
+                            <select name="banner_focus" value={formData.banner_focus} onChange={handleChange}
+                              className="w-full px-3 py-2.5 rounded-xl border border-slate-100 dark:border-slate-800 focus:border-[#1e293b] dark:focus:border-yellow-400 outline-none font-bold text-xs text-slate-700 dark:text-white bg-white dark:bg-slate-900 cursor-pointer">
+                              <option value="center">Center</option>
+                              <option value="top">Top</option>
+                              <option value="bottom">Bottom</option>
+                              <option value="left">Left</option>
+                              <option value="right">Right</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 block mb-1">Display Height</label>
+                            <select name="banner_height" value={formData.banner_height} onChange={handleChange}
+                              className="w-full px-3 py-2.5 rounded-xl border border-slate-100 dark:border-slate-800 focus:border-[#1e293b] dark:focus:border-yellow-400 outline-none font-bold text-xs text-slate-700 dark:text-white bg-white dark:bg-slate-900 cursor-pointer">
+                              <option value="auto">Auto (Natural Aspect)</option>
+                              <option value="compact">Compact (160px)</option>
+                              <option value="standard">Standard (240px)</option>
+                              <option value="tall">Tall / Hero (340px)</option>
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
-                  <div className="space-y-3">
+                  {/* Right Column: Registration Page Background Image */}
+                  <div className="space-y-4">
                     <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 flex items-center justify-between">
                       Registration Page Background Image (Optional)
                       {formData.background_url && <button type="button" onClick={() => setFormData({ ...formData, background_url: "" })} className="text-red-500 hover:underline text-[9px] uppercase font-bold tracking-widest">Remove</button>}
@@ -997,7 +1081,7 @@ export default function EditEventPage() {
                           }
                         }
                       }} className="absolute inset-0 opacity-0 cursor-pointer z-10" />
-                      <div className={`w-full h-24 rounded-2xl border-2 border-dashed ${formData.background_url ? "border-green-500/30 bg-green-50/50 dark:bg-green-950/20" : "border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/60"} relative transition-all overflow-hidden`}>
+                      <div className={`w-full h-28 rounded-2xl border-2 border-dashed ${formData.background_url ? "border-green-500/30 bg-green-50/50 dark:bg-green-950/20" : "border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/60"} relative transition-all overflow-hidden`}>
                         {formData.background_url ? (
                           <div className="absolute inset-0">
                             {formData.banner_size === "contain" && <div className="absolute inset-0 scale-110 blur-md opacity-60 bg-cover bg-center" style={{ backgroundImage: `url(${formData.background_url})` }} />}
@@ -1011,37 +1095,40 @@ export default function EditEventPage() {
                         )}
                       </div>
                     </div>
-                  </div>
 
-                  {(formData.banner_url || formData.background_url) && (
-                    <div className="space-y-3 md:col-span-2">
-                      <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">Banner &amp; Background Display Settings</label>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50/50 dark:bg-slate-900/40 rounded-2xl border border-slate-100 dark:border-slate-800 p-6">
-                        <div>
-                          <label className="text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 block mb-1">Fit / Scale</label>
-                          <select name="banner_size" value={formData.banner_size} onChange={handleChange}
-                            className="w-full px-4 py-3 rounded-xl border border-slate-100 dark:border-slate-800 focus:border-[#1e293b] dark:focus:border-yellow-400 focus:ring-4 focus:ring-yellow-400/20 outline-none transition-all font-bold text-xs text-slate-700 dark:text-white bg-white dark:bg-slate-900 cursor-pointer">
-                            <option value="cover">Cover (Fill Screen)</option>
-                            <option value="contain">Contain (Show Full Image)</option>
-                            <option value="100% 100%">Stretch to Fit</option>
-                            <option value="auto 100%">Fit Height (Top to Bottom)</option>
-                            <option value="100% auto">Fit Width</option>
-                          </select>
-                        </div>
-                        <div>
-                          <label className="text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 block mb-1">Focus / Position</label>
-                          <select name="banner_position" value={formData.banner_position} onChange={handleChange}
-                            className="w-full px-4 py-3 rounded-xl border border-slate-100 dark:border-slate-800 focus:border-[#1e293b] dark:focus:border-yellow-400 focus:ring-4 focus:ring-yellow-400/20 outline-none transition-all font-bold text-xs text-slate-700 dark:text-white bg-white dark:bg-slate-900 cursor-pointer">
-                            <option value="center">Center</option>
-                            <option value="top">Top</option>
-                            <option value="bottom">Bottom</option>
-                            <option value="left">Left</option>
-                            <option value="right">Right</option>
-                          </select>
+                    {/* Background Image Specific Controls */}
+                    {formData.background_url && (
+                      <div className="bg-slate-50/50 dark:bg-slate-900/40 rounded-2xl border border-slate-100 dark:border-slate-800 p-4 space-y-3">
+                        <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest block">
+                          Background Image Display Settings
+                        </span>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <label className="text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 block mb-1">Fit / Scale</label>
+                            <select name="banner_size" value={formData.banner_size} onChange={handleChange}
+                              className="w-full px-3 py-2.5 rounded-xl border border-slate-100 dark:border-slate-800 focus:border-[#1e293b] dark:focus:border-yellow-400 outline-none font-bold text-xs text-slate-700 dark:text-white bg-white dark:bg-slate-900 cursor-pointer">
+                              <option value="cover">Cover (Fill Screen)</option>
+                              <option value="contain">Contain (Show Full Image)</option>
+                              <option value="100% 100%">Stretch to Fit</option>
+                              <option value="auto 100%">Fit Height (Top to Bottom)</option>
+                              <option value="100% auto">Fit Width</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 block mb-1">Focus / Position</label>
+                            <select name="banner_position" value={formData.banner_position} onChange={handleChange}
+                              className="w-full px-3 py-2.5 rounded-xl border border-slate-100 dark:border-slate-800 focus:border-[#1e293b] dark:focus:border-yellow-400 outline-none font-bold text-xs text-slate-700 dark:text-white bg-white dark:bg-slate-900 cursor-pointer">
+                              <option value="center">Center</option>
+                              <option value="top">Top</option>
+                              <option value="bottom">Bottom</option>
+                              <option value="left">Left</option>
+                              <option value="right">Right</option>
+                            </select>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               </div>
 

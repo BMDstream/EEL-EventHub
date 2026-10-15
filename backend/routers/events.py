@@ -299,6 +299,8 @@ def read_event_by_id(
     event_dict["user_role_for_client"] = user_role
     return event_dict
 
+from sqlalchemy.exc import IntegrityError
+
 @router.put("/{event_id}", response_model=Event)
 def update_event(
     event_id: int, 
@@ -313,16 +315,40 @@ def update_event(
     if event_data.client_id != db_event.client_id:
         verify_client_access(current_user, event_data.client_id, session)
     
+    # Check if slug is being changed and if new slug collides with another event
+    if event_data.slug:
+        cleaned_slug = event_data.slug.replace("&nbsp;", " ").replace("\u00a0", " ").strip()
+        existing = session.exec(select(Event).where(Event.slug == cleaned_slug, Event.id != event_id)).first()
+        if existing:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"The URL slug '{cleaned_slug}' is already in use by another event. Please choose a unique slug."
+            )
+        db_event.slug = cleaned_slug
+
     event_dict = event_data.dict(exclude_unset=True)
+    if "slug" in event_dict:
+        del event_dict["slug"]
+
     for key, value in event_dict.items():
         setattr(db_event, key, value)
     
-    if db_event.slug:
-        db_event.slug = db_event.slug.replace("&nbsp;", " ").replace("\u00a0", " ").strip()
-    
-    session.add(db_event)
-    session.commit()
-    session.refresh(db_event)
+    try:
+        session.add(db_event)
+        session.commit()
+        session.refresh(db_event)
+    except IntegrityError as e:
+        session.rollback()
+        err_msg = str(e).lower()
+        if "slug" in err_msg or "unique" in err_msg:
+            raise HTTPException(
+                status_code=400, 
+                detail="The URL slug is already in use by another event. Please choose a unique slug."
+            )
+        raise HTTPException(status_code=400, detail=f"Database integrity error: {str(e)}")
+    except Exception as e:
+        session.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to update event: {str(e)}")
     
     # Invalidate Redis cache
     from backend.cache_service import clear_cached_event
@@ -926,10 +952,18 @@ def duplicate_event(
     try:
         stmt = text('SELECT user_id, role FROM "usereventlink" WHERE event_id = :event_id')
         links = session.execute(stmt, {"event_id": event_id}).all()
+        copied_user_ids = []
         for link in links:
+            copied_user_ids.append(link[0])
             session.execute(
                 text('INSERT INTO "usereventlink" (user_id, event_id, role) VALUES (:user_id, :event_id, :role)'),
                 {"user_id": link[0], "event_id": duplicate.id, "role": link[1]}
+            )
+        # Ensure the user who duplicated the event has manager access on the duplicate
+        if current_user and current_user.id not in copied_user_ids and current_user.role != "admin":
+            session.execute(
+                text('INSERT INTO "usereventlink" (user_id, event_id, role) VALUES (:user_id, :event_id, :role)'),
+                {"user_id": current_user.id, "event_id": duplicate.id, "role": "manager"}
             )
         session.commit()
         
