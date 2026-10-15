@@ -227,6 +227,9 @@ def read_event(slug: str, session: Session = Depends(get_session)):
     if getattr(event, "registration_form_template_id", None):
         from backend.models import RegistrationFormTemplate
         reg_tpl = session.get(RegistrationFormTemplate, event.registration_form_template_id)
+    if not reg_tpl:
+        from backend.models import RegistrationFormTemplate
+        reg_tpl = session.exec(select(RegistrationFormTemplate)).first()
         
     if reg_tpl:
         event_dict["registration_form_template"] = reg_tpl.dict()
@@ -234,6 +237,8 @@ def read_event(slug: str, session: Session = Depends(get_session)):
             event_dict["custom_fields_schema"] = reg_tpl.layout_schema
     else:
         event_dict["registration_form_template"] = None
+
+    event_dict["operator_config"] = getattr(event, "operator_config", None) or (reg_tpl.operator_config if reg_tpl else {})
 
     # Dynamic count of confirmed registrations
     from backend.models import Registration
@@ -296,7 +301,11 @@ def read_event_by_id(
     if getattr(event, "registration_form_template_id", None):
         from backend.models import RegistrationFormTemplate
         reg_tpl = session.get(RegistrationFormTemplate, event.registration_form_template_id)
+    if not reg_tpl:
+        from backend.models import RegistrationFormTemplate
+        reg_tpl = session.exec(select(RegistrationFormTemplate)).first()
     event_dict["registration_form_template"] = reg_tpl.dict() if reg_tpl else None
+    event_dict["operator_config"] = getattr(event, "operator_config", None) or (reg_tpl.operator_config if reg_tpl else {})
     
     event_dict["user_role_for_client"] = user_role
     return event_dict
@@ -380,6 +389,8 @@ def update_event_form_schema(
     verify_client_access(current_user, db_event.client_id, session)
     
     db_event.custom_fields_schema = payload.get("custom_fields_schema", [])
+    if "operator_config" in payload:
+        db_event.operator_config = payload.get("operator_config", {})
     session.add(db_event)
     session.commit()
     session.refresh(db_event)
@@ -943,7 +954,8 @@ def duplicate_event(
         disclaimer_text=db_event.disclaimer_text,
         custom_fields_schema=db_event.custom_fields_schema,
         allowed_domains=db_event.allowed_domains,
-        banner_settings=db_event.banner_settings
+        banner_settings=db_event.banner_settings,
+        operator_config=getattr(db_event, "operator_config", {}) or {}
     )
     
     session.add(duplicate)
@@ -1012,5 +1024,6 @@ def duplicate_event(
         "custom_fields_schema": duplicate.custom_fields_schema,
         "allowed_domains": duplicate.allowed_domains,
         "banner_settings": duplicate.banner_settings,
+        "operator_config": getattr(duplicate, "operator_config", {}) or {},
     }
 

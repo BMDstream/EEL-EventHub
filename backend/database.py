@@ -107,7 +107,8 @@ def run_db_initialization(session: Session, check_only_migrations: bool = False)
             ("sender_name", "TEXT"),
             ("reply_to", "TEXT"),
             ("company_required", f"BOOLEAN DEFAULT {bool_false}"),
-            ("background_url", "TEXT")
+            ("background_url", "TEXT"),
+            ("operator_config", "JSON")
         ]:
             if col_name not in event_columns:
                 try:

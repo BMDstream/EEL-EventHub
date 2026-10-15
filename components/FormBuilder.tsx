@@ -11,6 +11,7 @@ import RichTextEditor from "./RichTextEditor";
 
 interface FormField {
   id: string;
+  key?: string;
   label: string;
   type: "text" | "select" | "checkbox" | "partner_card" | "numeric" | "multiselect";
   required: boolean;
@@ -307,6 +308,18 @@ export default function FormBuilder({
   const handleSave = async () => {
     setSaving(true);
     try {
+      const slugify = (text: string) => 
+        (text || "").toLowerCase().replace(/<[^>]*>/g, "").replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+
+      // Ensure every field has a clean key
+      const normalizedSections = sections.map(sec => ({
+        ...sec,
+        fields: (sec.fields || []).map(f => ({
+          ...f,
+          key: f.key || slugify(f.label) || f.id
+        }))
+      }));
+
       // 1. Save to event-specific custom_fields_schema
       const res = await fetch(`/api/py/events/${eventId}/form-schema`, {
         method: "PUT",
@@ -314,7 +327,7 @@ export default function FormBuilder({
           "Content-Type": "application/json",
           "x-user-email": session?.user?.email || ""
         },
-        body: JSON.stringify({ custom_fields_schema: sections })
+        body: JSON.stringify({ custom_fields_schema: normalizedSections })
       });
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
@@ -322,14 +335,40 @@ export default function FormBuilder({
       }
 
       // 2. Save back to the global template (so both sides stay in sync!)
-      if (templateId) {
+      let targetTemplateId = templateId;
+      if (!targetTemplateId) {
+        try {
+          const tplsRes = await fetch("/api/py/settings/registration-templates", {
+            headers: { "x-user-email": session?.user?.email || "" }
+          });
+          if (tplsRes.ok) {
+            const allTpls = await tplsRes.json();
+            if (allTpls && allTpls.length > 0) {
+              targetTemplateId = allTpls[0].id;
+              // Link event to this template
+              await fetch(`/api/py/events/${eventId}`, {
+                method: "PUT",
+                headers: { 
+                  "Content-Type": "application/json",
+                  "x-user-email": session?.user?.email || ""
+                },
+                body: JSON.stringify({ registration_form_template_id: targetTemplateId })
+              });
+            }
+          }
+        } catch (e) {
+          console.warn("Could not auto-link template", e);
+        }
+      }
+
+      if (targetTemplateId) {
         // Fetch current template config first
-        const tplRes = await fetch(`/api/py/settings/registration-templates/${templateId}`);
+        const tplRes = await fetch(`/api/py/settings/registration-templates/${targetTemplateId}`);
         if (tplRes.ok) {
           const currentTpl = await tplRes.json();
            // Flatten sections into a flat list of fields for the template's layout_schema
            const flatLayoutSchema: any[] = [];
-           sections.forEach((sec) => {
+           normalizedSections.forEach((sec) => {
              if (sec.id !== "default_section" || sec.title !== "Registration Details") {
                flatLayoutSchema.push({
                  id: sec.id,
@@ -343,7 +382,7 @@ export default function FormBuilder({
            });
 
            // Update the template layout schema
-           const updateRes = await fetch(`/api/py/settings/registration-templates/${templateId}`, {
+           const updateRes = await fetch(`/api/py/settings/registration-templates/${targetTemplateId}`, {
              method: "PUT",
              headers: { 
                "Content-Type": "application/json",
@@ -365,7 +404,7 @@ export default function FormBuilder({
         }
       }
 
-      onSave(sections);
+      onSave(normalizedSections);
       alert("Form schema saved and synced successfully!");
     } catch (err: any) {
       console.error(err);

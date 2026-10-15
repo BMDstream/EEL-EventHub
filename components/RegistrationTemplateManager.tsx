@@ -4,7 +4,8 @@ import { useState, useEffect } from "react";
 import { 
   Plus, Trash2, Copy, Save, Loader2, Edit3, Type, CheckSquare, 
   List, Palette, FileText, CheckCircle2, AlertCircle, ChevronRight, XCircle,
-  ArrowUp, ArrowDown, Layout, HelpCircle, Mail, Award, Eye, EyeOff, ChevronDown
+  ArrowUp, ArrowDown, Layout, HelpCircle, Mail, Award, Eye, EyeOff, ChevronDown,
+  Sparkles, RefreshCw
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSession } from "next-auth/react";
@@ -105,6 +106,16 @@ export default function RegistrationTemplateManager() {
   const { data: session } = useSession();
   const isAdmin = (session?.user as any)?.role === "admin";
 
+  const toSlug = (text: string) => 
+    (text || "").toLowerCase().replace(/<[^>]*>/g, "").replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+
+  const [templates, setTemplates] = useState<RegistrationFormTemplate[]>([]);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [selectedTemplate, setSelectedTemplate] = useState<RegistrationFormTemplate | null>(null);
+  const [dragOverFieldId, setDragOverFieldId] = useState<string | null>(null);
+  const [eventsList, setEventsList] = useState<any[]>([]);
+  const [selectedEventIdForSync, setSelectedEventIdForSync] = useState<string>("");
+
   const compileOperatorPreviewText = (layoutText: string) => {
     if (!layoutText || !selectedTemplate) return "";
     let compiled = layoutText;
@@ -114,7 +125,8 @@ export default function RegistrationTemplateManager() {
       last_name: "Doe",
       email: "john.doe@example.com",
       company: "Excellence Logistics",
-      clearance_id: "EEL-1234"
+      clearance_id: "EEL-1234",
+      registration_date: new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
     };
     
     Object.entries(standards).forEach(([key, val]) => {
@@ -122,14 +134,43 @@ export default function RegistrationTemplateManager() {
       compiled = compiled.replace(regex, val);
     });
     
-    (selectedTemplate.layout_schema || []).forEach(f => {
+    const candidateFields: any[] = [];
+    if (Array.isArray(selectedTemplate.layout_schema)) {
+      selectedTemplate.layout_schema.forEach((item: any) => {
+        if (item && Array.isArray(item.fields)) {
+          candidateFields.push(...item.fields);
+        } else if (item) {
+          candidateFields.push(item);
+        }
+      });
+    }
+
+    // Also pull fields from eventsList to match all preview tokens
+    eventsList.forEach((ev: any) => {
+      if (Array.isArray(ev.custom_fields_schema)) {
+        ev.custom_fields_schema.forEach((item: any) => {
+          if (item && Array.isArray(item.fields)) {
+            candidateFields.push(...item.fields);
+          } else if (item && item.type !== "section_header") {
+            candidateFields.push(item);
+          }
+        });
+      }
+    });
+
+    candidateFields.forEach(f => {
       const fieldKey = f.key || f.id;
       const fieldLabel = (f.label || "").replace(/<[^>]*>/g, "").trim();
-      const mockVal = f.type === "partner_card" ? "VIP" : f.options?.[0] || "Sample Answer";
+      const slugKey = toSlug(f.label || f.key || f.id || "");
+      const mockVal = f.type === "partner_card" ? "VIP Player" : f.options?.[0] || "Sample Answer";
       
       if (fieldKey) {
         const keyRegex = new RegExp(`\\[${fieldKey}\\]`, "gi");
         compiled = compiled.replace(keyRegex, mockVal);
+      }
+      if (slugKey) {
+        const slugRegex = new RegExp(`\\[${slugKey}\\]`, "gi");
+        compiled = compiled.replace(slugRegex, mockVal);
       }
       if (fieldLabel) {
         const escapedLabel = fieldLabel.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
@@ -140,11 +181,6 @@ export default function RegistrationTemplateManager() {
     
     return compiled;
   };
-
-  const [templates, setTemplates] = useState<RegistrationFormTemplate[]>([]);
-  const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [selectedTemplate, setSelectedTemplate] = useState<RegistrationFormTemplate | null>(null);
-  const [dragOverFieldId, setDragOverFieldId] = useState<string | null>(null);
 
   const uploadImageFile = async (file: File): Promise<string> => {
     const formData = new FormData();
@@ -343,11 +379,88 @@ export default function RegistrationTemplateManager() {
     }
   };
 
+  const loadEvents = async () => {
+    if (!session?.user?.email) return;
+    try {
+      const res = await fetch("/api/py/events", {
+        headers: { "x-user-email": session.user.email }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setEventsList(Array.isArray(data) ? data : []);
+      }
+    } catch (e) {
+      console.warn("Failed to load events for question sync", e);
+    }
+  };
+
   useEffect(() => {
     if (session?.user?.email) {
       loadTemplates();
+      loadEvents();
     }
   }, [session?.user?.email]);
+
+  const handlePullEventQuestions = (eventIdStr: string) => {
+    setSelectedEventIdForSync(eventIdStr);
+    if (!eventIdStr || !selectedTemplate) return;
+    
+    const ev = eventsList.find(e => String(e.id) === String(eventIdStr));
+    if (!ev) return;
+    
+    const schema = ev.custom_fields_schema || [];
+    const pulledFields: any[] = [];
+    if (Array.isArray(schema)) {
+      schema.forEach((item: any) => {
+        if (item && Array.isArray(item.fields)) {
+          pulledFields.push(...item.fields);
+        } else if (item && item.type !== "section_header") {
+          pulledFields.push(item);
+        }
+      });
+    }
+
+    if (pulledFields.length === 0) {
+      showNotification("error", `No custom questions found in "${ev.title}" Form Studio yet.`);
+      return;
+    }
+
+    // Preserve standard fields (first_name, last_name, email, company)
+    const currentStandards = (selectedTemplate.layout_schema || []).filter(
+      (f: any) => ["first_name", "last_name", "email", "company"].includes(f.key || f.id)
+    );
+
+    const formattedNewFields = pulledFields.map(f => ({
+      ...f,
+      key: f.key || toSlug(f.label) || f.id,
+      label: (f.label || "").replace(/<[^>]*>/g, "").trim()
+    }));
+
+    const updatedSchema = [...currentStandards, ...formattedNewFields];
+    
+    // Auto generate cleaner card layout text if existing is empty or uses old legacy padel tokens
+    let newLayoutText = selectedTemplate.operator_config?.card_layout_text || "";
+    const hasLegacyTokens = newLayoutText.includes("[entry_role]") || newLayoutText.includes("[padel_category]") || !newLayoutText.trim();
+    if (hasLegacyTokens) {
+      const questionLines = formattedNewFields
+        .filter(f => !["first_name", "last_name", "email", "company"].includes(f.key || f.id))
+        .map(f => `*${f.label}:* [${f.key || toSlug(f.label) || f.id}]`)
+        .join("\n");
+
+      newLayoutText = `*Attendee Details:*\n*Name:* [first_name] [last_name]\n*Company:* [company]\n*Clearance:* [clearance_id]\n\n*Form Responses:*\n${questionLines}`;
+    }
+
+    setSelectedTemplate({
+      ...selectedTemplate,
+      layout_schema: updatedSchema,
+      operator_config: {
+        ...selectedTemplate.operator_config,
+        card_layout_text: newLayoutText
+      }
+    });
+    setHasUnsavedChanges(true);
+    showNotification("success", `Pulled ${pulledFields.length} questions from "${ev.title}" Form Studio!`);
+  };
 
   const showNotification = (type: "success" | "error", text: string) => {
     setNotification({ type, text });
@@ -1888,14 +2001,51 @@ export default function RegistrationTemplateManager() {
 
                   {editorTab === "operator" && (
                     <div className="space-y-6 animate-in fade-in duration-300">
-                      <h4 className="text-xs font-black uppercase text-slate-400 pb-2 border-b border-slate-100 dark:border-slate-800">
-                        Custom Operator Check-In Screen Builder
-                      </h4>
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800 gap-2">
+                        <h4 className="text-xs font-black uppercase text-slate-400">
+                          Custom Operator Check-In Screen Builder
+                        </h4>
+                        <span className="text-[10px] font-bold text-slate-400">
+                          Pulls live fields from your Event Form Studio
+                        </span>
+                      </div>
 
                       <div className="space-y-4">
-                        <p className="text-[10px] text-slate-500">
-                          Type and design your check-in card display layout. Wrap any field names or custom question labels/keys in brackets (e.g. <code className="bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded font-mono text-[9px] font-bold">[first_name]</code>) to dynamically inject attendee answers when passes are scanned.
-                        </p>
+                        {/* Event Question Sync Selector */}
+                        <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/20 space-y-3">
+                          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                            <div className="space-y-0.5">
+                              <div className="flex items-center gap-2">
+                                <Sparkles size={16} className="text-amber-500" />
+                                <span className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-white">
+                                  Pull Questions from Event Form Studio
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                                Select an event below to pull its exact Form Studio questions and tokens into this operator check-in layout.
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2 w-full sm:w-auto">
+                              <select
+                                value={selectedEventIdForSync}
+                                onChange={(e) => handlePullEventQuestions(e.target.value)}
+                                className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-400 cursor-pointer"
+                              >
+                                <option value="">-- Choose Event to Pull Questions --</option>
+                                {eventsList.map((ev: any) => {
+                                  const qCount = Array.isArray(ev.custom_fields_schema) 
+                                    ? ev.custom_fields_schema.reduce((acc: number, s: any) => acc + (s.fields?.length || 0), 0)
+                                    : 0;
+                                  return (
+                                    <option key={ev.id} value={ev.id}>
+                                      {ev.title} ({qCount} question{qCount === 1 ? "" : "s"})
+                                    </option>
+                                  );
+                                })}
+                              </select>
+                            </div>
+                          </div>
+                        </div>
 
                         <div className="space-y-2">
                           <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block ml-1">
@@ -1918,61 +2068,167 @@ export default function RegistrationTemplateManager() {
                         </div>
 
                         <div className="space-y-2">
-                          <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
-                            Display Card Content Layout Editor
-                          </label>
+                          <div className="flex items-center justify-between">
+                            <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
+                              Display Card Content Layout Editor
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const allCandidateQuestions: Array<{ label: string, token: string }> = [];
+                                
+                                // Selected event schema or eventsList
+                                const targetEvent = eventsList.find(e => String(e.id) === String(selectedEventIdForSync)) || eventsList[0];
+                                if (targetEvent && Array.isArray(targetEvent.custom_fields_schema)) {
+                                  targetEvent.custom_fields_schema.forEach((s: any) => {
+                                    (s.fields || []).forEach((f: any) => {
+                                      const label = (f.label || "").replace(/<[^>]*>/g, "").trim();
+                                      const token = `[${f.key || toSlug(label) || f.id}]`;
+                                      if (label && !["first_name", "last_name", "email", "company"].includes(token.slice(1, -1))) {
+                                        allCandidateQuestions.push({ label, token });
+                                      }
+                                    });
+                                  });
+                                } else if (Array.isArray(selectedTemplate.layout_schema)) {
+                                  selectedTemplate.layout_schema.forEach((item: any) => {
+                                    const fs = Array.isArray(item.fields) ? item.fields : [item];
+                                    fs.forEach((f: any) => {
+                                      const label = (f.label || "").replace(/<[^>]*>/g, "").trim();
+                                      const token = `[${f.key || toSlug(label) || f.id}]`;
+                                      if (label && !["first_name", "last_name", "email", "company"].includes(token.slice(1, -1))) {
+                                        allCandidateQuestions.push({ label, token });
+                                      }
+                                    });
+                                  });
+                                }
+
+                                const questionsText = allCandidateQuestions
+                                  .map(q => `*${q.label}:* ${q.token}`)
+                                  .join("\n");
+
+                                const fullTemplate = `*Attendee Details:*\n*Name:* [first_name] [last_name]\n*Company:* [company]\n*Pass Code:* [clearance_id]\n\n*Form Responses:*\n${questionsText || "*Questions:* [custom_responses]"}`;
+                                updateOperatorConfig("card_layout_text", fullTemplate);
+                                showNotification("success", "Populated layout with exact event Form Studio questions!");
+                              }}
+                              className="text-[9px] font-black text-amber-500 hover:text-amber-600 dark:hover:text-amber-400 uppercase tracking-widest cursor-pointer underline flex items-center gap-1"
+                            >
+                              <Sparkles size={11} />
+                              Auto-Fill Layout with Form Questions
+                            </button>
+                          </div>
                           <textarea
                             value={selectedTemplate.operator_config?.card_layout_text || ""}
                             onChange={(e) => updateOperatorConfig("card_layout_text", e.target.value)}
-                            placeholder={`Name: [first_name] [last_name]\nCompany: [company]\nDietary Requirements: [dietary_requirements]`}
-                            className="w-full h-36 px-4 py-3 rounded-2xl bg-white border border-slate-200 focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400 outline-none font-bold text-sm text-[#0f172a] dark:bg-slate-900 dark:border-slate-800 dark:text-white font-mono leading-relaxed"
+                            placeholder={`*Attendee Details:*\n*Name:* [first_name] [last_name]\n*Company:* [company]\n*Pass Code:* [clearance_id]\n\n*Form Responses:*\n*Which sport will you be playing:* [which_sport_will_you_be_playing]\n*T-Shirt Size:* [t_shirt_size]`}
+                            className="w-full h-44 px-4 py-3 rounded-2xl bg-white border border-slate-200 focus:border-amber-400 focus:ring-1 focus:ring-amber-400 outline-none font-bold text-sm text-[#0f172a] dark:bg-slate-900 dark:border-slate-800 dark:text-white font-mono leading-relaxed"
                           />
                         </div>
 
-                        <div className="space-y-3">
-                          <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
-                            Available Field Tokens (Click to insert)
-                          </span>
-                          
-                          <div className="flex flex-wrap gap-2">
-                             {[
-                              { label: "First Name", token: "[first_name]" },
-                              { label: "Last Name", token: "[last_name]" },
-                              { label: "Email Address", token: "[email]" },
-                              { label: "Company", token: "[company]" },
-                              { label: "Clearance ID", token: "[clearance_id]" },
-                              ...(() => {
-                                const fields: any[] = [];
-                                if (Array.isArray(selectedTemplate.layout_schema)) {
-                                  selectedTemplate.layout_schema.forEach((item: any) => {
-                                    if (item && Array.isArray(item.fields)) {
-                                      fields.push(...item.fields);
-                                    } else if (item) {
-                                      fields.push(item);
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
+                              Standard Attendee Tokens (Click to insert)
+                            </span>
+                            <div className="flex flex-wrap gap-2">
+                              {[
+                                { label: "First Name", token: "[first_name]" },
+                                { label: "Last Name", token: "[last_name]" },
+                                { label: "Email Address", token: "[email]" },
+                                { label: "Organization / Company", token: "[company]" },
+                                { label: "Clearance ID / PIN", token: "[clearance_id]" },
+                                { label: "Registration Date", token: "[registration_date]" }
+                              ].map((item, idx) => (
+                                <button
+                                  key={idx}
+                                  type="button"
+                                  onClick={() => {
+                                    const currentText = selectedTemplate.operator_config?.card_layout_text || "";
+                                    updateOperatorConfig("card_layout_text", currentText ? currentText + " " + item.token : item.token);
+                                  }}
+                                  className="px-3 py-1.5 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-900/10 dark:hover:bg-slate-900/30 text-[10px] font-black text-slate-700 dark:text-slate-300 transition-all active:scale-95"
+                                >
+                                  {item.label} <code className="text-yellow-500 font-mono font-bold text-[9px] ml-1">{item.token}</code>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Event Questions Tokens */}
+                          {(() => {
+                            const eventQuestions: Array<{ label: string, token: string, source: string }> = [];
+                            const seenTokens = new Set<string>();
+
+                            // 1. From selected event or all events
+                            const targetEvents = selectedEventIdForSync 
+                              ? eventsList.filter(e => String(e.id) === String(selectedEventIdForSync))
+                              : eventsList;
+
+                            targetEvents.forEach((ev: any) => {
+                              if (Array.isArray(ev.custom_fields_schema)) {
+                                ev.custom_fields_schema.forEach((s: any) => {
+                                  (s.fields || []).forEach((f: any) => {
+                                    const label = (f.label || "").replace(/<[^>]*>/g, "").trim();
+                                    const token = `[${f.key || toSlug(label) || f.id}]`;
+                                    if (label && !["[first_name]", "[last_name]", "[email]", "[company]", "[clearance_id]"].includes(token) && !seenTokens.has(token)) {
+                                      seenTokens.add(token);
+                                      eventQuestions.push({ label, token, source: ev.title || "Form Studio" });
                                     }
                                   });
-                                }
-                                return fields
-                                  .filter(f => f && (f.key || f.id) && !["first_name", "last_name", "email", "company"].includes(f.key || f.id))
-                                  .map(f => ({
-                                    label: (f.label || "").replace(/<[^>]*>/g, "").trim(),
-                                    token: `[${f.key || f.id}]`
-                                  }));
-                              })()
-                            ].map((item, idx) => (
-                              <button
-                                key={idx}
-                                type="button"
-                                onClick={() => {
-                                  const currentText = selectedTemplate.operator_config?.card_layout_text || "";
-                                  updateOperatorConfig("card_layout_text", currentText ? currentText + " " + item.token : item.token);
-                                }}
-                                className="px-3 py-1.5 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-900/10 dark:hover:bg-slate-900/30 text-[10px] font-black text-slate-700 dark:text-slate-300 transition-all active:scale-95"
-                              >
-                                {item.label} <code className="text-yellow-500 font-mono font-bold text-[9px] ml-1">{item.token}</code>
-                              </button>
-                            ))}
-                          </div>
+                                });
+                              }
+                            });
+
+                            // 2. From template layout schema
+                            if (Array.isArray(selectedTemplate.layout_schema)) {
+                              selectedTemplate.layout_schema.forEach((item: any) => {
+                                const fs = Array.isArray(item.fields) ? item.fields : [item];
+                                fs.forEach((f: any) => {
+                                  if (f && (f.key || f.id)) {
+                                    const label = (f.label || "").replace(/<[^>]*>/g, "").trim();
+                                    const token = `[${f.key || toSlug(label) || f.id}]`;
+                                    if (label && !["[first_name]", "[last_name]", "[email]", "[company]", "[clearance_id]"].includes(token) && !seenTokens.has(token)) {
+                                      seenTokens.add(token);
+                                      eventQuestions.push({ label, token, source: "Template" });
+                                    }
+                                  }
+                                });
+                              });
+                            }
+
+                            if (eventQuestions.length === 0) return null;
+
+                            return (
+                              <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-[9px] font-black uppercase tracking-wider text-amber-500 flex items-center gap-1.5">
+                                    <Sparkles size={11} /> Questions from Event Form Studio (Click to insert)
+                                  </span>
+                                  <span className="text-[9px] text-slate-400 font-bold">
+                                    {eventQuestions.length} Form Question{eventQuestions.length === 1 ? "" : "s"}
+                                  </span>
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                  {eventQuestions.map((item, idx) => (
+                                    <button
+                                      key={`ev-q-${idx}`}
+                                      type="button"
+                                      onClick={() => {
+                                        const currentText = selectedTemplate.operator_config?.card_layout_text || "";
+                                        updateOperatorConfig("card_layout_text", currentText ? currentText + " " + item.token : item.token);
+                                      }}
+                                      className="px-3 py-1.5 rounded-xl border border-amber-200 dark:border-amber-800/60 bg-amber-50/50 hover:bg-amber-100/60 dark:bg-amber-950/20 dark:hover:bg-amber-950/40 text-[10px] font-black text-amber-900 dark:text-amber-200 transition-all active:scale-95 flex items-center gap-1.5"
+                                      title={`Source: ${item.source}`}
+                                    >
+                                      <span>{item.label}</span>
+                                      <code className="text-amber-600 dark:text-amber-400 font-mono font-bold text-[9px] bg-amber-100 dark:bg-amber-900/40 px-1 py-0.5 rounded">
+                                        {item.token}
+                                      </code>
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            );
+                          })()}
                         </div>
                       </div>
                     </div>

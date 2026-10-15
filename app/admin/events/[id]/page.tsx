@@ -38,7 +38,8 @@ import {
   FileSpreadsheet,
   Layers,
   Info,
-  Presentation
+  Presentation,
+  Save
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import AdminLayout from "@/components/AdminLayout";
@@ -212,6 +213,50 @@ export default function EventDetailsPage() {
   const [isPresentationOpen, setIsPresentationOpen] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isMounted, setIsMounted] = useState(false);
+  const [isOperatorConfigOpen, setIsOperatorConfigOpen] = useState(false);
+  const [operatorCardLayoutText, setOperatorCardLayoutText] = useState("");
+  const [operatorSuccessBgColor, setOperatorSuccessBgColor] = useState("#0f172a");
+  const [isSavingOperatorConfig, setIsSavingOperatorConfig] = useState(false);
+
+  useEffect(() => {
+    if (event) {
+      const opConfig = (event as any)?.operator_config?.card_layout_text 
+        ? (event as any).operator_config 
+        : (event.registration_form_template?.operator_config || {});
+      setOperatorCardLayoutText(opConfig.card_layout_text || "");
+      setOperatorSuccessBgColor(opConfig.success_bg_color || "#0f172a");
+    }
+  }, [event]);
+
+  const handleSaveOperatorConfig = async () => {
+    if (!id) return;
+    setIsSavingOperatorConfig(true);
+    try {
+      const updatedConfig = {
+        card_layout_text: operatorCardLayoutText,
+        success_bg_color: operatorSuccessBgColor
+      };
+      const res = await fetch(`/api/py/events/${id}/form-schema`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-email": session?.user?.email || ""
+        },
+        body: JSON.stringify({
+          custom_fields_schema: event?.custom_fields_schema || [],
+          operator_config: updatedConfig
+        })
+      });
+      if (!res.ok) throw new Error("Failed to save operator configuration");
+      setEvent(prev => prev ? { ...prev, operator_config: updatedConfig } as any : null);
+      alert("Operator check-in card layout saved successfully!");
+    } catch (e: any) {
+      console.error(e);
+      alert(e.message || "Failed to save configuration");
+    } finally {
+      setIsSavingOperatorConfig(false);
+    }
+  };
 
   useEffect(() => {
     setIsMounted(true);
@@ -535,12 +580,7 @@ export default function EventDetailsPage() {
   const formatOperatorFields = (reg: any): Array<{ label: string, value: string }> => {
     if (!reg || !event) return [];
     const template = event?.registration_form_template;
-    const opConfig = template?.operator_config;
-    
-    // Fallback standard fields
-    const displayFields = opConfig?.display_fields && opConfig.display_fields.length > 0 
-      ? opConfig.display_fields 
-      : ["first_name", "last_name", "email", "company"];
+    const opConfig = (event as any)?.operator_config || template?.operator_config;
 
     const activeSchema = (event?.custom_fields_schema && event.custom_fields_schema.length > 0)
       ? event.custom_fields_schema
@@ -554,9 +594,15 @@ export default function EventDetailsPage() {
       flatFields = activeSchema;
     }
 
+    // Fallback standard fields + event custom questions
+    const displayFields = opConfig?.display_fields && opConfig.display_fields.length > 0 
+      ? opConfig.display_fields 
+      : ["first_name", "last_name", "email", "company", ...flatFields.map(f => f.key || f.id)];
+
     const fieldMap = new Map<string, any>();
     for (const f of flatFields) {
-      fieldMap.set(f.key || f.id, f);
+      if (f.key) fieldMap.set(f.key, f);
+      if (f.id) fieldMap.set(f.id, f);
     }
 
     const standardLabels: Record<string, string> = {
@@ -576,7 +622,7 @@ export default function EventDetailsPage() {
       if (["first_name", "last_name", "email", "company"].includes(fieldKey)) {
         val = reg.attendee?.[fieldKey] || "";
       } else {
-        val = reg.custom_answers?.[fieldKey] || reg.custom_answers?.[fieldDef?.id] || "";
+        val = getCustomAnswer(reg.custom_answers, fieldDef || { id: fieldKey, key: fieldKey, label: fieldKey });
         if (typeof val === "boolean") {
           val = val ? "Yes" : "No";
         } else if (typeof val === "object" && val !== null) {
@@ -584,8 +630,8 @@ export default function EventDetailsPage() {
         }
       }
 
-      if (val) {
-        const cleanLabel = label.replace(/<[^>]*>/g, "").trim();
+      if (val !== undefined && val !== null && val !== "") {
+        const cleanLabel = String(label).replace(/<[^>]*>/g, "").trim();
         results.push({ label: cleanLabel, value: String(val) });
       }
     }
@@ -596,6 +642,9 @@ export default function EventDetailsPage() {
   const compileOperatorCustomLayout = (layoutText: string, reg: any): string => {
     if (!layoutText || !reg) return "";
     let compiled = layoutText;
+
+    const toSlug = (text: string) => 
+      (text || "").toLowerCase().replace(/<[^>]*>/g, "").replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
     
     // Resolve standard fields
     const standards: Record<string, string> = {
@@ -603,7 +652,8 @@ export default function EventDetailsPage() {
       last_name: reg.attendee?.last_name || "",
       email: reg.attendee?.email || "",
       company: reg.attendee?.company || "",
-      clearance_id: reg.pin || reg.clearance_id || ""
+      clearance_id: reg.pin || reg.clearance_id || "",
+      registration_date: reg.created_at ? new Date(reg.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : ""
     };
     
     Object.entries(standards).forEach(([key, val]) => {
@@ -636,13 +686,16 @@ export default function EventDetailsPage() {
       templateFlatFields = templateSchema;
     }
     
-    // Build a map of label (lowercase, trimmed) to answer value in reg.custom_answers
+    // Build a map of label / key / id to answer value in reg.custom_answers
     const labelToAnswer = new Map<string, any>();
     
-    eventFlatFields.forEach(f => {
-      const fieldId = f.id;
-      const fieldKey = f.key;
-      const fieldLabel = (f.label || "").replace(/<[^>]*>/g, "").trim().toLowerCase();
+    const allFields = [...eventFlatFields, ...templateFlatFields];
+    allFields.forEach(f => {
+      const fieldId = f.id ? String(f.id).toLowerCase() : "";
+      const fieldKey = f.key ? String(f.key).toLowerCase() : "";
+      const rawLabel = (f.label || "").replace(/<[^>]*>/g, "").trim();
+      const fieldLabel = rawLabel.toLowerCase();
+      const fieldSlug = toSlug(rawLabel || f.key || f.id || "");
       
       let answer = getCustomAnswer(reg.custom_answers, f);
       if (typeof answer === "boolean") {
@@ -653,8 +706,9 @@ export default function EventDetailsPage() {
       
       if (answer !== undefined && answer !== null && answer !== "") {
         if (fieldLabel) labelToAnswer.set(fieldLabel, answer);
-        if (fieldId) labelToAnswer.set(fieldId.toLowerCase(), answer);
-        if (fieldKey) labelToAnswer.set(fieldKey.toLowerCase(), answer);
+        if (fieldSlug) labelToAnswer.set(fieldSlug, answer);
+        if (fieldId) labelToAnswer.set(fieldId, answer);
+        if (fieldKey) labelToAnswer.set(fieldKey, answer);
       }
     });
 
@@ -663,56 +717,47 @@ export default function EventDetailsPage() {
     // Map standard fields
     Object.entries(standards).forEach(([key, val]) => {
       replacements.set(key.toLowerCase(), String(val));
-    });
-    
-    // Map template fields using matched answers by label or ID
-    templateFlatFields.forEach(f => {
-      const fieldId = f.id;
-      const fieldKey = f.key;
-      const fieldLabel = (f.label || "").replace(/<[^>]*>/g, "").trim().toLowerCase();
-      
-      let answer = "";
-      if (fieldLabel && labelToAnswer.has(fieldLabel)) {
-        answer = labelToAnswer.get(fieldLabel);
-      } else if (fieldId && labelToAnswer.has(fieldId.toLowerCase())) {
-        answer = labelToAnswer.get(fieldId.toLowerCase());
-      } else if (fieldKey && labelToAnswer.has(fieldKey.toLowerCase())) {
-        answer = labelToAnswer.get(fieldKey.toLowerCase());
-      } else {
-        let rawAnswer = reg.custom_answers?.[fieldId] || reg.custom_answers?.[fieldKey] || "";
-        if (typeof rawAnswer === "boolean") {
-          answer = rawAnswer ? "Yes" : "No";
-        } else if (typeof rawAnswer === "object" && rawAnswer !== null) {
-          answer = `${rawAnswer.first_name || ""} ${rawAnswer.last_name || ""}`.trim();
-        } else {
-          answer = String(rawAnswer);
-        }
-      }
-      
-      if (fieldId) replacements.set(fieldId.toLowerCase(), answer);
-      if (fieldKey) replacements.set(fieldKey.toLowerCase(), answer);
-      if (fieldLabel) replacements.set(fieldLabel, answer);
+      replacements.set(toSlug(key), String(val));
     });
 
-    // Also add all event-specific keys/labels as replacements
-    eventFlatFields.forEach(f => {
-      const fieldId = f.id;
-      const fieldKey = f.key;
-      const fieldLabel = (f.label || "").replace(/<[^>]*>/g, "").trim().toLowerCase();
-      
+    // Map all fields
+    allFields.forEach(f => {
+      const fieldId = f.id ? String(f.id).toLowerCase() : "";
+      const fieldKey = f.key ? String(f.key).toLowerCase() : "";
+      const rawLabel = (f.label || "").replace(/<[^>]*>/g, "").trim();
+      const fieldLabel = rawLabel.toLowerCase();
+      const fieldSlug = toSlug(rawLabel || f.key || f.id || "");
+
       let answer = "";
-      if (fieldId && labelToAnswer.has(fieldId.toLowerCase())) {
-        answer = labelToAnswer.get(fieldId.toLowerCase());
-      } else if (fieldKey && labelToAnswer.has(fieldKey.toLowerCase())) {
-        answer = labelToAnswer.get(fieldKey.toLowerCase());
+      if (fieldSlug && labelToAnswer.has(fieldSlug)) {
+        answer = labelToAnswer.get(fieldSlug);
       } else if (fieldLabel && labelToAnswer.has(fieldLabel)) {
         answer = labelToAnswer.get(fieldLabel);
+      } else if (fieldId && labelToAnswer.has(fieldId)) {
+        answer = labelToAnswer.get(fieldId);
+      } else if (fieldKey && labelToAnswer.has(fieldKey)) {
+        answer = labelToAnswer.get(fieldKey);
       }
-      
-      if (fieldId) replacements.set(fieldId.toLowerCase(), answer);
-      if (fieldKey) replacements.set(fieldKey.toLowerCase(), answer);
+
+      if (fieldId) replacements.set(fieldId, answer);
+      if (fieldKey) replacements.set(fieldKey, answer);
       if (fieldLabel) replacements.set(fieldLabel, answer);
+      if (fieldSlug) replacements.set(fieldSlug, answer);
     });
+
+    // Also inject all raw custom_answers keys directly
+    if (reg.custom_answers && typeof reg.custom_answers === "object") {
+      Object.entries(reg.custom_answers).forEach(([k, val]) => {
+        let cleanVal: any = val;
+        if (typeof cleanVal === "boolean") cleanVal = cleanVal ? "Yes" : "No";
+        else if (typeof cleanVal === "object" && cleanVal !== null) {
+          cleanVal = `${cleanVal.first_name || ""} ${cleanVal.last_name || ""}`.trim();
+        }
+        const strVal = String(cleanVal ?? "");
+        replacements.set(k.toLowerCase(), strVal);
+        replacements.set(toSlug(k), strVal);
+      });
+    }
 
     // Replace brackets in compiled layout text
     const matches = compiled.match(/\[([^\]]+)\]/g);
@@ -720,8 +765,15 @@ export default function EventDetailsPage() {
       matches.forEach(match => {
         const token = match.slice(1, -1).trim();
         const tokenLower = token.toLowerCase();
-        if (replacements.has(tokenLower)) {
-          const val = replacements.get(tokenLower) || "";
+        const tokenSlug = toSlug(token);
+        const tokenSpaces = tokenLower.replace(/_/g, " ");
+
+        let val: string | null = null;
+        if (replacements.has(tokenLower)) val = replacements.get(tokenLower)!;
+        else if (replacements.has(tokenSlug)) val = replacements.get(tokenSlug)!;
+        else if (replacements.has(tokenSpaces)) val = replacements.get(tokenSpaces)!;
+
+        if (val !== null) {
           const escapedToken = token.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
           const regex = new RegExp(`\\[${escapedToken}\\]`, "gi");
           compiled = compiled.replace(regex, val);
@@ -2550,13 +2602,162 @@ export default function EventDetailsPage() {
                  )}
                </div>
              </div>
+
+             {/* Custom Operator Check-in Card Layout Panel */}
+             <div className="max-w-4xl mx-auto mb-10 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 sm:p-8 shadow-sm">
+               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
+                 <div className="space-y-1">
+                   <div className="flex items-center gap-2">
+                     <Sparkles size={16} className="text-amber-500" />
+                     <h3 className="text-xs font-black uppercase tracking-[0.2em] text-[#0f172a] dark:text-white">
+                       Operator Check-In Card Layout
+                     </h3>
+                   </div>
+                   <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                     Customize what attendee details & Form Studio answers appear on screen when passes are scanned.
+                   </p>
+                 </div>
+                 <button
+                   type="button"
+                   onClick={() => setIsOperatorConfigOpen(!isOperatorConfigOpen)}
+                   className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 transition-all flex items-center gap-1.5 cursor-pointer"
+                 >
+                   <span>{isOperatorConfigOpen ? "Hide Builder" : "Customize Card Layout"}</span>
+                 </button>
+               </div>
+
+               {isOperatorConfigOpen && (
+                 <div className="mt-6 space-y-6 animate-in fade-in duration-300">
+                   <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
+                     <div className="space-y-1.5">
+                       <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block ml-1">
+                         Card Background Color
+                       </label>
+                       <div className="flex items-center gap-3">
+                         <input 
+                           type="color" 
+                           value={operatorSuccessBgColor} 
+                           onChange={(e) => setOperatorSuccessBgColor(e.target.value)}
+                           className="w-10 h-10 rounded-xl border border-slate-200 cursor-pointer p-0 bg-transparent shrink-0" 
+                         />
+                         <input 
+                           type="text" 
+                           value={operatorSuccessBgColor} 
+                           onChange={(e) => setOperatorSuccessBgColor(e.target.value)}
+                           className="w-24 shrink-0 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 font-mono font-bold text-xs bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white" 
+                         />
+                       </div>
+                     </div>
+
+                     <div className="flex items-center gap-3 pt-4 sm:pt-0 sm:ml-auto">
+                       <button
+                         type="button"
+                         onClick={() => {
+                           const eventCustomQuestions: Array<{ label: string, token: string }> = [];
+                           if (event && Array.isArray(event.custom_fields_schema)) {
+                             event.custom_fields_schema.forEach((s: any) => {
+                               (s.fields || []).forEach((f: any) => {
+                                 const label = (f.label || "").replace(/<[^>]*>/g, "").trim();
+                                 const slug = (f.label || "").toLowerCase().replace(/<[^>]*>/g, "").replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+                                 const token = `[${f.key || slug || f.id}]`;
+                                 if (label && !["[first_name]", "[last_name]", "[email]", "[company]", "[clearance_id]"].includes(token)) {
+                                   eventCustomQuestions.push({ label, token });
+                                 }
+                               });
+                             });
+                           }
+                           const questionLines = eventCustomQuestions.map(q => `*${q.label}:* ${q.token}`).join("\n");
+                           const template = `*Attendee Details:*\n*Name:* [first_name] [last_name]\n*Company:* [company]\n*Pass Code:* [clearance_id]\n\n*Form Responses:*\n${questionLines || "*Questions:* [custom_responses]"}`;
+                           setOperatorCardLayoutText(template);
+                         }}
+                         className="px-4 py-2.5 rounded-xl border border-amber-300 dark:border-amber-700/60 bg-amber-50 dark:bg-amber-950/20 text-[10px] font-black uppercase tracking-wider text-amber-900 dark:text-amber-200 hover:bg-amber-100 transition-all flex items-center gap-1.5 cursor-pointer"
+                       >
+                         <Sparkles size={12} />
+                         Auto-Fill with Event Questions
+                       </button>
+
+                       <button
+                         type="button"
+                         onClick={handleSaveOperatorConfig}
+                         disabled={isSavingOperatorConfig}
+                         className="px-5 py-2.5 rounded-xl bg-[#0f172a] hover:bg-black dark:bg-amber-400 dark:hover:bg-amber-500 text-white dark:text-[#0f172a] text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer shadow-md disabled:opacity-50"
+                       >
+                         {isSavingOperatorConfig ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
+                         Save Card Layout
+                       </button>
+                     </div>
+                   </div>
+
+                   <div className="space-y-2">
+                     <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block ml-1">
+                       Display Layout Text (Supports Tokens)
+                     </label>
+                     <textarea
+                       value={operatorCardLayoutText}
+                       onChange={(e) => setOperatorCardLayoutText(e.target.value)}
+                       placeholder={`*Attendee Details:*\n*Name:* [first_name] [last_name]\n*Company:* [company]\n*Pass Code:* [clearance_id]`}
+                       className="w-full h-36 px-4 py-3 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 font-mono font-bold text-xs text-[#0f172a] dark:text-white outline-none focus:ring-2 focus:ring-amber-400 leading-relaxed"
+                     />
+                   </div>
+
+                   {/* Available Tokens */}
+                   <div className="space-y-3">
+                     <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block ml-1">
+                       Available Tokens from this Event (Click to insert)
+                     </span>
+                     <div className="flex flex-wrap gap-2">
+                       {[
+                         { label: "First Name", token: "[first_name]" },
+                         { label: "Last Name", token: "[last_name]" },
+                         { label: "Email Address", token: "[email]" },
+                         { label: "Company", token: "[company]" },
+                         { label: "Clearance ID", token: "[clearance_id]" },
+                         { label: "Registration Date", token: "[registration_date]" },
+                         ...(() => {
+                           const qs: Array<{ label: string, token: string }> = [];
+                           const seen = new Set<string>();
+                           if (event && Array.isArray(event.custom_fields_schema)) {
+                             event.custom_fields_schema.forEach((s: any) => {
+                               (s.fields || []).forEach((f: any) => {
+                                 const label = (f.label || "").replace(/<[^>]*>/g, "").trim();
+                                 const slug = (f.label || "").toLowerCase().replace(/<[^>]*>/g, "").replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+                                 const token = `[${f.key || slug || f.id}]`;
+                                 if (label && !["[first_name]", "[last_name]", "[email]", "[company]", "[clearance_id]"].includes(token) && !seen.has(token)) {
+                                   seen.add(token);
+                                   qs.push({ label, token });
+                                 }
+                               });
+                             });
+                           }
+                           return qs;
+                         })()
+                       ].map((t, idx) => (
+                         <button
+                           key={idx}
+                           type="button"
+                           onClick={() => {
+                             setOperatorCardLayoutText(prev => prev ? `${prev} ${t.token}` : t.token);
+                           }}
+                           className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-[10px] font-black text-slate-700 dark:text-slate-300 transition-all active:scale-95"
+                         >
+                           {t.label} <code className="text-amber-500 font-mono font-bold text-[9px] ml-1">{t.token}</code>
+                         </button>
+                       ))}
+                     </div>
+                   </div>
+                 </div>
+               )}
+             </div>
              
              <div className="max-w-4xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
                <div className="space-y-8">
                  <div className="bg-slate-50 p-8 rounded-[2rem] border border-slate-100">
                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 ml-1">QR Verification</h3>
                    <QRScanner 
-                     operatorConfig={event?.registration_form_template?.operator_config}
+                     operatorConfig={{
+                       card_layout_text: operatorCardLayoutText || (event as any)?.operator_config?.card_layout_text || event?.registration_form_template?.operator_config?.card_layout_text,
+                       success_bg_color: operatorSuccessBgColor || (event as any)?.operator_config?.success_bg_color || event?.registration_form_template?.operator_config?.success_bg_color || "#22c55e"
+                     }}
                      onScan={async (regId) => {
                        const targetDay = selectedScanDay === "auto" ? 1 : selectedScanDay;
                        
@@ -2593,8 +2794,8 @@ export default function EventDetailsPage() {
                          return {
                            ...resultObj,
                            operator_fields: formatOperatorFields(resultObj),
-                           card_layout_text: event?.registration_form_template?.operator_config?.card_layout_text 
-                             ? compileOperatorCustomLayout(event.registration_form_template.operator_config.card_layout_text, resultObj)
+                           card_layout_text: (operatorCardLayoutText || (event as any)?.operator_config?.card_layout_text || event?.registration_form_template?.operator_config?.card_layout_text)
+                             ? compileOperatorCustomLayout(operatorCardLayoutText || (event as any)?.operator_config?.card_layout_text || event?.registration_form_template?.operator_config?.card_layout_text, resultObj)
                              : null
                          };
                        }
@@ -2624,8 +2825,8 @@ export default function EventDetailsPage() {
                        return {
                          ...updated,
                          operator_fields: formatOperatorFields(updated),
-                         card_layout_text: event?.registration_form_template?.operator_config?.card_layout_text 
-                           ? compileOperatorCustomLayout(event.registration_form_template.operator_config.card_layout_text, updated)
+                         card_layout_text: (operatorCardLayoutText || (event as any)?.operator_config?.card_layout_text || event?.registration_form_template?.operator_config?.card_layout_text)
+                           ? compileOperatorCustomLayout(operatorCardLayoutText || (event as any)?.operator_config?.card_layout_text || event?.registration_form_template?.operator_config?.card_layout_text, updated)
                            : null
                        };
                      }}
@@ -2759,7 +2960,7 @@ export default function EventDetailsPage() {
                      <div 
                         style={{
                           backgroundColor: pinStatus === "success"
-                            ? (event?.registration_form_template?.operator_config?.success_bg_color || "#22c55e")
+                            ? (operatorSuccessBgColor || (event as any)?.operator_config?.success_bg_color || event?.registration_form_template?.operator_config?.success_bg_color || "#22c55e")
                             : pinStatus === "warning"
                             ? "#f97316"
                             : pinStatus === "error"
@@ -2777,10 +2978,10 @@ export default function EventDetailsPage() {
                           <p className="text-xl font-black italic uppercase tracking-tighter font-bricolage leading-tight">{pinMessage}</p>
                           {(pinStatus === "success" || pinStatus === "warning") && checkedInReg && (
                              <>
-                               {event?.registration_form_template?.operator_config?.card_layout_text ? (
+                               {(operatorCardLayoutText || (event as any)?.operator_config?.card_layout_text || event?.registration_form_template?.operator_config?.card_layout_text) ? (
                                  <div className="bg-white/10 p-5 rounded-2xl border border-white/5 text-left mt-6 w-full max-h-60 overflow-y-auto pr-1">
                                    <pre className="text-sm font-semibold text-white whitespace-pre-wrap font-sans leading-relaxed">
-                                     {compileOperatorCustomLayout(event.registration_form_template.operator_config.card_layout_text, checkedInReg)}
+                                     {compileOperatorCustomLayout(operatorCardLayoutText || (event as any)?.operator_config?.card_layout_text || event?.registration_form_template?.operator_config?.card_layout_text, checkedInReg)}
                                    </pre>
                                  </div>
                                ) : (
