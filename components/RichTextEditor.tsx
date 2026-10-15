@@ -149,11 +149,13 @@ export default function RichTextEditor({
       try {
         const tempDiv = document.createElement("div");
         tempDiv.innerHTML = value;
-        const styledSpan = tempDiv.querySelector("span[style]");
-        if (styledSpan) {
-          const spanEl = styledSpan as HTMLElement;
-          const fs = spanEl.style.fontSize;
-          const ff = spanEl.style.fontFamily;
+        const fullText = tempDiv.textContent?.trim() || "";
+        
+        // Prefer top-level wrapper span or element that encloses the text
+        const topEl = tempDiv.firstElementChild as HTMLElement | null;
+        if (topEl && topEl.tagName === "SPAN" && topEl.textContent?.trim() === fullText) {
+          const fs = topEl.style.fontSize;
+          const ff = topEl.style.fontFamily;
           if (fs && FONT_SIZES.includes(fs)) {
             setActiveSize(fs);
           }
@@ -162,15 +164,18 @@ export default function RichTextEditor({
             if (matched) setActiveFont(matched.value);
           }
         } else {
-          const fsMatch = value.match(/font-size:\s*(\d+px)/);
-          if (fsMatch && FONT_SIZES.includes(fsMatch[1])) {
-            setActiveSize(fsMatch[1]);
-          }
-          const ffMatch = value.match(/font-family:\s*([^;"]+)/);
-          if (ffMatch) {
-            const cleanFf = ffMatch[1].trim();
-            const matched = FONTS.find(f => f.value.includes(cleanFf) || cleanFf.includes(f.value));
-            if (matched) setActiveFont(matched.value);
+          // If no single top-level span, check if styled span exists
+          const styledSpan = tempDiv.querySelector("span[style]") as HTMLElement | null;
+          if (styledSpan && styledSpan.textContent?.trim() === fullText) {
+            const fs = styledSpan.style.fontSize;
+            const ff = styledSpan.style.fontFamily;
+            if (fs && FONT_SIZES.includes(fs)) {
+              setActiveSize(fs);
+            }
+            if (ff) {
+              const matched = FONTS.find(f => f.value.includes(ff) || ff.includes(f.value));
+              if (matched) setActiveFont(matched.value);
+            }
           }
         }
       } catch (e) {
@@ -210,38 +215,122 @@ export default function RichTextEditor({
     saveSelection();
   };
 
-  // Helper: Wraps the current highlighted selection in a styled span
-  const wrapSelectionInSpan = (styleProps: Record<string, string>) => {
-    const selection = window.getSelection();
-    if (!selection || selection.isCollapsed) return false;
+  // Helper to remove empty spans and unwrap style-less spans
+  const cleanSpans = (container: HTMLElement) => {
+    container.querySelectorAll("span").forEach(span => {
+      if (!span.textContent && !span.querySelector("img, br")) {
+        span.remove();
+        return;
+      }
+      const styleAttr = span.getAttribute("style");
+      if ((!styleAttr || styleAttr.trim() === "") && span.attributes.length <= 1) {
+        const parent = span.parentNode;
+        while (span.firstChild) {
+          parent?.insertBefore(span.firstChild, span);
+        }
+        parent?.removeChild(span);
+      }
+    });
+  };
+
+  // Helper: Applies style properties across the entire editor contents cleanly
+  const applyStyleToEntireContent = (styleProps: Record<string, string>) => {
+    if (!editorRef.current) return;
     
-    if (selection.rangeCount > 0) {
-      const range = selection.getRangeAt(0);
-      if (!editorRef.current?.contains(range.commonAncestorContainer)) return false;
+    // 1. Remove conflicting inline style properties from all descendant elements
+    Object.keys(styleProps).forEach(prop => {
+      editorRef.current!.querySelectorAll("*").forEach(node => {
+        const el = node as HTMLElement;
+        if (el.style && (el.style as any)[prop]) {
+          (el.style as any)[prop] = "";
+          const remainingStyle = el.getAttribute("style");
+          if (!remainingStyle || remainingStyle.trim() === "") {
+            el.removeAttribute("style");
+          }
+        }
+      });
+    });
+
+    cleanSpans(editorRef.current);
+    
+    // 2. Wrap all child nodes of editorRef in a single top-level span with desired styles,
+    // or update the existing top-level span wrapper if present
+    const hasContent = editorRef.current.textContent && editorRef.current.textContent.trim().length > 0;
+    if (hasContent) {
+      if (editorRef.current.children.length === 1 && editorRef.current.firstElementChild?.tagName === "SPAN") {
+        const topSpan = editorRef.current.firstElementChild as HTMLElement;
+        Object.entries(styleProps).forEach(([k, v]) => {
+          (topSpan.style as any)[k] = v;
+        });
+      } else {
+        const wrapper = document.createElement("span");
+        Object.entries(styleProps).forEach(([k, v]) => {
+          (wrapper.style as any)[k] = v;
+        });
+        while (editorRef.current.firstChild) {
+          wrapper.appendChild(editorRef.current.firstChild);
+        }
+        editorRef.current.appendChild(wrapper);
+      }
+    }
+    
+    // 3. Set base container styles so UI immediately matches
+    Object.entries(styleProps).forEach(([k, v]) => {
+      (editorRef.current!.style as any)[k] = v;
+    });
+    
+    triggerChange();
+  };
+
+  // Helper: Applies style properties to the active selection cleanly
+  const applyStyleToSelection = (styleProps: Record<string, string>) => {
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return false;
+    const range = sel.getRangeAt(0);
+    if (!editorRef.current?.contains(range.commonAncestorContainer)) return false;
+    
+    try {
+      const fragment = range.extractContents();
       
-      const span = document.createElement("span");
-      Object.entries(styleProps).forEach(([key, val]) => {
-        span.style[key as any] = val;
+      // Remove conflicting properties on extracted fragment nodes so parent style cascades
+      Object.keys(styleProps).forEach(prop => {
+        fragment.querySelectorAll?.("*").forEach(node => {
+          const el = node as HTMLElement;
+          if (el.style && (el.style as any)[prop]) {
+            (el.style as any)[prop] = "";
+            const remainingStyle = el.getAttribute("style");
+            if (!remainingStyle || remainingStyle.trim() === "") {
+              el.removeAttribute("style");
+            }
+          }
+        });
       });
       
-      try {
-        range.surroundContents(span);
-      } catch (e) {
-        const documentFragment = range.extractContents();
-        const wrapper = document.createElement("span");
-        Object.entries(styleProps).forEach(([key, val]) => {
-          wrapper.style[key as any] = val;
-        });
-        wrapper.appendChild(documentFragment);
-        range.insertNode(wrapper);
-      }
+      const wrapper = document.createElement("span");
+      Object.entries(styleProps).forEach(([k, v]) => {
+        (wrapper.style as any)[k] = v;
+      });
+      wrapper.appendChild(fragment);
+      range.insertNode(wrapper);
+      
+      // Reselect the styled wrapper
+      const newRange = document.createRange();
+      newRange.selectNodeContents(wrapper);
+      sel.removeAllRanges();
+      sel.addRange(newRange);
+      savedSelectionRef.current = newRange;
+      
+      triggerChange();
       return true;
+    } catch (e) {
+      console.error("Failed to apply style to selection:", e);
+      return false;
     }
-    return false;
   };
 
   // Helper: Ensures there is an active text selection. If collapsed/empty, selects the ENTIRE editor contents.
   const ensureSelection = () => {
+    restoreSelection();
     const sel = window.getSelection();
     if (!sel) return false;
     
@@ -290,95 +379,107 @@ export default function RichTextEditor({
   };
 
   const applyFontFamily = (fontFamily: string) => {
-    const hadSelection = ensureSelection();
     setActiveFont(fontFamily);
+    if (!editorRef.current) return;
     
-    if (hadSelection) {
-      const wrapped = wrapSelectionInSpan({ fontFamily: fontFamily });
-      if (wrapped) {
-        triggerChange();
-        return;
-      }
+    restoreSelection();
+    const sel = window.getSelection();
+    const hasHighlight = sel && sel.rangeCount > 0 && !sel.isCollapsed && 
+      sel.toString().trim().length > 0 && 
+      editorRef.current.contains(sel.getRangeAt(0).commonAncestorContainer);
+      
+    const editorText = editorRef.current.textContent?.trim() || "";
+    const selectedText = hasHighlight ? (sel?.toString().trim() || "") : "";
+    
+    if (!hasHighlight || selectedText === editorText) {
+      applyStyleToEntireContent({ fontFamily: fontFamily });
+    } else {
+      applyStyleToSelection({ fontFamily: fontFamily });
     }
-    
-    document.execCommand("insertHTML", false, `<span style="font-family: ${fontFamily};">&#8203;</span>`);
-    triggerChange();
   };
 
   const applyFontSize = (size: string) => {
-    const hadSelection = ensureSelection();
     setActiveSize(size);
+    if (!editorRef.current) return;
     
-    if (hadSelection) {
-      const wrapped = wrapSelectionInSpan({ fontSize: size });
-      if (wrapped) {
-        triggerChange();
-        return;
-      }
+    restoreSelection();
+    const sel = window.getSelection();
+    const hasHighlight = sel && sel.rangeCount > 0 && !sel.isCollapsed && 
+      sel.toString().trim().length > 0 && 
+      editorRef.current.contains(sel.getRangeAt(0).commonAncestorContainer);
+      
+    const editorText = editorRef.current.textContent?.trim() || "";
+    const selectedText = hasHighlight ? (sel?.toString().trim() || "") : "";
+    
+    if (!hasHighlight || selectedText === editorText) {
+      applyStyleToEntireContent({ fontSize: size });
+    } else {
+      applyStyleToSelection({ fontSize: size });
     }
-    
-    document.execCommand("insertHTML", false, `<span style="font-size: ${size};">&#8203;</span>`);
-    triggerChange();
   };
 
   const adjustFontSize = (increment: boolean) => {
     restoreSelection();
-    const selection = window.getSelection();
-    if (!selection) return;
+    const sel = window.getSelection();
     let currentSize = 16;
     
-    if (selection.rangeCount > 0) {
-      const range = selection.getRangeAt(0);
+    if (activeSize && activeSize.endsWith("px")) {
+      currentSize = parseFloat(activeSize) || 16;
+    } else if (sel && sel.rangeCount > 0) {
+      const range = sel.getRangeAt(0);
       let parentEl = range.commonAncestorContainer as HTMLElement;
       if (parentEl.nodeType === 3) {
         parentEl = parentEl.parentNode as HTMLElement;
       }
       const computedStyle = window.getComputedStyle(parentEl);
-      const sizeStr = computedStyle.fontSize;
-      if (sizeStr && sizeStr.endsWith("px")) {
-        currentSize = parseFloat(sizeStr);
+      if (computedStyle.fontSize && computedStyle.fontSize.endsWith("px")) {
+        currentSize = parseFloat(computedStyle.fontSize);
       }
     }
     
-    const newSize = increment ? Math.min(currentSize + 1, 96) : Math.max(currentSize - 1, 8);
+    const newSize = increment ? Math.min(currentSize + 2, 96) : Math.max(currentSize - 2, 8);
     applyFontSize(`${newSize}px`);
   };
 
   const applyFontWeight = (weight: "Light" | "Regular" | "Bold") => {
-    const hadSelection = ensureSelection();
     const weightVal = weight === "Light" ? "300" : weight === "Bold" ? "700" : "400";
+    if (!editorRef.current) return;
     
-    if (hadSelection) {
-      const wrapped = wrapSelectionInSpan({ fontWeight: weightVal });
-      if (wrapped) {
-        triggerChange();
-        return;
-      }
+    restoreSelection();
+    const sel = window.getSelection();
+    const hasHighlight = sel && sel.rangeCount > 0 && !sel.isCollapsed && 
+      sel.toString().trim().length > 0 && 
+      editorRef.current.contains(sel.getRangeAt(0).commonAncestorContainer);
+      
+    const editorText = editorRef.current.textContent?.trim() || "";
+    const selectedText = hasHighlight ? (sel?.toString().trim() || "") : "";
+    
+    if (!hasHighlight || selectedText === editorText) {
+      applyStyleToEntireContent({ fontWeight: weightVal });
+    } else {
+      applyStyleToSelection({ fontWeight: weightVal });
     }
-    
-    document.execCommand("insertHTML", false, `<span style="font-weight: ${weightVal};">&#8203;</span>`);
-    triggerChange();
   };
 
   const applyUnderline = (style: "solid" | "double" | "wavy" | "dashed" | "none") => {
-    const hadSelection = ensureSelection();
     setShowUnderlineDropdown(false);
+    if (!editorRef.current) return;
     
-    if (hadSelection) {
-      if (style === "none") {
-        document.execCommand("underline", false);
-        triggerChange();
-        return;
-      }
-      const wrapped = wrapSelectionInSpan({ textDecoration: `underline ${style}` });
-      if (wrapped) {
-        triggerChange();
-        return;
-      }
+    restoreSelection();
+    const sel = window.getSelection();
+    const hasHighlight = sel && sel.rangeCount > 0 && !sel.isCollapsed && 
+      sel.toString().trim().length > 0 && 
+      editorRef.current.contains(sel.getRangeAt(0).commonAncestorContainer);
+      
+    const textDec = style === "none" ? "none" : `underline ${style}`;
+    const editorText = editorRef.current.textContent?.trim() || "";
+    const selectedText = hasHighlight ? (sel?.toString().trim() || "") : "";
+    
+    if (!hasHighlight || selectedText === editorText) {
+      applyStyleToEntireContent({ textDecoration: textDec });
+    } else {
+      applyStyleToSelection({ textDecoration: textDec });
     }
-    
-    document.execCommand("underline", false);
-    triggerChange();
   };
 
   const applyTextColor = (color: string) => {
@@ -511,6 +612,7 @@ export default function RichTextEditor({
             <div className="shrink-0">
               <select
                 value={activeFont}
+                onMouseDown={() => saveSelection()}
                 onChange={(e) => applyFontFamily(e.target.value)}
                 className="px-2 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-[10px] font-bold outline-none cursor-pointer focus:ring-1 focus:ring-yellow-400 max-w-[110px]"
               >
@@ -524,6 +626,7 @@ export default function RichTextEditor({
             <div className="shrink-0">
               <select
                 value={activeSize}
+                onMouseDown={() => saveSelection()}
                 onChange={(e) => applyFontSize(e.target.value)}
                 className="px-2 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-[10px] font-bold outline-none cursor-pointer focus:ring-1 focus:ring-yellow-400 w-14"
               >
@@ -714,7 +817,7 @@ export default function RichTextEditor({
             updateActiveStylesFromSelection();
           }}
           onPaste={handlePaste}
-          className="w-full p-4 outline-none overflow-y-auto leading-relaxed text-sm min-h-[120px] custom-scrollbar editor-outline-helper"
+          className="w-full p-4 outline-none overflow-y-auto leading-relaxed text-sm min-h-[120px] custom-scrollbar editor-outline-helper whitespace-pre-wrap"
           style={{ minHeight, fontFamily: activeFont, fontSize: activeSize }}
         />
         

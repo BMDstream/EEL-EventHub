@@ -137,6 +137,23 @@ function parseMarkdown(text: string, theme: string = "cyber_dark") {
   return processedLines.join("");
 }
 
+function sanitizeEventTitle(rawTitle: string): string {
+  if (!rawTitle) return "";
+  let processed = rawTitle;
+  // Ensure spaces between inline tags and words are preserved
+  processed = processed.replace(/([a-zA-Z0-9])(<span)/g, "$1 $2");
+  processed = processed.replace(/(<\/span>)([a-zA-Z0-9])/g, "$1 $2");
+  return processed;
+}
+
+function getTitleClass(baseClass: string, titleHtml: string): string {
+  const hasInlineStyles = /font-size|font-family/i.test(titleHtml);
+  if (hasInlineStyles) {
+    return `${baseClass} !leading-tight !tracking-normal`;
+  }
+  return baseClass;
+}
+
 interface Client {
   id: number;
   name: string;
@@ -950,7 +967,7 @@ function PublicRegistrationPageContent() {
         </div>
       ) : null,
       rightPanel: "p-12 lg:p-24 flex flex-col justify-center bg-zinc-900/40 backdrop-blur-md border-l border-white/5 relative",
-      title: "text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black mb-6 lg:mb-10 leading-[0.9] tracking-tighter font-bricolage italic break-normal text-white relative z-10",
+      title: "text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black mb-6 lg:mb-10 leading-[1.05] tracking-tight font-bricolage italic break-normal text-white relative z-10",
       heading: "text-5xl font-black text-white mb-6 tracking-tight font-bricolage italic",
       subHeading: "text-zinc-500 text-lg font-medium leading-relaxed",
       label: "text-[10px] font-black uppercase tracking-[0.3em] text-zinc-400 ml-1",
@@ -1008,7 +1025,7 @@ function PublicRegistrationPageContent() {
         </div>
       ) : null,
       rightPanel: "p-12 lg:p-24 flex flex-col justify-center bg-white/70 backdrop-blur-md border-l border-slate-200/40 relative",
-      title: "text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black mb-6 lg:mb-10 leading-[0.9] tracking-tighter font-outfit break-normal text-slate-900 relative z-10",
+      title: "text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black mb-6 lg:mb-10 leading-[1.05] tracking-tight font-outfit break-normal text-slate-900 relative z-10",
       heading: "text-5xl font-black text-slate-900 mb-6 tracking-tight font-outfit",
       subHeading: "text-slate-500 text-lg font-medium leading-relaxed",
       label: "text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 ml-1",
@@ -1066,7 +1083,7 @@ function PublicRegistrationPageContent() {
         </div>
       ) : null,
       rightPanel: "p-12 lg:p-24 flex flex-col justify-center bg-white/5 backdrop-blur-md border-l border-white/10 relative",
-      title: "text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black mb-6 lg:mb-10 leading-[0.9] tracking-tighter font-outfit text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-100 to-indigo-200 relative z-10 break-normal",
+      title: "text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black mb-6 lg:mb-10 leading-[1.05] tracking-tight font-outfit text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-100 to-indigo-200 relative z-10 break-normal",
       heading: "text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-indigo-200 mb-6 tracking-tight font-outfit",
       subHeading: "text-indigo-200/50 text-lg font-medium leading-relaxed",
       label: "text-[10px] font-black uppercase tracking-[0.3em] text-indigo-200/70 ml-1",
@@ -1124,7 +1141,7 @@ function PublicRegistrationPageContent() {
         </div>
       ) : null,
       rightPanel: "p-12 lg:p-24 flex flex-col justify-center bg-[#fffbf0]/80 backdrop-blur-md relative border-l-[3px] border-black",
-      title: "text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black mb-6 lg:mb-10 leading-[0.9] tracking-tighter uppercase relative z-10 font-mono text-black break-normal",
+      title: "text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black mb-6 lg:mb-10 leading-[1.05] tracking-tight uppercase relative z-10 font-mono text-black break-normal",
       heading: "text-4xl font-black text-black mb-6 tracking-tight uppercase border-b-4 border-black pb-4 font-mono",
       subHeading: "text-black/80 font-mono text-base font-bold",
       label: "text-xs font-black uppercase tracking-widest text-black ml-1 block font-mono",
@@ -1250,7 +1267,7 @@ function PublicRegistrationPageContent() {
         </div>
       ) : null,
       rightPanel: "p-12 lg:p-24 flex flex-col justify-center bg-[#070114]/70 backdrop-blur-md border-l border-[#00ffff]/10 relative",
-      title: "text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black mb-6 leading-[0.9] tracking-tighter uppercase italic text-transparent bg-clip-text bg-gradient-to-r from-[#ff007f] via-[#b900ff] to-[#00ffff] drop-shadow-[0_2px_10px_rgba(255,0,127,0.4)] relative z-10 font-outfit break-normal",
+      title: "text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black mb-6 leading-[1.05] tracking-tight uppercase italic text-transparent bg-clip-text bg-gradient-to-r from-[#ff007f] via-[#b900ff] to-[#00ffff] drop-shadow-[0_2px_10px_rgba(255,0,127,0.4)] relative z-10 font-outfit break-normal",
       heading: "text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#ff007f] to-[#00ffff] mb-6 tracking-tight uppercase italic font-outfit",
       subHeading: "text-[#b900ff] text-base font-semibold tracking-wide uppercase",
       label: "text-[10px] font-black uppercase tracking-[0.25em] text-[#00ffff] ml-1 block font-outfit",
@@ -1540,7 +1557,7 @@ function PublicRegistrationPageContent() {
         </div>
       ) : null,
       rightPanel: "p-12 lg:p-24 flex flex-col justify-center bg-white relative",
-      title: "text-3xl sm:text-4xl lg:text-5xl font-outfit font-extrabold tracking-tighter text-white mb-6 uppercase italic break-normal",
+      title: "text-3xl sm:text-4xl lg:text-5xl font-outfit font-extrabold tracking-tight text-white mb-6 uppercase italic break-normal",
       heading: "text-4xl font-extrabold text-slate-900 mb-6 tracking-tight italic font-outfit",
       subHeading: "text-slate-400 text-sm font-medium leading-relaxed uppercase tracking-wider",
       label: "text-[10px] font-black uppercase tracking-[0.25em] text-slate-500 ml-1 block font-outfit",
@@ -1772,7 +1789,7 @@ function PublicRegistrationPageContent() {
         </div>
       ) : null,
       rightPanel: "p-12 lg:p-24 flex flex-col justify-center bg-slate-900/30 backdrop-blur-md relative border-l border-slate-800/50",
-      title: "text-3xl sm:text-4xl lg:text-5xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-slate-100 via-slate-300 to-slate-500 mb-6 uppercase italic font-outfit break-normal",
+      title: "text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-slate-100 via-slate-300 to-slate-500 mb-6 uppercase italic font-outfit break-normal",
       heading: "text-4xl font-black text-white mb-6 tracking-tight font-outfit italic uppercase border-b-2 border-slate-800 pb-4",
       subHeading: "text-slate-400 text-xs font-semibold tracking-wider uppercase",
       label: "text-[10px] font-black uppercase tracking-[0.25em] text-slate-400 ml-1 block font-outfit",
@@ -1837,7 +1854,7 @@ function PublicRegistrationPageContent() {
   // Sub-render blocks for dynamic layouts
   const eventInfo = event ? (
     <div className="relative z-10 my-auto py-12 lg:py-24">
-      <h1 className={style.title} dangerouslySetInnerHTML={{ __html: event.title || "" }} />
+      <h1 className={getTitleClass(style.title, event.title || "")} dangerouslySetInnerHTML={{ __html: sanitizeEventTitle(event.title || "") }} />
       <div 
         className={`text-xl mb-10 lg:mb-20 max-w-lg leading-relaxed font-medium ${style.textMuted}`}
         dangerouslySetInnerHTML={{ __html: event.description || "" }}
@@ -2428,7 +2445,7 @@ function PublicRegistrationPageContent() {
             <div className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-8 lg:p-12 relative z-10">
               <div className={`${style.centeredCard} client-form-text-custom`}>
                 <div className="mb-8 border-b border-white/10 pb-8">
-                  <h1 className={style.title} dangerouslySetInnerHTML={{ __html: event.title || "" }} />
+                  <h1 className={getTitleClass(style.title, event.title || "")} dangerouslySetInnerHTML={{ __html: sanitizeEventTitle(event.title || "") }} />
                   <div 
                     className={`text-base mb-8 max-w-xl leading-relaxed mt-4 ${style.textMuted}`}
                     dangerouslySetInnerHTML={{ __html: event.description || "" }}
@@ -2472,7 +2489,7 @@ function PublicRegistrationPageContent() {
               <div className={style.headerBlock}>
                 <div className="max-w-5xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-8">
                   <div>
-                    <h1 className={style.title} dangerouslySetInnerHTML={{ __html: event.title || "" }} />
+                    <h1 className={getTitleClass(style.title, event.title || "")} dangerouslySetInnerHTML={{ __html: sanitizeEventTitle(event.title || "") }} />
                     <div 
                       className={`text-base max-w-xl leading-relaxed mt-4 ${style.textMuted}`}
                       dangerouslySetInnerHTML={{ __html: event.description || "" }}
