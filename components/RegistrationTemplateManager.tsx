@@ -74,6 +74,8 @@ interface RegistrationFormTemplate {
     onscreen_decline_title?: string;
     onscreen_decline_description?: string;
     clearance_label?: string;
+    show_qr_code?: boolean;
+    show_pin_code?: boolean;
     success_icon_url?: string;
     decline_icon_url?: string;
     success_icon_style?: string;
@@ -406,7 +408,9 @@ export default function RegistrationTemplateManager() {
             onscreen_description: "Your registration for [Event Name] is confirmed. Verification has been dispatched to [Email Address]",
             onscreen_decline_title: "RSVP RESPONSE RECORDED.",
             onscreen_decline_description: "We have recorded that you are unable to attend [Event Name]. Thank you for letting us know.",
-            clearance_label: "unique access pass number"
+            clearance_label: "unique access pass number",
+            show_qr_code: true,
+            show_pin_code: true
           }
         })
       });
@@ -1813,6 +1817,39 @@ export default function RegistrationTemplateManager() {
                             className="w-full px-5 py-3 rounded-2xl bg-slate-50 border border-slate-100 focus:border-[#1e293b] outline-none font-bold text-[#0f172a] dark:bg-slate-800 dark:border-slate-700 dark:text-white"
                           />
                         </div>
+
+                        <div className="pt-4 border-t border-slate-100 dark:border-slate-800 space-y-3">
+                          <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-1">
+                            Confirmation Access Pass Display Options
+                          </label>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <label className="flex items-center gap-3 p-3.5 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 cursor-pointer hover:border-slate-300 dark:hover:border-slate-700 transition-all">
+                              <input 
+                                type="checkbox"
+                                checked={selectedTemplate.post_submit_config.show_qr_code !== false}
+                                onChange={(e) => updatePostSubmitConfig("show_qr_code", e.target.checked)}
+                                className="w-5 h-5 rounded text-[#0f172a] dark:text-yellow-400 focus:ring-0 border-slate-300 dark:border-slate-700 shrink-0"
+                              />
+                              <div className="space-y-0.5">
+                                <span className="text-xs font-bold text-slate-800 dark:text-white block">Display QR Code</span>
+                                <span className="text-[10px] text-slate-400 block leading-tight">Show scannable QR ticket on confirmation screen</span>
+                              </div>
+                            </label>
+
+                            <label className="flex items-center gap-3 p-3.5 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 cursor-pointer hover:border-slate-300 dark:hover:border-slate-700 transition-all">
+                              <input 
+                                type="checkbox"
+                                checked={selectedTemplate.post_submit_config.show_pin_code !== false}
+                                onChange={(e) => updatePostSubmitConfig("show_pin_code", e.target.checked)}
+                                className="w-5 h-5 rounded text-[#0f172a] dark:text-yellow-400 focus:ring-0 border-slate-300 dark:border-slate-700 shrink-0"
+                              />
+                              <div className="space-y-0.5">
+                                <span className="text-xs font-bold text-slate-800 dark:text-white block">Display PIN / Pass Code</span>
+                                <span className="text-[10px] text-slate-400 block leading-tight">Show clearance PIN and label on confirmation screen</span>
+                              </div>
+                            </label>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   )}
@@ -2275,14 +2312,37 @@ export default function RegistrationTemplateManager() {
                           dangerouslySetInnerHTML={{ __html: formatPostSubmit(selectedTemplate.post_submit_config.onscreen_description || "Your registration is confirmed.") }}
                         />
 
-                        <div className="pt-4 border-t border-slate-200/50 space-y-1">
-                          <p className="text-[8px] uppercase tracking-[0.25em] text-slate-400 font-bold">
-                            {selectedTemplate.post_submit_config.clearance_label || "unique access pass number"}
-                          </p>
-                          <p className="text-2xl font-black text-slate-800 italic tracking-tighter">
-                            EEL-987A
-                          </p>
-                        </div>
+                        {(selectedTemplate.post_submit_config.show_qr_code !== false || selectedTemplate.post_submit_config.show_pin_code !== false) && (
+                          <div className="pt-4 border-t border-slate-200/50 space-y-3">
+                            {selectedTemplate.post_submit_config.show_qr_code !== false && (
+                              <div className="flex justify-center my-2">
+                                <div className="bg-white p-2 rounded-xl border border-slate-200/50 shadow-sm inline-block">
+                                  <div className="w-20 h-20 border-2 border-dashed border-slate-300 rounded-lg flex items-center justify-center text-[9px] font-mono font-bold text-slate-400">
+                                    [QR Code]
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                            {selectedTemplate.post_submit_config.show_pin_code !== false && (
+                              <div className="space-y-1">
+                                <p className="text-[8px] uppercase tracking-[0.25em] text-slate-400 font-bold">
+                                  {selectedTemplate.post_submit_config.clearance_label || "unique access pass number"}
+                                </p>
+                                <p className="text-2xl font-black text-slate-800 italic tracking-tighter">
+                                  EEL-987A
+                                </p>
+                              </div>
+                            )}
+                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest text-center">
+                              {selectedTemplate.post_submit_config.show_qr_code !== false && selectedTemplate.post_submit_config.show_pin_code !== false
+                                ? "Please present this QR code OR number at the registration desk."
+                                : selectedTemplate.post_submit_config.show_qr_code !== false
+                                  ? "Please present this QR code at the registration desk."
+                                  : "Please present this number at the registration desk."
+                              }
+                            </p>
+                          </div>
+                        )}
                       </div>
                     );
                   })()

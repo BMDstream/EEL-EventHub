@@ -489,6 +489,8 @@ export default function EditEventPage() {
     decline_template_key: "global",
     decline_template_id: null as number | null,
     registration_form_template_id: null as number | null,
+    show_qr_code: true,
+    show_pin_code: true,
     send_emails: true,
     send_sms: false,
   });
@@ -566,6 +568,8 @@ export default function EditEventPage() {
           decline_template_key: data.decline_template_key || "global",
           decline_template_id: data.decline_template_id || null,
           registration_form_template_id: data.registration_form_template_id || null,
+          show_qr_code: data.banner_settings?.show_qr_code !== undefined ? data.banner_settings.show_qr_code !== false : true,
+          show_pin_code: data.banner_settings?.show_pin_code !== undefined ? data.banner_settings.show_pin_code !== false : true,
           send_emails: data.send_emails !== false,
           send_sms: !!data.send_sms,
         });
@@ -701,6 +705,8 @@ export default function EditEventPage() {
           layout: formData.banner_layout || "",
           text_color: formData.banner_text_color || "",
           disclaimer_checkbox_label: formData.disclaimer_checkbox_label || "",
+          show_qr_code: formData.show_qr_code,
+          show_pin_code: formData.show_pin_code,
         },
         registration_start: formData.registration_start || null,
         registration_end: formData.registration_end || null,
@@ -1241,6 +1247,41 @@ export default function EditEventPage() {
                         <option key={t.id} value={t.id}>{t.name} ({t.description || "No description"})</option>
                       ))}
                     </select>
+                  </div>
+
+                  <div className="space-y-3 md:col-span-2">
+                    <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">
+                      Confirmation Screen Access Pass & QR Code
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50/50 dark:bg-slate-900/60 rounded-2xl border border-slate-100 dark:border-slate-800 p-5">
+                      <label className="flex items-center gap-3 cursor-pointer">
+                        <input 
+                          type="checkbox"
+                          name="show_qr_code"
+                          checked={formData.show_qr_code}
+                          onChange={(e) => setFormData(prev => ({ ...prev, show_qr_code: e.target.checked }))}
+                          className="w-5 h-5 rounded text-[#0f172a] dark:text-yellow-400 focus:ring-0 border-slate-300 dark:border-slate-700 shrink-0"
+                        />
+                        <div className="space-y-0.5">
+                          <span className="text-xs font-bold text-slate-800 dark:text-white block">Display QR Code</span>
+                          <span className="text-[10px] text-slate-400 block leading-tight">Show scannable QR ticket on confirmation screen</span>
+                        </div>
+                      </label>
+
+                      <label className="flex items-center gap-3 cursor-pointer">
+                        <input 
+                          type="checkbox"
+                          name="show_pin_code"
+                          checked={formData.show_pin_code}
+                          onChange={(e) => setFormData(prev => ({ ...prev, show_pin_code: e.target.checked }))}
+                          className="w-5 h-5 rounded text-[#0f172a] dark:text-yellow-400 focus:ring-0 border-slate-300 dark:border-slate-700 shrink-0"
+                        />
+                        <div className="space-y-0.5">
+                          <span className="text-xs font-bold text-slate-800 dark:text-white block">Display PIN / Access Pass Number</span>
+                          <span className="text-[10px] text-slate-400 block leading-tight">Show clearance PIN and label on confirmation screen</span>
+                        </div>
+                      </label>
+                    </div>
                   </div>
 
                   <div className="space-y-3 md:col-span-2">

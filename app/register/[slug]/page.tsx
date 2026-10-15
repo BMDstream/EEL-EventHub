@@ -177,6 +177,9 @@ interface Event {
     accent_color?: string;
     layout?: string;
     text_color?: string;
+    show_qr_code?: boolean;
+    show_pin_code?: boolean;
+    [key: string]: any;
   };
   registration_active?: boolean;
   registration_start?: string;
@@ -296,6 +299,26 @@ function PublicRegistrationPageContent() {
 
   const getClearanceLabel = () => {
     return event?.registration_form_template?.post_submit_config?.clearance_label || "unique access pass number";
+  };
+
+  const templatePostSubmit = event?.registration_form_template?.post_submit_config || {};
+  const eventBannerSettings = event?.banner_settings || {};
+
+  const shouldShowQR = eventBannerSettings.show_qr_code !== undefined
+    ? (eventBannerSettings.show_qr_code !== false && (eventBannerSettings.show_qr_code as any) !== "false")
+    : (templatePostSubmit.show_qr_code !== false && (templatePostSubmit.show_qr_code as any) !== "false");
+
+  const shouldShowPin = eventBannerSettings.show_pin_code !== undefined
+    ? (eventBannerSettings.show_pin_code !== false && (eventBannerSettings.show_pin_code as any) !== "false")
+    : (templatePostSubmit.show_pin_code !== false && (templatePostSubmit.show_pin_code as any) !== "false");
+
+  const shouldShowAccessPass = shouldShowQR || shouldShowPin;
+
+  const getInstructionText = () => {
+    if (shouldShowQR && shouldShowPin) return "Please present this QR code OR number at the registration desk.";
+    if (shouldShowQR) return "Please present this QR code at the registration desk.";
+    if (shouldShowPin) return "Please present this number at the registration desk.";
+    return null;
   };
 
   const formatSuccessText = (templateText: string) => {
@@ -2280,28 +2303,36 @@ function PublicRegistrationPageContent() {
                 />
 
                 {/* QR Code and Clearance section */}
-                <div className="pt-6 border-t border-slate-200/50 space-y-4">
-                  <div className="flex justify-center my-4">
-                    <div className="bg-white p-2.5 rounded-xl border border-slate-200/50 shadow-sm">
-                      <QRCodeSVG 
-                        value={registeredPin || registeredId || ""} 
-                        size={150}
-                        level="M"
-                      />
-                    </div>
+                {shouldShowAccessPass && (
+                  <div className="pt-6 border-t border-slate-200/50 space-y-4">
+                    {shouldShowQR && (
+                      <div className="flex justify-center my-4">
+                        <div className="bg-white p-2.5 rounded-xl border border-slate-200/50 shadow-sm">
+                          <QRCodeSVG 
+                            value={registeredPin || registeredId || ""} 
+                            size={150}
+                            level="M"
+                          />
+                        </div>
+                      </div>
+                    )}
+                    {shouldShowPin && (
+                      <div className="space-y-1">
+                        <p className="text-[8px] uppercase tracking-[0.25em] text-slate-400 font-bold">
+                          {getClearanceLabel()}
+                        </p>
+                        <p className="text-2xl font-black text-slate-800 italic tracking-tighter">
+                          {registeredPin || (registeredId ? registeredId.substring(0, 8) : "")}
+                        </p>
+                      </div>
+                    )}
+                    {getInstructionText() && (
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">
+                        {getInstructionText()}
+                      </p>
+                    )}
                   </div>
-                  <div className="space-y-1">
-                    <p className="text-[8px] uppercase tracking-[0.25em] text-slate-400 font-bold">
-                      {getClearanceLabel()}
-                    </p>
-                    <p className="text-2xl font-black text-slate-800 italic tracking-tighter">
-                      {registeredPin || (registeredId ? registeredId.substring(0, 8) : "")}
-                    </p>
-                  </div>
-                </div>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">
-                  Please present this QR code OR number at the registration desk.
-                </p>
+                )}
               </>
             ) : (
               <>
