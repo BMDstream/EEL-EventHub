@@ -340,6 +340,10 @@ def update_event(
     event_dict = event_data.dict(exclude_unset=True)
     if "slug" in event_dict:
         del event_dict["slug"]
+    if "custom_fields_schema" in event_dict and not event_dict["custom_fields_schema"] and db_event.custom_fields_schema:
+        del event_dict["custom_fields_schema"]
+    if "operator_config" in event_dict and not event_dict["operator_config"] and db_event.operator_config:
+        del event_dict["operator_config"]
 
     for key, value in event_dict.items():
         setattr(db_event, key, value)

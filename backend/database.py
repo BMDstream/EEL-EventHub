@@ -108,6 +108,12 @@ def run_db_initialization(session: Session, check_only_migrations: bool = False)
             ("reply_to", "TEXT"),
             ("company_required", f"BOOLEAN DEFAULT {bool_false}"),
             ("background_url", "TEXT"),
+            ("confirmation_template_key", "TEXT DEFAULT 'global'"),
+            ("confirmation_template_id", "INTEGER"),
+            ("decline_template_key", "TEXT DEFAULT 'global'"),
+            ("decline_template_id", "INTEGER"),
+            ("registration_form_template_id", "INTEGER"),
+            ("send_sms", f"BOOLEAN DEFAULT {bool_false}"),
             ("operator_config", "JSON")
         ]:
             if col_name not in event_columns:

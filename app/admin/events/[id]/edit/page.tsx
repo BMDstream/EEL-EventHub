@@ -492,6 +492,7 @@ export default function EditEventPage() {
     registration_form_template_id: null as number | null,
     show_qr_code: true,
     show_pin_code: true,
+    form_logos: ["", "", "", "", ""] as string[],
     send_emails: true,
     send_sms: false,
   });
@@ -529,6 +530,8 @@ export default function EditEventPage() {
       })
       .then((data) => {
         const formattedDate = data.start_date ? data.start_date.slice(0, 16) : "";
+        const existingLogos = Array.isArray(data.banner_settings?.form_logos) ? data.banner_settings.form_logos : [];
+        const paddedLogos = [0, 1, 2, 3, 4].map((i) => existingLogos[i] || "");
         setFormData({
           title: data.title,
           slug: data.slug,
@@ -572,6 +575,7 @@ export default function EditEventPage() {
           registration_form_template_id: data.registration_form_template_id || null,
           show_qr_code: data.banner_settings?.show_qr_code !== undefined ? data.banner_settings.show_qr_code !== false : true,
           show_pin_code: data.banner_settings?.show_pin_code !== undefined ? data.banner_settings.show_pin_code !== false : true,
+          form_logos: paddedLogos,
           send_emails: data.send_emails !== false,
           send_sms: !!data.send_sms,
         });
@@ -681,7 +685,7 @@ export default function EditEventPage() {
         banner_fit, banner_focus, banner_height,
         banner_size, banner_position, banner_theme, banner_primary_color, 
         banner_accent_color, banner_layout, banner_text_color, banner_input_bg_color,
-        banner_url, logo_url, background_url, disclaimer_checkbox_label, 
+        banner_url, logo_url, background_url, disclaimer_checkbox_label, form_logos,
         ...submitData 
       } = formData;
       const payload: any = {
@@ -710,6 +714,7 @@ export default function EditEventPage() {
           disclaimer_checkbox_label: formData.disclaimer_checkbox_label || "",
           show_qr_code: formData.show_qr_code,
           show_pin_code: formData.show_pin_code,
+          form_logos: (formData.form_logos || []).slice(0, 5),
         },
         registration_start: formData.registration_start || null,
         registration_end: formData.registration_end || null,
@@ -1202,6 +1207,127 @@ export default function EditEventPage() {
                       <option value="champagne_lounge">Champagne Lounge (Warm Alabaster &amp; Brushed Gold)</option>
                       <option value="logistics_glass">Logistics Glass (Translucent Slate &amp; Steel Borders)</option>
                     </select>
+                  </div>
+
+                  {/* Registration Form Footer Logos (Up to 5 Sponsor/Partner Logos) */}
+                  <div className="space-y-3 md:col-span-2">
+                    <div className="flex items-center justify-between ml-1">
+                      <div>
+                        <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block">
+                          Registration Form Footer Logos (Up to 5 Sponsor / Partner Logos)
+                        </label>
+                        <p className="text-[9px] text-slate-400 dark:text-slate-500 font-bold mt-0.5">
+                          Displayed as a sponsor/partner footer strip at the bottom of the registration form card below the submit button.
+                        </p>
+                      </div>
+                      {formData.form_logos?.some((u) => !!u) && (
+                        <button
+                          type="button"
+                          onClick={() => setFormData((prev) => ({ ...prev, form_logos: ["", "", "", "", ""] }))}
+                          className="text-red-500 hover:underline text-[9px] uppercase font-bold tracking-widest shrink-0"
+                        >
+                          Clear All
+                        </button>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                      {[0, 1, 2, 3, 4].map((slotIdx) => {
+                        const slotUrl = formData.form_logos?.[slotIdx] || "";
+                        return (
+                          <div key={slotIdx} className="space-y-1.5">
+                            <div className="flex items-center justify-between px-1">
+                              <span className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                                Logo {slotIdx + 1}
+                              </span>
+                              {slotUrl && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setFormData((prev) => {
+                                      const next = [...(prev.form_logos || ["", "", "", "", ""])];
+                                      next[slotIdx] = "";
+                                      return { ...prev, form_logos: next };
+                                    });
+                                  }}
+                                  className="text-red-500 hover:underline text-[8px] uppercase font-bold tracking-wider"
+                                >
+                                  Remove
+                                </button>
+                              )}
+                            </div>
+                            <div className="relative group">
+                              <input
+                                type="file"
+                                accept="image/*"
+                                multiple
+                                onChange={async (e) => {
+                                  const files = Array.from(e.target.files || []);
+                                  if (files.length === 0) return;
+                                  const uploadedUrls: string[] = [];
+                                  for (const file of files.slice(0, 5 - slotIdx)) {
+                                    try {
+                                      const url = await uploadImageFile(file, session?.user?.email || "");
+                                      uploadedUrls.push(url);
+                                    } catch {
+                                      try {
+                                        const compressed = await compressImage(file, 800, 800, 0.85);
+                                        uploadedUrls.push(compressed);
+                                      } catch {
+                                        const dataUrl = await new Promise<string>((resolve) => {
+                                          const reader = new FileReader();
+                                          reader.onloadend = () => resolve((reader.result as string) || "");
+                                          reader.readAsDataURL(file);
+                                        });
+                                        if (dataUrl) uploadedUrls.push(dataUrl);
+                                      }
+                                    }
+                                  }
+                                  if (uploadedUrls.length > 0) {
+                                    setFormData((prev) => {
+                                      const next = [...(prev.form_logos || ["", "", "", "", ""])];
+                                      uploadedUrls.forEach((u, idx) => {
+                                        if (slotIdx + idx < 5) {
+                                          next[slotIdx + idx] = u;
+                                        }
+                                      });
+                                      return { ...prev, form_logos: next };
+                                    });
+                                  }
+                                  e.target.value = "";
+                                }}
+                                className="absolute inset-0 opacity-0 cursor-pointer z-10"
+                              />
+                              <div
+                                className={`w-full h-24 rounded-2xl border-2 border-dashed ${
+                                  slotUrl
+                                    ? "border-green-500/30 bg-green-50/50 dark:bg-green-950/20"
+                                    : "border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/60 hover:border-slate-300 dark:hover:border-slate-700"
+                                } relative transition-all overflow-hidden`}
+                              >
+                                {slotUrl ? (
+                                  <div className="absolute inset-0 flex items-center justify-center p-3 bg-slate-900/5">
+                                    <img
+                                      src={slotUrl}
+                                      alt={`Footer Logo ${slotIdx + 1}`}
+                                      className="max-h-full max-w-full object-contain"
+                                    />
+                                  </div>
+                                ) : (
+                                  <div className="flex flex-col items-center justify-center h-full px-2 text-center">
+                                    <p className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase">
+                                      + Upload Logo {slotIdx + 1}
+                                    </p>
+                                    <p className="text-[7px] text-slate-300 dark:text-slate-600 uppercase mt-0.5">
+                                      PNG / SVG / JPG
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
 
                   <div className="space-y-3 md:col-span-2">

@@ -2502,7 +2502,7 @@ export default function EventDetailsPage() {
              <FormBuilder 
                eventId={id as string} 
                templateId={event.registration_form_template?.id}
-               initialSchema={event.custom_fields_schema} 
+               initialSchema={(event.custom_fields_schema && event.custom_fields_schema.length > 0) ? event.custom_fields_schema : (event.registration_form_template?.layout_schema || [])} 
                onSave={(newSchema) => setEvent({ ...event, custom_fields_schema: newSchema })} 
              />
           </div>

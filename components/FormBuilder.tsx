@@ -320,7 +320,7 @@ export default function FormBuilder({
         }))
       }));
 
-      // 1. Save to event-specific custom_fields_schema
+      // Save to event-specific custom_fields_schema only (do not overwrite global template in Settings)
       const res = await fetch(`/api/py/events/${eventId}/form-schema`, {
         method: "PUT",
         headers: { 
@@ -334,78 +334,8 @@ export default function FormBuilder({
         throw new Error(errorData.detail || "Failed to save event form schema");
       }
 
-      // 2. Save back to the global template (so both sides stay in sync!)
-      let targetTemplateId = templateId;
-      if (!targetTemplateId) {
-        try {
-          const tplsRes = await fetch("/api/py/settings/registration-templates", {
-            headers: { "x-user-email": session?.user?.email || "" }
-          });
-          if (tplsRes.ok) {
-            const allTpls = await tplsRes.json();
-            if (allTpls && allTpls.length > 0) {
-              targetTemplateId = allTpls[0].id;
-              // Link event to this template
-              await fetch(`/api/py/events/${eventId}`, {
-                method: "PUT",
-                headers: { 
-                  "Content-Type": "application/json",
-                  "x-user-email": session?.user?.email || ""
-                },
-                body: JSON.stringify({ registration_form_template_id: targetTemplateId })
-              });
-            }
-          }
-        } catch (e) {
-          console.warn("Could not auto-link template", e);
-        }
-      }
-
-      if (targetTemplateId) {
-        // Fetch current template config first
-        const tplRes = await fetch(`/api/py/settings/registration-templates/${targetTemplateId}`);
-        if (tplRes.ok) {
-          const currentTpl = await tplRes.json();
-           // Flatten sections into a flat list of fields for the template's layout_schema
-           const flatLayoutSchema: any[] = [];
-           normalizedSections.forEach((sec) => {
-             if (sec.id !== "default_section" || sec.title !== "Registration Details") {
-               flatLayoutSchema.push({
-                 id: sec.id,
-                 key: sec.id,
-                 label: sec.title,
-                 type: "section_header",
-                 visible: true
-               });
-             }
-             flatLayoutSchema.push(...sec.fields);
-           });
-
-           // Update the template layout schema
-           const updateRes = await fetch(`/api/py/settings/registration-templates/${targetTemplateId}`, {
-             method: "PUT",
-             headers: { 
-               "Content-Type": "application/json",
-               "x-user-email": session?.user?.email || ""
-             },
-             body: JSON.stringify({
-               name: currentTpl.name,
-               description: currentTpl.description,
-               theme_config: currentTpl.theme_config,
-               layout_schema: flatLayoutSchema, // update with flat schema!
-               post_submit_config: currentTpl.post_submit_config,
-               email_config: currentTpl.email_config,
-               operator_config: currentTpl.operator_config
-             })
-           });
-          if (!updateRes.ok) {
-            console.warn("Failed to sync layout schema back to global template.");
-          }
-        }
-      }
-
       onSave(normalizedSections);
-      alert("Form schema saved and synced successfully!");
+      alert("Event Form Studio schema saved successfully!");
     } catch (err: any) {
       console.error(err);
       alert(err.message || "An unexpected error occurred while saving.");

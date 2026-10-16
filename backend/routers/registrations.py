@@ -109,22 +109,22 @@ def register_attendee(
                 from backend.models import RegistrationFormTemplate
                 template = session.get(RegistrationFormTemplate, event.registration_form_template_id)
             
-            # Extract fields schema
+            # Extract fields schema (Event Form Studio takes priority over global template)
             fields_schema = []
-            if template and template.layout_schema:
-                first_item = template.layout_schema[0] if len(template.layout_schema) > 0 else {}
-                if "fields" in first_item:
-                    for section in template.layout_schema:
-                        fields_schema.extend(section.get("fields", []))
-                else:
-                    fields_schema = template.layout_schema
-            elif event.custom_fields_schema:
+            if event.custom_fields_schema:
                 first_item = event.custom_fields_schema[0] if len(event.custom_fields_schema) > 0 else {}
-                if "fields" in first_item:
+                if isinstance(first_item, dict) and "fields" in first_item:
                     for section in event.custom_fields_schema:
                         fields_schema.extend(section.get("fields", []))
                 else:
-                    fields_schema = event.custom_fields_schema
+                    fields_schema = list(event.custom_fields_schema)
+            if not fields_schema and template and template.layout_schema:
+                first_item = template.layout_schema[0] if len(template.layout_schema) > 0 else {}
+                if isinstance(first_item, dict) and "fields" in first_item:
+                    for section in template.layout_schema:
+                        fields_schema.extend(section.get("fields", []))
+                else:
+                    fields_schema = list(template.layout_schema)
 
             if not fields_schema:
                 fields_schema = [

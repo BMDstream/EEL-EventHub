@@ -76,6 +76,7 @@ def run_migrations():
             
             for col_name, col_type in [
                 ("registration_active", f"BOOLEAN DEFAULT {bool_true}"),
+                ("send_emails", f"BOOLEAN DEFAULT {bool_true}"),
                 ("registration_start", datetime_type),
                 ("registration_end", datetime_type),
                 ("disclaimer_enabled", f"BOOLEAN DEFAULT {bool_false}"),
@@ -83,6 +84,7 @@ def run_migrations():
                 ("logo_url", "TEXT"),
                 ("sender_email", "TEXT"),
                 ("sender_name", "TEXT"),
+                ("reply_to", "TEXT"),
                 ("company_required", f"BOOLEAN DEFAULT {bool_false}"),
                 ("background_url", "TEXT"),
                 ("confirmation_template_key", "TEXT DEFAULT 'global'"),
@@ -90,13 +92,27 @@ def run_migrations():
                 ("decline_template_key", "TEXT DEFAULT 'global'"),
                 ("decline_template_id", "INTEGER"),
                 ("registration_form_template_id", "INTEGER"),
-                ("send_sms", f"BOOLEAN DEFAULT {bool_false}")
+                ("send_sms", f"BOOLEAN DEFAULT {bool_false}"),
+                ("operator_config", "JSON")
             ]:
                 if col_name not in event_columns:
                     try:
                         session.execute(text(f'ALTER TABLE "event" ADD COLUMN {col_name} {col_type}'))
                         session.commit()
                         print(f"Column '{col_name}' added to event table.")
+                    except Exception as e:
+                        session.rollback()
+                        print(f"Column '{col_name}' error: {e}")
+
+        # RegistrationFormTemplate fields
+        rft_columns = [col['name'] for col in inspector.get_columns('registrationformtemplate')] if inspector.has_table('registrationformtemplate') else []
+        if rft_columns:
+            for col_name in ["email_config", "operator_config"]:
+                if col_name not in rft_columns:
+                    try:
+                        session.execute(text(f'ALTER TABLE "registrationformtemplate" ADD COLUMN "{col_name}" JSON'))
+                        session.commit()
+                        print(f"Column '{col_name}' added to registrationformtemplate table.")
                     except Exception as e:
                         session.rollback()
                         print(f"Column '{col_name}' error: {e}")

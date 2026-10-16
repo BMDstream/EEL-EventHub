@@ -196,6 +196,7 @@ interface Event {
     text_color?: string;
     show_qr_code?: boolean;
     show_pin_code?: boolean;
+    form_logos?: string[];
     [key: string]: any;
   };
   registration_active?: boolean;
@@ -1902,6 +1903,10 @@ function PublicRegistrationPageContent() {
   const formHeadingText = rawHeading !== undefined && rawHeading !== null ? rawHeading : (event?.registration_form_template?.name || "");
   const isHeadingEmpty = !formHeadingText || formHeadingText.replace(/<[^>]*>/g, "").trim() === "";
 
+  const activeFormLogos = Array.isArray(event?.banner_settings?.form_logos)
+    ? event.banner_settings.form_logos.filter((u: any) => typeof u === "string" && u.trim() !== "").slice(0, 5)
+    : [];
+
   const registrationForm = event ? (
     <div className={`${style.bodyBlock || "max-w-md w-full mx-auto relative z-10 py-12"} my-auto client-form-text-custom`} style={customFormBg ? { backgroundColor: customFormBg, padding: '2rem', borderRadius: '2.5rem' } : undefined}>
       {formBannerUrl && (() => {
@@ -2029,6 +2034,22 @@ function PublicRegistrationPageContent() {
             {registering ? "Dispatching..." : "Submit Registration"}
           </button>
         </div>
+
+        {activeFormLogos.length > 0 && (
+          <div className={`mt-8 pt-6 border-t ${isFormLight ? "border-slate-200/80" : "border-white/10"}`}>
+            <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-8">
+              {activeFormLogos.map((logoUrl: string, idx: number) => (
+                <div key={idx} className="flex items-center justify-center">
+                  <img
+                    src={logoUrl}
+                    alt={`Partner Logo ${idx + 1}`}
+                    className="max-h-12 sm:max-h-14 max-w-[110px] sm:max-w-[130px] w-auto h-auto object-contain"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </form>
     </div>
   ) : null;

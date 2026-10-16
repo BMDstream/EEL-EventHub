@@ -8,8 +8,14 @@ import AdminLayout from "@/components/AdminLayout";
 import useSWR from "swr";
 import { cleanHtmlText } from "@/lib/utils";
 
-const fetcher = (url: string, email: string): Promise<Event[]> =>
-  fetch(url, { headers: { "x-user-email": email } }).then((res) => res.json());
+const fetcher = async (url: string, email: string): Promise<Event[]> => {
+  const res = await fetch(url, { headers: { "x-user-email": email } });
+  if (!res.ok) {
+    throw new Error(`Failed to fetch events (${res.status})`);
+  }
+  const data = await res.json();
+  return Array.isArray(data) ? data : [];
+};
 
 interface Event {
   id: number;
@@ -33,7 +39,7 @@ export default function EventsListPage() {
     ([url, email]: [string, string]) => fetcher(url, email)
   );
 
-  const events = eventsData || [];
+  const events = Array.isArray(eventsData) ? eventsData : [];
   const loading = !eventsData && !error;
 
   const filteredEvents = events.filter(e => {
