@@ -253,6 +253,40 @@ function PublicRegistrationPageContent() {
     return activeSchema;
   };
 
+  const isDependencyMet = (field: any, allFields: any[], answers: Record<string, any>): boolean => {
+    if (!field?.dependsOn?.fieldId) return true;
+    const depId = field.dependsOn.fieldId;
+    const expectedVal = String(field.dependsOn.value ?? "").trim();
+
+    const parentField = allFields.find(
+      (f: any) => f && (f.id === depId || f.key === depId)
+    );
+
+    if (parentField && parentField !== field && parentField.dependsOn) {
+      if (!isDependencyMet(parentField, allFields, answers)) {
+        return false;
+      }
+    }
+
+    let parentVal: any = undefined;
+    if (parentField) {
+      if (parentField.key && answers[parentField.key] !== undefined) {
+        parentVal = answers[parentField.key];
+      } else if (parentField.id && answers[parentField.id] !== undefined) {
+        parentVal = answers[parentField.id];
+      }
+    }
+    if (parentVal === undefined) {
+      parentVal = answers[depId];
+    }
+
+    if (Array.isArray(parentVal)) {
+      return parentVal.some((v) => String(v ?? "").trim() === expectedVal);
+    }
+    const parentValStr = typeof parentVal === "boolean" ? String(parentVal) : String(parentVal ?? "").trim();
+    return parentValStr === expectedVal;
+  };
+
   const getPostSubmitTitle = () => {
     if (capacityFull) {
       const customCapacityTitle = event?.registration_form_template?.post_submit_config?.onscreen_capacity_title;
@@ -416,10 +450,27 @@ function PublicRegistrationPageContent() {
 
     flatFields = [...missing, ...flatFields];
 
+    const getEffectiveShowBefore = (f: any, visited = new Set<string>()): boolean => {
+      const fId = f.id || f.key || "";
+      if (fId && visited.has(fId)) return !!f.showBeforeAttendance;
+      if (fId) visited.add(fId);
+
+      const isIdentity = ["first_name", "last_name", "email", "company"].includes(f.key || f.id || "");
+      if (isIdentity) return true;
+      if (f.dependsOn?.fieldId) {
+        const parentField = flatFields.find(
+          (pf: any) => pf && (pf.id === f.dependsOn.fieldId || pf.key === f.dependsOn.fieldId)
+        );
+        if (parentField && parentField !== f) {
+          return getEffectiveShowBefore(parentField, visited);
+        }
+      }
+      return !!f.showBeforeAttendance;
+    };
+
     const filtered = flatFields.filter(f => {
       if (f.inactive || f.visible === false) return false;
-      const isIdentity = ["first_name", "last_name", "email", "company"].includes(f.key || f.id || "");
-      const isBefore = isIdentity ? true : !!f.showBeforeAttendance;
+      const isBefore = getEffectiveShowBefore(f);
       const matchesBefore = showBefore === true ? isBefore : !isBefore;
       return matchesBefore;
     });
@@ -437,13 +488,8 @@ function PublicRegistrationPageContent() {
         return null;
       }
 
-      if (field.dependsOn) {
-        const parentAnswers = customAnswers;
-        const parentVal = parentAnswers[field.dependsOn.fieldId];
-        const parentValStr = typeof parentVal === "boolean" ? String(parentVal) : parentVal;
-        if (parentValStr !== field.dependsOn.value) {
-          return null;
-        }
+      if (field.dependsOn && !isDependencyMet(field, flatFields, customAnswers)) {
+        return null;
       }
 
       const fieldAlign: "left" | "center" | "right" = field.align || defaultFieldsAlign;
@@ -684,11 +730,13 @@ function PublicRegistrationPageContent() {
     
     for (const field of flatFields) {
       if (field.dependsOn) {
-        const parentVal = newAnswers[field.dependsOn.fieldId];
-        const parentValStr = typeof parentVal === "boolean" ? String(parentVal) : parentVal;
-        
-        if (parentValStr !== field.dependsOn.value) {
-          if (newAnswers[field.id] !== undefined) {
+        if (!isDependencyMet(field, flatFields, newAnswers)) {
+          const answerKey = field.key || field.id;
+          if (answerKey && newAnswers[answerKey] !== undefined) {
+            delete newAnswers[answerKey];
+            changed = true;
+          }
+          if (field.id && newAnswers[field.id] !== undefined) {
             delete newAnswers[field.id];
             changed = true;
           }
@@ -784,9 +832,10 @@ function PublicRegistrationPageContent() {
     const flatFields = getFlatFields();
     if (isAttending && flatFields.length > 0) {
       for (const field of flatFields) {
-        if (field.inactive) continue;
+        if (field.inactive || field.visible === false) continue;
+        if (field.dependsOn && !isDependencyMet(field, flatFields, customAnswers)) continue;
         if (field.type === "multiselect") {
-          const val = customAnswers[field.key || field.id];
+          const val = customAnswers[field.key || field.id] ?? customAnswers[field.id];
           if (field.required && (!val || !Array.isArray(val) || val.length === 0)) {
             setSubmitError(`Please select at least one option for "${field.label.replace(/<[^>]*>/g, "")}".`);
             return;
@@ -794,7 +843,7 @@ function PublicRegistrationPageContent() {
         }
         if (field.type === "partner_card") {
           if (isUpdateFlow) continue;
-          const partnerData = customAnswers[field.id];
+          const partnerData = customAnswers[field.key || field.id] ?? customAnswers[field.id];
           if (field.required && (!partnerData?.first_name?.trim() || !partnerData?.last_name?.trim() || !partnerData?.email?.trim())) {
             setSubmitError("Please fill out all partner details.");
             return;
@@ -831,10 +880,13 @@ function PublicRegistrationPageContent() {
     if (isAttending === false) {
       for (const field of flatFields) {
         if (!field.showBeforeAttendance) {
+          const k = field.key || field.id;
           if (field.type === "checkbox") {
-            finalCustomAnswers[field.id] = false;
+            if (k) finalCustomAnswers[k] = false;
+            if (field.id) finalCustomAnswers[field.id] = false;
           } else {
-            finalCustomAnswers[field.id] = null;
+            if (k) finalCustomAnswers[k] = null;
+            if (field.id) finalCustomAnswers[field.id] = null;
           }
         }
       }

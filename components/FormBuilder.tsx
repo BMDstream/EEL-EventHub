@@ -622,7 +622,8 @@ export default function FormBuilder({
                                                const parent = preceding[0];
                                                const defaultValue = parent.type === "checkbox" ? "true" : (parent.options?.[0] || "");
                                                updateField(section.id, field.id, { 
-                                                 dependsOn: { fieldId: parent.id, value: defaultValue } 
+                                                 dependsOn: { fieldId: parent.id, value: defaultValue },
+                                                 showBeforeAttendance: !!parent.showBeforeAttendance,
                                                });
                                              } else {
                                                updateField(section.id, field.id, { dependsOn: undefined });
@@ -638,27 +639,28 @@ export default function FormBuilder({
                                            <div className="space-y-1">
                                              <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-1">Select Question</label>
                                              <select 
-                                               value={field.dependsOn.fieldId}
+                                               value={preceding.find(p => p.id === field.dependsOn?.fieldId || p.key === field.dependsOn?.fieldId)?.id || field.dependsOn.fieldId}
                                                onChange={(e) => {
-                                                 const parent = preceding.find(p => p.id === e.target.value);
+                                                 const parent = preceding.find(p => p.id === e.target.value || p.key === e.target.value);
                                                  if (parent) {
                                                    const defaultValue = parent.type === "checkbox" ? "true" : (parent.options?.[0] || "");
                                                    updateField(section.id, field.id, {
-                                                     dependsOn: { fieldId: parent.id, value: defaultValue }
+                                                     dependsOn: { fieldId: parent.id, value: defaultValue },
+                                                     showBeforeAttendance: !!parent.showBeforeAttendance,
                                                    });
                                                  }
                                                }}
                                                className="w-full px-3 py-2 bg-slate-50 rounded-lg border border-slate-150 outline-none font-bold text-xs text-[#0f172a] dark:bg-slate-700 dark:text-white"
                                              >
                                                {preceding.map(p => (
-                                                 <option key={p.id} value={p.id}>{p.label}</option>
+                                                 <option key={p.id} value={p.id}>{(p.label || "").replace(/<[^>]*>/g, "")}</option>
                                                ))}
                                              </select>
                                            </div>
                                            <div className="space-y-1">
                                              <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-1">Trigger Value</label>
                                              {(() => {
-                                               const parent = preceding.find(p => p.id === field.dependsOn?.fieldId);
+                                               const parent = preceding.find(p => p.id === field.dependsOn?.fieldId || p.key === field.dependsOn?.fieldId);
                                                if (!parent || !field.dependsOn) return null;
                                                
                                                if (parent.type === "checkbox") {
