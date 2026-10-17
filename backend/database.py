@@ -6,10 +6,10 @@ from dotenv import load_dotenv
 load_dotenv()
 
 def _resolve_database_url() -> str:
-    raw_url = os.getenv("DATABASE_URL") or ""
-    preview_url = os.getenv("PREVIEW_DATABASE_URL") or ""
-    vercel_env = (os.getenv("VERCEL_ENV") or "").lower()
-    git_ref = (os.getenv("VERCEL_GIT_COMMIT_REF") or "").lower()
+    raw_url = (os.getenv("DATABASE_URL") or "").strip().strip('"').strip("'")
+    preview_url = (os.getenv("PREVIEW_DATABASE_URL") or "").strip().strip('"').strip("'")
+    vercel_env = (os.getenv("VERCEL_ENV") or "").strip().lower()
+    git_ref = (os.getenv("VERCEL_GIT_COMMIT_REF") or "").strip().lower()
 
     is_preview = vercel_env == "preview" or (git_ref != "" and git_ref not in ("main", "master"))
     if not is_preview and not vercel_env:
@@ -23,13 +23,17 @@ def _resolve_database_url() -> str:
         except Exception:
             pass
 
+    resolved = raw_url
     if is_preview:
         if preview_url:
-            return preview_url
-        if raw_url and "/neondb" in raw_url and "/neondb_preview" not in raw_url:
+            resolved = preview_url
+        elif raw_url and "/neondb" in raw_url and "/neondb_preview" not in raw_url:
             import re
-            return re.sub(r"/neondb(\?|$)", r"/neondb_preview\1", raw_url)
-    return raw_url
+            resolved = re.sub(r"/neondb(\?|$)", r"/neondb_preview\1", raw_url)
+
+    if resolved.startswith("postgres://"):
+        resolved = resolved.replace("postgres://", "postgresql://", 1)
+    return resolved
 
 DATABASE_URL = _resolve_database_url()
 # Handle cases where the engine must be running serverless or locally
@@ -44,7 +48,8 @@ engine_args = {
 if not is_sqlite:
     engine_args["pool_size"] = 5
     engine_args["max_overflow"] = 10
-    engine_args["pool_recycle"] = 1800
+    engine_args["pool_recycle"] = 300
+    engine_args["pool_pre_ping"] = True
 
 engine = create_engine(DATABASE_URL, **engine_args)
 

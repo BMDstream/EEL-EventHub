@@ -65,6 +65,24 @@ def read_events(
         result.append(event_dict)
     return result
 
+def _parse_event_datetime(val: Any) -> Optional[Any]:
+    if val is None or val == "":
+        return None
+    from datetime import datetime
+    if isinstance(val, datetime):
+        return val
+    if isinstance(val, str):
+        s = val.strip()
+        if not s:
+            return None
+        if s.endswith("Z"):
+            s = s[:-1] + "+00:00"
+        try:
+            return datetime.fromisoformat(s)
+        except Exception:
+            return val
+    return val
+
 @router.post("", response_model=Event)
 def create_event(
     event: Event, 
@@ -76,6 +94,12 @@ def create_event(
     verify_client_access(current_user, event.client_id, session)
     if event.slug:
         event.slug = event.slug.replace("&nbsp;", " ").replace("\u00a0", " ").strip()
+    if getattr(event, "start_date", None):
+        event.start_date = _parse_event_datetime(event.start_date)
+    if hasattr(event, "registration_start"):
+        event.registration_start = _parse_event_datetime(event.registration_start)
+    if hasattr(event, "registration_end"):
+        event.registration_end = _parse_event_datetime(event.registration_end)
     
     session.add(event)
     session.commit()
@@ -311,11 +335,12 @@ def read_event_by_id(
     return event_dict
 
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm.attributes import flag_modified
 
 @router.put("/{event_id}", response_model=Event)
 def update_event(
     event_id: int, 
-    event_data: Event, 
+    event_data: Dict[str, Any], 
     session: Session = Depends(get_session),
     current_user: Optional[User] = Depends(get_current_user_from_request)
 ):
@@ -323,12 +348,23 @@ def update_event(
     if not db_event:
         raise HTTPException(status_code=404, detail="Event not found")
     verify_event_manager_access(current_user, db_event, session)
-    if event_data.client_id != db_event.client_id:
-        verify_client_access(current_user, event_data.client_id, session)
+
+    incoming_client_id = event_data.get("client_id", db_event.client_id)
+    if incoming_client_id in ("", None):
+        incoming_client_id = None
+    else:
+        try:
+            incoming_client_id = int(incoming_client_id)
+        except Exception:
+            incoming_client_id = db_event.client_id
+
+    if incoming_client_id != db_event.client_id:
+        verify_client_access(current_user, incoming_client_id, session)
     
     # Check if slug is being changed and if new slug collides with another event
-    if event_data.slug:
-        cleaned_slug = event_data.slug.replace("&nbsp;", " ").replace("\u00a0", " ").strip()
+    raw_slug = event_data.get("slug")
+    if raw_slug:
+        cleaned_slug = str(raw_slug).replace("&nbsp;", " ").replace("\u00a0", " ").strip()
         existing = session.exec(select(Event).where(Event.slug == cleaned_slug, Event.id != event_id)).first()
         if existing:
             raise HTTPException(
@@ -337,16 +373,39 @@ def update_event(
             )
         db_event.slug = cleaned_slug
 
-    event_dict = event_data.dict(exclude_unset=True)
-    if "slug" in event_dict:
-        del event_dict["slug"]
+    event_dict = dict(event_data)
+    for ignored_key in ("id", "slug", "client", "registration_form_template", "confirmation_template_meta", "decline_template_meta", "user_role_for_client", "registrations_count"):
+        event_dict.pop(ignored_key, None)
+
     if "custom_fields_schema" in event_dict and not event_dict["custom_fields_schema"] and db_event.custom_fields_schema:
         del event_dict["custom_fields_schema"]
     if "operator_config" in event_dict and not event_dict["operator_config"] and db_event.operator_config:
         del event_dict["operator_config"]
 
+    valid_columns = set(Event.__fields__.keys())
+    json_columns = {"banner_settings", "allowed_domains", "custom_fields_schema", "operator_config"}
+    datetime_columns = {"start_date", "registration_start", "registration_end"}
+    int_columns = {"capacity", "duration_days", "client_id", "confirmation_template_id", "decline_template_id", "registration_form_template_id"}
+
     for key, value in event_dict.items():
+        if key not in valid_columns:
+            continue
+        if key in datetime_columns:
+            parsed_dt = _parse_event_datetime(value)
+            if key == "start_date" and parsed_dt is None:
+                continue
+            value = parsed_dt
+        elif key in int_columns:
+            if value in ("", None):
+                value = 0 if key == "capacity" else (1 if key == "duration_days" else None)
+            else:
+                try:
+                    value = int(value)
+                except Exception:
+                    continue
         setattr(db_event, key, value)
+        if key in json_columns:
+            flag_modified(db_event, key)
     
     try:
         session.add(db_event)

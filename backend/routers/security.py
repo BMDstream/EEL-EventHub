@@ -34,12 +34,12 @@ def get_audit_logs(
     if not current_user or current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Admin authorization required")
         
+    from sqlalchemy import func, select as sa_select
     query = select(AuditLog)
     
     if search:
         search_term = f"%{search.lower()}%"
         # Since SQLModel supports SQL statements, we filter search terms on email/action/description
-        from sqlalchemy import func
         query = query.where(
             func.lower(AuditLog.user_email).like(search_term) |
             func.lower(AuditLog.action).like(search_term) |
@@ -47,7 +47,6 @@ def get_audit_logs(
         )
         
     # Count total matching records
-    from sqlalchemy import select as sa_select
     count_query = sa_select(func.count()).select_from(query.subquery())
     total = session.exec(count_query).one()
     

@@ -526,7 +526,7 @@ export default function EditEventPage() {
       .then((res) => res.json())
       .then((data) => { if (Array.isArray(data)) setRegTemplates(data); })
       .catch((err) => console.error("Failed to load registration templates", err));
-  }, [session]);
+  }, [session?.user?.email]);
 
   useEffect(() => {
     if ((effectiveRole !== "admin" && effectiveRole !== "manager") || !session?.user?.email) return;
@@ -534,7 +534,7 @@ export default function EditEventPage() {
       .then((res) => res.json())
       .then((data) => { if (Array.isArray(data)) setSenderEmails(data); })
       .catch((err) => console.error("Failed to fetch sender domains", err));
-  }, [effectiveRole, session]);
+  }, [effectiveRole, session?.user?.email]);
 
   useEffect(() => {
     if (!session?.user?.email) return;
@@ -616,7 +616,7 @@ export default function EditEventPage() {
         setLoading(false);
       })
       .catch((err) => { console.error("Failed to fetch event", err); setLoading(false); });
-  }, [id, session]);
+  }, [id, session?.user?.email]);
 
   // Load templates when Email tab is opened
   useEffect(() => {
@@ -627,7 +627,7 @@ export default function EditEventPage() {
       .then((data) => { if (Array.isArray(data)) setTemplates(data); })
       .catch((err) => console.error("Failed to load templates", err))
       .finally(() => setLoadingTemplates(false));
-  }, [activeTab, session, templates.length]);
+  }, [activeTab, session?.user?.email, templates.length]);
 
   // Rebuild preview whenever the selected template ID/key or event branding changes
   useEffect(() => {
@@ -716,6 +716,12 @@ export default function EditEventPage() {
         banner_size, banner_position, banner_theme, banner_primary_color, 
         banner_accent_color, banner_layout, banner_text_color, banner_input_bg_color,
         banner_url, logo_url, background_url, disclaimer_checkbox_label, form_logos,
+        show_qr_code, show_pin_code,
+        title_align, description_align, meta_align, meta_order,
+        form_header_align, fields_align, logos_align,
+        meta_icon_color, meta_icon_bg_color, meta_icon_size,
+        meta_font_family, meta_label_size, meta_label_color,
+        meta_value_size, meta_value_color,
         ...submitData 
       } = formData;
       const payload: any = {
@@ -772,11 +778,18 @@ export default function EditEventPage() {
       payload.decline_template_id = formData.decline_template_id || null;
       payload.registration_form_template_id = formData.registration_form_template_id || null;
 
-      const response = await fetch(`/api/py/events/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", "x-user-email": session?.user?.email || "" },
-        body: JSON.stringify(payload),
-      });
+      const sendUpdateRequest = () =>
+        fetch(`/api/py/events/${id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", "x-user-email": session?.user?.email || "" },
+          body: JSON.stringify(payload),
+        });
+
+      let response = await sendUpdateRequest();
+      if (response.status >= 500) {
+        // Retry once automatically in case of a cold start or dropped serverless DB connection
+        response = await sendUpdateRequest();
+      }
 
       if (response.ok) {
         setSaveNotification({ type: "success", text: "✓ Event settings saved successfully!" });
@@ -784,22 +797,26 @@ export default function EditEventPage() {
         setOriginalLogo(formData.logo_url);
         setOriginalBg(formData.background_url);
       } else {
-        let errorMessage = "Failed to update event";
-        try { 
-          const error = await response.json(); 
-          if (typeof error.detail === "string") {
-            errorMessage = error.detail;
-          } else if (Array.isArray(error.detail)) {
-            errorMessage = error.detail.map((d: any) => `${d.loc?.filter((l: string) => l !== "body").join(".") || "Field"}: ${d.msg}`).join("; ");
-          } else if (error.message) {
-            errorMessage = error.message;
+        let errorMessage = `Failed to update event (HTTP ${response.status})`;
+        try {
+          const rawText = await response.text();
+          if (rawText) {
+            try {
+              const error = JSON.parse(rawText);
+              if (typeof error.detail === "string") {
+                errorMessage = error.detail;
+              } else if (Array.isArray(error.detail)) {
+                errorMessage = error.detail.map((d: any) => `${d.loc?.filter((l: string) => l !== "body").join(".") || "Field"}: ${d.msg}`).join("; ");
+              } else if (error.message) {
+                errorMessage = error.message;
+              } else {
+                errorMessage = rawText.slice(0, 300);
+              }
+            } catch {
+              errorMessage = rawText.slice(0, 300);
+            }
           }
-        } catch { 
-          try { 
-            const text = await response.text(); 
-            if (text) errorMessage = text;
-          } catch { } 
-        }
+        } catch { }
         setSaveNotification({ type: "error", text: `Error: ${errorMessage}` });
         alert(`Error: ${errorMessage}`);
       }

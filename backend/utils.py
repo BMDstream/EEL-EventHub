@@ -23,10 +23,14 @@ def get_current_user_from_request(
     email: Optional[str] = None,
     session: Session = Depends(get_session)
 ):
-    user_email = x_user_email or email
+    user_email = (x_user_email or email or "").strip()
     if not user_email:
         return None
-    user = session.exec(select(User).where(func.lower(User.email) == user_email.lower())).first()
+    try:
+        user = session.exec(select(User).where(func.lower(User.email) == user_email.lower())).first()
+    except Exception:
+        session.rollback()
+        user = session.exec(select(User).where(func.lower(User.email) == user_email.lower())).first()
     
     # Track Active Session
     if user and request:
