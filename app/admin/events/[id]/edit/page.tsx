@@ -1623,6 +1623,12 @@ export default function EditEventPage() {
                       )}
                     </div>
 
+                    {(() => {
+                      const selectedClientObj = clients.find((c: any) => c.id?.toString() === formData.client_id?.toString());
+                      const activeThemeDefaults = THEME_DEFAULTS[formData.banner_theme as keyof typeof THEME_DEFAULTS] || THEME_DEFAULTS.cyber_dark;
+                      const defaultMetaIconColor = formData.banner_accent_color || selectedClientObj?.accent_color || activeThemeDefaults.accent || "#eab308";
+                      const effectivePreviewIconColor = formData.meta_icon_color || defaultMetaIconColor;
+                      return (
                     <div className="bg-slate-50/50 dark:bg-slate-900/60 rounded-2xl border border-slate-100 dark:border-slate-800 p-6 space-y-6">
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                         {/* Icon Color */}
@@ -1636,7 +1642,8 @@ export default function EditEventPage() {
                           <div className="flex items-center gap-2.5">
                             <input
                               type="color"
-                              value={formData.meta_icon_color || formData.banner_accent_color || "#eab308"}
+                              value={effectivePreviewIconColor}
+                              onInput={(e) => setFormData(prev => ({ ...prev, meta_icon_color: (e.target as HTMLInputElement).value }))}
                               onChange={(e) => setFormData(prev => ({ ...prev, meta_icon_color: e.target.value }))}
                               className="w-10 h-10 rounded-xl border border-slate-200 dark:border-slate-700 cursor-pointer p-0 bg-transparent shrink-0"
                             />
@@ -1644,7 +1651,7 @@ export default function EditEventPage() {
                               type="text"
                               value={formData.meta_icon_color}
                               onChange={(e) => setFormData(prev => ({ ...prev, meta_icon_color: e.target.value }))}
-                              placeholder="Default (Accent)"
+                              placeholder={`Default (${defaultMetaIconColor})`}
                               className="w-full px-3 py-2.5 rounded-xl border border-slate-100 dark:border-slate-800 font-bold text-xs text-slate-700 dark:text-white bg-white dark:bg-slate-900"
                             />
                           </div>
@@ -1842,7 +1849,8 @@ export default function EditEventPage() {
                                 style={{
                                   width: `${formData.meta_icon_size || 22}px`,
                                   height: `${formData.meta_icon_size || 22}px`,
-                                  color: formData.meta_icon_color || formData.banner_accent_color || "#eab308",
+                                  color: effectivePreviewIconColor,
+                                  stroke: effectivePreviewIconColor,
                                 }}
                               />
                             </div>
@@ -1881,7 +1889,8 @@ export default function EditEventPage() {
                                 style={{
                                   width: `${formData.meta_icon_size || 22}px`,
                                   height: `${formData.meta_icon_size || 22}px`,
-                                  color: formData.meta_icon_color || formData.banner_accent_color || "#eab308",
+                                  color: effectivePreviewIconColor,
+                                  stroke: effectivePreviewIconColor,
                                 }}
                               />
                             </div>
@@ -1909,6 +1918,8 @@ export default function EditEventPage() {
                         </div>
                       </div>
                     </div>
+                      );
+                    })()}
                   </div>
 
                   <div className="space-y-3 md:col-span-2">

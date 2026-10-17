@@ -188,12 +188,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         {/* Collapse Toggle (Desktop) */}
         <button 
           onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+          title={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          aria-label={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
           className="hidden lg:flex absolute -right-3 top-10 w-6 h-6 bg-yellow-400 text-black rounded-full items-center justify-center shadow-lg z-50 hover:scale-110 transition-transform"
         >
-          {isSidebarCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+          {isSidebarCollapsed ? <ChevronRight size={14} className="shrink-0" /> : <ChevronLeft size={14} className="shrink-0" />}
         </button>
 
-        <div className={`h-full flex flex-col p-8 transition-all ${isSidebarCollapsed ? "items-center px-4" : ""}`}>
+        <div className={`h-full flex flex-col p-8 transition-all ${isSidebarCollapsed ? "items-center px-3" : ""}`}>
           {/* Logo / Client Branding Section */}
           <div className={`flex items-center gap-3 mb-12 group relative ${isSidebarCollapsed ? "justify-center" : ""}`}>
             {/* Logo — clickable to upload only for admins */}
@@ -227,6 +229,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               </div>
             )}
 
+            {isSidebarCollapsed && (
+              <span
+                role="tooltip"
+                className="pointer-events-none absolute left-full ml-4 px-3.5 py-2 rounded-xl bg-[#0f172a] text-white text-[11px] font-black uppercase tracking-widest whitespace-nowrap opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200 shadow-2xl border border-white/15 z-[100]"
+              >
+                <span className="absolute -left-1 top-1/2 -translate-y-1/2 w-2 h-2 bg-[#0f172a] border-l border-b border-white/15 rotate-45" />
+                {sidebarClientName}
+              </span>
+            )}
+
             {!isSidebarCollapsed && (
               <div className="transition-opacity duration-300 min-w-0">
                 {primaryClient ? (
@@ -251,32 +263,53 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 space-y-2">
+          <nav className={`flex-1 space-y-2.5 ${isSidebarCollapsed ? "w-full flex flex-col items-center" : ""}`}>
             {navItems.map((item) => {
-              const isActive = pathname === item.href;
+              const isActive = pathname === item.href || (item.href !== "/admin" && pathname?.startsWith(item.href));
               return (
                 <Link
                   key={item.name}
                   href={item.href}
                   onClick={() => setIsSidebarOpen(false)}
-                  className={`flex items-center gap-4 px-5 py-4 rounded-2xl transition-all duration-300 group ${
+                  className={`relative flex items-center rounded-2xl transition-all duration-300 group ${
                     isActive 
                       ? "bg-gradient-to-r from-yellow-400 to-amber-500 text-slate-950 shadow-lg shadow-yellow-500/10 font-black scale-[1.02]" 
-                      : "text-slate-400 hover:bg-slate-900/60 hover:text-white font-bold hover:translate-x-1"
-                  } ${isSidebarCollapsed ? "justify-center px-0 w-12 h-12" : ""}`}
-                  title={isSidebarCollapsed ? item.name : ""}
+                      : "text-slate-400 hover:bg-slate-900/60 hover:text-white font-bold"
+                  } ${
+                    isSidebarCollapsed
+                      ? "justify-center w-12 h-12 p-0 mx-auto"
+                      : "gap-4 px-5 py-4 w-full hover:translate-x-1"
+                  }`}
+                  title={isSidebarCollapsed ? item.name : undefined}
+                  aria-label={item.name}
                 >
-                  <item.icon size={isSidebarCollapsed ? 26 : 20} className={isActive ? "text-slate-950" : "text-slate-500 group-hover:text-white transition-colors duration-300"} />
+                  <item.icon
+                    size={isSidebarCollapsed ? 24 : 20}
+                    className={`shrink-0 ${
+                      isSidebarCollapsed ? "w-6 h-6" : "w-5 h-5"
+                    } ${
+                      isActive ? "text-slate-950" : "text-slate-400 group-hover:text-white transition-colors duration-300"
+                    }`}
+                  />
                   {!isSidebarCollapsed && <span className="text-sm uppercase tracking-widest truncate">{item.name}</span>}
+                  {isSidebarCollapsed && (
+                    <span
+                      role="tooltip"
+                      className="pointer-events-none absolute left-full ml-4 px-3.5 py-2 rounded-xl bg-[#0f172a] text-white text-[11px] font-black uppercase tracking-widest whitespace-nowrap opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 group-focus-visible:opacity-100 group-focus-visible:translate-x-0 transition-all duration-200 shadow-2xl border border-white/15 z-[100]"
+                    >
+                      <span className="absolute -left-1 top-1/2 -translate-y-1/2 w-2 h-2 bg-[#0f172a] border-l border-b border-white/15 rotate-45" />
+                      {item.name}
+                    </span>
+                  )}
                 </Link>
               );
             })}
           </nav>
 
           {/* Footer: User info + Sign Out */}
-          <div className="pt-6 border-t border-slate-800 space-y-3">
+          <div className={`pt-6 border-t border-slate-800 space-y-3 ${isSidebarCollapsed ? "w-full flex flex-col items-center" : ""}`}>
             {/* Logged-in user info */}
-            {!isSidebarCollapsed && (
+            {!isSidebarCollapsed ? (
               <div className="flex items-center gap-3 px-2 py-3">
                 <div className="w-8 h-8 rounded-xl bg-yellow-400/10 border border-yellow-400/20 flex items-center justify-center shrink-0">
                   <span className="text-[10px] font-black text-yellow-400 uppercase">{initials}</span>
@@ -286,14 +319,39 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   <p className="text-[9px] text-slate-500 truncate uppercase tracking-wider font-bold">{userRole}</p>
                 </div>
               </div>
+            ) : (
+              <div className="relative group flex items-center justify-center py-1" title={`${firstName} (${userRole})`}>
+                <div className="w-10 h-10 rounded-xl bg-yellow-400/10 border border-yellow-400/20 flex items-center justify-center shrink-0">
+                  <span className="text-xs font-black text-yellow-400 uppercase">{initials}</span>
+                </div>
+                <span
+                  role="tooltip"
+                  className="pointer-events-none absolute left-full ml-4 px-3.5 py-2 rounded-xl bg-[#0f172a] text-white text-[11px] font-black uppercase tracking-widest whitespace-nowrap opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200 shadow-2xl border border-white/15 z-[100]"
+                >
+                  <span className="absolute -left-1 top-1/2 -translate-y-1/2 w-2 h-2 bg-[#0f172a] border-l border-b border-white/15 rotate-45" />
+                  {firstName} • {userRole}
+                </span>
+              </div>
             )}
             <button 
               onClick={() => signOut({ callbackUrl: "/" })}
-              className={`flex items-center gap-4 px-5 py-4 w-full rounded-2xl text-slate-400 hover:bg-red-500/10 hover:text-red-500 transition-all font-bold group ${isSidebarCollapsed ? "justify-center px-0 w-12 h-12" : ""}`}
-              title={isSidebarCollapsed ? "Sign Out" : ""}
+              className={`relative flex items-center rounded-2xl text-slate-400 hover:bg-red-500/10 hover:text-red-500 transition-all font-bold group ${
+                isSidebarCollapsed ? "justify-center w-12 h-12 p-0 mx-auto" : "gap-4 px-5 py-4 w-full"
+              }`}
+              title={isSidebarCollapsed ? "Sign Out" : undefined}
+              aria-label="Sign Out"
             >
-              <LogOut size={isSidebarCollapsed ? 26 : 20} className="group-hover:translate-x-1 transition-transform shrink-0" />
+              <LogOut size={isSidebarCollapsed ? 24 : 20} className={`shrink-0 ${isSidebarCollapsed ? "w-6 h-6" : "w-5 h-5 group-hover:translate-x-1"} transition-transform`} />
               {!isSidebarCollapsed && <span className="text-sm uppercase tracking-widest truncate">Sign Out</span>}
+              {isSidebarCollapsed && (
+                <span
+                  role="tooltip"
+                  className="pointer-events-none absolute left-full ml-4 px-3.5 py-2 rounded-xl bg-[#0f172a] text-red-400 text-[11px] font-black uppercase tracking-widest whitespace-nowrap opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 group-focus-visible:opacity-100 group-focus-visible:translate-x-0 transition-all duration-200 shadow-2xl border border-red-500/20 z-[100]"
+                >
+                  <span className="absolute -left-1 top-1/2 -translate-y-1/2 w-2 h-2 bg-[#0f172a] border-l border-b border-red-500/20 rotate-45" />
+                  Sign Out
+                </span>
+              )}
             </button>
           </div>
         </div>

@@ -1877,6 +1877,7 @@ function PublicRegistrationPageContent() {
   const logosAlign: "left" | "center" | "right" = bs.logos_align || tcSettings.logos_align || "center";
 
   const metaIconColor: string = bs.meta_icon_color || tcSettings.meta_icon_color || "";
+  const resolvedMetaIconColor: string = metaIconColor || event?.banner_settings?.accent_color || client?.accent_color || (isLightTheme ? eventPrimaryColor : eventAccentColor) || "#eab308";
   const metaIconBgColor: string = bs.meta_icon_bg_color || tcSettings.meta_icon_bg_color || "";
   const metaIconSize: number = Number(bs.meta_icon_size || tcSettings.meta_icon_size) || 0;
   const metaFontFamily: string = bs.meta_font_family || tcSettings.meta_font_family || "";
@@ -1922,8 +1923,12 @@ function PublicRegistrationPageContent() {
           >
             <Calendar
               size={metaIconSize || 32}
-              className={!metaIconColor ? (isLightTheme ? "client-text-primary" : "client-text-accent") : ""}
-              style={metaIconColor ? { color: metaIconColor, width: `${metaIconSize || 32}px`, height: `${metaIconSize || 32}px` } : undefined}
+              style={{
+                color: resolvedMetaIconColor,
+                stroke: resolvedMetaIconColor,
+                width: `${metaIconSize || 32}px`,
+                height: `${metaIconSize || 32}px`,
+              }}
             />
           </div>
           <div>
@@ -1959,8 +1964,12 @@ function PublicRegistrationPageContent() {
           >
             <MapPin
               size={metaIconSize || 32}
-              className={!metaIconColor ? (isLightTheme ? "client-text-primary" : "client-text-accent") : ""}
-              style={metaIconColor ? { color: metaIconColor, width: `${metaIconSize || 32}px`, height: `${metaIconSize || 32}px` } : undefined}
+              style={{
+                color: resolvedMetaIconColor,
+                stroke: resolvedMetaIconColor,
+                width: `${metaIconSize || 32}px`,
+                height: `${metaIconSize || 32}px`,
+              }}
             />
           </div>
           <div>
@@ -2212,6 +2221,14 @@ function PublicRegistrationPageContent() {
         .client-form-text-custom textarea {
           font-weight: ${bStyles.weight} !important;
           font-style: ${bStyles.style} !important;
+        }
+        .client-form-text-custom .client-meta-label {
+          font-weight: 900 !important;
+          font-style: normal !important;
+        }
+        .client-form-text-custom .client-meta-value {
+          font-weight: 700 !important;
+          font-style: normal !important;
         }
         .client-form-text-custom h1,
         .client-form-text-custom h2,
@@ -2632,25 +2649,31 @@ function PublicRegistrationPageContent() {
                       >
                         <Calendar
                           size={metaIconSize || 22}
-                          className={!metaIconColor ? (isLightTheme ? "text-[#1e293b]" : "text-yellow-400") : ""}
-                          style={metaIconColor ? { color: metaIconColor, width: `${metaIconSize || 22}px`, height: `${metaIconSize || 22}px` } : undefined}
+                          style={{
+                            color: resolvedMetaIconColor,
+                            stroke: resolvedMetaIconColor,
+                            width: `${metaIconSize || 22}px`,
+                            height: `${metaIconSize || 22}px`,
+                          }}
                         />
                       </div>
                       <div className={`${metaAlign === "right" ? "text-right" : "text-left"} font-bold`}>
                         <p
-                          className={`text-[10px] uppercase tracking-widest ${isLightTheme ? "text-slate-400" : "text-zinc-500"} client-meta-label`}
+                          className={`text-[10px] font-black uppercase tracking-widest ${isLightTheme ? "text-slate-400" : "text-zinc-500"} client-meta-label`}
                           style={{
-                            ...(metaLabelSize ? { fontSize: `${metaLabelSize}px` } : {}),
-                            ...(metaLabelColor ? { color: metaLabelColor } : {}),
+                            fontSize: `${metaLabelSize || 10}px`,
+                            color: metaLabelColor || (isLightTheme ? "#64748b" : "#94a3b8"),
+                            fontWeight: 900,
                             ...(metaFontFamily ? { fontFamily: metaFontFamily } : {}),
                           }}
                         >
                           Date &amp; Time
                         </p>
                         <p
-                          className={`text-xs mt-0.5 ${style.textMain} client-meta-value`}
+                          className={`text-xs font-bold mt-0.5 ${style.textMain} client-meta-value`}
                           style={{
-                            ...(metaValueSize ? { fontSize: `${metaValueSize}px` } : {}),
+                            fontSize: `${metaValueSize || 12}px`,
+                            fontWeight: 700,
                             ...(metaValueColor ? { color: metaValueColor } : {}),
                             ...(metaFontFamily ? { fontFamily: metaFontFamily } : {}),
                           }}
@@ -2671,25 +2694,31 @@ function PublicRegistrationPageContent() {
                       >
                         <MapPin
                           size={metaIconSize || 22}
-                          className={!metaIconColor ? (isLightTheme ? "text-[#1e293b]" : "text-yellow-400") : ""}
-                          style={metaIconColor ? { color: metaIconColor, width: `${metaIconSize || 22}px`, height: `${metaIconSize || 22}px` } : undefined}
+                          style={{
+                            color: resolvedMetaIconColor,
+                            stroke: resolvedMetaIconColor,
+                            width: `${metaIconSize || 22}px`,
+                            height: `${metaIconSize || 22}px`,
+                          }}
                         />
                       </div>
                       <div className={`${metaAlign === "right" ? "text-right" : "text-left"} font-bold`}>
                         <p
-                          className={`text-[10px] uppercase tracking-widest ${isLightTheme ? "text-slate-400" : "text-zinc-500"} client-meta-label`}
+                          className={`text-[10px] font-black uppercase tracking-widest ${isLightTheme ? "text-slate-400" : "text-zinc-500"} client-meta-label`}
                           style={{
-                            ...(metaLabelSize ? { fontSize: `${metaLabelSize}px` } : {}),
-                            ...(metaLabelColor ? { color: metaLabelColor } : {}),
+                            fontSize: `${metaLabelSize || 10}px`,
+                            color: metaLabelColor || (isLightTheme ? "#64748b" : "#94a3b8"),
+                            fontWeight: 900,
                             ...(metaFontFamily ? { fontFamily: metaFontFamily } : {}),
                           }}
                         >
                           Venue
                         </p>
                         <p
-                          className={`text-xs mt-0.5 ${style.textMain} client-meta-value`}
+                          className={`text-xs font-bold mt-0.5 ${style.textMain} client-meta-value`}
                           style={{
-                            ...(metaValueSize ? { fontSize: `${metaValueSize}px` } : {}),
+                            fontSize: `${metaValueSize || 12}px`,
+                            fontWeight: 700,
                             ...(metaValueColor ? { color: metaValueColor } : {}),
                             ...(metaFontFamily ? { fontFamily: metaFontFamily } : {}),
                           }}
@@ -2746,8 +2775,12 @@ function PublicRegistrationPageContent() {
                       >
                         <Calendar
                           size={metaIconSize || 24}
-                          className={!metaIconColor ? "client-text-accent" : ""}
-                          style={metaIconColor ? { color: metaIconColor, width: `${metaIconSize || 24}px`, height: `${metaIconSize || 24}px` } : undefined}
+                          style={{
+                            color: resolvedMetaIconColor,
+                            stroke: resolvedMetaIconColor,
+                            width: `${metaIconSize || 24}px`,
+                            height: `${metaIconSize || 24}px`,
+                          }}
                         />
                       </div>
                       <div>
@@ -2786,8 +2819,12 @@ function PublicRegistrationPageContent() {
                       >
                         <MapPin
                           size={metaIconSize || 24}
-                          className={!metaIconColor ? "client-text-accent" : ""}
-                          style={metaIconColor ? { color: metaIconColor, width: `${metaIconSize || 24}px`, height: `${metaIconSize || 24}px` } : undefined}
+                          style={{
+                            color: resolvedMetaIconColor,
+                            stroke: resolvedMetaIconColor,
+                            width: `${metaIconSize || 24}px`,
+                            height: `${metaIconSize || 24}px`,
+                          }}
                         />
                       </div>
                       <div>
