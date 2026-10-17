@@ -19,7 +19,7 @@ def read_users(
 ):
     if not current_user or current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Only admins can view users")
-    users = session.exec(select(User)).all()
+    users = session.exec(select(User).order_by(func.lower(User.email).asc())).all()
     result = []
     from sqlalchemy import text
     for user in users:
@@ -136,6 +136,16 @@ def delete_user(
     user = session.get(User, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    session.delete(user)
-    session.commit()
-    return {"ok": True}
+    if current_user.id == user_id or (current_user.email and current_user.email.lower() == user.email.lower()):
+        raise HTTPException(status_code=400, detail="Cannot delete your own administrative account to prevent lockout.")
+    
+    from sqlalchemy import text
+    try:
+        session.execute(text('DELETE FROM "userclientlink" WHERE user_id = :uid'), {"uid": user_id})
+        session.execute(text('DELETE FROM "usereventlink" WHERE user_id = :uid'), {"uid": user_id})
+        session.delete(user)
+        session.commit()
+    except Exception as e:
+        session.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to delete user: {str(e)}")
+    return {"ok": True, "message": f"User {user.email} deleted successfully"}

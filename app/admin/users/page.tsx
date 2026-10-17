@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Users, Plus, Shield, Mail, Trash2, Loader2, CheckCircle2, Lock, Building2, X, Key, Upload, Download } from "lucide-react";
+import { Users, Plus, Shield, Mail, Trash2, Loader2, CheckCircle2, Lock, Building2, X, Key, Upload, Download, Save, ArrowUpDown, Search } from "lucide-react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import AdminLayout from "@/components/AdminLayout";
@@ -25,6 +25,12 @@ export default function UserManagementPage() {
   const [newPassword, setNewPassword] = useState("");
   const [newRole, setNewRole] = useState("staff");
   const [saving, setSaving] = useState(false);
+
+  // Pending edits & table controls
+  const [pendingRoles, setPendingRoles] = useState<Record<number, string>>({});
+  const [savingRoles, setSavingRoles] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
   // Client Assignment States
   const [allClients, setAllClients] = useState<any[]>([]);
@@ -87,6 +93,7 @@ export default function UserManagementPage() {
       });
       const data = res.ok ? await res.json() : [];
       setUsers(Array.isArray(data) ? data : []);
+      setPendingRoles({});
     } catch (err) {
       console.error("Failed to fetch users", err);
     } finally {
@@ -125,20 +132,36 @@ export default function UserManagementPage() {
     }
   };
 
-  const handleDeleteUser = async (userId: number) => {
-    if (!confirm("Are you sure you want to remove this user's access?")) return;
+  const handleDeleteUser = async (user: User) => {
+    if (user.email.toLowerCase() === session?.user?.email?.toLowerCase()) {
+      alert("You cannot delete your own administrative account to prevent lockout.");
+      return;
+    }
+    if (!confirm(`Are you sure you want to remove team access for ${user.email}? This action cannot be undone.`)) return;
     try {
-      await fetch(`/api/py/users/${userId}`, { 
+      const res = await fetch(`/api/py/users/${user.id}`, { 
         method: "DELETE",
         headers: { "x-user-email": session?.user?.email || "" }
       });
-      fetchUsers();
-    } catch (err) {
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        alert(errorData.detail || "Failed to remove user access.");
+        return;
+      }
+      setUsers(prev => prev.filter(u => u.id !== user.id));
+      setPendingRoles(prev => {
+        const next = { ...prev };
+        delete next[user.id];
+        return next;
+      });
+      alert(`User ${user.email} removed successfully.`);
+    } catch (err: any) {
       console.error(err);
+      alert(err.message || "Failed to remove user access.");
     }
   };
 
-  const handleRoleChange = async (userId: number, newRole: string) => {
+  const handleRoleChange = (userId: number, newRole: string) => {
     const userToUpdate = users.find(u => u.id === userId);
     if (!userToUpdate) return;
     
@@ -147,32 +170,57 @@ export default function UserManagementPage() {
       return;
     }
 
-    // Optimistically update local state
-    setUsers(prev => prev.map(u => u.id === userId ? { ...u, role: newRole } : u));
-    
-    try {
-      const res = await fetch(`/api/py/users/${userId}`, {
-        method: "PUT",
-        headers: { 
-          "Content-Type": "application/json",
-          "x-user-email": session?.user?.email || ""
-        },
-        body: JSON.stringify({ 
-          email: userToUpdate.email,
-          role: newRole,
-          is_active: userToUpdate.is_active
-        }),
-      });
-      if (!res.ok) {
-        // Revert on error
-        setUsers(prev => prev.map(u => u.id === userId ? { ...u, role: userToUpdate.role } : u));
-        alert("Failed to update user role.");
+    setPendingRoles(prev => {
+      const updated = { ...prev };
+      if (userToUpdate.role === newRole) {
+        delete updated[userId];
+      } else {
+        updated[userId] = newRole;
       }
-    } catch (err) {
+      return updated;
+    });
+  };
+
+  const handleSaveAllRoles = async () => {
+    const userIds = Object.keys(pendingRoles).map(Number);
+    if (userIds.length === 0) {
+      alert("No pending changes to save.");
+      return;
+    }
+
+    setSavingRoles(true);
+    try {
+      for (const userId of userIds) {
+        const user = users.find(u => u.id === userId);
+        if (!user) continue;
+        const newRole = pendingRoles[userId];
+        const res = await fetch(`/api/py/users/${userId}`, {
+          method: "PUT",
+          headers: { 
+            "Content-Type": "application/json",
+            "x-user-email": session?.user?.email || ""
+          },
+          body: JSON.stringify({ 
+            email: user.email,
+            role: newRole,
+            is_active: user.is_active
+          }),
+        });
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.detail || `Failed to update role for ${user.email}`);
+        }
+      }
+
+      setUsers(prev => prev.map(u => pendingRoles[u.id] ? { ...u, role: pendingRoles[u.id] } : u));
+      setPendingRoles({});
+      alert("Team changes saved successfully!");
+    } catch (err: any) {
       console.error(err);
-      // Revert on error
-      setUsers(prev => prev.map(u => u.id === userId ? { ...u, role: userToUpdate.role } : u));
-      alert("Failed to update user role.");
+      alert(err.message || "Failed to save some team changes.");
+      fetchUsers();
+    } finally {
+      setSavingRoles(false);
     }
   };
 
@@ -368,16 +416,35 @@ export default function UserManagementPage() {
     }
   };
 
+  const pendingCount = Object.keys(pendingRoles).length;
+
+  const sortedAndFilteredUsers = [...users]
+    .filter(u => !searchQuery.trim() || u.email.toLowerCase().includes(searchQuery.toLowerCase()))
+    .sort((a, b) => {
+      const cmp = a.email.toLowerCase().localeCompare(b.email.toLowerCase());
+      return sortOrder === "asc" ? cmp : -cmp;
+    });
+
   return (
     <AdminLayout>
       <div className="max-w-6xl mx-auto font-outfit">
         {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
           <div>
             <h1 className="text-5xl font-black text-[#0f172a] tracking-tighter font-bricolage italic uppercase">TEAM <span className="text-slate-300">MANAGEMENT</span></h1>
             <p className="text-slate-500 font-medium text-lg">Manage permissions and access levels for Excellence Entertainment Logistics.</p>
           </div>
-          <div className="flex flex-wrap gap-4">
+          <div className="flex flex-wrap items-center gap-4">
+            {pendingCount > 0 && (
+              <button
+                onClick={handleSaveAllRoles}
+                disabled={savingRoles}
+                className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-4 rounded-2xl font-black transition-all shadow-lg shadow-emerald-200 uppercase tracking-widest text-xs animate-pulse disabled:opacity-50"
+              >
+                {savingRoles ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+                Save Changes ({pendingCount})
+              </button>
+            )}
             <button 
               onClick={() => setShowBulkModal(true)}
               className="flex items-center gap-3 bg-white border border-slate-200 hover:border-slate-300 text-slate-700 px-6 py-4 rounded-2xl font-black transition-all uppercase tracking-widest text-xs shadow-sm"
@@ -395,6 +462,33 @@ export default function UserManagementPage() {
           </div>
         </div>
 
+        {/* Search & Sort Controls */}
+        <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4 mb-6 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+          <div className="relative flex-1">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search team member by email..."
+              className="w-full pl-11 pr-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:border-[#0f172a] focus:ring-2 focus:ring-slate-100 outline-none text-xs font-bold text-[#0f172a] transition-all"
+            />
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setSortOrder(prev => prev === "asc" ? "desc" : "asc")}
+              className="flex items-center gap-2 px-4 py-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-xl text-xs font-black uppercase tracking-wider transition-all"
+              title="Toggle sort direction"
+            >
+              <ArrowUpDown size={15} />
+              <span>Sort: {sortOrder === "asc" ? "A → Z" : "Z → A"}</span>
+            </button>
+            <span className="text-[11px] font-bold text-slate-400 px-1 uppercase tracking-wider">
+              {sortedAndFilteredUsers.length} {sortedAndFilteredUsers.length === 1 ? 'member' : 'members'}
+            </span>
+          </div>
+        </div>
+
         {/* Users Table */}
         <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
           {loading ? (
@@ -409,6 +503,13 @@ export default function UserManagementPage() {
                <h3 className="text-xl font-bold text-[#0f172a]">No team members yet</h3>
                <p className="text-slate-400 mt-2">Invite your first staff member to help manage events.</p>
             </div>
+          ) : sortedAndFilteredUsers.length === 0 ? (
+            <div className="p-16 text-center">
+               <p className="text-slate-500 font-bold">No team members match &ldquo;{searchQuery}&rdquo;</p>
+               <button onClick={() => setSearchQuery("")} className="mt-3 text-xs font-black text-blue-600 uppercase tracking-wider hover:underline">
+                 Clear Search
+               </button>
+            </div>
           ) : (
             <table className="w-full text-left border-collapse">
               <thead>
@@ -421,87 +522,110 @@ export default function UserManagementPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
-                {users.map((user) => (
-                  <tr key={user.id} className="hover:bg-slate-50/30 transition-colors group">
-                    <td className="px-8 py-6">
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 bg-[#0f172a] rounded-xl flex items-center justify-center text-white font-bold text-xs uppercase">
-                          {user.email.substring(0, 2)}
+                {sortedAndFilteredUsers.map((user) => {
+                  const currentRole = pendingRoles[user.id] ?? user.role;
+                  const isModified = pendingRoles[user.id] !== undefined;
+                  const isCurrentUser = user.email.toLowerCase() === session?.user?.email?.toLowerCase();
+
+                  return (
+                    <tr key={user.id} className="hover:bg-slate-50/30 transition-colors group">
+                      <td className="px-8 py-6">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 bg-[#0f172a] rounded-xl flex items-center justify-center text-white font-bold text-xs uppercase">
+                            {user.email.substring(0, 2)}
+                          </div>
+                          <div>
+                            <p className="font-bold text-[#0f172a]">{user.email}</p>
+                            <p className="text-[10px] text-slate-400 font-medium">Internal Member</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-bold text-[#0f172a]">{user.email}</p>
-                          <p className="text-[10px] text-slate-400 font-medium">Internal Member</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-8 py-6">
-                      {user.email.toLowerCase() === session?.user?.email?.toLowerCase() ? (
-                        <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-700 rounded-lg text-[10px] font-black uppercase tracking-widest border border-blue-100 cursor-not-allowed select-none">
-                          <Shield size={12} />
-                          {user.role} (You)
-                        </div>
-                      ) : (
-                        <select
-                          value={user.role}
-                          onChange={(e) => handleRoleChange(user.id, e.target.value)}
-                          className="bg-white border border-slate-200 hover:border-slate-300 text-slate-700 rounded-lg px-2.5 py-1.5 text-[10px] font-black uppercase tracking-widest outline-none transition-all cursor-pointer focus:ring-2 focus:ring-slate-100"
-                        >
-                          <option value="admin">Admin</option>
-                          <option value="manager">Manager</option>
-                          <option value="staff">Staff</option>
-                        </select>
-                      )}
-                    </td>
-                    <td className="px-8 py-6">
-                      {user.role === "admin" ? (
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest italic">All Clients (Admin)</span>
-                      ) : user.clients && user.clients.length > 0 ? (
-                        <div className="flex flex-wrap gap-1.5 max-w-[200px]">
-                          {user.clients.map(c => (
-                            <span key={c.id} className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 text-slate-500 rounded-md text-[9px] font-bold border border-slate-100 uppercase tracking-wide dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700">
-                              {c.name}
-                              <span className={`text-[7px] px-1 rounded-sm uppercase tracking-tighter ${c.role === 'manager' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' : 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-400'}`}>
-                                {c.role === 'manager' ? 'Mgr' : 'Staff'}
+                      </td>
+                      <td className="px-8 py-6">
+                        {isCurrentUser ? (
+                          <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-700 rounded-lg text-[10px] font-black uppercase tracking-widest border border-blue-100 cursor-not-allowed select-none">
+                            <Shield size={12} />
+                            {user.role} (You)
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <select
+                              value={currentRole}
+                              onChange={(e) => handleRoleChange(user.id, e.target.value)}
+                              className={`bg-white border rounded-lg px-2.5 py-1.5 text-[10px] font-black uppercase tracking-widest outline-none transition-all cursor-pointer focus:ring-2 focus:ring-slate-100 ${
+                                isModified 
+                                  ? "border-amber-400 ring-2 ring-amber-100 bg-amber-50/30 font-bold" 
+                                  : "border-slate-200 hover:border-slate-300 text-slate-700"
+                              }`}
+                            >
+                              <option value="admin">Admin</option>
+                              <option value="manager">Manager</option>
+                              <option value="staff">Staff</option>
+                            </select>
+                            {isModified && (
+                              <span className="text-[9px] font-black uppercase tracking-wider text-amber-700 bg-amber-100/70 px-2 py-0.5 rounded border border-amber-300">
+                                Unsaved
                               </span>
-                            </span>
-                          ))}
+                            )}
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-8 py-6">
+                        {user.role === "admin" ? (
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest italic">All Clients (Admin)</span>
+                        ) : user.clients && user.clients.length > 0 ? (
+                          <div className="flex flex-wrap gap-1.5 max-w-[200px]">
+                            {user.clients.map(c => (
+                              <span key={c.id} className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 text-slate-500 rounded-md text-[9px] font-bold border border-slate-100 uppercase tracking-wide dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700">
+                                {c.name}
+                                <span className={`text-[7px] px-1 rounded-sm uppercase tracking-tighter ${c.role === 'manager' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' : 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-400'}`}>
+                                  {c.role === 'manager' ? 'Mgr' : 'Staff'}
+                                </span>
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-[10px] font-bold text-red-500 uppercase tracking-widest italic">No access assigned</span>
+                        )}
+                      </td>
+                      <td className="px-8 py-6">
+                        <div className="flex items-center gap-2 text-green-600 text-[10px] font-black uppercase tracking-widest">
+                          <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
+                          Active
                         </div>
-                      ) : (
-                        <span className="text-[10px] font-bold text-red-500 uppercase tracking-widest italic">No access assigned</span>
-                      )}
-                    </td>
-                    <td className="px-8 py-6">
-                      <div className="flex items-center gap-2 text-green-600 text-[10px] font-black uppercase tracking-widest">
-                        <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
-                        Active
-                      </div>
-                    </td>
-                    <td className="px-8 py-6 text-right">
-                      <button 
-                        onClick={() => handleOpenPasswordModal(user)}
-                        className="p-2 text-slate-300 hover:text-blue-500 transition-colors mr-3"
-                        title="Change Password"
-                      >
-                        <Key size={18} />
-                      </button>
-                      {user.role !== "admin" && (
+                      </td>
+                      <td className="px-8 py-6 text-right">
                         <button 
-                          onClick={() => handleOpenClientModal(user)}
-                          className="p-2 text-slate-300 hover:text-yellow-500 transition-colors mr-3"
-                          title="Manage Company Access"
+                          onClick={() => handleOpenPasswordModal(user)}
+                          className="p-2 text-slate-300 hover:text-blue-500 transition-colors mr-3"
+                          title="Change Password"
                         >
-                          <Building2 size={18} />
+                          <Key size={18} />
                         </button>
-                      )}
-                      <button 
-                        onClick={() => handleDeleteUser(user.id)}
-                        className="p-2 text-slate-300 hover:text-red-500 transition-colors"
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                        {user.role !== "admin" && (
+                          <button 
+                            onClick={() => handleOpenClientModal(user)}
+                            className="p-2 text-slate-300 hover:text-yellow-500 transition-colors mr-3"
+                            title="Manage Company Access"
+                          >
+                            <Building2 size={18} />
+                          </button>
+                        )}
+                        <button 
+                          onClick={() => handleDeleteUser(user)}
+                          disabled={isCurrentUser}
+                          className={`p-2 transition-colors ${
+                            isCurrentUser 
+                              ? "text-slate-200 cursor-not-allowed opacity-40" 
+                              : "text-slate-300 hover:text-red-500 cursor-pointer"
+                          }`}
+                          title={isCurrentUser ? "You cannot delete your own account" : "Remove team member"}
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           )}
