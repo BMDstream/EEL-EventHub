@@ -471,6 +471,7 @@ export default function EditEventPage() {
     banner_fit: "cover",
     banner_focus: "center",
     banner_height: "auto",
+    banner_border: true,
     banner_size: "cover",
     banner_position: "center",
     banner_theme: "cyber_dark",
@@ -569,6 +570,7 @@ export default function EditEventPage() {
           banner_fit: data.banner_settings?.banner_fit || "cover",
           banner_focus: data.banner_settings?.banner_focus || "center",
           banner_height: data.banner_settings?.banner_height || "auto",
+          banner_border: data.banner_settings?.banner_border !== undefined ? data.banner_settings.banner_border !== false : true,
           banner_size: data.banner_settings?.size || "cover",
           banner_position: data.banner_settings?.position || "center",
           banner_theme: data.banner_settings?.theme || "cyber_dark",
@@ -712,7 +714,7 @@ export default function EditEventPage() {
     setSaving(true);
     try {
       const { 
-        banner_fit, banner_focus, banner_height,
+        banner_fit, banner_focus, banner_height, banner_border,
         banner_size, banner_position, banner_theme, banner_primary_color, 
         banner_accent_color, banner_layout, banner_text_color, banner_input_bg_color,
         banner_url, logo_url, background_url, disclaimer_checkbox_label, form_logos,
@@ -739,6 +741,7 @@ export default function EditEventPage() {
           banner_fit: formData.banner_fit || "cover",
           banner_focus: formData.banner_focus || "center",
           banner_height: formData.banner_height || "auto",
+          banner_border: formData.banner_border !== false,
           size: formData.banner_size || "cover",
           position: formData.banner_position || "center",
           theme: formData.banner_theme,
@@ -1101,7 +1104,7 @@ export default function EditEventPage() {
                         <span className="text-[9px] font-black text-amber-500 uppercase tracking-widest block">
                           Banner Display Settings
                         </span>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <div>
                             <label className="text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 block mb-1">Fit / Scale</label>
                             <select name="banner_fit" value={formData.banner_fit} onChange={handleChange}
@@ -1132,6 +1135,33 @@ export default function EditEventPage() {
                               <option value="standard">Standard (240px)</option>
                               <option value="tall">Tall / Hero (340px)</option>
                             </select>
+                          </div>
+                          <div>
+                            <label className="text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 block mb-1">Banner Border</label>
+                            <div className="flex bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 p-1 gap-1">
+                              <button
+                                type="button"
+                                onClick={() => setFormData(prev => ({ ...prev, banner_border: true }))}
+                                className={`flex-1 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
+                                  formData.banner_border !== false
+                                    ? "bg-[#0f172a] dark:bg-yellow-400 text-white dark:text-slate-950 shadow-sm"
+                                    : "text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                                }`}
+                              >
+                                On (Border)
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setFormData(prev => ({ ...prev, banner_border: false }))}
+                                className={`flex-1 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
+                                  formData.banner_border === false
+                                    ? "bg-[#0f172a] dark:bg-yellow-400 text-white dark:text-slate-950 shadow-sm"
+                                    : "text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                                }`}
+                              >
+                                Off (Blend)
+                              </button>
+                            </div>
                           </div>
                         </div>
                       </div>

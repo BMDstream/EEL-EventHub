@@ -952,6 +952,7 @@ function PublicRegistrationPageContent() {
   const bannerFit = event?.banner_settings?.banner_fit || "cover";
   const bannerFocus = event?.banner_settings?.banner_focus || "center";
   const bannerHeightChoice = event?.banner_settings?.banner_height || "auto";
+  const showBannerBorder = event?.banner_settings?.banner_border !== false;
 
   const themeStyles = {
     cyber_dark: {
@@ -2035,8 +2036,12 @@ function PublicRegistrationPageContent() {
         const objectFitVal = isContain ? "contain" : (bannerFit === "100% 100%" ? "fill" : (bannerFit === "auto" ? "none" : "cover"));
 
         return (
-          <div className={`rounded-2xl overflow-hidden border border-slate-200/10 dark:border-white/5 shadow-lg transition-all relative ${isHeadingEmpty ? "mb-6 scale-102" : "mb-8"} ${heightClass} ${isContain ? "bg-slate-950/40 backdrop-blur-sm" : ""}`}>
-            {isContain && (
+          <div className={`rounded-2xl overflow-hidden transition-all relative ${
+            showBannerBorder
+              ? `border border-slate-200/10 dark:border-white/5 shadow-lg ${isContain ? "bg-slate-950/40 backdrop-blur-sm" : ""}`
+              : "border-0 shadow-none bg-transparent"
+          } ${isHeadingEmpty ? "mb-6 scale-102" : "mb-8"} ${heightClass}`}>
+            {isContain && showBannerBorder && (
               <div 
                 className="absolute inset-0 scale-110 blur-xl opacity-30 bg-cover bg-center pointer-events-none" 
                 style={{ backgroundImage: `url(${formBannerUrl})` }}

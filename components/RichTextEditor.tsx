@@ -47,28 +47,119 @@ const FONT_SIZES = [
 ];
 
 const TEXT_COLORS = [
-  { name: "Slate 800", value: "#0f172a" },
-  { name: "Gray 500", value: "#64748b" },
-  { name: "White", value: "#ffffff" },
-  { name: "Red 500", value: "#ef4444" },
-  { name: "Orange 500", value: "#f97316" },
-  { name: "Yellow 500", value: "#eab308" },
-  { name: "Green 500", value: "#22c55e" },
-  { name: "Blue 500", value: "#3b82f6" },
-  { name: "Indigo 500", value: "#6366f1" },
-  { name: "Purple 500", value: "#a855f7" },
-  { name: "Pink 500", value: "#ec4899" }
+  // Neutrals, Whites, Grays & Slates
+  { name: "White", value: "#ffffff", group: "Neutrals & Slates" },
+  { name: "Slate 100 (Ice)", value: "#f1f5f9", group: "Neutrals & Slates" },
+  { name: "Slate 200 (Silver)", value: "#e2e8f0", group: "Neutrals & Slates" },
+  { name: "Slate 300 (Light Gray)", value: "#cbd5e1", group: "Neutrals & Slates" },
+  { name: "Slate 400 (Muted Gray)", value: "#94a3b8", group: "Neutrals & Slates" },
+  { name: "Gray 500", value: "#64748b", group: "Neutrals & Slates" },
+  { name: "Slate 600 (Charcoal)", value: "#475569", group: "Neutrals & Slates" },
+  { name: "Slate 700 (Dark Slate)", value: "#334155", group: "Neutrals & Slates" },
+  { name: "Slate 800", value: "#0f172a", group: "Neutrals & Slates" },
+  { name: "Pure Black", value: "#000000", group: "Neutrals & Slates" },
+
+  // Reds, Roses & Crimsons
+  { name: "Red 300 (Soft Red)", value: "#fca5a5", group: "Reds & Roses" },
+  { name: "Red 400 (Coral Red)", value: "#f87171", group: "Reds & Roses" },
+  { name: "Red 500", value: "#ef4444", group: "Reds & Roses" },
+  { name: "Red 600 (Crimson)", value: "#dc2626", group: "Reds & Roses" },
+  { name: "Red 700 (Ruby)", value: "#b91c1c", group: "Reds & Roses" },
+  { name: "Red 900 (Burgundy)", value: "#7f1d1d", group: "Reds & Roses" },
+  { name: "Rose 400", value: "#fb7185", group: "Reds & Roses" },
+  { name: "Rose 500", value: "#f43f5e", group: "Reds & Roses" },
+  { name: "Rose 600", value: "#e11d48", group: "Reds & Roses" },
+
+  // Oranges, Ambers & Golds
+  { name: "Orange 300 (Peach)", value: "#fdba74", group: "Oranges & Golds" },
+  { name: "Orange 400 (Sunset)", value: "#fb923c", group: "Oranges & Golds" },
+  { name: "Orange 500", value: "#f97316", group: "Oranges & Golds" },
+  { name: "Orange 600 (Burnt Orange)", value: "#ea580c", group: "Oranges & Golds" },
+  { name: "Amber 300 (Warm Gold)", value: "#fcd34d", group: "Oranges & Golds" },
+  { name: "Amber 400 (Bright Gold)", value: "#fbbf24", group: "Oranges & Golds" },
+  { name: "Amber 500 (Rich Amber)", value: "#f59e0b", group: "Oranges & Golds" },
+  { name: "Champagne Gold", value: "#d4af37", group: "Oranges & Golds" },
+  { name: "Bronze", value: "#b45309", group: "Oranges & Golds" },
+
+  // Yellows & Limes
+  { name: "Cream / Ivory", value: "#fef9c3", group: "Yellows & Limes" },
+  { name: "Yellow 300 (Lemon)", value: "#fde047", group: "Yellows & Limes" },
+  { name: "Yellow 400 (Sunshine)", value: "#facc15", group: "Yellows & Limes" },
+  { name: "Yellow 500", value: "#eab308", group: "Yellows & Limes" },
+  { name: "Lime 300 (Neon Lime)", value: "#bef264", group: "Yellows & Limes" },
+  { name: "Lime 400 (Padel Lime)", value: "#a3e635", group: "Yellows & Limes" },
+  { name: "Lime 500 (Electric Lime)", value: "#84cc16", group: "Yellows & Limes" },
+  { name: "Lime 600 (Court Green)", value: "#65a30d", group: "Yellows & Limes" },
+
+  // Greens, Emeralds & Teals
+  { name: "Green 300 (Mint)", value: "#86efac", group: "Greens & Teals" },
+  { name: "Green 400 (Spring Green)", value: "#4ade80", group: "Greens & Teals" },
+  { name: "Green 500", value: "#22c55e", group: "Greens & Teals" },
+  { name: "Green 600 (Kelly Green)", value: "#16a34a", group: "Greens & Teals" },
+  { name: "Green 800 (Forest Green)", value: "#166534", group: "Greens & Teals" },
+  { name: "Emerald 400", value: "#34d399", group: "Greens & Teals" },
+  { name: "Emerald 500", value: "#10b981", group: "Greens & Teals" },
+  { name: "Emerald 600", value: "#059669", group: "Greens & Teals" },
+  { name: "Teal 300 (Aqua)", value: "#5eead4", group: "Greens & Teals" },
+  { name: "Teal 400 (Turquoise)", value: "#2dd4bf", group: "Greens & Teals" },
+  { name: "Teal 500", value: "#14b8a6", group: "Greens & Teals" },
+  { name: "Teal 600 (Deep Teal)", value: "#0d9488", group: "Greens & Teals" },
+
+  // Cyans, Skies, Blues & Navies
+  { name: "Cyan 300 (Electric Cyan)", value: "#67e8f9", group: "Blues & Navies" },
+  { name: "Cyan 400", value: "#22d3ee", group: "Blues & Navies" },
+  { name: "Cyan 500", value: "#06b6d4", group: "Blues & Navies" },
+  { name: "Sky 300 (Light Sky)", value: "#7dd3fc", group: "Blues & Navies" },
+  { name: "Sky 400 (Sky Blue)", value: "#38bdf8", group: "Blues & Navies" },
+  { name: "Sky 500 (Ocean Blue)", value: "#0ea5e9", group: "Blues & Navies" },
+  { name: "Blue 300 (Baby Blue)", value: "#93c5fd", group: "Blues & Navies" },
+  { name: "Blue 400 (Azure)", value: "#60a5fa", group: "Blues & Navies" },
+  { name: "Blue 500", value: "#3b82f6", group: "Blues & Navies" },
+  { name: "Blue 600 (Royal Blue)", value: "#2563eb", group: "Blues & Navies" },
+  { name: "Blue 700 (Cobalt)", value: "#1d4ed8", group: "Blues & Navies" },
+  { name: "Blue 900 (Midnight Navy)", value: "#1e3a8a", group: "Blues & Navies" },
+
+  // Indigos, Violets, Purples & Pinks
+  { name: "Indigo 300 (Periwinkle)", value: "#a5b4fc", group: "Purples & Pinks" },
+  { name: "Indigo 400", value: "#818cf8", group: "Purples & Pinks" },
+  { name: "Indigo 500", value: "#6366f1", group: "Purples & Pinks" },
+  { name: "Indigo 600", value: "#4f46e5", group: "Purples & Pinks" },
+  { name: "Violet 400 (Lavender)", value: "#a78bfa", group: "Purples & Pinks" },
+  { name: "Violet 500", value: "#8b5cf6", group: "Purples & Pinks" },
+  { name: "Purple 300 (Lilac)", value: "#d8b4fe", group: "Purples & Pinks" },
+  { name: "Purple 400", value: "#c084fc", group: "Purples & Pinks" },
+  { name: "Purple 500", value: "#a855f7", group: "Purples & Pinks" },
+  { name: "Purple 600 (Amethyst)", value: "#9333ea", group: "Purples & Pinks" },
+  { name: "Corporate Purple", value: "#7c1c91", group: "Purples & Pinks" },
+  { name: "Fuchsia 400 (Magenta)", value: "#e879f9", group: "Purples & Pinks" },
+  { name: "Fuchsia 500", value: "#d946ef", group: "Purples & Pinks" },
+  { name: "Pink 300 (Blush)", value: "#f9a8d4", group: "Purples & Pinks" },
+  { name: "Pink 400 (Hot Pink)", value: "#f472b6", group: "Purples & Pinks" },
+  { name: "Pink 500", value: "#ec4899", group: "Purples & Pinks" },
+  { name: "Pink 600", value: "#db2777", group: "Purples & Pinks" }
 ];
 
 const HIGHLIGHT_COLORS = [
   { name: "Clear", value: "transparent" },
   { name: "Yellow Light", value: "#fef08a" },
+  { name: "Amber Light", value: "#fde68a" },
   { name: "Orange Light", value: "#ffedd5" },
-  { name: "Green Light", value: "#dcfce7" },
-  { name: "Blue Light", value: "#dbeafe" },
-  { name: "Purple Light", value: "#f3e8ff" },
+  { name: "Red Light", value: "#fee2e2" },
+  { name: "Rose Light", value: "#ffe4e6" },
   { name: "Pink Light", value: "#fce7f3" },
-  { name: "Slate Light", value: "#f1f5f9" }
+  { name: "Fuchsia Light", value: "#fae8ff" },
+  { name: "Purple Light", value: "#f3e8ff" },
+  { name: "Indigo Light", value: "#e0e7ff" },
+  { name: "Blue Light", value: "#dbeafe" },
+  { name: "Sky Light", value: "#e0f2fe" },
+  { name: "Cyan Light", value: "#cffafe" },
+  { name: "Teal Light", value: "#ccfbf1" },
+  { name: "Emerald Light", value: "#d1fae5" },
+  { name: "Green Light", value: "#dcfce7" },
+  { name: "Lime Light", value: "#ecfccb" },
+  { name: "Slate Light", value: "#f1f5f9" },
+  { name: "Dark Slate Badge", value: "#1e293b" },
+  { name: "Dark Navy Badge", value: "#172554" }
 ];
 
 export default function RichTextEditor({
@@ -88,6 +179,7 @@ export default function RichTextEditor({
   const [activeFont, setActiveFont] = useState("Calibri, sans-serif");
   const [activeSize, setActiveSize] = useState("16px");
   const [activeAlign, setActiveAlign] = useState<"left" | "center" | "right">("left");
+  const [activeTextColor, setActiveTextColor] = useState("");
   const [showUnderlineDropdown, setShowUnderlineDropdown] = useState(false);
   const [showBorderDropdown, setShowBorderDropdown] = useState(false);
   const [showTextColorDropdown, setShowTextColorDropdown] = useState(false);
@@ -520,6 +612,8 @@ export default function RichTextEditor({
   };
 
   const applyTextColor = (color: string) => {
+    if (!color) return;
+    setActiveTextColor(color);
     ensureSelection();
     setShowTextColorDropdown(false);
     document.execCommand("styleWithCSS", false, "true");
@@ -792,23 +886,40 @@ export default function RichTextEditor({
 
             <div className="w-px h-3.5 bg-slate-200 dark:bg-slate-800 mx-0.5 hidden sm:block shrink-0" />
 
-            {/* 7. Text Color Select */}
-            <div className="shrink-0">
+            {/* 7. Text Color Select + Custom Color Wheel */}
+            <div className="flex items-center gap-1 shrink-0">
               <select
+                value={activeTextColor}
+                onMouseDown={() => saveSelection()}
                 onChange={(e) => applyTextColor(e.target.value)}
-                defaultValue=""
                 className="px-2 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-[10px] font-bold outline-none cursor-pointer focus:ring-1 focus:ring-yellow-400"
               >
                 <option value="" disabled>Color</option>
-                {TEXT_COLORS.map((color) => (
-                  <option key={color.value} value={color.value}>{color.name}</option>
+                {Array.from(new Set(TEXT_COLORS.map((c) => c.group))).map((groupName) => (
+                  <optgroup key={groupName} label={groupName}>
+                    {TEXT_COLORS.filter((c) => c.group === groupName).map((color) => (
+                      <option key={color.value} value={color.value}>
+                        {color.name}
+                      </option>
+                    ))}
+                  </optgroup>
                 ))}
               </select>
+              <input
+                type="color"
+                value={activeTextColor || "#3b82f6"}
+                onMouseDown={() => saveSelection()}
+                onInput={(e) => applyTextColor((e.target as HTMLInputElement).value)}
+                onChange={(e) => applyTextColor(e.target.value)}
+                title="Custom Text Color"
+                className="w-6 h-6 rounded-md border border-slate-200 dark:border-slate-700 cursor-pointer p-0 bg-transparent shrink-0"
+              />
             </div>
 
             {/* 8. Highlight Color Select */}
             <div className="shrink-0">
               <select
+                onMouseDown={() => saveSelection()}
                 onChange={(e) => applyHighlightColor(e.target.value)}
                 defaultValue=""
                 className="px-2 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-[10px] font-bold outline-none cursor-pointer focus:ring-1 focus:ring-yellow-400"
