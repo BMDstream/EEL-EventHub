@@ -5,7 +5,33 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-DATABASE_URL = os.getenv("DATABASE_URL")
+def _resolve_database_url() -> str:
+    raw_url = os.getenv("DATABASE_URL") or ""
+    preview_url = os.getenv("PREVIEW_DATABASE_URL") or ""
+    vercel_env = (os.getenv("VERCEL_ENV") or "").lower()
+    git_ref = (os.getenv("VERCEL_GIT_COMMIT_REF") or "").lower()
+
+    is_preview = vercel_env == "preview" or (git_ref != "" and git_ref not in ("main", "master"))
+    if not is_preview and not vercel_env:
+        try:
+            head_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".git", "HEAD")
+            if os.path.exists(head_path):
+                with open(head_path, "r") as f:
+                    head_ref = f.read().strip()
+                if "refs/heads/" in head_ref and not head_ref.endswith("/main") and not head_ref.endswith("/master"):
+                    is_preview = True
+        except Exception:
+            pass
+
+    if is_preview:
+        if preview_url:
+            return preview_url
+        if raw_url and "/neondb" in raw_url and "/neondb_preview" not in raw_url:
+            import re
+            return re.sub(r"/neondb(\?|$)", r"/neondb_preview\1", raw_url)
+    return raw_url
+
+DATABASE_URL = _resolve_database_url()
 # Handle cases where the engine must be running serverless or locally
 IS_SERVERLESS = DATABASE_URL and "localhost" not in DATABASE_URL and "sqlite" not in DATABASE_URL
 is_sqlite = DATABASE_URL and DATABASE_URL.startswith("sqlite")

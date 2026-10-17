@@ -6,7 +6,7 @@ import Link from "next/link";
 import {
   ArrowLeft, Save, Loader2, Trash2, Building2, Lock, Mail,
   Type, Eye, ExternalLink, CheckCircle2, AlertCircle, Sparkles,
-  Calendar, Award, Layers, ChevronDown
+  Calendar, Award, Layers, ChevronDown, AlignLeft, AlignCenter, AlignRight, MapPin
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import AdminLayout from "@/components/AdminLayout";
@@ -495,6 +495,21 @@ export default function EditEventPage() {
     form_logos: ["", "", "", "", ""] as string[],
     send_emails: true,
     send_sms: false,
+    title_align: "left" as "left" | "center" | "right",
+    description_align: "left" as "left" | "center" | "right",
+    meta_align: "left" as "left" | "center" | "right",
+    meta_order: "date_first" as "date_first" | "venue_first" | "stacked",
+    form_header_align: "left" as "left" | "center" | "right",
+    fields_align: "left" as "left" | "center" | "right",
+    logos_align: "center" as "left" | "center" | "right",
+    meta_icon_color: "",
+    meta_icon_bg_color: "",
+    meta_icon_size: 22,
+    meta_font_family: "",
+    meta_label_size: 10,
+    meta_label_color: "",
+    meta_value_size: 12,
+    meta_value_color: "",
   });
 
   // ---------------------------------------------------------------------------
@@ -578,6 +593,21 @@ export default function EditEventPage() {
           form_logos: paddedLogos,
           send_emails: data.send_emails !== false,
           send_sms: !!data.send_sms,
+          title_align: data.banner_settings?.title_align || "left",
+          description_align: data.banner_settings?.description_align || "left",
+          meta_align: data.banner_settings?.meta_align || "left",
+          meta_order: data.banner_settings?.meta_order || "date_first",
+          form_header_align: data.banner_settings?.form_header_align || "left",
+          fields_align: data.banner_settings?.fields_align || "left",
+          logos_align: data.banner_settings?.logos_align || "center",
+          meta_icon_color: data.banner_settings?.meta_icon_color || "",
+          meta_icon_bg_color: data.banner_settings?.meta_icon_bg_color || "",
+          meta_icon_size: Number(data.banner_settings?.meta_icon_size) || 22,
+          meta_font_family: data.banner_settings?.meta_font_family || "",
+          meta_label_size: Number(data.banner_settings?.meta_label_size) || 10,
+          meta_label_color: data.banner_settings?.meta_label_color || "",
+          meta_value_size: Number(data.banner_settings?.meta_value_size) || 12,
+          meta_value_color: data.banner_settings?.meta_value_color || "",
         });
         setOriginalBanner(data.banner_url || "");
         setOriginalLogo(data.logo_url || "");
@@ -715,6 +745,21 @@ export default function EditEventPage() {
           show_qr_code: formData.show_qr_code,
           show_pin_code: formData.show_pin_code,
           form_logos: (formData.form_logos || []).slice(0, 5),
+          title_align: formData.title_align || "left",
+          description_align: formData.description_align || "left",
+          meta_align: formData.meta_align || "left",
+          meta_order: formData.meta_order || "date_first",
+          form_header_align: formData.form_header_align || "left",
+          fields_align: formData.fields_align || "left",
+          logos_align: formData.logos_align || "center",
+          meta_icon_color: formData.meta_icon_color || "",
+          meta_icon_bg_color: formData.meta_icon_bg_color || "",
+          meta_icon_size: Number(formData.meta_icon_size) || 22,
+          meta_font_family: formData.meta_font_family || "",
+          meta_label_size: Number(formData.meta_label_size) || 10,
+          meta_label_color: formData.meta_label_color || "",
+          meta_value_size: Number(formData.meta_value_size) || 12,
+          meta_value_color: formData.meta_value_color || "",
         },
         registration_start: formData.registration_start || null,
         registration_end: formData.registration_end || null,
@@ -1444,6 +1489,408 @@ export default function EditEventPage() {
                           </div>
                         </div>
                       ))}
+                    </div>
+                  </div>
+
+                  {/* Item Alignment & Positioning (Left / Center / Right) */}
+                  <div className="space-y-3 md:col-span-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">
+                        Form Item Alignment & Positioning (Left / Center / Right)
+                      </label>
+                      <span className="text-[10px] font-bold text-slate-400">Move elements independently across the form</span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 bg-slate-50/50 dark:bg-slate-900/60 rounded-2xl border border-slate-100 dark:border-slate-800 p-6">
+                      {[
+                        { key: "title_align", label: "Event Title Alignment", desc: "Main event headline" },
+                        { key: "description_align", label: "Event Description Block", desc: "Intro & rich text block" },
+                        { key: "meta_align", label: "Date & Venue Row", desc: "Calendar & location badges" },
+                        { key: "form_header_align", label: "Form Heading & Subheading", desc: "'Complete Registration' header" },
+                        { key: "fields_align", label: "Form Questions & Labels", desc: "Default question alignment" },
+                        { key: "logos_align", label: "Footer Sponsor Logos", desc: "Bottom partner logo strip" },
+                      ].map((item) => {
+                        const currentVal = (formData as any)[item.key] || "left";
+                        return (
+                          <div key={item.key} className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 p-3.5 flex flex-col justify-between gap-2.5 shadow-sm">
+                            <div>
+                              <span className="text-xs font-black text-slate-800 dark:text-white block">{item.label}</span>
+                              <span className="text-[10px] text-slate-400 font-medium block">{item.desc}</span>
+                            </div>
+                            <div className="grid grid-cols-3 gap-1.5 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
+                              {([
+                                { val: "left", label: "Left", Icon: AlignLeft },
+                                { val: "center", label: "Center", Icon: AlignCenter },
+                                { val: "right", label: "Right", Icon: AlignRight },
+                              ] as const).map(({ val, label, Icon }) => {
+                                const active = currentVal === val;
+                                return (
+                                  <button
+                                    key={val}
+                                    type="button"
+                                    onClick={() => setFormData(prev => ({ ...prev, [item.key]: val }))}
+                                    className={`flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-md text-[10px] font-black uppercase tracking-wider transition-all ${
+                                      active
+                                        ? "bg-slate-900 text-white dark:bg-yellow-400 dark:text-slate-950 shadow-sm"
+                                        : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white"
+                                    }`}
+                                  >
+                                    <Icon className="w-3.5 h-3.5" />
+                                    {label}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+
+                      {/* Date & Venue Positioning / Swap Order */}
+                      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 p-3.5 flex flex-col justify-between gap-2.5 shadow-sm sm:col-span-2 lg:col-span-3">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                          <div>
+                            <span className="text-xs font-black text-slate-800 dark:text-white block">Date & Venue Arrangement / Order</span>
+                            <span className="text-[10px] text-slate-400 font-medium block">Swap which item appears on the left or right, or stack them vertically</span>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 bg-slate-100 dark:bg-slate-800 p-1.5 rounded-lg">
+                          {[
+                            { val: "date_first", label: "Date Left  •  Venue Right" },
+                            { val: "venue_first", label: "Venue Left  •  Date Right" },
+                            { val: "stacked", label: "Stacked Vertically" },
+                          ].map((opt) => {
+                            const active = (formData.meta_order || "date_first") === opt.val;
+                            return (
+                              <button
+                                key={opt.val}
+                                type="button"
+                                onClick={() => setFormData(prev => ({ ...prev, meta_order: opt.val as any }))}
+                                className={`py-2 px-3 rounded-md text-[10px] font-black uppercase tracking-wider transition-all ${
+                                  active
+                                    ? "bg-slate-900 text-white dark:bg-yellow-400 dark:text-slate-950 shadow-sm"
+                                    : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white"
+                                }`}
+                              >
+                                {opt.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Date & Venue Icons & Typography Styling */}
+                  <div className="space-y-3 md:col-span-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">
+                        Date & Venue Icons & Text Styling (Color, Size & Font)
+                      </label>
+                      {(formData.meta_icon_color || formData.meta_icon_bg_color || formData.meta_font_family || formData.meta_label_color || formData.meta_value_color || formData.meta_icon_size !== 22 || formData.meta_label_size !== 10 || formData.meta_value_size !== 12) && (
+                        <button
+                          type="button"
+                          onClick={() => setFormData(prev => ({
+                            ...prev,
+                            meta_icon_color: "",
+                            meta_icon_bg_color: "",
+                            meta_icon_size: 22,
+                            meta_font_family: "",
+                            meta_label_size: 10,
+                            meta_label_color: "",
+                            meta_value_size: 12,
+                            meta_value_color: "",
+                          }))}
+                          className="text-[10px] font-bold text-slate-400 hover:text-red-500 transition-colors"
+                        >
+                          Reset All Date/Venue Styles
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="bg-slate-50/50 dark:bg-slate-900/60 rounded-2xl border border-slate-100 dark:border-slate-800 p-6 space-y-6">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        {/* Icon Color */}
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block">Icon Color</label>
+                            {formData.meta_icon_color && (
+                              <button type="button" onClick={() => setFormData(prev => ({ ...prev, meta_icon_color: "" }))} className="text-[9px] font-bold text-slate-400 hover:text-red-500">Reset</button>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2.5">
+                            <input
+                              type="color"
+                              value={formData.meta_icon_color || formData.banner_accent_color || "#eab308"}
+                              onChange={(e) => setFormData(prev => ({ ...prev, meta_icon_color: e.target.value }))}
+                              className="w-10 h-10 rounded-xl border border-slate-200 dark:border-slate-700 cursor-pointer p-0 bg-transparent shrink-0"
+                            />
+                            <input
+                              type="text"
+                              value={formData.meta_icon_color}
+                              onChange={(e) => setFormData(prev => ({ ...prev, meta_icon_color: e.target.value }))}
+                              placeholder="Default (Accent)"
+                              className="w-full px-3 py-2.5 rounded-xl border border-slate-100 dark:border-slate-800 font-bold text-xs text-slate-700 dark:text-white bg-white dark:bg-slate-900"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Icon Badge Background Color */}
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block">Icon Box Background</label>
+                            {formData.meta_icon_bg_color && (
+                              <button type="button" onClick={() => setFormData(prev => ({ ...prev, meta_icon_bg_color: "" }))} className="text-[9px] font-bold text-slate-400 hover:text-red-500">Reset</button>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2.5">
+                            <input
+                              type="color"
+                              value={formData.meta_icon_bg_color || "#1e293b"}
+                              onChange={(e) => setFormData(prev => ({ ...prev, meta_icon_bg_color: e.target.value }))}
+                              className="w-10 h-10 rounded-xl border border-slate-200 dark:border-slate-700 cursor-pointer p-0 bg-transparent shrink-0"
+                            />
+                            <input
+                              type="text"
+                              value={formData.meta_icon_bg_color}
+                              onChange={(e) => setFormData(prev => ({ ...prev, meta_icon_bg_color: e.target.value }))}
+                              placeholder="Default (Glass)"
+                              className="w-full px-3 py-2.5 rounded-xl border border-slate-100 dark:border-slate-800 font-bold text-xs text-slate-700 dark:text-white bg-white dark:bg-slate-900"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Label Text Color ("DATE & TIME" / "VENUE") */}
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block">Label Color (DATE / VENUE)</label>
+                            {formData.meta_label_color && (
+                              <button type="button" onClick={() => setFormData(prev => ({ ...prev, meta_label_color: "" }))} className="text-[9px] font-bold text-slate-400 hover:text-red-500">Reset</button>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2.5">
+                            <input
+                              type="color"
+                              value={formData.meta_label_color || "#94a3b8"}
+                              onChange={(e) => setFormData(prev => ({ ...prev, meta_label_color: e.target.value }))}
+                              className="w-10 h-10 rounded-xl border border-slate-200 dark:border-slate-700 cursor-pointer p-0 bg-transparent shrink-0"
+                            />
+                            <input
+                              type="text"
+                              value={formData.meta_label_color}
+                              onChange={(e) => setFormData(prev => ({ ...prev, meta_label_color: e.target.value }))}
+                              placeholder="e.g. #94a3b8"
+                              className="w-full px-3 py-2.5 rounded-xl border border-slate-100 dark:border-slate-800 font-bold text-xs text-slate-700 dark:text-white bg-white dark:bg-slate-900"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Value Text Color (Actual Date & Location text) */}
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block">Value Text Color</label>
+                            {formData.meta_value_color && (
+                              <button type="button" onClick={() => setFormData(prev => ({ ...prev, meta_value_color: "" }))} className="text-[9px] font-bold text-slate-400 hover:text-red-500">Reset</button>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2.5">
+                            <input
+                              type="color"
+                              value={formData.meta_value_color || formData.banner_text_color || "#ffffff"}
+                              onChange={(e) => setFormData(prev => ({ ...prev, meta_value_color: e.target.value }))}
+                              className="w-10 h-10 rounded-xl border border-slate-200 dark:border-slate-700 cursor-pointer p-0 bg-transparent shrink-0"
+                            />
+                            <input
+                              type="text"
+                              value={formData.meta_value_color}
+                              onChange={(e) => setFormData(prev => ({ ...prev, meta_value_color: e.target.value }))}
+                              placeholder="e.g. #ffffff"
+                              className="w-full px-3 py-2.5 rounded-xl border border-slate-100 dark:border-slate-800 font-bold text-xs text-slate-700 dark:text-white bg-white dark:bg-slate-900"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2 border-t border-slate-200/60 dark:border-slate-800">
+                        {/* Font Family */}
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block">Date & Venue Font Family</label>
+                          <select
+                            value={formData.meta_font_family}
+                            onChange={(e) => setFormData(prev => ({ ...prev, meta_font_family: e.target.value }))}
+                            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-100 dark:border-slate-800 font-bold text-xs text-slate-700 dark:text-white bg-white dark:bg-slate-900 cursor-pointer"
+                          >
+                            <option value="">Inherit Form Font</option>
+                            <option value="Inter, system-ui, sans-serif">Inter (Modern Sans)</option>
+                            <option value="'Plus Jakarta Sans', sans-serif">Plus Jakarta Sans</option>
+                            <option value="'Playfair Display', Georgia, serif">Playfair Display (Editorial Serif)</option>
+                            <option value="Georgia, serif">Georgia (Classic Serif)</option>
+                            <option value="'Space Grotesk', sans-serif">Space Grotesk (Tech)</option>
+                            <option value="'JetBrains Mono', monospace">JetBrains Mono (Monospace)</option>
+                            <option value="Arial, Helvetica, sans-serif">Arial / Helvetica</option>
+                            <option value="'Trebuchet MS', sans-serif">Trebuchet MS</option>
+                          </select>
+                        </div>
+
+                        {/* Icon Size (px) */}
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block">Icon Size</label>
+                            <span className="text-xs font-black text-slate-700 dark:text-yellow-400">{formData.meta_icon_size || 22}px</span>
+                          </div>
+                          <input
+                            type="range"
+                            min={14}
+                            max={40}
+                            value={formData.meta_icon_size || 22}
+                            onChange={(e) => setFormData(prev => ({ ...prev, meta_icon_size: parseInt(e.target.value) || 22 }))}
+                            className="w-full accent-slate-900 dark:accent-yellow-400 cursor-pointer mt-2"
+                          />
+                          <div className="flex justify-between text-[9px] font-bold text-slate-400">
+                            <span>14px (Small)</span>
+                            <span>22px (Default)</span>
+                            <span>40px (Large)</span>
+                          </div>
+                        </div>
+
+                        {/* Label Text Size (px) */}
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block">Label Font Size</label>
+                            <span className="text-xs font-black text-slate-700 dark:text-yellow-400">{formData.meta_label_size || 10}px</span>
+                          </div>
+                          <input
+                            type="range"
+                            min={8}
+                            max={20}
+                            value={formData.meta_label_size || 10}
+                            onChange={(e) => setFormData(prev => ({ ...prev, meta_label_size: parseInt(e.target.value) || 10 }))}
+                            className="w-full accent-slate-900 dark:accent-yellow-400 cursor-pointer mt-2"
+                          />
+                          <div className="flex justify-between text-[9px] font-bold text-slate-400">
+                            <span>8px</span>
+                            <span>10px (Default)</span>
+                            <span>20px</span>
+                          </div>
+                        </div>
+
+                        {/* Value Text Size (px) */}
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block">Date / Venue Text Size</label>
+                            <span className="text-xs font-black text-slate-700 dark:text-yellow-400">{formData.meta_value_size || 12}px</span>
+                          </div>
+                          <input
+                            type="range"
+                            min={10}
+                            max={28}
+                            value={formData.meta_value_size || 12}
+                            onChange={(e) => setFormData(prev => ({ ...prev, meta_value_size: parseInt(e.target.value) || 12 }))}
+                            className="w-full accent-slate-900 dark:accent-yellow-400 cursor-pointer mt-2"
+                          />
+                          <div className="flex justify-between text-[9px] font-bold text-slate-400">
+                            <span>10px</span>
+                            <span>12px (Default)</span>
+                            <span>28px</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Live Mini-Preview of Date & Venue */}
+                      <div className="rounded-xl bg-slate-900/95 p-4 border border-slate-800">
+                        <div className="flex items-center justify-between mb-3">
+                          <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Live Date & Venue Badge Preview</span>
+                          <span className="text-[9px] font-bold text-slate-500 uppercase">Align: {formData.meta_align} • Order: {formData.meta_order.replace("_", " ")}</span>
+                        </div>
+                        <div
+                          className={`flex flex-wrap gap-6 ${
+                            formData.meta_order === "stacked" ? "flex-col" : formData.meta_order === "venue_first" ? "flex-row-reverse" : "flex-row"
+                          } ${
+                            formData.meta_align === "center"
+                              ? formData.meta_order === "stacked" ? "items-center text-center" : "justify-center"
+                              : formData.meta_align === "right"
+                              ? formData.meta_order === "stacked" ? "items-end text-right" : "justify-end"
+                              : formData.meta_order === "stacked" ? "items-start text-left" : "justify-start"
+                          }`}
+                          style={{ fontFamily: formData.meta_font_family || undefined }}
+                        >
+                          <div className={`flex items-center gap-3.5 ${formData.meta_align === "right" ? "flex-row-reverse text-right" : ""}`}>
+                            <div
+                              className="rounded-2xl flex items-center justify-center border border-white/10 shadow-sm shrink-0"
+                              style={{
+                                width: `${Math.max(36, (formData.meta_icon_size || 22) + 22)}px`,
+                                height: `${Math.max(36, (formData.meta_icon_size || 22) + 22)}px`,
+                                backgroundColor: formData.meta_icon_bg_color || "rgba(255,255,255,0.08)",
+                              }}
+                            >
+                              <Calendar
+                                style={{
+                                  width: `${formData.meta_icon_size || 22}px`,
+                                  height: `${formData.meta_icon_size || 22}px`,
+                                  color: formData.meta_icon_color || formData.banner_accent_color || "#eab308",
+                                }}
+                              />
+                            </div>
+                            <div>
+                              <span
+                                className="font-black uppercase tracking-widest block mb-0.5"
+                                style={{
+                                  fontSize: `${formData.meta_label_size || 10}px`,
+                                  color: formData.meta_label_color || "rgba(255,255,255,0.5)",
+                                }}
+                              >
+                                Date & Time
+                              </span>
+                              <p
+                                className="font-bold tracking-tight"
+                                style={{
+                                  fontSize: `${formData.meta_value_size || 12}px`,
+                                  color: formData.meta_value_color || formData.banner_text_color || "#ffffff",
+                                }}
+                              >
+                                {formData.start_date ? new Date(formData.start_date).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" }) : "Nov 16, 2026, 2:30 PM"}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className={`flex items-center gap-3.5 ${formData.meta_align === "right" ? "flex-row-reverse text-right" : ""}`}>
+                            <div
+                              className="rounded-2xl flex items-center justify-center border border-white/10 shadow-sm shrink-0"
+                              style={{
+                                width: `${Math.max(36, (formData.meta_icon_size || 22) + 22)}px`,
+                                height: `${Math.max(36, (formData.meta_icon_size || 22) + 22)}px`,
+                                backgroundColor: formData.meta_icon_bg_color || "rgba(255,255,255,0.08)",
+                              }}
+                            >
+                              <MapPin
+                                style={{
+                                  width: `${formData.meta_icon_size || 22}px`,
+                                  height: `${formData.meta_icon_size || 22}px`,
+                                  color: formData.meta_icon_color || formData.banner_accent_color || "#eab308",
+                                }}
+                              />
+                            </div>
+                            <div>
+                              <span
+                                className="font-black uppercase tracking-widest block mb-0.5"
+                                style={{
+                                  fontSize: `${formData.meta_label_size || 10}px`,
+                                  color: formData.meta_label_color || "rgba(255,255,255,0.5)",
+                                }}
+                              >
+                                Venue
+                              </span>
+                              <p
+                                className="font-bold tracking-tight"
+                                style={{
+                                  fontSize: `${formData.meta_value_size || 12}px`,
+                                  color: formData.meta_value_color || formData.banner_text_color || "#ffffff",
+                                }}
+                              >
+                                {formData.location || "Event Venue Location"}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
 

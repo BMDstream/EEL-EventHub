@@ -384,7 +384,8 @@ function PublicRegistrationPageContent() {
             label: item.title,
             type: "section_header",
             visible: true,
-            showBeforeAttendance: allFieldsBefore
+            showBeforeAttendance: allFieldsBefore,
+            align: item.align,
           });
         }
         flatFields.push(...item.fields);
@@ -423,10 +424,15 @@ function PublicRegistrationPageContent() {
       return matchesBefore;
     });
 
+    const defaultFieldsAlign: "left" | "center" | "right" =
+      (event?.banner_settings as any)?.fields_align ||
+      (event?.registration_form_template?.theme_config as any)?.fields_align ||
+      "left";
+
     return filtered.map((field) => {
       const isPartnerRelated = field.type === "partner_card" || 
-                              field.label?.toLowerCase().includes("partner") || 
-                              field.description?.toLowerCase().includes("partner");
+                               field.label?.toLowerCase().includes("partner") || 
+                               field.description?.toLowerCase().includes("partner");
       if (isUpdateFlow && isPartnerRelated) {
         return null;
       }
@@ -440,10 +446,15 @@ function PublicRegistrationPageContent() {
         }
       }
 
+      const fieldAlign: "left" | "center" | "right" = field.align || defaultFieldsAlign;
+      const textAlignClass = fieldAlign === "center" ? "text-center" : fieldAlign === "right" ? "text-right" : "text-left";
+      const flexAlignClass = fieldAlign === "center" ? "justify-center text-center" : fieldAlign === "right" ? "justify-end text-right" : "justify-start text-left";
+      const blockPositionClass = fieldAlign === "center" ? "mx-auto" : fieldAlign === "right" ? "ml-auto" : "mr-auto";
+
       if (field.type === "section_header") {
         return (
-          <div key={field.id} className="pt-6 border-t border-white/5">
-            <h4 className={`${style.label} text-[#0f172a] dark:text-white uppercase tracking-wider font-black`}>
+          <div key={field.id} className={`pt-6 border-t border-white/5 ${textAlignClass}`}>
+            <h4 className={`${style.label} text-[#0f172a] dark:text-white uppercase tracking-wider font-black ${textAlignClass}`}>
               {formatLabel(field.label)}
             </h4>
           </div>
@@ -462,14 +473,14 @@ function PublicRegistrationPageContent() {
       };
 
       return (
-        <div key={field.id} className="space-y-3">
-          <label className={`${style.label} client-question-label flex items-center flex-wrap gap-1`}>
+        <div key={field.id} className={`space-y-3 ${textAlignClass}`}>
+          <label className={`${style.label} client-question-label flex items-center flex-wrap gap-1 ${flexAlignClass}`}>
             <span dangerouslySetInnerHTML={{ __html: formatLabel(field.label) }} />
             {field.required && <span className={`${isLightTheme ? "client-text-primary" : "client-text-accent"} ml-0.5 font-bold`}>*</span>}
           </label>
           
           {field.description && (
-            <div className={`p-4 rounded-[1.2rem] flex items-start gap-3 text-xs leading-normal border ${
+            <div className={`p-4 rounded-[1.2rem] flex items-start gap-3 text-xs leading-normal border ${flexAlignClass} ${
               isLightTheme
                 ? "bg-slate-100/80 border-slate-200 text-slate-600" 
                 : "bg-black/30 border-white/5 text-zinc-400"
@@ -480,7 +491,7 @@ function PublicRegistrationPageContent() {
           )}
 
           {field.image_url && (
-            <div className="mt-2 relative rounded-2xl overflow-hidden border border-slate-100 dark:border-slate-850 shadow-sm max-w-sm bg-white/5 p-1">
+            <div className={`mt-2 relative rounded-2xl overflow-hidden border border-slate-100 dark:border-slate-850 shadow-sm max-w-sm bg-white/5 p-1 ${blockPositionClass}`}>
               <img src={field.image_url} alt={field.label} className="w-full h-auto max-h-48 object-contain rounded-xl" />
             </div>
           )}
@@ -492,7 +503,7 @@ function PublicRegistrationPageContent() {
               placeholder={field.placeholder || "Enter your answer"}
               value={value as string}
               onChange={(e) => handleFieldChange(e.target.value)}
-              className={`${style.input} ${!customInputBg && isFormLight ? '!bg-slate-50 !border-slate-300 !text-slate-900 !placeholder-slate-400 focus:!bg-white focus:!border-slate-500' : ''}`}
+              className={`${style.input} ${textAlignClass} ${!customInputBg && isFormLight ? '!bg-slate-50 !border-slate-300 !text-slate-900 !placeholder-slate-400 focus:!bg-white focus:!border-slate-500' : ''}`}
             />
           )}
 
@@ -507,7 +518,7 @@ function PublicRegistrationPageContent() {
                 const cleaned = e.target.value.replace(/[^0-9]/g, '');
                 handleFieldChange(cleaned);
               }}
-              className={`${style.input} ${!customInputBg && isFormLight ? '!bg-slate-50 !border-slate-300 !text-slate-900 !placeholder-slate-400 focus:!bg-white focus:!border-slate-500' : ''}`}
+              className={`${style.input} ${textAlignClass} ${!customInputBg && isFormLight ? '!bg-slate-50 !border-slate-300 !text-slate-900 !placeholder-slate-400 focus:!bg-white focus:!border-slate-500' : ''}`}
             />
           )}
 
@@ -517,7 +528,7 @@ function PublicRegistrationPageContent() {
                 required={isAttending !== false && field.required}
                 value={value as string}
                 onChange={(e) => handleFieldChange(e.target.value)}
-                className={`${style.select} ${!customInputBg && isFormLight ? '!bg-slate-50 !border-slate-300 !text-slate-900 focus:!bg-white focus:!border-slate-500' : ''}`}
+                className={`${style.select} ${textAlignClass} ${!customInputBg && isFormLight ? '!bg-slate-50 !border-slate-300 !text-slate-900 focus:!bg-white focus:!border-slate-500' : ''}`}
               >
                 <option value="" className={isFormLight ? "text-slate-900 bg-white" : "text-white bg-slate-900"}>{field.placeholder || "Select Option"}</option>
                 {field.options?.map((opt: string) => (
@@ -531,7 +542,7 @@ function PublicRegistrationPageContent() {
           )}
 
           {field.type === "checkbox" && (
-            <label className={`${style.checkbox} ${event?.registration_form_template?.theme_config?.force_text_visibility ? "text-black" : ""}`}>
+            <label className={`${style.checkbox} ${flexAlignClass} ${event?.registration_form_template?.theme_config?.force_text_visibility ? "text-black" : ""}`}>
                <input 
                  type="checkbox" 
                  checked={!!value}
@@ -548,7 +559,7 @@ function PublicRegistrationPageContent() {
                 const currentArray = Array.isArray(value) ? value : [];
                 const isChecked = currentArray.includes(opt);
                 return (
-                  <label key={opt} className={`${style.checkbox || "flex items-center cursor-pointer select-none text-sm font-bold text-white mb-2"} ${event?.registration_form_template?.theme_config?.force_text_visibility ? "text-black" : ""} flex items-center`}>
+                  <label key={opt} className={`${style.checkbox || "flex items-center cursor-pointer select-none text-sm font-bold text-white mb-2"} ${event?.registration_form_template?.theme_config?.force_text_visibility ? "text-black" : ""} flex items-center ${flexAlignClass}`}>
                     <input
                       type="checkbox"
                       checked={isChecked}
@@ -1854,31 +1865,125 @@ function PublicRegistrationPageContent() {
 
   const layout = event?.banner_settings?.layout || themeLayouts[theme as keyof typeof themeLayouts] || "split";
 
+  const bs: Record<string, any> = (event?.banner_settings as any) || {};
+  const tcSettings: Record<string, any> = (event?.registration_form_template?.theme_config as any) || {};
+
+  const titleAlign: "left" | "center" | "right" = bs.title_align || tcSettings.title_align || "left";
+  const descriptionAlign: "left" | "center" | "right" = bs.description_align || tcSettings.description_align || "left";
+  const metaAlign: "left" | "center" | "right" = bs.meta_align || tcSettings.meta_align || "left";
+  const metaOrder: "date_first" | "venue_first" | "stacked" = bs.meta_order || tcSettings.meta_order || "date_first";
+  const formHeaderAlign: "left" | "center" | "right" = bs.form_header_align || tcSettings.form_header_align || "left";
+  const fieldsAlign: "left" | "center" | "right" = bs.fields_align || tcSettings.fields_align || "left";
+  const logosAlign: "left" | "center" | "right" = bs.logos_align || tcSettings.logos_align || "center";
+
+  const metaIconColor: string = bs.meta_icon_color || tcSettings.meta_icon_color || "";
+  const metaIconBgColor: string = bs.meta_icon_bg_color || tcSettings.meta_icon_bg_color || "";
+  const metaIconSize: number = Number(bs.meta_icon_size || tcSettings.meta_icon_size) || 0;
+  const metaFontFamily: string = bs.meta_font_family || tcSettings.meta_font_family || "";
+  const metaLabelSize: number = Number(bs.meta_label_size || tcSettings.meta_label_size) || 0;
+  const metaLabelColor: string = bs.meta_label_color || tcSettings.meta_label_color || "";
+  const metaValueSize: number = Number(bs.meta_value_size || tcSettings.meta_value_size) || 0;
+  const metaValueColor: string = bs.meta_value_color || tcSettings.meta_value_color || "";
+
+  const titleAlignClass = titleAlign === "center" ? "text-center" : titleAlign === "right" ? "text-right" : "text-left";
+  const descAlignClass =
+    descriptionAlign === "center"
+      ? "text-center mx-auto"
+      : descriptionAlign === "right"
+      ? "text-right ml-auto"
+      : "text-left mr-auto";
+  const formHeaderAlignClass = formHeaderAlign === "center" ? "text-center" : formHeaderAlign === "right" ? "text-right" : "text-left";
+  const fieldsLabelFlexClass = fieldsAlign === "center" ? "justify-center text-center" : fieldsAlign === "right" ? "justify-end text-right" : "justify-start text-left";
+  const logosFlexClass = logosAlign === "left" ? "justify-start" : logosAlign === "right" ? "justify-end" : "justify-center";
+
   // Sub-render blocks for dynamic layouts
   const eventInfo = event ? (
     <div className="relative z-10 my-auto py-12 lg:py-24">
-      <h1 className={getTitleClass(style.title, event.title || "")} dangerouslySetInnerHTML={{ __html: sanitizeEventTitle(event.title || "") }} />
+      <h1 className={`${getTitleClass(style.title, event.title || "")} ${titleAlignClass}`} dangerouslySetInnerHTML={{ __html: sanitizeEventTitle(event.title || "") }} />
       <div 
-        className={`text-xl mb-10 lg:mb-20 max-w-lg leading-relaxed font-medium ${style.textMuted}`}
+        className={`text-xl mb-10 lg:mb-20 max-w-lg leading-relaxed font-medium ${style.textMuted} ${descAlignClass}`}
         dangerouslySetInnerHTML={{ __html: event.description || "" }}
       />
-      <div className="space-y-6 lg:space-y-10">
-        <div className="flex items-center gap-8 group">
-          <div className={style.card}>
-            <Calendar size={32} className={isLightTheme ? "client-text-primary" : "client-text-accent"} />
+      <div
+        className={`flex gap-6 lg:gap-10 ${
+          metaOrder === "venue_first" ? "flex-col-reverse" : "flex-col"
+        } ${
+          metaAlign === "center" ? "items-center text-center" : metaAlign === "right" ? "items-end text-right" : "items-start text-left"
+        }`}
+        style={metaFontFamily ? { fontFamily: metaFontFamily } : undefined}
+      >
+        <div className={`flex items-center gap-6 lg:gap-8 group ${metaAlign === "right" ? "flex-row-reverse text-right" : ""}`}>
+          <div
+            className={style.card}
+            style={{
+              ...(metaIconBgColor ? { backgroundColor: metaIconBgColor } : {}),
+              ...(metaIconSize ? { width: `${Math.max(44, metaIconSize + 24)}px`, height: `${Math.max(44, metaIconSize + 24)}px`, display: "flex", alignItems: "center", justifyContent: "center", padding: 0 } : {}),
+            }}
+          >
+            <Calendar
+              size={metaIconSize || 32}
+              className={!metaIconColor ? (isLightTheme ? "client-text-primary" : "client-text-accent") : ""}
+              style={metaIconColor ? { color: metaIconColor, width: `${metaIconSize || 32}px`, height: `${metaIconSize || 32}px` } : undefined}
+            />
           </div>
           <div>
-            <p className={`${style.textMuted} text-[10px] font-black uppercase tracking-[0.3em] mb-2`}>Schedule</p>
-            <p className={`text-2xl font-black font-bricolage italic tracking-tight ${style.textMain}`}>{new Date(event.start_date).toLocaleString(undefined, { dateStyle: 'full', timeStyle: 'short' })}</p>
+            <p
+              className={`${style.textMuted} text-[10px] font-black uppercase tracking-[0.3em] mb-2 client-meta-label`}
+              style={{
+                ...(metaLabelSize ? { fontSize: `${metaLabelSize}px` } : {}),
+                ...(metaLabelColor ? { color: metaLabelColor } : {}),
+                ...(metaFontFamily ? { fontFamily: metaFontFamily } : {}),
+              }}
+            >
+              Schedule
+            </p>
+            <p
+              className={`text-2xl font-black font-bricolage italic tracking-tight ${style.textMain} client-meta-value`}
+              style={{
+                ...(metaValueSize ? { fontSize: `${metaValueSize}px` } : {}),
+                ...(metaValueColor ? { color: metaValueColor } : {}),
+                ...(metaFontFamily ? { fontFamily: metaFontFamily } : {}),
+              }}
+            >
+              {new Date(event.start_date).toLocaleString(undefined, { dateStyle: 'full', timeStyle: 'short' })}
+            </p>
           </div>
         </div>
-        <div className="flex items-start gap-8 group">
-          <div className={style.card}>
-            <MapPin size={32} className={isLightTheme ? "client-text-primary" : "client-text-accent"} />
+        <div className={`flex items-start gap-6 lg:gap-8 group ${metaAlign === "right" ? "flex-row-reverse text-right" : ""}`}>
+          <div
+            className={style.card}
+            style={{
+              ...(metaIconBgColor ? { backgroundColor: metaIconBgColor } : {}),
+              ...(metaIconSize ? { width: `${Math.max(44, metaIconSize + 24)}px`, height: `${Math.max(44, metaIconSize + 24)}px`, display: "flex", alignItems: "center", justifyContent: "center", padding: 0 } : {}),
+            }}
+          >
+            <MapPin
+              size={metaIconSize || 32}
+              className={!metaIconColor ? (isLightTheme ? "client-text-primary" : "client-text-accent") : ""}
+              style={metaIconColor ? { color: metaIconColor, width: `${metaIconSize || 32}px`, height: `${metaIconSize || 32}px` } : undefined}
+            />
           </div>
           <div>
-            <p className={`${style.textMuted} text-[10px] font-black uppercase tracking-[0.3em] mb-2`}>Venue</p>
-            <p className={`text-2xl font-black font-bricolage italic tracking-tight ${style.textMain}`}>{event.location}</p>
+            <p
+              className={`${style.textMuted} text-[10px] font-black uppercase tracking-[0.3em] mb-2 client-meta-label`}
+              style={{
+                ...(metaLabelSize ? { fontSize: `${metaLabelSize}px` } : {}),
+                ...(metaLabelColor ? { color: metaLabelColor } : {}),
+                ...(metaFontFamily ? { fontFamily: metaFontFamily } : {}),
+              }}
+            >
+              Venue
+            </p>
+            <p
+              className={`text-2xl font-black font-bricolage italic tracking-tight ${style.textMain} client-meta-value`}
+              style={{
+                ...(metaValueSize ? { fontSize: `${metaValueSize}px` } : {}),
+                ...(metaValueColor ? { color: metaValueColor } : {}),
+                ...(metaFontFamily ? { fontFamily: metaFontFamily } : {}),
+              }}
+            >
+              {event.location}
+            </p>
             {event.address && (
               <p className={`${style.textMuted} text-sm font-medium leading-relaxed max-w-sm mt-1`}>{event.address}</p>
             )}
@@ -1940,21 +2045,21 @@ function PublicRegistrationPageContent() {
           </div>
         );
       })()}
-      <div className={isHeadingEmpty ? "mb-6" : "mb-12"}>
+      <div className={`${isHeadingEmpty ? "mb-6" : "mb-12"} ${formHeaderAlignClass}`}>
         {!isHeadingEmpty && (
           <h2 
-            className={`${style.heading} client-event-heading`} 
+            className={`${style.heading} client-event-heading ${formHeaderAlignClass}`} 
             dangerouslySetInnerHTML={{
               __html: formHeadingText
             }}
           />
         )}
         <div 
-          className={
+          className={`${
             event?.registration_form_template?.theme_config?.form_subheading && /<[a-z][\s\S]*>/i.test(event.registration_form_template.theme_config.form_subheading)
               ? style.subHeading.replace(/\buppercase\b/g, "").replace(/\btracking-wide(st|r)?\b/g, "")
               : style.subHeading
-          }
+          } ${formHeaderAlignClass}`}
           dangerouslySetInnerHTML={{
             __html: event?.registration_form_template 
               ? (event.registration_form_template.theme_config?.form_subheading !== undefined && event.registration_form_template.theme_config?.form_subheading !== null && event.registration_form_template.theme_config?.form_subheading !== ""
@@ -1970,7 +2075,7 @@ function PublicRegistrationPageContent() {
           {renderFormFields(true)}
 
           <div className={style.rsvpBorder}>
-            <label className={`${style.label} client-question-label`}>
+            <label className={`${style.label} client-question-label flex items-center flex-wrap gap-1 ${fieldsLabelFlexClass}`}>
               {event?.registration_form_template?.theme_config?.attendance_label 
                 ? formatLabel(event.registration_form_template.theme_config.attendance_label) 
                 : "Attendance Status"} <span className={`${isLightTheme ? "client-text-primary" : "client-text-accent"} ml-0.5 font-bold`}>*</span>
@@ -2037,7 +2142,7 @@ function PublicRegistrationPageContent() {
 
         {activeFormLogos.length > 0 && (
           <div className={`mt-8 pt-6 border-t ${isFormLight ? "border-slate-200/80" : "border-white/10"}`}>
-            <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-8">
+            <div className={`flex flex-wrap items-center ${logosFlexClass} gap-6 sm:gap-8`}>
               {activeFormLogos.map((logoUrl: string, idx: number) => (
                 <div key={idx} className="flex items-center justify-center">
                   <img
@@ -2498,32 +2603,99 @@ function PublicRegistrationPageContent() {
             <div className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-8 lg:p-12 relative z-10">
               <div className={`${style.centeredCard} client-form-text-custom`}>
                 <div className="mb-8 border-b border-white/10 pb-8">
-                  <h1 className={getTitleClass(style.title, event.title || "")} dangerouslySetInnerHTML={{ __html: sanitizeEventTitle(event.title || "") }} />
+                  <h1 className={`${getTitleClass(style.title, event.title || "")} ${titleAlignClass}`} dangerouslySetInnerHTML={{ __html: sanitizeEventTitle(event.title || "") }} />
                   <div 
-                    className={`text-base mb-8 max-w-xl leading-relaxed mt-4 ${style.textMuted}`}
+                    className={`text-base mb-8 max-w-xl leading-relaxed mt-4 ${style.textMuted} ${descAlignClass}`}
                     dangerouslySetInnerHTML={{ __html: event.description || "" }}
                   />
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="flex items-center gap-4">
-                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${isLightTheme ? "bg-slate-100 text-slate-800" : "bg-white/5 text-[#fff] border border-white/10"}`}>
-                        <Calendar size={22} className={isLightTheme ? "text-[#1e293b]" : "text-yellow-400"} />
+                  <div
+                    className={`flex flex-wrap gap-6 md:gap-10 ${
+                      metaOrder === "stacked" ? "flex-col" : metaOrder === "venue_first" ? "flex-col md:flex-row-reverse" : "flex-col md:flex-row"
+                    } ${
+                      metaAlign === "center"
+                        ? metaOrder === "stacked" ? "items-center text-center" : "md:justify-center items-center"
+                        : metaAlign === "right"
+                        ? metaOrder === "stacked" ? "items-end text-right" : "md:justify-end items-end"
+                        : metaOrder === "stacked" ? "items-start text-left" : "md:justify-start items-start"
+                    }`}
+                    style={metaFontFamily ? { fontFamily: metaFontFamily } : undefined}
+                  >
+                    <div className={`flex items-center gap-4 ${metaAlign === "right" ? "flex-row-reverse text-right" : ""}`}>
+                      <div
+                        className={`rounded-xl flex items-center justify-center shrink-0 ${isLightTheme ? "bg-slate-100 text-slate-800" : "bg-white/5 text-[#fff] border border-white/10"}`}
+                        style={{
+                          width: `${Math.max(40, (metaIconSize || 22) + 24)}px`,
+                          height: `${Math.max(40, (metaIconSize || 22) + 24)}px`,
+                          ...(metaIconBgColor ? { backgroundColor: metaIconBgColor } : {}),
+                        }}
+                      >
+                        <Calendar
+                          size={metaIconSize || 22}
+                          className={!metaIconColor ? (isLightTheme ? "text-[#1e293b]" : "text-yellow-400") : ""}
+                          style={metaIconColor ? { color: metaIconColor, width: `${metaIconSize || 22}px`, height: `${metaIconSize || 22}px` } : undefined}
+                        />
                       </div>
-                      <div className="text-left font-bold">
-                        <p className={`text-[10px] uppercase tracking-widest ${isLightTheme ? "text-slate-400" : "text-zinc-500"}`}>Date &amp; Time</p>
-                        <p className={`text-xs mt-0.5 ${style.textMain}`}>
+                      <div className={`${metaAlign === "right" ? "text-right" : "text-left"} font-bold`}>
+                        <p
+                          className={`text-[10px] uppercase tracking-widest ${isLightTheme ? "text-slate-400" : "text-zinc-500"} client-meta-label`}
+                          style={{
+                            ...(metaLabelSize ? { fontSize: `${metaLabelSize}px` } : {}),
+                            ...(metaLabelColor ? { color: metaLabelColor } : {}),
+                            ...(metaFontFamily ? { fontFamily: metaFontFamily } : {}),
+                          }}
+                        >
+                          Date &amp; Time
+                        </p>
+                        <p
+                          className={`text-xs mt-0.5 ${style.textMain} client-meta-value`}
+                          style={{
+                            ...(metaValueSize ? { fontSize: `${metaValueSize}px` } : {}),
+                            ...(metaValueColor ? { color: metaValueColor } : {}),
+                            ...(metaFontFamily ? { fontFamily: metaFontFamily } : {}),
+                          }}
+                        >
                           {event.start_date ? new Date(event.start_date).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : "TBA"}
                         </p>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-4">
-                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${isLightTheme ? "bg-slate-100 text-slate-800" : "bg-white/5 text-[#fff] border border-white/10"}`}>
-                        <MapPin size={22} className={isLightTheme ? "text-[#1e293b]" : "text-yellow-400"} />
+                    <div className={`flex items-center gap-4 ${metaAlign === "right" ? "flex-row-reverse text-right" : ""}`}>
+                      <div
+                        className={`rounded-xl flex items-center justify-center shrink-0 ${isLightTheme ? "bg-slate-100 text-slate-800" : "bg-white/5 text-[#fff] border border-white/10"}`}
+                        style={{
+                          width: `${Math.max(40, (metaIconSize || 22) + 24)}px`,
+                          height: `${Math.max(40, (metaIconSize || 22) + 24)}px`,
+                          ...(metaIconBgColor ? { backgroundColor: metaIconBgColor } : {}),
+                        }}
+                      >
+                        <MapPin
+                          size={metaIconSize || 22}
+                          className={!metaIconColor ? (isLightTheme ? "text-[#1e293b]" : "text-yellow-400") : ""}
+                          style={metaIconColor ? { color: metaIconColor, width: `${metaIconSize || 22}px`, height: `${metaIconSize || 22}px` } : undefined}
+                        />
                       </div>
-                      <div className="text-left font-bold">
-                        <p className={`text-[10px] uppercase tracking-widest ${isLightTheme ? "text-slate-400" : "text-zinc-500"}`}>Venue</p>
-                        <p className={`text-xs mt-0.5 ${style.textMain}`}>{event.location || "TBA"}</p>
+                      <div className={`${metaAlign === "right" ? "text-right" : "text-left"} font-bold`}>
+                        <p
+                          className={`text-[10px] uppercase tracking-widest ${isLightTheme ? "text-slate-400" : "text-zinc-500"} client-meta-label`}
+                          style={{
+                            ...(metaLabelSize ? { fontSize: `${metaLabelSize}px` } : {}),
+                            ...(metaLabelColor ? { color: metaLabelColor } : {}),
+                            ...(metaFontFamily ? { fontFamily: metaFontFamily } : {}),
+                          }}
+                        >
+                          Venue
+                        </p>
+                        <p
+                          className={`text-xs mt-0.5 ${style.textMain} client-meta-value`}
+                          style={{
+                            ...(metaValueSize ? { fontSize: `${metaValueSize}px` } : {}),
+                            ...(metaValueColor ? { color: metaValueColor } : {}),
+                            ...(metaFontFamily ? { fontFamily: metaFontFamily } : {}),
+                          }}
+                        >
+                          {event.location || "TBA"}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -2540,28 +2712,105 @@ function PublicRegistrationPageContent() {
           {layout === "stacked" && (
             <div className="min-h-screen flex flex-col relative z-10">
               <div className={style.headerBlock}>
-                <div className="max-w-5xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-8">
-                  <div>
-                    <h1 className={getTitleClass(style.title, event.title || "")} dangerouslySetInnerHTML={{ __html: sanitizeEventTitle(event.title || "") }} />
+                <div className="max-w-5xl mx-auto flex flex-col gap-8">
+                  <div className="w-full">
+                    <h1 className={`${getTitleClass(style.title, event.title || "")} ${titleAlignClass}`} dangerouslySetInnerHTML={{ __html: sanitizeEventTitle(event.title || "") }} />
                     <div 
-                      className={`text-base max-w-xl leading-relaxed mt-4 ${style.textMuted}`}
+                      className={`text-base max-w-xl leading-relaxed mt-4 ${style.textMuted} ${descAlignClass}`}
                       dangerouslySetInnerHTML={{ __html: event.description || "" }}
                     />
                   </div>
                   
-                  <div className="flex flex-col sm:flex-row gap-8 shrink-0">
-                    <div className="flex items-center gap-4">
-                      <Calendar size={24} className="client-text-accent" />
+                  <div
+                    className={`flex flex-wrap gap-8 shrink-0 ${
+                      metaOrder === "stacked" ? "flex-col" : metaOrder === "venue_first" ? "flex-col sm:flex-row-reverse" : "flex-col sm:flex-row"
+                    } ${
+                      metaAlign === "center"
+                        ? metaOrder === "stacked" ? "items-center text-center" : "justify-center items-center"
+                        : metaAlign === "right"
+                        ? metaOrder === "stacked" ? "items-end text-right" : "justify-end items-end"
+                        : metaOrder === "stacked" ? "items-start text-left" : "justify-start items-start"
+                    }`}
+                    style={metaFontFamily ? { fontFamily: metaFontFamily } : undefined}
+                  >
+                    <div className={`flex items-center gap-4 ${metaAlign === "right" ? "flex-row-reverse text-right" : ""}`}>
+                      <div
+                        className={`rounded-xl flex items-center justify-center shrink-0 ${metaIconBgColor ? "" : "p-2"}`}
+                        style={{
+                          ...(metaIconBgColor ? {
+                            backgroundColor: metaIconBgColor,
+                            width: `${Math.max(40, (metaIconSize || 24) + 22)}px`,
+                            height: `${Math.max(40, (metaIconSize || 24) + 22)}px`,
+                          } : {}),
+                        }}
+                      >
+                        <Calendar
+                          size={metaIconSize || 24}
+                          className={!metaIconColor ? "client-text-accent" : ""}
+                          style={metaIconColor ? { color: metaIconColor, width: `${metaIconSize || 24}px`, height: `${metaIconSize || 24}px` } : undefined}
+                        />
+                      </div>
                       <div>
-                        <p className={`${style.textMuted} text-[9px] font-black uppercase tracking-[0.3em]`}>Schedule</p>
-                        <p className={`text-lg font-bold ${style.textMain}`}>{new Date(event.start_date).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}</p>
+                        <p
+                          className={`${style.textMuted} text-[9px] font-black uppercase tracking-[0.3em] client-meta-label`}
+                          style={{
+                            ...(metaLabelSize ? { fontSize: `${metaLabelSize}px` } : {}),
+                            ...(metaLabelColor ? { color: metaLabelColor } : {}),
+                            ...(metaFontFamily ? { fontFamily: metaFontFamily } : {}),
+                          }}
+                        >
+                          Schedule
+                        </p>
+                        <p
+                          className={`text-lg font-bold ${style.textMain} client-meta-value`}
+                          style={{
+                            ...(metaValueSize ? { fontSize: `${metaValueSize}px` } : {}),
+                            ...(metaValueColor ? { color: metaValueColor } : {}),
+                            ...(metaFontFamily ? { fontFamily: metaFontFamily } : {}),
+                          }}
+                        >
+                          {new Date(event.start_date).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
+                        </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-4">
-                      <MapPin size={24} className="client-text-accent" />
+                    <div className={`flex items-center gap-4 ${metaAlign === "right" ? "flex-row-reverse text-right" : ""}`}>
+                      <div
+                        className={`rounded-xl flex items-center justify-center shrink-0 ${metaIconBgColor ? "" : "p-2"}`}
+                        style={{
+                          ...(metaIconBgColor ? {
+                            backgroundColor: metaIconBgColor,
+                            width: `${Math.max(40, (metaIconSize || 24) + 22)}px`,
+                            height: `${Math.max(40, (metaIconSize || 24) + 22)}px`,
+                          } : {}),
+                        }}
+                      >
+                        <MapPin
+                          size={metaIconSize || 24}
+                          className={!metaIconColor ? "client-text-accent" : ""}
+                          style={metaIconColor ? { color: metaIconColor, width: `${metaIconSize || 24}px`, height: `${metaIconSize || 24}px` } : undefined}
+                        />
+                      </div>
                       <div>
-                        <p className={`${style.textMuted} text-[9px] font-black uppercase tracking-[0.3em]`}>Venue</p>
-                        <p className={`text-lg font-bold ${style.textMain}`}>{event.location}</p>
+                        <p
+                          className={`${style.textMuted} text-[9px] font-black uppercase tracking-[0.3em] client-meta-label`}
+                          style={{
+                            ...(metaLabelSize ? { fontSize: `${metaLabelSize}px` } : {}),
+                            ...(metaLabelColor ? { color: metaLabelColor } : {}),
+                            ...(metaFontFamily ? { fontFamily: metaFontFamily } : {}),
+                          }}
+                        >
+                          Venue
+                        </p>
+                        <p
+                          className={`text-lg font-bold ${style.textMain} client-meta-value`}
+                          style={{
+                            ...(metaValueSize ? { fontSize: `${metaValueSize}px` } : {}),
+                            ...(metaValueColor ? { color: metaValueColor } : {}),
+                            ...(metaFontFamily ? { fontFamily: metaFontFamily } : {}),
+                          }}
+                        >
+                          {event.location}
+                        </p>
                       </div>
                     </div>
                   </div>

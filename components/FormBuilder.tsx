@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import { 
   Plus, Trash2, Type, List, CheckSquare, Save, Loader2, 
-  Sparkles, ArrowUp, ArrowDown, Users, Hash, FileText, ChevronDown, ListTodo
+  Sparkles, ArrowUp, ArrowDown, Users, Hash, FileText, ChevronDown, ListTodo,
+  AlignLeft, AlignCenter, AlignRight
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSession } from "next-auth/react";
@@ -24,11 +25,13 @@ interface FormField {
   image_url?: string;
   inactive?: boolean;
   showBeforeAttendance?: boolean;
+  align?: "left" | "center" | "right";
 }
 
 interface FormSection {
   id: string;
   title: string;
+  align?: "left" | "center" | "right";
   fields: FormField[];
 }
 
@@ -432,8 +435,8 @@ export default function FormBuilder({
                        className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 space-y-6 dark:bg-[#0f172a] dark:border-slate-800"
                      >
                        {/* Section header bar */}
-                       <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
-                         <div className="flex items-center gap-3 flex-1">
+                       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
+                         <div className="flex items-center gap-3 flex-1 min-w-[220px]">
                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Section {secIdx + 1}:</span>
                            <input 
                              type="text"
@@ -442,7 +445,31 @@ export default function FormBuilder({
                              className="px-4 py-2 rounded-xl bg-slate-50 border-none outline-none font-bold text-sm text-[#0f172a] focus:ring-2 focus:ring-yellow-400 dark:bg-slate-800 dark:text-white"
                            />
                          </div>
-                         <div className="flex items-center gap-1.5">
+                         <div className="flex items-center gap-2">
+                           <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl" title="Section title alignment">
+                             {([
+                               { val: "left", Icon: AlignLeft, label: "Left" },
+                               { val: "center", Icon: AlignCenter, label: "Center" },
+                               { val: "right", Icon: AlignRight, label: "Right" },
+                             ] as const).map(({ val, Icon, label }) => {
+                               const active = (section.align || "left") === val;
+                               return (
+                                 <button
+                                   key={val}
+                                   type="button"
+                                   onClick={() => setSections(sections.map(s => s.id === section.id ? { ...s, align: val } : s))}
+                                   title={`Align section header ${label}`}
+                                   className={`p-1.5 rounded-lg transition-all ${
+                                     active
+                                       ? "bg-[#0f172a] text-white dark:bg-yellow-400 dark:text-slate-950 shadow-sm"
+                                       : "text-slate-400 hover:text-slate-700 dark:hover:text-white"
+                                   }`}
+                                 >
+                                   <Icon size={13} />
+                                 </button>
+                               );
+                             })}
+                           </div>
                            <button 
                              onClick={() => moveSectionOrder(secIdx, "up")}
                              disabled={secIdx === 0}
@@ -671,34 +698,65 @@ export default function FormBuilder({
                                  })()}
 
                                  {/* Field behaviors flags */}
-                                 <div className="flex flex-wrap items-center gap-6 pt-3 border-t border-slate-100 dark:border-slate-800">
-                                   <label className="flex items-center gap-2 cursor-pointer">
-                                     <input 
-                                       type="checkbox" 
-                                       checked={field.required}
-                                       onChange={(e) => updateField(section.id, field.id, { required: e.target.checked })}
-                                       className="w-4 h-4 rounded text-yellow-400 focus:ring-yellow-400" 
-                                     />
-                                     <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Required</span>
-                                   </label>
-                                   <label className="flex items-center gap-2 cursor-pointer">
-                                     <input 
-                                       type="checkbox" 
-                                       checked={!!field.inactive}
-                                       onChange={(e) => updateField(section.id, field.id, { inactive: e.target.checked })}
-                                       className="w-4 h-4 rounded text-yellow-400 focus:ring-yellow-400" 
-                                     />
-                                     <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Hide from Form</span>
-                                   </label>
-                                   <label className="flex items-center gap-2 cursor-pointer">
-                                     <input 
-                                       type="checkbox" 
-                                       checked={!!field.showBeforeAttendance}
-                                       onChange={(e) => updateField(section.id, field.id, { showBeforeAttendance: e.target.checked })}
-                                       className="w-4 h-4 rounded text-yellow-400 focus:ring-yellow-400" 
-                                     />
-                                     <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Show before status</span>
-                                   </label>
+                                 <div className="flex flex-wrap items-center justify-between gap-4 pt-3 border-t border-slate-100 dark:border-slate-800">
+                                   <div className="flex flex-wrap items-center gap-6">
+                                     <label className="flex items-center gap-2 cursor-pointer">
+                                       <input 
+                                         type="checkbox" 
+                                         checked={field.required}
+                                         onChange={(e) => updateField(section.id, field.id, { required: e.target.checked })}
+                                         className="w-4 h-4 rounded text-yellow-400 focus:ring-yellow-400" 
+                                       />
+                                       <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Required</span>
+                                     </label>
+                                     <label className="flex items-center gap-2 cursor-pointer">
+                                       <input 
+                                         type="checkbox" 
+                                         checked={!!field.inactive}
+                                         onChange={(e) => updateField(section.id, field.id, { inactive: e.target.checked })}
+                                         className="w-4 h-4 rounded text-yellow-400 focus:ring-yellow-400" 
+                                       />
+                                       <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Hide from Form</span>
+                                     </label>
+                                     <label className="flex items-center gap-2 cursor-pointer">
+                                       <input 
+                                         type="checkbox" 
+                                         checked={!!field.showBeforeAttendance}
+                                         onChange={(e) => updateField(section.id, field.id, { showBeforeAttendance: e.target.checked })}
+                                         className="w-4 h-4 rounded text-yellow-400 focus:ring-yellow-400" 
+                                       />
+                                       <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Show before status</span>
+                                     </label>
+                                   </div>
+
+                                   <div className="flex items-center gap-2">
+                                     <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Position:</span>
+                                     <div className="flex items-center gap-1 bg-white dark:bg-slate-800 border border-slate-150 dark:border-slate-700 p-0.5 rounded-lg">
+                                       {([
+                                         { val: "left", Icon: AlignLeft, label: "Left" },
+                                         { val: "center", Icon: AlignCenter, label: "Center" },
+                                         { val: "right", Icon: AlignRight, label: "Right" },
+                                       ] as const).map(({ val, Icon, label }) => {
+                                         const active = (field.align || "left") === val;
+                                         return (
+                                           <button
+                                             key={val}
+                                             type="button"
+                                             onClick={() => updateField(section.id, field.id, { align: val })}
+                                             title={`Align question ${label}`}
+                                             className={`flex items-center gap-1 px-2 py-1 rounded-md text-[8px] font-black uppercase tracking-wider transition-all ${
+                                               active
+                                                 ? "bg-[#0f172a] text-white dark:bg-yellow-400 dark:text-slate-950 shadow-sm"
+                                                 : "text-slate-400 hover:text-slate-700 dark:hover:text-white"
+                                             }`}
+                                           >
+                                             <Icon size={11} />
+                                             {label}
+                                           </button>
+                                         );
+                                       })}
+                                     </div>
+                                   </div>
                                  </div>
                                </div>
 

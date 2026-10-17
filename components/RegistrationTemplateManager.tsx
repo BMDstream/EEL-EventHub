@@ -5,7 +5,7 @@ import {
   Plus, Trash2, Copy, Save, Loader2, Edit3, Type, CheckSquare, 
   List, Palette, FileText, CheckCircle2, AlertCircle, ChevronRight, XCircle,
   ArrowUp, ArrowDown, Layout, HelpCircle, Mail, Award, Eye, EyeOff, ChevronDown,
-  Sparkles, RefreshCw
+  Sparkles, RefreshCw, AlignLeft, AlignCenter, AlignRight
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSession } from "next-auth/react";
@@ -27,6 +27,7 @@ interface FormField {
   image_url?: string;
   inactive?: boolean;
   showBeforeAttendance?: boolean;
+  align?: "left" | "center" | "right";
 }
 
 interface FormSection {
@@ -1590,6 +1591,34 @@ export default function RegistrationTemplateManager() {
                                       />
                                       Render before RSVP Selector
                                     </label>
+                                  </div>
+
+                                  <div className="flex items-center gap-2 pt-1">
+                                    <span className="text-[8px] font-black uppercase tracking-widest text-slate-400">Position:</span>
+                                    <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-0.5 rounded-lg">
+                                      {([
+                                        { val: "left", Icon: AlignLeft, label: "Left" },
+                                        { val: "center", Icon: AlignCenter, label: "Center" },
+                                        { val: "right", Icon: AlignRight, label: "Right" },
+                                      ] as const).map(({ val, Icon, label }) => {
+                                        const active = (field.align || "left") === val;
+                                        return (
+                                          <button
+                                            key={val}
+                                            type="button"
+                                            onClick={() => updateFieldProperty(field.id, "align", val)}
+                                            className={`flex items-center gap-1 px-2 py-1 rounded-md text-[8px] font-black uppercase tracking-wider transition-all ${
+                                              active
+                                                ? "bg-[#0f172a] text-white dark:bg-yellow-400 dark:text-slate-950 shadow-sm"
+                                                : "text-slate-400 hover:text-slate-700 dark:hover:text-white"
+                                            }`}
+                                          >
+                                            <Icon size={11} />
+                                            {label}
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
                                   </div>
 
                                   {field.type === "select" && (

@@ -12,7 +12,10 @@ import {
   CaseSensitive,
   Type,
   Sun,
-  Moon
+  Moon,
+  AlignLeft,
+  AlignCenter,
+  AlignRight
 } from "lucide-react";
 
 interface RichTextEditorProps {
@@ -84,6 +87,7 @@ export default function RichTextEditor({
 
   const [activeFont, setActiveFont] = useState("Calibri, sans-serif");
   const [activeSize, setActiveSize] = useState("16px");
+  const [activeAlign, setActiveAlign] = useState<"left" | "center" | "right">("left");
   const [showUnderlineDropdown, setShowUnderlineDropdown] = useState(false);
   const [showBorderDropdown, setShowBorderDropdown] = useState(false);
   const [showTextColorDropdown, setShowTextColorDropdown] = useState(false);
@@ -132,6 +136,11 @@ export default function RichTextEditor({
             }
           }
         }
+
+        const textAlignVal = computedStyle.textAlign;
+        if (textAlignVal === "center" || textAlignVal === "right" || textAlignVal === "left") {
+          setActiveAlign(textAlignVal);
+        }
       }
     }
   };
@@ -153,9 +162,10 @@ export default function RichTextEditor({
         
         // Prefer top-level wrapper span or element that encloses the text
         const topEl = tempDiv.firstElementChild as HTMLElement | null;
-        if (topEl && topEl.tagName === "SPAN" && topEl.textContent?.trim() === fullText) {
+        if (topEl && (topEl.tagName === "SPAN" || topEl.tagName === "DIV") && topEl.textContent?.trim() === fullText) {
           const fs = topEl.style.fontSize;
           const ff = topEl.style.fontFamily;
+          const ta = topEl.style.textAlign;
           if (fs && FONT_SIZES.includes(fs)) {
             setActiveSize(fs);
           }
@@ -163,18 +173,25 @@ export default function RichTextEditor({
             const matched = FONTS.find(f => f.value.includes(ff) || ff.includes(f.value));
             if (matched) setActiveFont(matched.value);
           }
+          if (ta === "left" || ta === "center" || ta === "right") {
+            setActiveAlign(ta);
+          }
         } else {
           // If no single top-level span, check if styled span exists
-          const styledSpan = tempDiv.querySelector("span[style]") as HTMLElement | null;
+          const styledSpan = tempDiv.querySelector("span[style], div[style]") as HTMLElement | null;
           if (styledSpan && styledSpan.textContent?.trim() === fullText) {
             const fs = styledSpan.style.fontSize;
             const ff = styledSpan.style.fontFamily;
+            const ta = styledSpan.style.textAlign;
             if (fs && FONT_SIZES.includes(fs)) {
               setActiveSize(fs);
             }
             if (ff) {
               const matched = FONTS.find(f => f.value.includes(ff) || ff.includes(f.value));
               if (matched) setActiveFont(matched.value);
+            }
+            if (ta === "left" || ta === "center" || ta === "right") {
+              setActiveAlign(ta);
             }
           }
         }
@@ -482,6 +499,26 @@ export default function RichTextEditor({
     }
   };
 
+  const applyTextAlign = (align: "left" | "center" | "right") => {
+    setActiveAlign(align);
+    if (!editorRef.current) return;
+
+    restoreSelection();
+    const sel = window.getSelection();
+    const hasHighlight = sel && sel.rangeCount > 0 && !sel.isCollapsed &&
+      sel.toString().trim().length > 0 &&
+      editorRef.current.contains(sel.getRangeAt(0).commonAncestorContainer);
+
+    const editorText = editorRef.current.textContent?.trim() || "";
+    const selectedText = hasHighlight ? (sel?.toString().trim() || "") : "";
+
+    if (!hasHighlight || selectedText === editorText) {
+      applyStyleToEntireContent({ display: "block", width: "100%", textAlign: align });
+    } else {
+      applyStyleToSelection({ display: "block", width: "100%", textAlign: align });
+    }
+  };
+
   const applyTextColor = (color: string) => {
     ensureSelection();
     setShowTextColorDropdown(false);
@@ -677,6 +714,34 @@ export default function RichTextEditor({
                 title="Italic"
               >
                 <ItalicIcon size={11} className="pointer-events-none" />
+              </button>
+            </div>
+
+            {/* 4b. Left, Center, Right Alignment Buttons */}
+            <div className="flex items-center bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-0.5 shrink-0">
+              <button
+                type="button"
+                onMouseDown={(e) => { e.preventDefault(); applyTextAlign("left"); }}
+                className={`p-1 rounded transition-colors ${activeAlign === "left" ? "bg-slate-200 dark:bg-slate-700 text-[#0f172a] dark:text-yellow-400" : "hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200"}`}
+                title="Align Left"
+              >
+                <AlignLeft size={11} className="pointer-events-none" />
+              </button>
+              <button
+                type="button"
+                onMouseDown={(e) => { e.preventDefault(); applyTextAlign("center"); }}
+                className={`p-1 rounded transition-colors ${activeAlign === "center" ? "bg-slate-200 dark:bg-slate-700 text-[#0f172a] dark:text-yellow-400" : "hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200"}`}
+                title="Align Center"
+              >
+                <AlignCenter size={11} className="pointer-events-none" />
+              </button>
+              <button
+                type="button"
+                onMouseDown={(e) => { e.preventDefault(); applyTextAlign("right"); }}
+                className={`p-1 rounded transition-colors ${activeAlign === "right" ? "bg-slate-200 dark:bg-slate-700 text-[#0f172a] dark:text-yellow-400" : "hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200"}`}
+                title="Align Right"
+              >
+                <AlignRight size={11} className="pointer-events-none" />
               </button>
             </div>
 
