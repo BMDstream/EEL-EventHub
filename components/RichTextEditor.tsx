@@ -180,6 +180,7 @@ export default function RichTextEditor({
   const [activeSize, setActiveSize] = useState("16px");
   const [activeAlign, setActiveAlign] = useState<"left" | "center" | "right">("left");
   const [activeTextColor, setActiveTextColor] = useState("");
+  const [customHexInput, setCustomHexInput] = useState("");
   const [showUnderlineDropdown, setShowUnderlineDropdown] = useState(false);
   const [showBorderDropdown, setShowBorderDropdown] = useState(false);
   const [showTextColorDropdown, setShowTextColorDropdown] = useState(false);
@@ -611,11 +612,54 @@ export default function RichTextEditor({
     }
   };
 
-  const applyTextColor = (color: string) => {
+  const applyTextColor = (color: string, keepInputFocus = false) => {
     if (!color) return;
     setActiveTextColor(color);
-    ensureSelection();
+    setCustomHexInput(color);
     setShowTextColorDropdown(false);
+
+    if (keepInputFocus && editorRef.current) {
+      const savedRange = savedSelectionRef.current;
+      const editorText = editorRef.current.textContent?.trim() || "";
+      const savedText = savedRange && !savedRange.collapsed && editorRef.current.contains(savedRange.commonAncestorContainer)
+        ? savedRange.toString().trim()
+        : "";
+
+      if (savedRange && savedText.length > 0 && savedText !== editorText) {
+        try {
+          const parentEl = savedRange.commonAncestorContainer.nodeType === 1
+            ? (savedRange.commonAncestorContainer as HTMLElement)
+            : (savedRange.commonAncestorContainer.parentElement as HTMLElement | null);
+          if (parentEl && parentEl !== editorRef.current && parentEl.tagName === "SPAN" && parentEl.textContent?.trim() === savedText) {
+            parentEl.style.color = color;
+          } else {
+            const fragment = savedRange.extractContents();
+            fragment.querySelectorAll?.("*").forEach((node) => {
+              const el = node as HTMLElement;
+              if (el.style?.color) el.style.color = "";
+              if (el.tagName === "FONT" && el.hasAttribute("color")) el.removeAttribute("color");
+            });
+            const wrapper = document.createElement("span");
+            wrapper.style.color = color;
+            wrapper.appendChild(fragment);
+            savedRange.insertNode(wrapper);
+            const newRange = document.createRange();
+            newRange.selectNodeContents(wrapper);
+            savedSelectionRef.current = newRange;
+          }
+          triggerChange();
+          return;
+        } catch (err) {
+          console.error("Failed to apply hex color to range:", err);
+        }
+      }
+
+      editorRef.current.querySelectorAll("font[color]").forEach((el) => el.removeAttribute("color"));
+      applyStyleToEntireContent({ color });
+      return;
+    }
+
+    ensureSelection();
     document.execCommand("styleWithCSS", false, "true");
     document.execCommand("foreColor", false, color);
     triggerChange();
@@ -886,7 +930,7 @@ export default function RichTextEditor({
 
             <div className="w-px h-3.5 bg-slate-200 dark:bg-slate-800 mx-0.5 hidden sm:block shrink-0" />
 
-            {/* 7. Text Color Select + Custom Color Wheel */}
+            {/* 7. Text Color Select + Custom Color Wheel + Hex Code Input */}
             <div className="flex items-center gap-1 shrink-0">
               <select
                 value={activeTextColor}
@@ -895,6 +939,9 @@ export default function RichTextEditor({
                 className="px-2 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-[10px] font-bold outline-none cursor-pointer focus:ring-1 focus:ring-yellow-400"
               >
                 <option value="" disabled>Color</option>
+                {activeTextColor && !TEXT_COLORS.some((c) => c.value.toLowerCase() === activeTextColor.toLowerCase()) && (
+                  <option value={activeTextColor}>Custom ({activeTextColor})</option>
+                )}
                 {Array.from(new Set(TEXT_COLORS.map((c) => c.group))).map((groupName) => (
                   <optgroup key={groupName} label={groupName}>
                     {TEXT_COLORS.filter((c) => c.group === groupName).map((color) => (
@@ -907,12 +954,47 @@ export default function RichTextEditor({
               </select>
               <input
                 type="color"
-                value={activeTextColor || "#3b82f6"}
+                value={/^#[0-9a-fA-F]{6}$/.test(activeTextColor) ? activeTextColor : "#3b82f6"}
                 onMouseDown={() => saveSelection()}
                 onInput={(e) => applyTextColor((e.target as HTMLInputElement).value)}
                 onChange={(e) => applyTextColor(e.target.value)}
-                title="Custom Text Color"
+                title="Custom Text Color Picker"
                 className="w-6 h-6 rounded-md border border-slate-200 dark:border-slate-700 cursor-pointer p-0 bg-transparent shrink-0"
+              />
+              <input
+                type="text"
+                value={customHexInput}
+                onMouseDown={() => saveSelection()}
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  setCustomHexInput(raw);
+                  const cleaned = raw.trim();
+                  if (/^#?[0-9a-fA-F]{6}$/.test(cleaned)) {
+                    const normalized = cleaned.startsWith("#") ? cleaned : `#${cleaned}`;
+                    applyTextColor(normalized, true);
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    const cleaned = customHexInput.trim();
+                    if (/^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(cleaned)) {
+                      const normalized = cleaned.startsWith("#") ? cleaned : `#${cleaned}`;
+                      applyTextColor(normalized, false);
+                    }
+                  }
+                }}
+                onBlur={() => {
+                  const cleaned = customHexInput.trim();
+                  if (/^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(cleaned)) {
+                    const normalized = cleaned.startsWith("#") ? cleaned : `#${cleaned}`;
+                    applyTextColor(normalized, true);
+                  }
+                }}
+                placeholder="#hex"
+                maxLength={7}
+                title="Enter custom hex color (e.g. #a3e635)"
+                className="w-16 px-1.5 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-[10px] font-mono font-bold outline-none focus:ring-1 focus:ring-yellow-400"
               />
             </div>
 
