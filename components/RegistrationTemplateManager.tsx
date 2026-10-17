@@ -98,6 +98,12 @@ interface RegistrationFormTemplate {
     display_fields?: string[];
     card_layout_text?: string;
     success_bg_color?: string;
+    card_text_color?: string;
+    card_font_size?: string;
+    card_font_weight?: string;
+    card_font_family?: string;
+    card_text_align?: string;
+    card_line_height?: string;
   };
   created_at?: string;
   updated_at?: string;
@@ -854,63 +860,66 @@ export default function RegistrationTemplateManager() {
         )}
       </AnimatePresence>
 
-      <div className="space-y-4">
-        <div className="flex items-center justify-between ml-1">
-          <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">
-            Select Template
-          </h3>
+      <div className="bg-white rounded-[2rem] p-4 sm:p-5 shadow-sm border border-slate-100 dark:bg-[#0f172a] dark:border-slate-800 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+        <div className="flex-1 flex flex-col sm:flex-row sm:items-center gap-3">
+          <div className="flex items-center gap-2 shrink-0">
+            <Layout size={16} className="text-amber-500" />
+            <h3 className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">
+              Select Template:
+            </h3>
+          </div>
+          
+          <div className="relative flex-1 min-w-[280px]">
+            <select
+              value={selectedId || ""}
+              onChange={(e) => handleSelectTemplate(Number(e.target.value))}
+              className="w-full appearance-none px-4 py-3.5 pr-10 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 font-bold text-sm text-[#0f172a] dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-400 cursor-pointer shadow-inner"
+            >
+              {templates.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name} {t.description ? ` — (${t.description})` : ""}
+                </option>
+              ))}
+            </select>
+            <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400" />
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+          {selectedTemplate && (
+            <>
+              <button
+                type="button"
+                onClick={() => handleDuplicateTemplate(selectedTemplate)}
+                title="Duplicate active template"
+                className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold transition-all cursor-pointer"
+              >
+                <Copy size={13} className="text-blue-500" />
+                <span>Duplicate</span>
+              </button>
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={() => handleDeleteTemplate(selectedTemplate.id, selectedTemplate.name)}
+                  title="Delete active template"
+                  className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 dark:bg-red-950/30 dark:hover:bg-red-900/40 dark:text-red-400 text-xs font-bold transition-all cursor-pointer"
+                >
+                  <Trash2 size={13} />
+                  <span>Delete</span>
+                </button>
+              )}
+            </>
+          )}
           {isAdmin && (
             <button
+              type="button"
               onClick={() => { setShowCreateModal(true); }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#0f172a] hover:bg-[#1e293b] text-white text-[10px] font-black uppercase tracking-wider transition-all shadow-sm"
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#0f172a] hover:bg-[#1e293b] text-white text-xs font-black uppercase tracking-wider transition-all shadow-sm dark:bg-yellow-400 dark:text-black dark:hover:bg-yellow-500 cursor-pointer"
             >
-              <Plus size={11} />
-              New
+              <Plus size={13} />
+              <span>New</span>
             </button>
           )}
-        </div>
-        <div className="bg-white rounded-[2rem] p-4 shadow-sm border border-slate-100 dark:bg-[#0f172a] dark:border-slate-800 flex flex-row items-center gap-4 overflow-x-auto whitespace-nowrap min-h-[110px] scrollbar-thin">
-          {templates.map((t) => {
-            const isSelected = t.id === selectedId;
-            return (
-              <div key={t.id} className="relative group/row font-bold inline-block min-w-[240px] shrink-0">
-                <button
-                  onClick={() => handleSelectTemplate(t.id)}
-                  className={`w-full flex items-center justify-between p-4 rounded-2xl text-left transition-all ${
-                    isSelected 
-                      ? "bg-[#0f172a]/5 text-[#0f172a] font-black dark:bg-yellow-400/10 dark:text-yellow-400"
-                      : "text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800/50"
-                  }`}
-                >
-                  <div className="flex-1 min-w-0 pr-10">
-                    <p className="text-sm font-bold truncate">{t.name}</p>
-                    <p className="text-[10px] text-slate-400 font-medium truncate mt-0.5">{t.description || "No description provided."}</p>
-                  </div>
-                  <ChevronRight size={14} className={`opacity-40 transition-transform shrink-0 ${isSelected ? "translate-x-1" : ""}`} />
-                </button>
-                
-                {/* Actions */}
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 opacity-0 group-hover/row:opacity-100 transition-opacity flex items-center gap-1 bg-white/95 rounded-xl px-1.5 py-1 shadow-sm border border-slate-100 dark:bg-[#0f172a]">
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleDuplicateTemplate(t); }}
-                    title="Copy template"
-                    className="p-1.5 rounded-lg text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20"
-                  >
-                    <Copy size={13} />
-                  </button>
-                  {isAdmin && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); handleDeleteTemplate(t.id, t.name); }}
-                      title="Delete template"
-                      className="p-1.5 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
-                    >
-                      <Trash2 size={13} />
-                    </button>
-                  )}
-                </div>
-              </div>
-            );
-          })}
         </div>
       </div>
 
@@ -2076,23 +2085,161 @@ export default function RegistrationTemplateManager() {
                           </div>
                         </div>
 
-                        <div className="space-y-2">
-                          <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block ml-1">
-                            Operator Success Card Background Color
-                          </label>
-                          <div className="flex items-center gap-3">
-                            <input 
-                              type="color" 
-                              value={selectedTemplate.operator_config?.success_bg_color || "#0f172a"} 
-                              onChange={(e) => updateOperatorConfig("success_bg_color", e.target.value)}
-                              className="w-10 h-10 rounded-xl border border-slate-200 cursor-pointer p-0 bg-transparent shrink-0" 
-                            />
-                            <input 
-                              type="text" 
-                              value={selectedTemplate.operator_config?.success_bg_color || "#0f172a"} 
-                              onChange={(e) => updateOperatorConfig("success_bg_color", e.target.value)}
-                              className="w-24 shrink-0 px-3 py-2.5 rounded-xl border border-slate-100 font-mono font-bold text-xs bg-slate-50 dark:bg-slate-800" 
-                            />
+                        {/* Operator Card Styling: Background, Text Color & Typography */}
+                        <div className="p-4 sm:p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 space-y-4">
+                          <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 block">
+                            Operator Card Styling & Typography
+                          </span>
+                          
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                            {/* Card Background Color */}
+                            <div className="space-y-1.5">
+                              <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
+                                Card Background Color
+                              </label>
+                              <div className="flex items-center gap-2">
+                                <input 
+                                  type="color" 
+                                  value={selectedTemplate.operator_config?.success_bg_color || "#0f172a"} 
+                                  onChange={(e) => updateOperatorConfig("success_bg_color", e.target.value)}
+                                  className="w-9 h-9 rounded-xl border border-slate-200 cursor-pointer p-0 bg-transparent shrink-0" 
+                                />
+                                <input 
+                                  type="text" 
+                                  value={selectedTemplate.operator_config?.success_bg_color || "#0f172a"} 
+                                  onChange={(e) => updateOperatorConfig("success_bg_color", e.target.value)}
+                                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 font-mono font-bold text-xs bg-white dark:bg-slate-800 text-slate-800 dark:text-white" 
+                                />
+                              </div>
+                            </div>
+
+                            {/* Card Text Color */}
+                            <div className="space-y-1.5">
+                              <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
+                                Text Color
+                              </label>
+                              <div className="flex items-center gap-2">
+                                <input 
+                                  type="color" 
+                                  value={selectedTemplate.operator_config?.card_text_color || "#ffffff"} 
+                                  onChange={(e) => updateOperatorConfig("card_text_color", e.target.value)}
+                                  className="w-9 h-9 rounded-xl border border-slate-200 cursor-pointer p-0 bg-transparent shrink-0" 
+                                />
+                                <input 
+                                  type="text" 
+                                  value={selectedTemplate.operator_config?.card_text_color || "#ffffff"} 
+                                  onChange={(e) => updateOperatorConfig("card_text_color", e.target.value)}
+                                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 font-mono font-bold text-xs bg-white dark:bg-slate-800 text-slate-800 dark:text-white" 
+                                />
+                              </div>
+                            </div>
+
+                            {/* Font Size */}
+                            <div className="space-y-1.5">
+                              <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
+                                Font Size
+                              </label>
+                              <select
+                                value={selectedTemplate.operator_config?.card_font_size || "14px"}
+                                onChange={(e) => updateOperatorConfig("card_font_size", e.target.value)}
+                                className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-xs bg-white dark:bg-slate-800 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-400 cursor-pointer"
+                              >
+                                <option value="11px">11px — Extra Small</option>
+                                <option value="12px">12px — Small</option>
+                                <option value="13px">13px — Compact</option>
+                                <option value="14px">14px — Regular (Default)</option>
+                                <option value="16px">16px — Medium</option>
+                                <option value="18px">18px — Large</option>
+                                <option value="20px">20px — Extra Large</option>
+                                <option value="24px">24px — Jumbo</option>
+                              </select>
+                            </div>
+
+                            {/* Font Weight */}
+                            <div className="space-y-1.5">
+                              <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
+                                Font Weight
+                              </label>
+                              <select
+                                value={selectedTemplate.operator_config?.card_font_weight || "600"}
+                                onChange={(e) => updateOperatorConfig("card_font_weight", e.target.value)}
+                                className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-xs bg-white dark:bg-slate-800 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-400 cursor-pointer"
+                              >
+                                <option value="400">400 — Regular</option>
+                                <option value="500">500 — Medium</option>
+                                <option value="600">600 — Semibold (Default)</option>
+                                <option value="700">700 — Bold</option>
+                                <option value="800">800 — Extra Bold</option>
+                                <option value="900">900 — Black</option>
+                              </select>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-slate-200/60 dark:border-slate-700/60">
+                            {/* Font Family */}
+                            <div className="space-y-1.5">
+                              <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
+                                Font Family
+                              </label>
+                              <select
+                                value={selectedTemplate.operator_config?.card_font_family || "sans"}
+                                onChange={(e) => updateOperatorConfig("card_font_family", e.target.value)}
+                                className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-xs bg-white dark:bg-slate-800 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-400 cursor-pointer"
+                              >
+                                <option value="sans">Clean Sans-Serif</option>
+                                <option value="mono">Terminal Monospace</option>
+                                <option value="bricolage">Bricolage Grotesque</option>
+                                <option value="serif">Editorial Serif</option>
+                              </select>
+                            </div>
+
+                            {/* Text Alignment */}
+                            <div className="space-y-1.5">
+                              <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
+                                Text Alignment
+                              </label>
+                              <div className="flex items-center gap-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-1 rounded-xl">
+                                {([
+                                  { val: "left", Icon: AlignLeft, label: "Left" },
+                                  { val: "center", Icon: AlignCenter, label: "Center" },
+                                  { val: "right", Icon: AlignRight, label: "Right" },
+                                ] as const).map(({ val, Icon, label }) => {
+                                  const active = (selectedTemplate.operator_config?.card_text_align || "left") === val;
+                                  return (
+                                    <button
+                                      key={val}
+                                      type="button"
+                                      onClick={() => updateOperatorConfig("card_text_align", val)}
+                                      title={`Align text ${label}`}
+                                      className={`flex-1 py-1 flex items-center justify-center rounded-lg transition-all ${
+                                        active 
+                                          ? "bg-[#0f172a] text-white dark:bg-amber-400 dark:text-black font-bold shadow-sm" 
+                                          : "text-slate-400 hover:text-slate-700 dark:hover:text-white"
+                                      }`}
+                                    >
+                                      <Icon size={13} />
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+
+                            {/* Line Spacing */}
+                            <div className="space-y-1.5">
+                              <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
+                                Line Spacing
+                              </label>
+                              <select
+                                value={selectedTemplate.operator_config?.card_line_height || "1.5"}
+                                onChange={(e) => updateOperatorConfig("card_line_height", e.target.value)}
+                                className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-xs bg-white dark:bg-slate-800 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-400 cursor-pointer"
+                              >
+                                <option value="1.3">1.3 — Compact</option>
+                                <option value="1.5">1.5 — Normal (Default)</option>
+                                <option value="1.7">1.7 — Relaxed</option>
+                                <option value="2.0">2.0 — Double</option>
+                              </select>
+                            </div>
                           </div>
                         </div>
 
@@ -2784,8 +2931,28 @@ export default function RegistrationTemplateManager() {
                       {selectedTemplate.operator_config?.card_layout_text ? (
                         <div className="space-y-2">
                           <span className="text-[8.5px] font-black text-slate-400 uppercase tracking-widest block ml-1">Card Display Layout</span>
-                          <div className="bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-4">
-                            <pre className="text-[10px] font-bold text-slate-700 dark:text-slate-350 whitespace-pre-wrap font-sans leading-relaxed">
+                          <div 
+                            style={{ backgroundColor: selectedTemplate.operator_config?.success_bg_color || "#0f172a" }}
+                            className="border border-slate-100 dark:border-slate-800 rounded-2xl p-4 transition-all shadow-sm"
+                          >
+                            <pre 
+                              style={{
+                                color: selectedTemplate.operator_config?.card_text_color || "#ffffff",
+                                fontSize: selectedTemplate.operator_config?.card_font_size || "14px",
+                                fontWeight: selectedTemplate.operator_config?.card_font_weight || "600",
+                                textAlign: (selectedTemplate.operator_config?.card_text_align as any) || "left",
+                                lineHeight: selectedTemplate.operator_config?.card_line_height || "1.5"
+                              }}
+                              className={`whitespace-pre-wrap ${
+                                selectedTemplate.operator_config?.card_font_family === 'mono' 
+                                  ? 'font-mono' 
+                                  : selectedTemplate.operator_config?.card_font_family === 'bricolage' 
+                                  ? 'font-bricolage' 
+                                  : selectedTemplate.operator_config?.card_font_family === 'serif' 
+                                  ? 'font-serif' 
+                                  : 'font-sans'
+                              }`}
+                            >
                               {compileOperatorPreviewText(selectedTemplate.operator_config.card_layout_text)}
                             </pre>
                           </div>

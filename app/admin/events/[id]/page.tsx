@@ -216,6 +216,12 @@ export default function EventDetailsPage() {
   const [isOperatorConfigOpen, setIsOperatorConfigOpen] = useState(false);
   const [operatorCardLayoutText, setOperatorCardLayoutText] = useState("");
   const [operatorSuccessBgColor, setOperatorSuccessBgColor] = useState("#0f172a");
+  const [operatorCardTextColor, setOperatorCardTextColor] = useState("#ffffff");
+  const [operatorCardFontSize, setOperatorCardFontSize] = useState("14px");
+  const [operatorCardFontWeight, setOperatorCardFontWeight] = useState("600");
+  const [operatorCardFontFamily, setOperatorCardFontFamily] = useState("sans");
+  const [operatorCardTextAlign, setOperatorCardTextAlign] = useState<"left" | "center" | "right">("left");
+  const [operatorCardLineHeight, setOperatorCardLineHeight] = useState("1.5");
   const [isSavingOperatorConfig, setIsSavingOperatorConfig] = useState(false);
 
   useEffect(() => {
@@ -225,6 +231,12 @@ export default function EventDetailsPage() {
         : (event.registration_form_template?.operator_config || {});
       setOperatorCardLayoutText(opConfig.card_layout_text || "");
       setOperatorSuccessBgColor(opConfig.success_bg_color || "#0f172a");
+      setOperatorCardTextColor(opConfig.card_text_color || "#ffffff");
+      setOperatorCardFontSize(opConfig.card_font_size || "14px");
+      setOperatorCardFontWeight(opConfig.card_font_weight || "600");
+      setOperatorCardFontFamily(opConfig.card_font_family || "sans");
+      setOperatorCardTextAlign(opConfig.card_text_align || "left");
+      setOperatorCardLineHeight(opConfig.card_line_height || "1.5");
     }
   }, [event]);
 
@@ -234,7 +246,13 @@ export default function EventDetailsPage() {
     try {
       const updatedConfig = {
         card_layout_text: operatorCardLayoutText,
-        success_bg_color: operatorSuccessBgColor
+        success_bg_color: operatorSuccessBgColor,
+        card_text_color: operatorCardTextColor,
+        card_font_size: operatorCardFontSize,
+        card_font_weight: operatorCardFontWeight,
+        card_font_family: operatorCardFontFamily,
+        card_text_align: operatorCardTextAlign,
+        card_line_height: operatorCardLineHeight
       };
       const res = await fetch(`/api/py/events/${id}/form-schema`, {
         method: "PUT",
@@ -2628,65 +2646,202 @@ export default function EventDetailsPage() {
 
                {isOperatorConfigOpen && (
                  <div className="mt-6 space-y-6 animate-in fade-in duration-300">
-                   <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
-                     <div className="space-y-1.5">
-                       <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block ml-1">
-                         Card Background Color
-                       </label>
-                       <div className="flex items-center gap-3">
-                         <input 
-                           type="color" 
-                           value={operatorSuccessBgColor} 
-                           onChange={(e) => setOperatorSuccessBgColor(e.target.value)}
-                           className="w-10 h-10 rounded-xl border border-slate-200 cursor-pointer p-0 bg-transparent shrink-0" 
-                         />
-                         <input 
-                           type="text" 
-                           value={operatorSuccessBgColor} 
-                           onChange={(e) => setOperatorSuccessBgColor(e.target.value)}
-                           className="w-24 shrink-0 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 font-mono font-bold text-xs bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white" 
-                         />
-                       </div>
-                     </div>
+                    {/* Operator Card Typography & Appearance */}
+                    <div className="p-4 sm:p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-800 space-y-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 block">
+                          Operator Card Styling & Typography
+                        </span>
+                        <div className="flex items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const eventCustomQuestions: Array<{ label: string, token: string }> = [];
+                              if (event && Array.isArray(event.custom_fields_schema)) {
+                                event.custom_fields_schema.forEach((s: any) => {
+                                  (s.fields || []).forEach((f: any) => {
+                                    const label = (f.label || "").replace(/<[^>]*>/g, "").trim();
+                                    const slug = (f.label || "").toLowerCase().replace(/<[^>]*>/g, "").replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+                                    const token = `[${f.key || slug || f.id}]`;
+                                    if (label && !["[first_name]", "[last_name]", "[email]", "[company]", "[clearance_id]"].includes(token)) {
+                                      eventCustomQuestions.push({ label, token });
+                                    }
+                                  });
+                                });
+                              }
+                              const questionLines = eventCustomQuestions.map(q => `*${q.label}:* ${q.token}`).join("\n");
+                              const template = `*Attendee Details:*\n*Name:* [first_name] [last_name]\n*Company:* [company]\n*Pass Code:* [clearance_id]\n\n*Form Responses:*\n${questionLines || "*Questions:* [custom_responses]"}`;
+                              setOperatorCardLayoutText(template);
+                            }}
+                            className="px-3.5 py-2 rounded-xl border border-amber-300 dark:border-amber-700/60 bg-amber-50 dark:bg-amber-950/20 text-[10px] font-black uppercase tracking-wider text-amber-900 dark:text-amber-200 hover:bg-amber-100 transition-all flex items-center gap-1.5 cursor-pointer"
+                          >
+                            <Sparkles size={12} />
+                            Auto-Fill Questions
+                          </button>
 
-                     <div className="flex items-center gap-3 pt-4 sm:pt-0 sm:ml-auto">
-                       <button
-                         type="button"
-                         onClick={() => {
-                           const eventCustomQuestions: Array<{ label: string, token: string }> = [];
-                           if (event && Array.isArray(event.custom_fields_schema)) {
-                             event.custom_fields_schema.forEach((s: any) => {
-                               (s.fields || []).forEach((f: any) => {
-                                 const label = (f.label || "").replace(/<[^>]*>/g, "").trim();
-                                 const slug = (f.label || "").toLowerCase().replace(/<[^>]*>/g, "").replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
-                                 const token = `[${f.key || slug || f.id}]`;
-                                 if (label && !["[first_name]", "[last_name]", "[email]", "[company]", "[clearance_id]"].includes(token)) {
-                                   eventCustomQuestions.push({ label, token });
-                                 }
-                               });
-                             });
-                           }
-                           const questionLines = eventCustomQuestions.map(q => `*${q.label}:* ${q.token}`).join("\n");
-                           const template = `*Attendee Details:*\n*Name:* [first_name] [last_name]\n*Company:* [company]\n*Pass Code:* [clearance_id]\n\n*Form Responses:*\n${questionLines || "*Questions:* [custom_responses]"}`;
-                           setOperatorCardLayoutText(template);
-                         }}
-                         className="px-4 py-2.5 rounded-xl border border-amber-300 dark:border-amber-700/60 bg-amber-50 dark:bg-amber-950/20 text-[10px] font-black uppercase tracking-wider text-amber-900 dark:text-amber-200 hover:bg-amber-100 transition-all flex items-center gap-1.5 cursor-pointer"
-                       >
-                         <Sparkles size={12} />
-                         Auto-Fill with Event Questions
-                       </button>
+                          <button
+                            type="button"
+                            onClick={handleSaveOperatorConfig}
+                            disabled={isSavingOperatorConfig}
+                            className="px-5 py-2 rounded-xl bg-[#0f172a] hover:bg-black dark:bg-amber-400 dark:hover:bg-amber-500 text-white dark:text-[#0f172a] text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer shadow-md disabled:opacity-50"
+                          >
+                            {isSavingOperatorConfig ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
+                            Save Layout
+                          </button>
+                        </div>
+                      </div>
 
-                       <button
-                         type="button"
-                         onClick={handleSaveOperatorConfig}
-                         disabled={isSavingOperatorConfig}
-                         className="px-5 py-2.5 rounded-xl bg-[#0f172a] hover:bg-black dark:bg-amber-400 dark:hover:bg-amber-500 text-white dark:text-[#0f172a] text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer shadow-md disabled:opacity-50"
-                       >
-                         {isSavingOperatorConfig ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
-                         Save Card Layout
-                       </button>
-                     </div>
-                   </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        {/* Background Color */}
+                        <div className="space-y-1.5">
+                          <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
+                            Card Background Color
+                          </label>
+                          <div className="flex items-center gap-2">
+                            <input 
+                              type="color" 
+                              value={operatorSuccessBgColor} 
+                              onChange={(e) => setOperatorSuccessBgColor(e.target.value)}
+                              className="w-9 h-9 rounded-xl border border-slate-200 cursor-pointer p-0 bg-transparent shrink-0" 
+                            />
+                            <input 
+                              type="text" 
+                              value={operatorSuccessBgColor} 
+                              onChange={(e) => setOperatorSuccessBgColor(e.target.value)}
+                              className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 font-mono font-bold text-xs bg-white dark:bg-slate-800 text-slate-800 dark:text-white" 
+                            />
+                          </div>
+                        </div>
+
+                        {/* Text Color */}
+                        <div className="space-y-1.5">
+                          <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
+                            Text Color
+                          </label>
+                          <div className="flex items-center gap-2">
+                            <input 
+                              type="color" 
+                              value={operatorCardTextColor} 
+                              onChange={(e) => setOperatorCardTextColor(e.target.value)}
+                              className="w-9 h-9 rounded-xl border border-slate-200 cursor-pointer p-0 bg-transparent shrink-0" 
+                            />
+                            <input 
+                              type="text" 
+                              value={operatorCardTextColor} 
+                              onChange={(e) => setOperatorCardTextColor(e.target.value)}
+                              className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 font-mono font-bold text-xs bg-white dark:bg-slate-800 text-slate-800 dark:text-white" 
+                            />
+                          </div>
+                        </div>
+
+                        {/* Font Size */}
+                        <div className="space-y-1.5">
+                          <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
+                            Font Size
+                          </label>
+                          <select
+                            value={operatorCardFontSize}
+                            onChange={(e) => setOperatorCardFontSize(e.target.value)}
+                            className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-xs bg-white dark:bg-slate-800 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-400 cursor-pointer"
+                          >
+                            <option value="11px">11px — Extra Small</option>
+                            <option value="12px">12px — Small</option>
+                            <option value="13px">13px — Compact</option>
+                            <option value="14px">14px — Regular (Default)</option>
+                            <option value="16px">16px — Medium</option>
+                            <option value="18px">18px — Large</option>
+                            <option value="20px">20px — Extra Large</option>
+                            <option value="24px">24px — Jumbo</option>
+                          </select>
+                        </div>
+
+                        {/* Font Weight */}
+                        <div className="space-y-1.5">
+                          <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
+                            Font Weight
+                          </label>
+                          <select
+                            value={operatorCardFontWeight}
+                            onChange={(e) => setOperatorCardFontWeight(e.target.value)}
+                            className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-xs bg-white dark:bg-slate-800 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-400 cursor-pointer"
+                          >
+                            <option value="400">400 — Regular</option>
+                            <option value="500">500 — Medium</option>
+                            <option value="600">600 — Semibold (Default)</option>
+                            <option value="700">700 — Bold</option>
+                            <option value="800">800 — Extra Bold</option>
+                            <option value="900">900 — Black</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-slate-200/60 dark:border-slate-700/60">
+                        {/* Font Family */}
+                        <div className="space-y-1.5">
+                          <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
+                            Font Family
+                          </label>
+                          <select
+                            value={operatorCardFontFamily}
+                            onChange={(e) => setOperatorCardFontFamily(e.target.value)}
+                            className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-xs bg-white dark:bg-slate-800 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-400 cursor-pointer"
+                          >
+                            <option value="sans">Clean Sans-Serif</option>
+                            <option value="mono">Terminal Monospace</option>
+                            <option value="bricolage">Bricolage Grotesque</option>
+                            <option value="serif">Editorial Serif</option>
+                          </select>
+                        </div>
+
+                        {/* Text Alignment */}
+                        <div className="space-y-1.5">
+                          <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
+                            Text Alignment
+                          </label>
+                          <div className="flex items-center gap-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-1 rounded-xl">
+                            {([
+                              { val: "left", Icon: AlignLeft, label: "Left" },
+                              { val: "center", Icon: AlignCenter, label: "Center" },
+                              { val: "right", Icon: AlignRight, label: "Right" },
+                            ] as const).map(({ val, Icon, label }) => {
+                              const active = operatorCardTextAlign === val;
+                              return (
+                                <button
+                                  key={val}
+                                  type="button"
+                                  onClick={() => setOperatorCardTextAlign(val)}
+                                  title={`Align text ${label}`}
+                                  className={`flex-1 py-1 flex items-center justify-center rounded-lg transition-all ${
+                                    active 
+                                      ? "bg-[#0f172a] text-white dark:bg-amber-400 dark:text-black font-bold shadow-sm" 
+                                      : "text-slate-400 hover:text-slate-700 dark:hover:text-white"
+                                  }`}
+                                >
+                                  <Icon size={13} />
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {/* Line Spacing */}
+                        <div className="space-y-1.5">
+                          <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
+                            Line Spacing
+                          </label>
+                          <select
+                            value={operatorCardLineHeight}
+                            onChange={(e) => setOperatorCardLineHeight(e.target.value)}
+                            className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-xs bg-white dark:bg-slate-800 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-400 cursor-pointer"
+                          >
+                            <option value="1.3">1.3 — Compact</option>
+                            <option value="1.5">1.5 — Normal (Default)</option>
+                            <option value="1.7">1.7 — Relaxed</option>
+                            <option value="2.0">2.0 — Double</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
 
                    <div className="space-y-2">
                      <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block ml-1">
@@ -2756,7 +2911,13 @@ export default function EventDetailsPage() {
                    <QRScanner 
                      operatorConfig={{
                        card_layout_text: operatorCardLayoutText || (event as any)?.operator_config?.card_layout_text || event?.registration_form_template?.operator_config?.card_layout_text,
-                       success_bg_color: operatorSuccessBgColor || (event as any)?.operator_config?.success_bg_color || event?.registration_form_template?.operator_config?.success_bg_color || "#22c55e"
+                       success_bg_color: operatorSuccessBgColor || (event as any)?.operator_config?.success_bg_color || event?.registration_form_template?.operator_config?.success_bg_color || "#22c55e",
+                       card_text_color: operatorCardTextColor || (event as any)?.operator_config?.card_text_color || event?.registration_form_template?.operator_config?.card_text_color || "#ffffff",
+                       card_font_size: operatorCardFontSize || (event as any)?.operator_config?.card_font_size || event?.registration_form_template?.operator_config?.card_font_size || "14px",
+                       card_font_weight: operatorCardFontWeight || (event as any)?.operator_config?.card_font_weight || event?.registration_form_template?.operator_config?.card_font_weight || "600",
+                       card_font_family: operatorCardFontFamily || (event as any)?.operator_config?.card_font_family || event?.registration_form_template?.operator_config?.card_font_family || "sans",
+                       card_text_align: operatorCardTextAlign || (event as any)?.operator_config?.card_text_align || event?.registration_form_template?.operator_config?.card_text_align || "left",
+                       card_line_height: operatorCardLineHeight || (event as any)?.operator_config?.card_line_height || event?.registration_form_template?.operator_config?.card_line_height || "1.5"
                      }}
                      onScan={async (regId) => {
                        const targetDay = selectedScanDay === "auto" ? 1 : selectedScanDay;
@@ -2980,7 +3141,24 @@ export default function EventDetailsPage() {
                              <>
                                {(operatorCardLayoutText || (event as any)?.operator_config?.card_layout_text || event?.registration_form_template?.operator_config?.card_layout_text) ? (
                                  <div className="bg-white/10 p-5 rounded-2xl border border-white/5 text-left mt-6 w-full max-h-60 overflow-y-auto pr-1">
-                                   <pre className="text-sm font-semibold text-white whitespace-pre-wrap font-sans leading-relaxed">
+                                   <pre 
+                                     style={{
+                                       color: operatorCardTextColor || (event as any)?.operator_config?.card_text_color || event?.registration_form_template?.operator_config?.card_text_color || "#ffffff",
+                                       fontSize: operatorCardFontSize || (event as any)?.operator_config?.card_font_size || event?.registration_form_template?.operator_config?.card_font_size || "14px",
+                                       fontWeight: operatorCardFontWeight || (event as any)?.operator_config?.card_font_weight || event?.registration_form_template?.operator_config?.card_font_weight || "600",
+                                       textAlign: ((operatorCardTextAlign || (event as any)?.operator_config?.card_text_align || event?.registration_form_template?.operator_config?.card_text_align || "left") as any),
+                                       lineHeight: operatorCardLineHeight || (event as any)?.operator_config?.card_line_height || event?.registration_form_template?.operator_config?.card_line_height || "1.5"
+                                     }}
+                                     className={`whitespace-pre-wrap leading-relaxed ${
+                                       (operatorCardFontFamily || (event as any)?.operator_config?.card_font_family || event?.registration_form_template?.operator_config?.card_font_family) === 'mono'
+                                         ? 'font-mono'
+                                         : (operatorCardFontFamily || (event as any)?.operator_config?.card_font_family || event?.registration_form_template?.operator_config?.card_font_family) === 'bricolage'
+                                         ? 'font-bricolage'
+                                         : (operatorCardFontFamily || (event as any)?.operator_config?.card_font_family || event?.registration_form_template?.operator_config?.card_font_family) === 'serif'
+                                         ? 'font-serif'
+                                         : 'font-sans'
+                                     }`}
+                                   >
                                      {compileOperatorCustomLayout(operatorCardLayoutText || (event as any)?.operator_config?.card_layout_text || event?.registration_form_template?.operator_config?.card_layout_text, checkedInReg)}
                                    </pre>
                                  </div>

@@ -10,6 +10,12 @@ interface QRScannerProps {
   operatorConfig?: {
     success_bg_color?: string;
     card_layout_text?: string;
+    card_text_color?: string;
+    card_font_size?: string;
+    card_font_weight?: string;
+    card_font_family?: string;
+    card_text_align?: string;
+    card_line_height?: string;
   };
 }
 
@@ -197,7 +203,24 @@ export default function QRScanner({ onScan, onViewDetails, operatorConfig }: QRS
                  </p>
                  {scannedCardLayoutText ? (
                    <div className="bg-white/10 p-5 rounded-2xl border border-white/5 text-left mt-4 w-full max-h-60 overflow-y-auto pr-1">
-                     <pre className="text-xs font-semibold text-white whitespace-pre-wrap font-sans leading-relaxed">
+                     <pre 
+                       style={{
+                         color: operatorConfig?.card_text_color || "#ffffff",
+                         fontSize: operatorConfig?.card_font_size || "13px",
+                         fontWeight: operatorConfig?.card_font_weight || "600",
+                         textAlign: (operatorConfig?.card_text_align as any) || "left",
+                         lineHeight: operatorConfig?.card_line_height || "1.5"
+                       }}
+                       className={`whitespace-pre-wrap ${
+                         operatorConfig?.card_font_family === 'mono'
+                           ? 'font-mono'
+                           : operatorConfig?.card_font_family === 'bricolage'
+                           ? 'font-bricolage'
+                           : operatorConfig?.card_font_family === 'serif'
+                           ? 'font-serif'
+                           : 'font-sans'
+                       }`}
+                     >
                        {scannedCardLayoutText}
                      </pre>
                    </div>
