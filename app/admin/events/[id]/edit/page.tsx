@@ -12,7 +12,7 @@ import {
 import { useSession } from "next-auth/react";
 import AdminLayout from "@/components/AdminLayout";
 import RichTextEditor from "@/components/RichTextEditor";
-import { unescapeHtmlLinks } from "@/lib/utils";
+import { unescapeHtmlLinks, cleanHtmlText } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
 // Helpers shared with settings page
@@ -552,7 +552,7 @@ export default function EditEventPage() {
         const existingLogos = Array.isArray(data.banner_settings?.form_logos) ? data.banner_settings.form_logos : [];
         const paddedLogos = [0, 1, 2, 3, 4].map((i) => existingLogos[i] || "");
         setFormData({
-          title: data.title,
+          title: cleanHtmlText(data.title || ""),
           slug: data.slug,
           description: data.description,
           start_date: formattedDate,
@@ -994,7 +994,7 @@ export default function EditEventPage() {
               textAlign: formData.title_align || "left" 
             }}
           >
-            {formData.title || "Untitled Event Title"}
+            {cleanHtmlText(formData.title || "") || "Untitled Event Title"}
           </h2>
 
           {formData.description ? (

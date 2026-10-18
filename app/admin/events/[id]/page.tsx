@@ -40,7 +40,8 @@ import {
   Info,
   Presentation,
   Save,
-  Copy
+  Copy,
+  Camera
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import AdminLayout from "@/components/AdminLayout";
@@ -224,6 +225,7 @@ export default function EventDetailsPage() {
   const [operatorCardTextAlign, setOperatorCardTextAlign] = useState<"left" | "center" | "right">("left");
   const [operatorCardLineHeight, setOperatorCardLineHeight] = useState("1.5");
   const [isSavingOperatorConfig, setIsSavingOperatorConfig] = useState(false);
+  const [isEmbeddedScannerOpen, setIsEmbeddedScannerOpen] = useState(false);
 
   useEffect(() => {
     if (event) {
@@ -1509,7 +1511,10 @@ export default function EventDetailsPage() {
         (reg.attendee?.first_name || "").toLowerCase().includes(search) ||
         (reg.attendee?.last_name || "").toLowerCase().includes(search) ||
         (reg.attendee?.email || "").toLowerCase().includes(search) ||
-        (reg.attendee?.company || "").toLowerCase().includes(search)
+        (reg.attendee?.company || "").toLowerCase().includes(search) ||
+        (reg.pin ? String(reg.pin).toLowerCase().includes(search) : false) ||
+        (reg.id ? String(reg.id).toLowerCase().includes(search) : false) ||
+        (reg.clearance_id ? String(reg.clearance_id).toLowerCase().includes(search) : false)
       );
       if (!matchesSearch) return false;
       
@@ -1553,6 +1558,79 @@ export default function EventDetailsPage() {
     ? filteredRegistrations 
     : filteredRegistrations.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
+  const handleScanCheckin = async (regId: string) => {
+    const targetDay = selectedScanDay === "auto" ? 1 : selectedScanDay;
+    
+    if (!isOnline) {
+      const localReg = await dbOffline.getLocalRegistration(regId, Number(id));
+      if (!localReg) {
+        throw new Error("Clearance credential not found in local offline cache for this event.");
+      }
+      if (localReg.status === "declined") {
+        throw new Error("Declined registrations cannot be checked in.");
+      }
+      const checkedInDays = localReg.checked_in_days || [];
+      if (checkedInDays.includes(targetDay)) {
+        throw new Error(`Attendee already checked in for Day ${targetDay}`);
+      }
+      
+      const scanObj: dbOffline.OfflineScan = {
+        registration_id: localReg.id,
+        event_id: Number(id),
+        day: targetDay,
+        timestamp: new Date().toISOString(),
+        mode: "checkin",
+        synced: false
+      };
+      await dbOffline.addOfflineScan(scanObj);
+      await updateOfflineStats();
+      
+      const resultObj = {
+        id: localReg.id,
+        attendee: localReg.attendee,
+        checked_in: true,
+        checked_in_days: [...checkedInDays, targetDay]
+      };
+      return {
+        ...resultObj,
+        operator_fields: formatOperatorFields(resultObj),
+        card_layout_text: (operatorCardLayoutText || (event as any)?.operator_config?.card_layout_text || event?.registration_form_template?.operator_config?.card_layout_text)
+          ? compileOperatorCustomLayout(operatorCardLayoutText || (event as any)?.operator_config?.card_layout_text || event?.registration_form_template?.operator_config?.card_layout_text, resultObj)
+          : null
+      };
+    }
+    
+    const query = selectedScanDay === "auto" 
+      ? `mode=checkin&event_id=${id}` 
+      : `mode=checkin&day=${selectedScanDay}&event_id=${id}`;
+    const res = await fetch(`/api/py/registrations/${encodeURIComponent(regId)}/checkin?${query}`, { 
+      method: "PUT",
+      headers: { "x-user-email": session?.user?.email || "" }
+    });
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.detail || "Authentication Failed");
+    }
+    const updated = await res.json();
+    setRegistrations(prev => prev.map(r => r.id === updated.id ? { ...r, checked_in: updated.checked_in, checked_in_days: updated.checked_in_days ?? [] } : r));
+    
+    dbOffline.initDb().then(async (db) => {
+      const tx = db.transaction(["registrations"], "readwrite");
+      tx.objectStore("registrations").put({
+        ...updated,
+        event_id: updated.event_id || Number(id)
+      });
+    }).catch(() => {});
+    
+    return {
+      ...updated,
+      operator_fields: formatOperatorFields(updated),
+      card_layout_text: (operatorCardLayoutText || (event as any)?.operator_config?.card_layout_text || event?.registration_form_template?.operator_config?.card_layout_text)
+        ? compileOperatorCustomLayout(operatorCardLayoutText || (event as any)?.operator_config?.card_layout_text || event?.registration_form_template?.operator_config?.card_layout_text, updated)
+        : null
+    };
+  };
+
   if (loading) {
     return (
       <AdminLayout>
@@ -1591,207 +1669,190 @@ export default function EventDetailsPage() {
 
         {/* Event Header Card */}
         <div className="bg-white dark:bg-[#0d1527] rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-800/80 overflow-hidden mb-8">
-          <div className="p-10 lg:p-14">
-            <div className="flex flex-col md:flex-row justify-between items-start gap-12 min-w-0">
-              <div className="flex-1 min-w-0 w-full">
-                 <div className="flex flex-wrap items-center gap-3 mb-6">
-                    {event.client?.logo_url && (
-                      <div className="h-6 w-6 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-lg overflow-hidden flex items-center justify-center">
-                        <img src={event.client.logo_url} alt={event.client.name} className="w-full h-full object-cover" />
-                      </div>
-                    )}
-                    <span className="px-3 py-1 bg-yellow-400/10 text-yellow-600 dark:text-yellow-400 text-[10px] font-black uppercase tracking-[0.2em] rounded-lg border border-yellow-400/20">
-                      {event.client?.name || "Command Panel"}
-                    </span>
-                    <span className="text-[10px] font-mono text-slate-300 dark:text-slate-600">ID: {id}</span>
-                    {(() => {
-                      const now = new Date();
-                      let statusText = "Active";
-                      let badgeClass = "bg-green-50 text-green-600 border-green-200/50";
-                      
-                      if (event.registration_active === false) {
-                        statusText = "Closed / Paused";
-                        badgeClass = "bg-red-50 text-red-600 border-red-200/50";
-                      } else {
-                        if (event.registration_start) {
-                          const startDate = new Date(event.registration_start);
-                          if (now < startDate) {
-                            statusText = `Scheduled (Opens ${startDate.toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })})`;
-                            badgeClass = "bg-blue-50 text-blue-600 border-blue-200/50";
-                          }
-                        }
-                        if (event.registration_end) {
-                          const endDate = new Date(event.registration_end);
-                          if (now > endDate) {
-                            statusText = "Closed (Expired)";
-                            badgeClass = "bg-red-50 text-red-600 border-red-200/50";
-                          }
-                        }
+          <div className="p-8 sm:p-10 lg:p-12 space-y-8">
+            {/* Row 1: Badges & Title */}
+            <div className="space-y-4">
+              <div className="flex flex-wrap items-center gap-3">
+                {event.client?.logo_url && (
+                  <div className="h-6 w-6 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-lg overflow-hidden flex items-center justify-center">
+                    <img src={event.client.logo_url} alt={event.client.name} className="w-full h-full object-cover" />
+                  </div>
+                )}
+                <span className="px-3 py-1 bg-yellow-400/10 text-yellow-600 dark:text-yellow-400 text-[10px] font-black uppercase tracking-[0.2em] rounded-lg border border-yellow-400/20">
+                  {event.client?.name || "Command Panel"}
+                </span>
+                <span className="text-[10px] font-mono text-slate-300 dark:text-slate-600">ID: {id}</span>
+                {(() => {
+                  const now = new Date();
+                  let statusText = "Active";
+                  let badgeClass = "bg-green-50 text-green-600 border-green-200/50";
+                  
+                  if (event.registration_active === false) {
+                    statusText = "Closed / Paused";
+                    badgeClass = "bg-red-50 text-red-600 border-red-200/50";
+                  } else {
+                    if (event.registration_start) {
+                      const startDate = new Date(event.registration_start);
+                      if (now < startDate) {
+                        statusText = `Scheduled (Opens ${startDate.toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })})`;
+                        badgeClass = "bg-blue-50 text-blue-600 border-blue-200/50";
                       }
-                      
-                      return (
-                        <span className={`px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] rounded-lg border ${badgeClass} dark:bg-slate-900/40`}>
-                          Registration: {statusText}
-                        </span>
-                      );
-                    })()}
-                 </div>
-                <h1 
-                  className={`text-3xl sm:text-4xl md:text-5xl font-black text-[#0f172a] dark:text-white tracking-tighter italic font-bricolage leading-[1.1] ${(userRole === "admin" || userRole === "manager") ? "mb-6" : "mb-10"}`}
-                >
-                  {cleanHtmlText(event.title || "")}
-                </h1>
-                {(userRole === "admin" || userRole === "manager") && (() => {
-                  const cleanSlug = (event.slug || "").replace(/&nbsp;/g, " ").replace(/\u00a0/g, " ").trim() || String(event.id);
-                  const regUrl = typeof window !== 'undefined' ? `${window.location.origin}/register/${encodeURIComponent(cleanSlug)}` : `/register/${encodeURIComponent(cleanSlug)}`;
+                    }
+                    if (event.registration_end) {
+                      const endDate = new Date(event.registration_end);
+                      if (now > endDate) {
+                        statusText = "Closed (Expired)";
+                        badgeClass = "bg-red-50 text-red-600 border-red-200/50";
+                      }
+                    }
+                  }
+                  
                   return (
-                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mb-10 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-800/80 group min-w-0">
-                       <p className="text-[10px] font-black text-slate-300 dark:text-slate-500 uppercase tracking-widest ml-1 shrink-0">Public Link:</p>
-                       <code className="text-xs font-bold text-[#0f172a] dark:text-slate-300 bg-white dark:bg-slate-800 px-3 py-1 rounded-lg border border-slate-100 dark:border-slate-700 flex-1 min-w-0 truncate">
-                         {regUrl}
-                       </code>
-                       <button 
-                         onClick={() => {
-                           navigator.clipboard.writeText(regUrl);
-                           alert("Link copied!");
-                         }}
-                         className="px-4 py-2 bg-[#0f172a] dark:bg-yellow-400 text-white dark:text-black text-[9px] font-black uppercase tracking-widest rounded-xl hover:bg-black dark:hover:bg-yellow-500 transition-all shrink-0"
-                       >
-                         Copy Link
-                       </button>
-                       <a 
-                         href={`/register/${encodeURIComponent(cleanSlug)}`} 
-                         target="_blank" 
-                         className="p-2 text-slate-400 hover:text-[#0f172a] dark:hover:text-white transition-all shrink-0"
-                       >
-                         <ArrowUpRight size={16} />
-                       </a>
-                    </div>
+                    <span className={`px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] rounded-lg border ${badgeClass} dark:bg-slate-900/40`}>
+                      Registration: {statusText}
+                    </span>
                   );
                 })()}
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-5 gap-y-8 gap-x-4 sm:gap-x-6">
-                  {/* Date Button */}
-                  <button 
-                    onClick={() => setSelectedMetric("date")}
-                    className="flex flex-col justify-between gap-4 min-w-0 text-left bg-white dark:bg-[#0f172a]/40 border border-slate-100 dark:border-slate-800/80 p-5 rounded-[2rem] transition-all hover:bg-slate-50/50 dark:hover:bg-slate-800/20 hover:border-slate-200 dark:hover:border-slate-700 hover:shadow-sm active:scale-[0.98] w-full shadow-xs"
-                  >
-                    <div className="p-2.5 bg-slate-50 dark:bg-slate-800 text-[#0f172a] dark:text-white rounded-2xl shrink-0 self-start">
-                      <Calendar size={20} className="sm:w-[22px] sm:h-[22px]" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-[10px] font-black text-slate-400 dark:text-slate-300 uppercase tracking-wider whitespace-nowrap">Date</p>
-                      <p className="font-bold text-[#0f172a] dark:text-slate-200 text-sm sm:text-base whitespace-nowrap mt-1">{new Date(event.start_date).toLocaleDateString(undefined, { dateStyle: 'medium' })}</p>
-                    </div>
-                  </button>
-
-                  {/* Venue Button */}
-                  <button 
-                    onClick={() => setSelectedMetric("venue")}
-                    className="flex flex-col justify-between gap-4 min-w-0 text-left bg-white dark:bg-[#0f172a]/40 border border-slate-100 dark:border-slate-800/80 p-5 rounded-[2rem] transition-all hover:bg-slate-50/50 dark:hover:bg-slate-800/20 hover:border-slate-200 dark:hover:border-slate-700 hover:shadow-sm active:scale-[0.98] w-full shadow-xs"
-                  >
-                    <div className="p-2.5 bg-slate-50 dark:bg-slate-800 text-[#0f172a] dark:text-white rounded-2xl shrink-0 self-start">
-                      <MapPin size={20} className="sm:w-[22px] sm:h-[22px]" />
-                    </div>
-                    <div className="min-w-0 w-full">
-                      <p className="text-[10px] font-black text-slate-400 dark:text-slate-300 uppercase tracking-wider whitespace-nowrap">Venue</p>
-                      <p className="font-bold text-[#0f172a] dark:text-slate-200 text-sm sm:text-base truncate mt-1" title={event.location}>{event.location}</p>
-                      {event.address && (
-                        <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider truncate mt-0.5" title={event.address}>{event.address}</p>
-                      )}
-                    </div>
-                  </button>
-
-                  {/* Enrollment Button */}
-                  <button 
-                    onClick={() => setSelectedMetric("enrollment")}
-                    className="flex flex-col justify-between gap-4 min-w-0 text-left bg-white dark:bg-[#0f172a]/40 border border-slate-100 dark:border-slate-800/80 p-5 rounded-[2rem] transition-all hover:bg-slate-50/50 dark:hover:bg-slate-800/20 hover:border-slate-200 dark:hover:border-slate-700 hover:shadow-sm active:scale-[0.98] w-full shadow-xs"
-                  >
-                    <div className="p-2.5 bg-slate-50 dark:bg-slate-800 text-[#0f172a] dark:text-white rounded-2xl shrink-0 self-start">
-                      <Users size={20} className="sm:w-[22px] sm:h-[22px]" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-[10px] font-black text-slate-400 dark:text-slate-300 uppercase tracking-wider whitespace-nowrap">Enrollment</p>
-                      <p className="font-bold text-[#0f172a] dark:text-slate-200 text-sm sm:text-base whitespace-nowrap mt-1">{confirmedCount} / {event.capacity}</p>
-                    </div>
-                  </button>
-
-                  {/* Declined Button */}
-                  <button 
-                    onClick={() => setSelectedMetric("declined")}
-                    className="flex flex-col justify-between gap-4 min-w-0 text-left bg-white dark:bg-[#0f172a]/40 border border-slate-100 dark:border-slate-800/80 p-5 rounded-[2rem] transition-all hover:bg-slate-50/50 dark:hover:bg-slate-800/20 hover:border-slate-200 dark:hover:border-slate-700 hover:shadow-sm active:scale-[0.98] w-full shadow-xs"
-                  >
-                    <div className="p-2.5 bg-red-50 dark:bg-red-950/30 text-red-500 rounded-2xl shrink-0 self-start">
-                      <UserX size={20} className="sm:w-[22px] sm:h-[22px]" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-[10px] font-black text-slate-400 dark:text-slate-300 uppercase tracking-wider whitespace-nowrap">Declined</p>
-                      <p className="font-bold text-red-500 dark:text-red-400 text-sm sm:text-base whitespace-nowrap mt-1">{declinedCount}</p>
-                    </div>
-                  </button>
-
-                  {/* Checked In Button */}
-                  <button 
-                    onClick={() => setSelectedMetric("checked_in")}
-                    className="flex flex-col justify-between gap-4 min-w-0 text-left bg-white dark:bg-[#0f172a]/40 border border-slate-100 dark:border-slate-800/80 p-5 rounded-[2rem] transition-all hover:bg-slate-50/50 dark:hover:bg-slate-800/20 hover:border-slate-200 dark:hover:border-slate-700 hover:shadow-sm active:scale-[0.98] w-full col-span-2 sm:col-span-1 md:col-span-2 lg:col-span-1 xl:col-span-1 2xl:col-span-1 shadow-xs"
-                  >
-                    <div className="p-2.5 bg-green-50 dark:bg-green-950/30 text-green-600 rounded-2xl shrink-0 self-start">
-                      <CheckCircle2 size={20} className="sm:w-[22px] sm:h-[22px]" />
-                    </div>
-                    <div className="min-w-0 w-full">
-                      <p className="text-[10px] font-black text-slate-400 dark:text-slate-300 uppercase tracking-wider whitespace-nowrap">Checked In</p>
-                      <div className="flex items-baseline gap-1.5 flex-wrap min-w-0 mt-1">
-                        <p className="font-bold text-green-600 dark:text-green-400 text-sm sm:text-base whitespace-nowrap">{checkedInCount}</p>
-                        {event.duration_days && event.duration_days > 1 && (
-                          <span className="text-[8px] text-slate-400 font-bold uppercase whitespace-nowrap">(Unique)</span>
-                        )}
-                      </div>
-                      {event.duration_days && event.duration_days > 1 && (
-                        <div className="mt-1.5 flex flex-wrap gap-1">
-                          {Array.from({ length: event.duration_days }, (_, i) => i + 1).map(d => (
-                            <span key={d} className="px-1.5 py-0.5 bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-400 text-[8px] font-bold rounded border border-green-200/50 dark:border-green-900/50 shrink-0">
-                              Day {d}: {registrations.filter(r => r.checked_in_days?.includes(d)).length}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </button>
-                </div>
-
-                {/* Event Capacity & Operations Meter */}
-                <div className="mt-8 bg-slate-50/70 dark:bg-slate-900/50 p-5 rounded-[1.5rem] border border-slate-100 dark:border-slate-800/80">
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-3">
-                    <div className="flex items-center gap-2.5">
-                      <span className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 dark:text-slate-500">
-                        Registration &amp; Capacity
-                      </span>
-                      <span className="text-[10px] font-bold text-amber-600 dark:text-yellow-400 bg-amber-50 dark:bg-yellow-400/10 px-2 py-0.5 rounded-md border border-amber-200/60 dark:border-yellow-400/20">
-                        {Math.round((confirmedCount / Math.max(1, event.capacity)) * 100)}% Filled
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-4 text-[10px] font-bold text-slate-500 dark:text-slate-400">
-                      <span>Available: <strong className="text-[#0f172a] dark:text-white font-black">{Math.max(0, event.capacity - confirmedCount)}</strong></span>
-                      <span>Checked-in: <strong className="text-green-600 dark:text-green-400 font-black">{checkedInCount} ({confirmedCount > 0 ? Math.round((checkedInCount / confirmedCount) * 100) : 0}%)</strong></span>
-                    </div>
-                  </div>
-                  <div className="w-full h-3 bg-slate-200/70 dark:bg-slate-800 rounded-full overflow-hidden flex">
-                    <div 
-                      className="h-full bg-gradient-to-r from-yellow-400 to-amber-500 transition-all duration-500 rounded-full" 
-                      style={{ width: `${Math.min(100, Math.round((confirmedCount / Math.max(1, event.capacity)) * 100))}%` }}
-                    />
-                  </div>
-                </div>
               </div>
 
-              {(userRole === "admin" || userRole === "manager") && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 w-full lg:w-[480px] shrink-0">
+              <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-[#0f172a] dark:text-white tracking-tighter italic font-bricolage leading-[1.1]">
+                {cleanHtmlText(event.title || "")}
+              </h1>
+            </div>
+
+            {/* Row 2: Public Registration Link */}
+            {(userRole === "admin" || userRole === "manager") && (() => {
+              const cleanSlug = (event.slug || "").replace(/&nbsp;/g, " ").replace(/\u00a0/g, " ").trim() || String(event.id);
+              const regUrl = typeof window !== 'undefined' ? `${window.location.origin}/register/${encodeURIComponent(cleanSlug)}` : `/register/${encodeURIComponent(cleanSlug)}`;
+              return (
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-slate-50 dark:bg-slate-900/50 p-3.5 sm:p-4 rounded-2xl border border-slate-100 dark:border-slate-800/80 group min-w-0">
+                  <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 shrink-0">Public Registration Link:</p>
+                  <code className="text-xs font-bold text-[#0f172a] dark:text-slate-300 bg-white dark:bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-100 dark:border-slate-700 flex-1 min-w-0 truncate">
+                    {regUrl}
+                  </code>
+                  <button 
+                    onClick={() => {
+                      navigator.clipboard.writeText(regUrl);
+                      alert("Link copied!");
+                    }}
+                    className="px-4 py-2 bg-[#0f172a] dark:bg-yellow-400 text-white dark:text-black text-[9px] font-black uppercase tracking-widest rounded-xl hover:bg-black dark:hover:bg-yellow-500 transition-all shrink-0"
+                  >
+                    Copy Link
+                  </button>
+                  <a 
+                    href={`/register/${encodeURIComponent(cleanSlug)}`} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    title="Open Registration Page"
+                    className="p-2 text-slate-400 hover:text-[#0f172a] dark:hover:text-white transition-all shrink-0 flex items-center justify-center"
+                  >
+                    <ArrowUpRight size={16} />
+                  </a>
+                </div>
+              );
+            })()}
+
+            {/* Row 3: 5 Key Performance Metrics (Full-Width Responsive Grid) */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5 sm:gap-4">
+              {/* Date Button */}
+              <button 
+                onClick={() => setSelectedMetric("date")}
+                className="flex flex-col justify-between gap-4 min-w-0 text-left bg-white dark:bg-[#0f172a]/40 border border-slate-100 dark:border-slate-800/80 p-5 rounded-[2rem] transition-all hover:bg-slate-50/50 dark:hover:bg-slate-800/20 hover:border-slate-200 dark:hover:border-slate-700 hover:shadow-sm active:scale-[0.98] w-full shadow-xs"
+              >
+                <div className="p-2.5 bg-slate-50 dark:bg-slate-800 text-[#0f172a] dark:text-white rounded-2xl shrink-0 self-start">
+                  <Calendar size={20} className="sm:w-[22px] sm:h-[22px]" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-black text-slate-400 dark:text-slate-300 uppercase tracking-wider whitespace-nowrap">Date</p>
+                  <p className="font-bold text-[#0f172a] dark:text-slate-200 text-sm sm:text-base whitespace-nowrap mt-1">{new Date(event.start_date).toLocaleDateString(undefined, { dateStyle: 'medium' })}</p>
+                </div>
+              </button>
+
+              {/* Venue Button */}
+              <button 
+                onClick={() => setSelectedMetric("venue")}
+                className="flex flex-col justify-between gap-4 min-w-0 text-left bg-white dark:bg-[#0f172a]/40 border border-slate-100 dark:border-slate-800/80 p-5 rounded-[2rem] transition-all hover:bg-slate-50/50 dark:hover:bg-slate-800/20 hover:border-slate-200 dark:hover:border-slate-700 hover:shadow-sm active:scale-[0.98] w-full shadow-xs"
+              >
+                <div className="p-2.5 bg-slate-50 dark:bg-slate-800 text-[#0f172a] dark:text-white rounded-2xl shrink-0 self-start">
+                  <MapPin size={20} className="sm:w-[22px] sm:h-[22px]" />
+                </div>
+                <div className="min-w-0 w-full">
+                  <p className="text-[10px] font-black text-slate-400 dark:text-slate-300 uppercase tracking-wider whitespace-nowrap">Venue</p>
+                  <p className="font-bold text-[#0f172a] dark:text-slate-200 text-sm sm:text-base line-clamp-2 break-words mt-1" title={event.location}>{event.location}</p>
+                  {event.address && (
+                    <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider truncate mt-0.5" title={event.address}>{event.address}</p>
+                  )}
+                </div>
+              </button>
+
+              {/* Enrollment Button */}
+              <button 
+                onClick={() => setSelectedMetric("enrollment")}
+                className="flex flex-col justify-between gap-4 min-w-0 text-left bg-white dark:bg-[#0f172a]/40 border border-slate-100 dark:border-slate-800/80 p-5 rounded-[2rem] transition-all hover:bg-slate-50/50 dark:hover:bg-slate-800/20 hover:border-slate-200 dark:hover:border-slate-700 hover:shadow-sm active:scale-[0.98] w-full shadow-xs"
+              >
+                <div className="p-2.5 bg-slate-50 dark:bg-slate-800 text-[#0f172a] dark:text-white rounded-2xl shrink-0 self-start">
+                  <Users size={20} className="sm:w-[22px] sm:h-[22px]" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-black text-slate-400 dark:text-slate-300 uppercase tracking-wider whitespace-nowrap">Enrollment</p>
+                  <p className="font-bold text-[#0f172a] dark:text-slate-200 text-sm sm:text-base whitespace-nowrap mt-1">{confirmedCount} / {event.capacity}</p>
+                </div>
+              </button>
+
+              {/* Declined Button */}
+              <button 
+                onClick={() => setSelectedMetric("declined")}
+                className="flex flex-col justify-between gap-4 min-w-0 text-left bg-white dark:bg-[#0f172a]/40 border border-slate-100 dark:border-slate-800/80 p-5 rounded-[2rem] transition-all hover:bg-slate-50/50 dark:hover:bg-slate-800/20 hover:border-slate-200 dark:hover:border-slate-700 hover:shadow-sm active:scale-[0.98] w-full shadow-xs"
+              >
+                <div className="p-2.5 bg-red-50 dark:bg-red-950/30 text-red-500 rounded-2xl shrink-0 self-start">
+                  <UserX size={20} className="sm:w-[22px] sm:h-[22px]" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-black text-slate-400 dark:text-slate-300 uppercase tracking-wider whitespace-nowrap">Declined</p>
+                  <p className="font-bold text-red-500 dark:text-red-400 text-sm sm:text-base whitespace-nowrap mt-1">{declinedCount}</p>
+                </div>
+              </button>
+
+              {/* Checked In Button */}
+              <button 
+                onClick={() => setSelectedMetric("checked_in")}
+                className="flex flex-col justify-between gap-4 min-w-0 text-left bg-white dark:bg-[#0f172a]/40 border border-slate-100 dark:border-slate-800/80 p-5 rounded-[2rem] transition-all hover:bg-slate-50/50 dark:hover:bg-slate-800/20 hover:border-slate-200 dark:hover:border-slate-700 hover:shadow-sm active:scale-[0.98] w-full col-span-2 sm:col-span-1 md:col-span-1 lg:col-span-1 shadow-xs"
+              >
+                <div className="p-2.5 bg-green-50 dark:bg-green-950/30 text-green-600 rounded-2xl shrink-0 self-start">
+                  <CheckCircle2 size={20} className="sm:w-[22px] sm:h-[22px]" />
+                </div>
+                <div className="min-w-0 w-full">
+                  <p className="text-[10px] font-black text-slate-400 dark:text-slate-300 uppercase tracking-wider whitespace-nowrap">Checked In</p>
+                  <div className="flex items-baseline gap-1.5 flex-wrap min-w-0 mt-1">
+                    <p className="font-bold text-green-600 dark:text-green-400 text-sm sm:text-base whitespace-nowrap">{checkedInCount}</p>
+                    {event.duration_days && event.duration_days > 1 && (
+                      <span className="text-[8px] text-slate-400 font-bold uppercase whitespace-nowrap">(Unique)</span>
+                    )}
+                  </div>
+                  {event.duration_days && event.duration_days > 1 && (
+                    <div className="mt-1.5 flex flex-wrap gap-1">
+                      {Array.from({ length: event.duration_days }, (_, i) => i + 1).map(d => (
+                        <span key={d} className="px-1.5 py-0.5 bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-400 text-[8px] font-bold rounded border border-green-200/50 dark:border-green-900/50 shrink-0">
+                          Day {d}: {registrations.filter(r => r.checked_in_days?.includes(d)).length}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </button>
+            </div>
+
+            {/* Row 4: Action Command Bar (Enterprise Full-Width Grid) */}
+            {(userRole === "admin" || userRole === "manager") && (
+              <div className="pt-4 border-t border-slate-100 dark:border-slate-800/80">
+                <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2.5">
                   <button
                     onClick={exportToExcel}
                     disabled={registrations.length === 0}
-                    className="flex items-center justify-center gap-2.5 bg-[#0f172a] hover:bg-black disabled:bg-slate-200 dark:bg-yellow-400 dark:hover:bg-yellow-500 dark:text-[#0f172a] dark:disabled:bg-slate-800 dark:disabled:text-slate-500 text-white px-4 py-3.5 rounded-xl font-black transition-all shadow-md shadow-slate-200 dark:shadow-none uppercase tracking-widest text-[11px]"
+                    className="flex items-center justify-center gap-2 bg-[#0f172a] hover:bg-black disabled:bg-slate-200 dark:bg-yellow-400 dark:hover:bg-yellow-500 dark:text-[#0f172a] dark:disabled:bg-slate-800 dark:disabled:text-slate-500 text-white px-3 py-3 rounded-xl font-black transition-all shadow-sm uppercase tracking-wider text-[10px]"
                   >
-                    <Download size={16} />
-                    Export Excel
+                    <Download size={14} />
+                    <span>Export Excel</span>
                   </button>
                   <button
                     onClick={async () => {
@@ -1816,10 +1877,10 @@ export default function EventDetailsPage() {
                       }
                     }}
                     disabled={registrations.length === 0}
-                    className="flex items-center justify-center gap-2.5 bg-[#eab308] hover:bg-[#ca8a04] disabled:bg-slate-200 dark:disabled:bg-slate-800 dark:disabled:text-slate-500 text-[#0f172a] px-4 py-3.5 rounded-xl font-black transition-all shadow-md shadow-yellow-500/10 dark:shadow-none uppercase tracking-widest text-[11px]"
+                    className="flex items-center justify-center gap-2 bg-[#eab308] hover:bg-[#ca8a04] disabled:bg-slate-200 dark:disabled:bg-slate-800 dark:disabled:text-slate-500 text-[#0f172a] px-3 py-3 rounded-xl font-black transition-all shadow-sm uppercase tracking-wider text-[10px]"
                   >
-                    <Download size={16} />
-                    QR Codes (ZIP)
+                    <Download size={14} />
+                    <span>QR Codes ZIP</span>
                   </button>
                   {(() => {
                     const cleanSlug = (event.slug || "").replace(/&nbsp;/g, " ").replace(/\u00a0/g, " ").trim() || String(event.id);
@@ -1832,19 +1893,19 @@ export default function EventDetailsPage() {
                             navigator.clipboard.writeText(url);
                             alert("Client dashboard link copied to clipboard!");
                           }}
-                          className="flex-1 flex items-center justify-center gap-2 bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-[#0f172a] dark:text-slate-200 px-3 py-3.5 rounded-xl font-black transition-all border border-slate-200 dark:border-slate-700 uppercase tracking-widest text-[10px]"
+                          className="flex-1 flex items-center justify-center gap-1.5 bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-[#0f172a] dark:text-slate-200 px-2 py-3 rounded-xl font-black transition-all border border-slate-200 dark:border-slate-700 uppercase tracking-wider text-[10px]"
                         >
-                          <Eye size={16} />
-                          Share Link
+                          <Eye size={14} />
+                          <span>Share Link</span>
                         </button>
                         <a
                           href={clientViewPath}
                           target="_blank"
                           rel="noopener noreferrer"
                           title="Open Client Dashboard in new tab"
-                          className="flex items-center justify-center px-3 bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-400 hover:text-[#0f172a] dark:hover:text-white rounded-xl border border-slate-200 dark:border-slate-700 transition-all"
+                          className="flex items-center justify-center px-2.5 bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-400 hover:text-[#0f172a] dark:hover:text-white rounded-xl border border-slate-200 dark:border-slate-700 transition-all"
                         >
-                          <ArrowUpRight size={15} />
+                          <ArrowUpRight size={14} />
                         </a>
                       </div>
                     );
@@ -1854,17 +1915,17 @@ export default function EventDetailsPage() {
                       setCurrentSlide(0);
                       setIsPresentationOpen(true);
                     }}
-                    className="flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-600 hover:to-yellow-500 text-slate-950 px-4 py-3.5 rounded-xl font-black transition-all shadow-md shadow-yellow-500/20 uppercase tracking-widest text-[11px]"
+                    className="flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-600 hover:to-yellow-500 text-slate-950 px-3 py-3 rounded-xl font-black transition-all shadow-sm uppercase tracking-wider text-[10px]"
                   >
-                    <Presentation size={16} />
-                    Presentation
+                    <Presentation size={14} />
+                    <span>Presentation</span>
                   </button>
                   <Link
                     href={`/admin/events/${id}/badges`}
-                    className="flex items-center justify-center gap-2 bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-[#0f172a] dark:text-slate-200 px-4 py-3.5 rounded-xl font-black transition-all border border-slate-200 dark:border-slate-700 uppercase tracking-widest text-[11px] text-center"
+                    className="flex items-center justify-center gap-2 bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-[#0f172a] dark:text-slate-200 px-3 py-3 rounded-xl font-black transition-all border border-slate-200 dark:border-slate-700 uppercase tracking-wider text-[10px] text-center"
                   >
-                    <Printer size={16} />
-                    Print Badges
+                    <Printer size={14} />
+                    <span>Print Badges</span>
                   </Link>
                   <button
                     onClick={async () => {
@@ -1891,46 +1952,44 @@ export default function EventDetailsPage() {
                         }
                       }
                     }}
-                    className="flex items-center justify-center gap-2 bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-[#0f172a] dark:text-slate-200 px-4 py-3.5 rounded-xl font-black transition-all border border-slate-200 dark:border-slate-700 uppercase tracking-widest text-[11px]"
+                    className="flex items-center justify-center gap-2 bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-[#0f172a] dark:text-slate-200 px-3 py-3 rounded-xl font-black transition-all border border-slate-200 dark:border-slate-700 uppercase tracking-wider text-[10px]"
                   >
-                    <Mail size={16} />
-                    Send Reminders
+                    <Mail size={14} />
+                    <span>Reminders</span>
                   </button>
                   <Link
                     href={`/admin/events/${id}/edit`}
-                    className="flex items-center justify-center gap-2 bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-[#0f172a] dark:text-slate-200 px-4 py-3.5 rounded-xl font-black transition-all border border-slate-200 dark:border-slate-700 uppercase tracking-widest text-[11px] text-center"
+                    className="flex items-center justify-center gap-2 bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-[#0f172a] dark:text-slate-200 px-3 py-3 rounded-xl font-black transition-all border border-slate-200 dark:border-slate-700 uppercase tracking-wider text-[10px] text-center"
                   >
-                    <Settings size={16} />
-                    Edit Config
+                    <Settings size={14} />
+                    <span>Edit Config</span>
                   </Link>
-                  {(userRole === "admin" || userRole === "manager") && (
-                    <button
-                      onClick={async () => {
-                        if (confirm(`Are you sure you want to duplicate this event?`)) {
-                          try {
-                            const res = await fetch(`/api/py/events/${id}/duplicate`, {
-                              method: "POST",
-                              headers: { "x-user-email": session?.user?.email || "" }
-                            });
-                            if (res.ok) {
-                              const duplicateData = await res.json();
-                              alert("Event duplicated successfully!");
-                              router.push(`/admin/events/${duplicateData.id}`);
-                            } else {
-                              const err = await res.json();
-                              alert(`Failed to duplicate: ${err.detail || "Unknown error"}`);
-                            }
-                          } catch (err) {
-                            alert("An error occurred while duplicating the event.");
+                  <button
+                    onClick={async () => {
+                      if (confirm(`Are you sure you want to duplicate this event?`)) {
+                        try {
+                          const res = await fetch(`/api/py/events/${id}/duplicate`, {
+                            method: "POST",
+                            headers: { "x-user-email": session?.user?.email || "" }
+                          });
+                          if (res.ok) {
+                            const duplicateData = await res.json();
+                            alert("Event duplicated successfully!");
+                            router.push(`/admin/events/${duplicateData.id}`);
+                          } else {
+                            const err = await res.json();
+                            alert(`Failed to duplicate: ${err.detail || "Unknown error"}`);
                           }
+                        } catch (err) {
+                          alert("An error occurred while duplicating the event.");
                         }
-                      }}
-                      className="flex items-center justify-center gap-2 bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-[#0f172a] dark:text-slate-200 px-4 py-3.5 rounded-xl font-black transition-all border border-slate-200 dark:border-slate-700 uppercase tracking-widest text-[11px]"
-                    >
-                      <Copy size={16} />
-                      Duplicate
-                    </button>
-                  )}
+                      }
+                    }}
+                    className="flex items-center justify-center gap-2 bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-[#0f172a] dark:text-slate-200 px-3 py-3 rounded-xl font-black transition-all border border-slate-200 dark:border-slate-700 uppercase tracking-wider text-[10px]"
+                  >
+                    <Copy size={14} />
+                    <span>Duplicate</span>
+                  </button>
                   {userRole === "admin" && (
                     <button
                       onClick={async () => {
@@ -1954,71 +2013,141 @@ export default function EventDetailsPage() {
                           alert("Error sending test email");
                         }
                       }}
-                      className="col-span-1 sm:col-span-2 flex items-center justify-center gap-2 bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 px-4 py-3 rounded-xl font-black transition-all border border-slate-200/80 dark:border-slate-700 uppercase tracking-widest text-[10px]"
+                      className="col-span-2 sm:col-span-4 lg:col-span-8 flex items-center justify-center gap-2 bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 px-4 py-2.5 rounded-xl font-black transition-all border border-slate-200/80 dark:border-slate-700 uppercase tracking-widest text-[10px]"
                     >
                       Test Email Service
                     </button>
                   )}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
           
           {/* Tab Navigation */}
-          <div className="px-10 flex border-t border-slate-50 dark:border-slate-800 bg-slate-50/20 overflow-x-auto whitespace-nowrap scrollbar-hide">
-             <button 
-               onClick={() => setActiveTab("registrants")}
-               className={`px-6 md:px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2 shrink-0 ${activeTab === "registrants" ? "border-yellow-400 text-[#0f172a] dark:text-white" : "border-transparent text-slate-400"}`}
-             >
-                Registrants
-             </button>
-             {(userRole === "admin" || userRole === "manager") && (
-                <button 
-                  onClick={() => setActiveTab("form")}
-                  className={`px-6 md:px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2 shrink-0 ${activeTab === "form" ? "border-yellow-400 text-[#0f172a] dark:text-white" : "border-transparent text-slate-400"}`}
-                >
-                  Form Studio
-               </button>
-             )}
+          <div className="px-6 sm:px-10 flex border-t border-slate-50 dark:border-slate-800 bg-slate-50/20 overflow-x-auto whitespace-nowrap scrollbar-hide">
+            {userRole === "staff" ? (
               <button 
-                onClick={() => setActiveTab("scanner")}
-                className={`px-6 md:px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2 shrink-0 ${activeTab === "scanner" ? "border-yellow-400 text-[#0f172a] dark:text-white" : "border-transparent text-slate-400"}`}
+                onClick={() => setActiveTab("registrants")}
+                className={`px-6 md:px-8 py-5 sm:py-6 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2 shrink-0 flex items-center gap-2 ${activeTab === "registrants" ? "border-yellow-400 text-[#0f172a] dark:text-white" : "border-transparent text-slate-400"}`}
               >
-                Live Scanner
-             </button>
-             {(userRole === "admin" || userRole === "manager") && (
+                <CheckCircle2 size={14} className="text-emerald-500" />
+                Check-In (Scan & Search)
+              </button>
+            ) : (
+              <>
                 <button 
-                  onClick={() => setActiveTab("communications")}
-                  className={`px-6 md:px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2 shrink-0 ${activeTab === "communications" ? "border-yellow-400 text-[#0f172a] dark:text-white" : "border-transparent text-slate-400"}`}
+                  onClick={() => setActiveTab("registrants")}
+                  className={`px-6 md:px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2 shrink-0 ${activeTab === "registrants" ? "border-yellow-400 text-[#0f172a] dark:text-white" : "border-transparent text-slate-400"}`}
                 >
-                  Communications
-               </button>
-             )}
-             {(userRole === "admin" || userRole === "manager") && (
+                  Registrants
+                </button>
+                {(userRole === "admin" || userRole === "manager") && (
+                  <button 
+                    onClick={() => setActiveTab("form")}
+                    className={`px-6 md:px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2 shrink-0 ${activeTab === "form" ? "border-yellow-400 text-[#0f172a] dark:text-white" : "border-transparent text-slate-400"}`}
+                  >
+                    Form Studio
+                  </button>
+                )}
                 <button 
-                  onClick={() => setActiveTab("staff")}
-                  className={`px-6 md:px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2 shrink-0 ${activeTab === "staff" ? "border-yellow-400 text-[#0f172a] dark:text-white" : "border-transparent text-slate-400"}`}
+                  onClick={() => setActiveTab("scanner")}
+                  className={`px-6 md:px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2 shrink-0 ${activeTab === "scanner" ? "border-yellow-400 text-[#0f172a] dark:text-white" : "border-transparent text-slate-400"}`}
                 >
-                  Staff Assignment
-               </button>
-             )}
+                  Live Scanner
+                </button>
+                {(userRole === "admin" || userRole === "manager") && (
+                  <button 
+                    onClick={() => setActiveTab("communications")}
+                    className={`px-6 md:px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2 shrink-0 ${activeTab === "communications" ? "border-yellow-400 text-[#0f172a] dark:text-white" : "border-transparent text-slate-400"}`}
+                  >
+                    Communications
+                  </button>
+                )}
+                {(userRole === "admin" || userRole === "manager") && (
+                  <button 
+                    onClick={() => setActiveTab("staff")}
+                    className={`px-6 md:px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2 shrink-0 ${activeTab === "staff" ? "border-yellow-400 text-[#0f172a] dark:text-white" : "border-transparent text-slate-400"}`}
+                  >
+                    Staff Assignment
+                  </button>
+                )}
+              </>
+            )}
           </div>
         </div>
 
         {activeTab === "registrants" ? (
           <div className="space-y-6">
-            <div className="bg-white dark:bg-[#0d1527] rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-800/80 p-8 flex flex-col gap-6">
-              {/* Row 1: Search and Check-in Tabs */}
-              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-                 <div className="relative flex-1 max-w-md">
-                    <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 dark:text-slate-500" size={20} />
-                    <input 
-                      type="text" 
-                      placeholder="Search by name, email or company..." 
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full pl-16 pr-8 py-5 bg-slate-50 dark:bg-slate-800 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-[#0f172a] dark:text-white placeholder-slate-300 dark:placeholder-slate-600 transition-all"
+            <div className="bg-white dark:bg-[#0d1527] rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-800/80 p-6 sm:p-8 flex flex-col gap-6">
+              
+              {/* Unified Mobile/Staff Camera QR Scanner Bar */}
+              {isEmbeddedScannerOpen && (
+                <div className="bg-slate-900 text-white p-6 sm:p-8 rounded-[2rem] border border-slate-800 shadow-xl space-y-4 animate-in fade-in duration-300">
+                  <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+                    <div className="flex items-center gap-2.5">
+                      <div className="p-2 bg-yellow-400 text-black rounded-xl">
+                        <Camera size={18} />
+                      </div>
+                      <div>
+                        <h4 className="text-xs sm:text-sm font-black tracking-wide uppercase font-bricolage">Live Camera QR Scanner</h4>
+                        <p className="text-[11px] text-slate-400">Point device camera at attendee QR badge for instant check-in</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setIsEmbeddedScannerOpen(false)}
+                      className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all"
+                    >
+                      Close Camera
+                    </button>
+                  </div>
+                  <div className="max-w-md mx-auto">
+                    <QRScanner 
+                      onScan={handleScanCheckin}
+                      onViewDetails={(registrant) => {
+                        const fullReg = registrations.find(r => r.id === registrant.id) || registrant;
+                        setHideResendButton(true);
+                        setSelectedReg(fullReg);
+                      }}
+                      operatorConfig={{
+                        success_bg_color: operatorSuccessBgColor,
+                        card_layout_text: operatorCardLayoutText,
+                        card_text_color: operatorCardTextColor,
+                        card_font_size: operatorCardFontSize,
+                        card_font_weight: operatorCardFontWeight,
+                        card_font_family: operatorCardFontFamily,
+                        card_text_align: operatorCardTextAlign,
+                        card_line_height: operatorCardLineHeight
+                      }}
                     />
+                  </div>
+                </div>
+              )}
+
+              {/* Row 1: Search, Camera Toggle, and Check-in Tabs */}
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 sm:gap-6">
+                 <div className="flex items-center gap-2.5 flex-1 max-w-lg">
+                   <div className="relative flex-1">
+                     <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 dark:text-slate-500" size={18} />
+                     <input 
+                       type="text" 
+                       placeholder="Search by name, email, company, or PIN..." 
+                       value={searchTerm}
+                       onChange={(e) => setSearchTerm(e.target.value)}
+                       className="w-full pl-13 pr-6 py-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-xs sm:text-sm text-[#0f172a] dark:text-white placeholder-slate-400 dark:placeholder-slate-500 transition-all"
+                     />
+                   </div>
+                   <button
+                     onClick={() => setIsEmbeddedScannerOpen(!isEmbeddedScannerOpen)}
+                     className={`px-4 sm:px-5 py-4 rounded-2xl font-black uppercase text-[10px] tracking-wider flex items-center gap-2 transition-all shrink-0 ${
+                       isEmbeddedScannerOpen
+                         ? "bg-red-500 hover:bg-red-600 text-white shadow-md shadow-red-500/20"
+                         : "bg-yellow-400 hover:bg-yellow-500 text-black shadow-md shadow-yellow-400/20"
+                     }`}
+                     title="Toggle Live Camera QR Scanner"
+                   >
+                     <Camera size={16} />
+                     <span className="hidden sm:inline">{isEmbeddedScannerOpen ? "Close Camera" : "Scan QR"}</span>
+                   </button>
                  </div>
                  <div className="flex flex-wrap items-center gap-4">
                    <div className="flex bg-slate-100/85 dark:bg-slate-900/50 p-1.5 rounded-2xl border border-slate-100 dark:border-slate-800/60 flex-wrap items-center gap-1">
