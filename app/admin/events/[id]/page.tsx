@@ -42,7 +42,10 @@ import {
   Save,
   Copy,
   Camera,
-  KeyRound
+  KeyRound,
+  AlignLeft,
+  AlignCenter,
+  AlignRight
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import AdminLayout from "@/components/AdminLayout";
@@ -1964,6 +1967,7 @@ export default function EventDetailsPage() {
                     )}
                   </div>
                 </button>
+              </div>
             )}
 
             {/* Row 4: Action Command Bar (Enterprise Full-Width Grid) */}
