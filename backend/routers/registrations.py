@@ -66,6 +66,24 @@ def register_attendee(
     # Domain restriction and status check
     if event_id:
         event = session.get(Event, event_id)
+        if not event:
+            try:
+                from backend.database import engine_prod, engine_preview
+                from backend.models import RegistrationFormTemplate
+                if session.bind == engine_preview and engine_prod != engine_preview:
+                    with Session(engine_prod) as prod_session:
+                        prod_event = prod_session.get(Event, event_id)
+                        if prod_event:
+                            if prod_event.template_id and not session.get(RegistrationFormTemplate, prod_event.template_id):
+                                prod_tpl = prod_session.get(RegistrationFormTemplate, prod_event.template_id)
+                                if prod_tpl:
+                                    session.merge(RegistrationFormTemplate.model_validate(prod_tpl))
+                                    session.commit()
+                            event = session.merge(Event.model_validate(prod_event))
+                            session.commit()
+                            session.refresh(event)
+            except Exception as e:
+                print(f"Preview event sync note: {e}")
         if event:
             # Check manual active flag (defaults to True)
             if not getattr(event, "registration_active", True):

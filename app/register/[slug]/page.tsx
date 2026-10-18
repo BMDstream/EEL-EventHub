@@ -786,11 +786,21 @@ function PublicRegistrationPageContent() {
       decodedSlug = rawSlug;
     }
 
-    fetch(`/api/py/events/${encodeURIComponent(decodedSlug)}`)
+    const isPreviewHost = typeof window !== "undefined" && (
+      window.location.hostname.includes("preview") || 
+      window.location.hostname.includes("-git-") || 
+      window.location.hostname.includes("localhost")
+    );
+    const reqHeaders: Record<string, string> = {};
+    if (isPreviewHost) {
+      reqHeaders["x-app-environment"] = "preview";
+    }
+
+    fetch(`/api/py/events/${encodeURIComponent(decodedSlug)}`, { headers: reqHeaders })
       .then(async (res) => {
         if (!res.ok) {
           // If first attempt fails, attempt with hyphen substitution
-          const fallbackRes = await fetch(`/api/py/events/${encodeURIComponent(decodedSlug.replace(/\s+/g, "-"))}`);
+          const fallbackRes = await fetch(`/api/py/events/${encodeURIComponent(decodedSlug.replace(/\s+/g, "-"))}`, { headers: reqHeaders });
           if (!fallbackRes.ok) throw new Error("Event not found");
           return fallbackRes.json();
         }
@@ -893,9 +903,18 @@ function PublicRegistrationPageContent() {
     }
 
     try {
+      const isPreviewHost = typeof window !== "undefined" && (
+        window.location.hostname.includes("preview") || 
+        window.location.hostname.includes("-git-") || 
+        window.location.hostname.includes("localhost")
+      );
+
       const response = await fetch(`/api/py/register`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          ...(isPreviewHost ? { "x-app-environment": "preview" } : {})
+        },
         body: JSON.stringify({
           event_id: event.id,
           ...formData,

@@ -214,6 +214,36 @@ def find_event_by_slug_or_id(slug_or_id: str, session: Session) -> Optional[Even
         if event:
             return event
 
+    # 5. If running against preview database and event not found in preview, copy from production
+    try:
+        from backend.database import engine_prod, engine_preview
+        if session.bind == engine_preview and engine_prod != engine_preview:
+            with Session(engine_prod) as prod_session:
+                prod_event = prod_session.exec(select(Event).where(Event.slug.in_(list(candidates)))).first()
+                if not prod_event and conditions:
+                    prod_event = prod_session.exec(select(Event).where(or_(*conditions))).first()
+                if not prod_event:
+                    for val in [raw, unquoted]:
+                        if val.isdigit():
+                            prod_event = prod_session.get(Event, int(val))
+                            if prod_event:
+                                break
+                if not prod_event and title_conditions:
+                    prod_event = prod_session.exec(select(Event).where(or_(*title_conditions))).first()
+
+                if prod_event:
+                    if prod_event.template_id and not session.get(RegistrationFormTemplate, prod_event.template_id):
+                        prod_tpl = prod_session.get(RegistrationFormTemplate, prod_event.template_id)
+                        if prod_tpl:
+                            session.merge(RegistrationFormTemplate.model_validate(prod_tpl))
+                            session.commit()
+                    cloned = session.merge(Event.model_validate(prod_event))
+                    session.commit()
+                    session.refresh(cloned)
+                    return cloned
+    except Exception as e:
+        print(f"Preview event sync note: {e}")
+
     return None
 
 

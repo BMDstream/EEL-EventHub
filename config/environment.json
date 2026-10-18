@@ -1,0 +1,5 @@
+{
+  "environment": "preview",
+  "is_preview": true,
+  "description": "Preview environment branch configuration. Isolates all registrations, attendees, and test data to neondb_preview so they never touch production."
+}

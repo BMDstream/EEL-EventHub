@@ -1,41 +1,102 @@
 import os
+import json
+import re
+from typing import Optional, Any
 from sqlmodel import create_engine, SQLModel, Session
 from sqlalchemy.pool import NullPool
 from dotenv import load_dotenv
 
 load_dotenv()
 
-def _resolve_database_url() -> str:
+def is_preview_env(request: Optional[Any] = None) -> bool:
+    """
+    Determines whether code is running or request is arriving in the preview environment.
+    Checks:
+    1. Direct environment variables (VERCEL_ENV, NEXT_PUBLIC_VERCEL_ENV, ENVIRONMENT)
+    2. Checked-in environment configuration (app_environment.json / config/environment.json)
+    3. Git branch reference
+    4. Incoming HTTP request headers (x-app-environment, host, referer, x-vercel-deployment-url)
+    """
+    # 1. Explicit environment variables
+    vercel_env = (os.getenv("VERCEL_ENV") or os.getenv("NEXT_PUBLIC_VERCEL_ENV") or os.getenv("ENVIRONMENT") or "").strip().lower()
+    git_ref = (os.getenv("VERCEL_GIT_COMMIT_REF") or os.getenv("GIT_BRANCH") or "").strip().lower()
+    if vercel_env == "preview" or (git_ref != "" and git_ref not in ("main", "master", "production")):
+        return True
+
+    # 2. Checked-in environment configuration file
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.dirname(current_dir)
+    for candidate in [
+        os.path.join(current_dir, "app_environment.json"),
+        os.path.join(project_root, "config", "environment.json")
+    ]:
+        if os.path.exists(candidate):
+            try:
+                with open(candidate, "r") as f:
+                    data = json.load(f)
+                    if data.get("is_preview") is True or data.get("environment") == "preview":
+                        return True
+            except Exception:
+                pass
+
+    # 3. Local git HEAD branch check
+    try:
+        head_path = os.path.join(project_root, ".git", "HEAD")
+        if os.path.exists(head_path):
+            with open(head_path, "r") as f:
+                head_ref = f.read().strip()
+            if "refs/heads/" in head_ref and not head_ref.endswith("/main") and not head_ref.endswith("/master"):
+                return True
+    except Exception:
+        pass
+
+    # 4. Request headers (when called from FastAPI request context)
+    if request and hasattr(request, "headers"):
+        headers = request.headers
+        app_env_hdr = (headers.get("x-app-environment") or headers.get("x-environment") or "").lower()
+        if app_env_hdr == "preview":
+            return True
+        host = (headers.get("host") or "").lower()
+        deploy_url = (headers.get("x-vercel-deployment-url") or "").lower()
+        referer = (headers.get("referer") or "").lower()
+        if (
+            "preview" in host
+            or "-git-" in host
+            or "preview" in deploy_url
+            or "preview" in referer
+        ):
+            return True
+
+    return False
+
+def _resolve_database_url(for_preview: bool = False) -> str:
     raw_url = (os.getenv("DATABASE_URL") or "").strip().strip('"').strip("'")
     preview_url = (os.getenv("PREVIEW_DATABASE_URL") or "").strip().strip('"').strip("'")
-    vercel_env = (os.getenv("VERCEL_ENV") or "").strip().lower()
-    git_ref = (os.getenv("VERCEL_GIT_COMMIT_REF") or "").strip().lower()
 
-    is_preview = vercel_env == "preview" or (git_ref != "" and git_ref not in ("main", "master"))
-    if not is_preview and not vercel_env:
-        try:
-            head_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".git", "HEAD")
-            if os.path.exists(head_path):
-                with open(head_path, "r") as f:
-                    head_ref = f.read().strip()
-                if "refs/heads/" in head_ref and not head_ref.endswith("/main") and not head_ref.endswith("/master"):
-                    is_preview = True
-        except Exception:
-            pass
-
-    resolved = raw_url
-    if is_preview:
+    if for_preview:
         if preview_url:
             resolved = preview_url
         elif raw_url and "/neondb" in raw_url and "/neondb_preview" not in raw_url:
-            import re
             resolved = re.sub(r"/neondb(\?|$)", r"/neondb_preview\1", raw_url)
+        else:
+            resolved = preview_url or raw_url
+    else:
+        if raw_url and "/neondb_preview" in raw_url:
+            resolved = re.sub(r"/neondb_preview(\?|$)", r"/neondb\1", raw_url)
+        else:
+            resolved = raw_url
 
     if resolved.startswith("postgres://"):
         resolved = resolved.replace("postgres://", "postgresql://", 1)
     return resolved
 
-DATABASE_URL = _resolve_database_url()
+PROD_DATABASE_URL = _resolve_database_url(for_preview=False)
+PREVIEW_DATABASE_URL = _resolve_database_url(for_preview=True)
+
+# Determine default database URL for static context
+IS_PREVIEW = is_preview_env()
+DATABASE_URL = PREVIEW_DATABASE_URL if IS_PREVIEW else PROD_DATABASE_URL
+
 # Handle cases where the engine must be running serverless or locally
 IS_SERVERLESS = DATABASE_URL and "localhost" not in DATABASE_URL and "sqlite" not in DATABASE_URL
 is_sqlite = DATABASE_URL and DATABASE_URL.startswith("sqlite")
@@ -51,13 +112,19 @@ if not is_sqlite:
     engine_args["pool_recycle"] = 300
     engine_args["pool_pre_ping"] = True
 
-engine = create_engine(DATABASE_URL, **engine_args)
+engine_prod = create_engine(PROD_DATABASE_URL, **engine_args)
+engine_preview = create_engine(PREVIEW_DATABASE_URL, **engine_args) if PREVIEW_DATABASE_URL != PROD_DATABASE_URL else engine_prod
 
-def init_db():
-    SQLModel.metadata.create_all(engine)
+# Default engine used by direct imports across backend modules
+engine = engine_preview if IS_PREVIEW else engine_prod
 
-def get_session():
-    with Session(engine) as session:
+def init_db(target_engine=None):
+    SQLModel.metadata.create_all(target_engine or engine)
+
+def get_session(request: Optional[Any] = None):
+    use_preview = is_preview_env(request)
+    target_engine = engine_preview if use_preview else engine_prod
+    with Session(target_engine) as session:
         yield session
 
 def run_db_initialization(session: Session, check_only_migrations: bool = False):

@@ -9,6 +9,20 @@ function resolveDatabaseUrl(): string {
   const gitRef = (process.env.VERCEL_GIT_COMMIT_REF || '').toLowerCase();
 
   let isPreview = vercelEnv === 'preview' || (gitRef !== '' && gitRef !== 'main' && gitRef !== 'master');
+  if (!isPreview) {
+    try {
+      const envJsonPath = path.join(process.cwd(), 'config', 'environment.json');
+      if (fs.existsSync(envJsonPath)) {
+        const envData = JSON.parse(fs.readFileSync(envJsonPath, 'utf8'));
+        if (envData.is_preview === true || envData.environment === 'preview') {
+          isPreview = true;
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }
+
   if (!isPreview && !vercelEnv) {
     try {
       const headPath = path.join(process.cwd(), '.git', 'HEAD');
