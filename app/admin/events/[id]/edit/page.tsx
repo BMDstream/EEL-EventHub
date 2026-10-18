@@ -452,6 +452,7 @@ export default function EditEventPage() {
   const [rawEvent, setRawEvent] = useState<any>(null);
   const [previewDevice, setPreviewDevice] = useState<"desktop" | "mobile">("desktop");
   const [showPreviewModal, setShowPreviewModal] = useState<boolean>(false);
+  const [previewAttending, setPreviewAttending] = useState<boolean>(true);
   const [brandingAccordions, setBrandingAccordions] = useState({
     imagery: true,
     logos: true,
@@ -965,7 +966,9 @@ export default function EditEventPage() {
 
     const postAttendanceQuestions = flatQuestions.filter((f: any) => {
       const k = f.key || f.id;
-      return !["first_name", "last_name", "email", "company"].includes(k) && !f.showBeforeAttendance;
+      if (["first_name", "last_name", "email", "company"].includes(k) || f.showBeforeAttendance) return false;
+      if (f.dependsOn && f.dependsOn.fieldId) return false;
+      return true;
     });
 
     const activeLogos = (formData.form_logos || []).filter((u: any) => typeof u === "string" && u.trim() !== "");
@@ -992,42 +995,76 @@ export default function EditEventPage() {
         <div className="relative z-10 p-4 sm:p-7 max-w-lg mx-auto flex flex-col items-center">
           
           {/* ================= HEADER (OUTSIDE CARD) ================= */}
-          <div className="w-full text-center mb-6 space-y-2">
+          <div className={`w-full mb-6 space-y-2.5 ${
+            formData.title_align === "left" ? "text-left items-start" : formData.title_align === "right" ? "text-right items-end" : "text-center items-center"
+          } flex flex-col`}>
             <h1 
-              className="text-2xl sm:text-3xl font-black tracking-tight leading-tight text-white drop-shadow-md"
-              style={{ textAlign: formData.title_align || "center" }}
+              className={`text-2xl sm:text-3xl font-black tracking-tight leading-tight text-white drop-shadow-md w-full ${
+                formData.title_align === "left" ? "text-left" : formData.title_align === "right" ? "text-right" : "text-center"
+              }`}
+              style={{ textAlign: (formData.title_align as any) || "center" }}
             >
               {cleanHtmlText(formData.title || "") || "Untitled Event Title"}
             </h1>
 
             {formData.description && (
               <div 
-                className="text-xs sm:text-sm text-zinc-200/90 font-medium max-w-md mx-auto line-clamp-2 leading-relaxed drop-shadow"
-                style={{ textAlign: formData.description_align || "center" }}
+                className={`text-xs sm:text-sm text-zinc-200/90 font-medium leading-relaxed drop-shadow max-w-md w-full ${
+                  formData.description_align === "left" ? "text-left mr-auto" : formData.description_align === "right" ? "text-right ml-auto" : "text-center mx-auto"
+                }`}
+                style={{ textAlign: (formData.description_align as any) || "center" }}
                 dangerouslySetInnerHTML={{ __html: formData.description }}
               />
             )}
 
-            {/* Date & Venue Compact Badges */}
+            {/* Date & Venue Badges matching live public registration page */}
             <div 
-              className={`flex flex-wrap items-center justify-center gap-2 pt-2 ${
-                formData.meta_order === "stacked" ? "flex-col" : formData.meta_order === "venue_first" ? "flex-row-reverse" : "flex-row"
+              className={`flex flex-wrap items-center gap-4 pt-3 w-full ${
+                formData.meta_align === "left" ? "justify-start" : formData.meta_align === "right" ? "justify-end" : "justify-center"
+              } ${
+                formData.meta_order === "stacked" ? "flex-col !items-stretch" : formData.meta_order === "venue_first" ? "flex-row-reverse" : "flex-row"
               }`}
             >
-              {/* Date Pill */}
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/80 border border-white/10 text-white shadow-sm backdrop-blur-md">
-                <Calendar size={13} style={{ color: effectiveAccentColor }} />
-                <span className="text-[11px] font-bold text-zinc-200">
-                  {formData.start_date ? new Date(formData.start_date).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" }) : "Nov 11, 2026, 11:00 AM"}
-                </span>
+              {/* Date & Time Badge */}
+              <div className={`flex items-center gap-3 ${formData.meta_align === "right" ? "flex-row-reverse text-right" : ""}`}>
+                <div 
+                  className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border border-white/10 shadow-sm"
+                  style={{
+                    backgroundColor: isLight ? "rgba(255,255,255,0.7)" : "rgba(255,255,255,0.06)",
+                    borderColor: isLight ? "rgba(0,0,0,0.1)" : "rgba(255,255,255,0.12)"
+                  }}
+                >
+                  <Calendar size={18} style={{ color: effectiveAccentColor }} />
+                </div>
+                <div className={formData.meta_align === "right" ? "text-right" : "text-left"}>
+                  <p className="text-[9px] font-black uppercase tracking-widest text-zinc-400">
+                    Date &amp; Time
+                  </p>
+                  <p className="text-xs font-bold text-white mt-0.5">
+                    {formData.start_date ? new Date(formData.start_date).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" }) : "Nov 11, 2026, 11:00 AM"}
+                  </p>
+                </div>
               </div>
 
-              {/* Venue Pill */}
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/80 border border-white/10 text-white shadow-sm backdrop-blur-md">
-                <MapPin size={13} style={{ color: effectiveAccentColor }} />
-                <span className="text-[11px] font-bold text-zinc-200">
-                  {formData.location || "The Glen Country Club, Clifton"}
-                </span>
+              {/* Venue Badge */}
+              <div className={`flex items-center gap-3 ${formData.meta_align === "right" ? "flex-row-reverse text-right" : ""}`}>
+                <div 
+                  className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border border-white/10 shadow-sm"
+                  style={{
+                    backgroundColor: isLight ? "rgba(255,255,255,0.7)" : "rgba(255,255,255,0.06)",
+                    borderColor: isLight ? "rgba(0,0,0,0.1)" : "rgba(255,255,255,0.12)"
+                  }}
+                >
+                  <MapPin size={18} style={{ color: effectiveAccentColor }} />
+                </div>
+                <div className={formData.meta_align === "right" ? "text-right" : "text-left"}>
+                  <p className="text-[9px] font-black uppercase tracking-widest text-zinc-400">
+                    Venue
+                  </p>
+                  <p className="text-xs font-bold text-white mt-0.5">
+                    {formData.location || "The Glen Country Club, Clifton"}
+                  </p>
+                </div>
               </div>
             </div>
           </div>
@@ -1084,14 +1121,13 @@ export default function EditEventPage() {
                   First Name <span style={{ color: effectiveAccentColor }}>*</span>
                 </label>
                 <div 
-                  className="w-full px-4 py-2.5 rounded-xl text-xs font-semibold border transition-all"
+                  className="w-full px-4 py-2.5 rounded-xl text-xs font-medium border transition-all text-zinc-400/80"
                   style={{ 
                     backgroundColor: effectiveInputBg,
                     borderColor: isLight ? "#cbd5e1" : "rgba(255,255,255,0.14)",
-                    color: effectiveTextColor
                   }}
                 >
-                  John
+                  e.g. Alan
                 </div>
               </div>
 
@@ -1100,14 +1136,13 @@ export default function EditEventPage() {
                   Last Name <span style={{ color: effectiveAccentColor }}>*</span>
                 </label>
                 <div 
-                  className="w-full px-4 py-2.5 rounded-xl text-xs font-semibold border transition-all"
+                  className="w-full px-4 py-2.5 rounded-xl text-xs font-medium border transition-all text-zinc-400/80"
                   style={{ 
                     backgroundColor: effectiveInputBg,
                     borderColor: isLight ? "#cbd5e1" : "rgba(255,255,255,0.14)",
-                    color: effectiveTextColor
                   }}
                 >
-                  Doe
+                  e.g. Turing
                 </div>
               </div>
 
@@ -1116,14 +1151,13 @@ export default function EditEventPage() {
                   Email Address <span style={{ color: effectiveAccentColor }}>*</span>
                 </label>
                 <div 
-                  className="w-full px-4 py-2.5 rounded-xl text-xs font-semibold border transition-all"
+                  className="w-full px-4 py-2.5 rounded-xl text-xs font-medium border transition-all text-zinc-400/80"
                   style={{ 
                     backgroundColor: effectiveInputBg,
                     borderColor: isLight ? "#cbd5e1" : "rgba(255,255,255,0.14)",
-                    color: effectiveTextColor
                   }}
                 >
-                  john.doe@company.com
+                  e.g. turing@bletchleypark.org.uk
                 </div>
               </div>
 
@@ -1133,14 +1167,13 @@ export default function EditEventPage() {
                     Organization / Company {formData.company_required ? <span style={{ color: effectiveAccentColor }}>*</span> : <span className="opacity-60">(Optional)</span>}
                   </label>
                   <div 
-                    className="w-full px-4 py-2.5 rounded-xl text-xs font-semibold border transition-all"
+                    className="w-full px-4 py-2.5 rounded-xl text-xs font-medium border transition-all text-zinc-400/80"
                     style={{ 
                       backgroundColor: effectiveInputBg,
                       borderColor: isLight ? "#cbd5e1" : "rgba(255,255,255,0.14)",
-                      color: effectiveTextColor
                     }}
                   >
-                    Acme Corporation
+                    e.g. GC&amp;CS
                   </div>
                 </div>
               )}
@@ -1154,99 +1187,106 @@ export default function EditEventPage() {
               <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
-                  className="w-full py-2.5 px-3 rounded-xl font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm"
-                  style={{
+                  onClick={() => setPreviewAttending(true)}
+                  className={`w-full py-2.5 px-3 rounded-xl font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                    previewAttending ? "shadow-md" : "border border-white/15 text-zinc-400 bg-white/5 hover:text-white"
+                  }`}
+                  style={previewAttending ? {
                     backgroundColor: effectiveAccentColor,
                     color: "#0f172a",
-                  }}
+                  } : undefined}
                 >
                   <span>I am attending</span>
                 </button>
                 <button
                   type="button"
-                  className="w-full py-2.5 px-3 rounded-xl font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 border border-white/15 text-zinc-400 bg-white/5"
+                  onClick={() => setPreviewAttending(false)}
+                  className={`w-full py-2.5 px-3 rounded-xl font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                    !previewAttending ? "shadow-md text-white border border-rose-500/50 bg-rose-500/20" : "border border-white/15 text-zinc-400 bg-white/5 hover:text-white"
+                  }`}
                 >
                   <span>Unable to attend</span>
                 </button>
               </div>
             </div>
 
-            {/* Custom Questions (Dietary, Player or Spectator, etc.) */}
-            <div className="space-y-3.5">
-              {postAttendanceQuestions.length > 0 ? (
-                postAttendanceQuestions.map((field: any, idx: number) => {
-                  const labelClean = (field.label || "").replace(/<[^>]*>/g, "");
-                  return (
-                    <div key={idx} className="space-y-1">
+            {/* Custom Questions (Dietary, Player or Spectator, etc.) - shown only when attending */}
+            {previewAttending && (
+              <div className="space-y-3.5">
+                {postAttendanceQuestions.length > 0 ? (
+                  postAttendanceQuestions.map((field: any, idx: number) => {
+                    const labelClean = (field.label || "").replace(/<[^>]*>/g, "");
+                    return (
+                      <div key={idx} className="space-y-1">
+                        <label className="block text-[10px] font-black uppercase tracking-wider text-zinc-400">
+                          {labelClean} {field.required ? <span style={{ color: effectiveAccentColor }}>*</span> : ""}
+                        </label>
+                        {field.type === "select" ? (
+                          <div 
+                            className="w-full px-4 py-2.5 rounded-xl text-xs font-semibold border flex items-center justify-between"
+                            style={{ 
+                              backgroundColor: effectiveInputBg,
+                              borderColor: isLight ? "#cbd5e1" : "rgba(255,255,255,0.14)",
+                              color: effectiveTextColor
+                            }}
+                          >
+                            <span>{field.options?.[0] || "Select Option"}</span>
+                            <ChevronDown size={14} className="opacity-60" />
+                          </div>
+                        ) : (
+                          <div 
+                            className="w-full px-4 py-2.5 rounded-xl text-xs font-medium border text-zinc-400/80"
+                            style={{ 
+                              backgroundColor: effectiveInputBg,
+                              borderColor: isLight ? "#cbd5e1" : "rgba(255,255,255,0.14)",
+                            }}
+                          >
+                            {field.placeholder || "Enter answer"}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+                ) : (
+                  <>
+                    {/* Default Sensible Previews matching template questions */}
+                    <div className="space-y-1">
                       <label className="block text-[10px] font-black uppercase tracking-wider text-zinc-400">
-                        {labelClean} {field.required ? <span style={{ color: effectiveAccentColor }}>*</span> : ""}
+                        Dietary Requirements
                       </label>
-                      {field.type === "select" ? (
-                        <div 
-                          className="w-full px-4 py-2.5 rounded-xl text-xs font-semibold border flex items-center justify-between"
-                          style={{ 
-                            backgroundColor: effectiveInputBg,
-                            borderColor: isLight ? "#cbd5e1" : "rgba(255,255,255,0.14)",
-                            color: effectiveTextColor
-                          }}
-                        >
-                          <span>{field.options?.[0] || "Select Option"}</span>
-                          <ChevronDown size={14} className="opacity-60" />
-                        </div>
-                      ) : (
-                        <div 
-                          className="w-full px-4 py-2.5 rounded-xl text-xs font-semibold border"
-                          style={{ 
-                            backgroundColor: effectiveInputBg,
-                            borderColor: isLight ? "#cbd5e1" : "rgba(255,255,255,0.14)",
-                            color: effectiveTextColor
-                          }}
-                        >
-                          {field.placeholder || "Enter answer"}
-                        </div>
-                      )}
+                      <div 
+                        className="w-full px-4 py-2.5 rounded-xl text-xs font-semibold border flex items-center justify-between"
+                        style={{ 
+                          backgroundColor: effectiveInputBg,
+                          borderColor: isLight ? "#cbd5e1" : "rgba(255,255,255,0.14)",
+                          color: effectiveTextColor
+                        }}
+                      >
+                        <span>None</span>
+                        <ChevronDown size={14} className="opacity-60" />
+                      </div>
                     </div>
-                  );
-                })
-              ) : (
-                <>
-                  {/* Default Sensible Previews matching template questions */}
-                  <div className="space-y-1">
-                    <label className="block text-[10px] font-black uppercase tracking-wider text-zinc-400">
-                      Dietary Requirements
-                    </label>
-                    <div 
-                      className="w-full px-4 py-2.5 rounded-xl text-xs font-semibold border flex items-center justify-between"
-                      style={{ 
-                        backgroundColor: effectiveInputBg,
-                        borderColor: isLight ? "#cbd5e1" : "rgba(255,255,255,0.14)",
-                        color: effectiveTextColor
-                      }}
-                    >
-                      <span>None</span>
-                      <ChevronDown size={14} className="opacity-60" />
-                    </div>
-                  </div>
 
-                  <div className="space-y-1">
-                    <label className="block text-[10px] font-black uppercase tracking-wider text-zinc-400">
-                      Player or Spectator
-                    </label>
-                    <div 
-                      className="w-full px-4 py-2.5 rounded-xl text-xs font-semibold border flex items-center justify-between"
-                      style={{ 
-                        backgroundColor: effectiveInputBg,
-                        borderColor: isLight ? "#cbd5e1" : "rgba(255,255,255,0.14)",
-                        color: effectiveTextColor
-                      }}
-                    >
-                      <span>Player</span>
-                      <ChevronDown size={14} className="opacity-60" />
+                    <div className="space-y-1">
+                      <label className="block text-[10px] font-black uppercase tracking-wider text-zinc-400">
+                        Player or Spectator
+                      </label>
+                      <div 
+                        className="w-full px-4 py-2.5 rounded-xl text-xs font-semibold border flex items-center justify-between"
+                        style={{ 
+                          backgroundColor: effectiveInputBg,
+                          borderColor: isLight ? "#cbd5e1" : "rgba(255,255,255,0.14)",
+                          color: effectiveTextColor
+                        }}
+                      >
+                        <span>Player</span>
+                        <ChevronDown size={14} className="opacity-60" />
+                      </div>
                     </div>
-                  </div>
-                </>
-              )}
-            </div>
+                  </>
+                )}
+              </div>
+            )}
 
             {/* Disclaimer & Indemnity Checkbox */}
             {formData.disclaimer_enabled && (

@@ -2004,70 +2004,99 @@ export default function SettingsPage() {
                       New Template
                     </button>
                   </div>
-                  <div className="bg-white rounded-[2rem] p-4 shadow-sm border border-slate-100 dark:bg-[#0f172a] dark:border-slate-800 space-y-2">
-                    {templates.map((t) => {
-                      const Icon = TEMPLATE_ICONS[t.key] || Mail;
-                      const isSelected = t.key === selectedKey;
-                      const isSystem = SYSTEM_TEMPLATE_KEYS.has(t.key);
+                  <div className="bg-white dark:bg-[#0f172a] rounded-[2rem] p-5 shadow-sm border border-slate-100 dark:border-slate-800 space-y-4">
+                    {/* Dropdown Selector */}
+                    <div className="relative">
+                      <select
+                        value={selectedKey}
+                        onChange={(e) => handleSelectTemplate(e.target.value)}
+                        className="w-full px-5 py-4 pr-12 rounded-2xl border border-slate-200 dark:border-slate-800 focus:border-[#0f172a] dark:focus:border-yellow-400 focus:ring-4 focus:ring-yellow-400/20 outline-none transition-all font-bold text-slate-800 dark:text-white bg-slate-50 dark:bg-slate-900 appearance-none cursor-pointer text-sm shadow-sm"
+                      >
+                        <optgroup label="System Templates">
+                          {templates.filter(t => SYSTEM_TEMPLATE_KEYS.has(t.key)).map(t => (
+                            <option key={t.key} value={t.key}>
+                              {t.name} (System)
+                            </option>
+                          ))}
+                        </optgroup>
+                        {templates.some(t => !SYSTEM_TEMPLATE_KEYS.has(t.key)) && (
+                          <optgroup label="Custom Templates">
+                            {templates.filter(t => !SYSTEM_TEMPLATE_KEYS.has(t.key)).map(t => (
+                              <option key={t.key} value={t.key}>
+                                {t.name}
+                              </option>
+                            ))}
+                          </optgroup>
+                        )}
+                      </select>
+                      <ChevronDown size={18} className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                    </div>
+
+                    {/* Active Template Quick Info & Action Bar */}
+                    {(() => {
+                      const currentTpl = templates.find(t => t.key === selectedKey);
+                      if (!currentTpl) return null;
+                      const Icon = TEMPLATE_ICONS[currentTpl.key] || Mail;
+                      const isSystem = SYSTEM_TEMPLATE_KEYS.has(currentTpl.key);
+
                       return (
-                        <div key={t.key} className="relative group/row font-bold">
-                          <button
-                            onClick={() => handleSelectTemplate(t.key)}
-                            className={`w-full flex items-center gap-4 p-4 rounded-2xl text-left transition-all ${
-                              isSelected 
-                                ? "bg-[#0f172a]/5 text-[#0f172a] font-black dark:bg-yellow-400/10 dark:text-yellow-400"
-                                : "text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800/50"
-                            }`}
-                          >
-                            <div className={`p-3 rounded-xl ${
-                              isSelected 
-                                ? "bg-[#0f172a] text-white dark:bg-yellow-400 dark:text-black"
-                                : "bg-slate-100 text-slate-400 dark:bg-slate-800"
-                            }`}>
+                        <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-50/80 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800/80">
+                          <div className="flex items-center gap-3.5 min-w-0">
+                            <div className="p-2.5 rounded-xl bg-[#0f172a] text-white dark:bg-yellow-400 dark:text-black shrink-0">
                               <Icon size={18} />
                             </div>
-                            <div className="flex-1 min-w-0 pr-16">
+                            <div className="min-w-0">
                               <div className="flex items-center gap-2">
-                                <p className="text-sm font-bold truncate">{t.name}</p>
+                                <span className="text-sm font-black text-slate-800 dark:text-white truncate">
+                                  {currentTpl.name}
+                                </span>
                                 {isSystem && (
-                                  <span className="text-[8px] font-black uppercase tracking-wider text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-full">System</span>
+                                  <span className="text-[8px] font-black uppercase tracking-wider text-slate-400 bg-slate-200/80 dark:bg-slate-800 px-2 py-0.5 rounded-full shrink-0">
+                                    System
+                                  </span>
                                 )}
                               </div>
-                              <p className="text-[10px] text-slate-400 font-medium truncate mt-0.5">{t.key}</p>
+                              <p className="text-[10px] text-slate-400 font-medium truncate mt-0.5">
+                                {currentTpl.key}
+                              </p>
                             </div>
-                            <ChevronRight size={14} className={`opacity-40 transition-transform ${isSelected ? "translate-x-1" : ""}`} />
-                          </button>
-                          
-                          {/* Copy button — available for ALL templates */}
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setNewTplName(`${t.name} (Copy)`);
-                              setNewTplKey(`${t.key}_copy`);
-                              setDuplicateSubject(t.subject || "");
-                              setDuplicateBodyHtml(t.body_html || "");
-                              setShowCreateModal(true);
-                            }}
-                            title="Copy template"
-                            className={`absolute ${isSystem ? "right-14" : "right-24"} top-1/2 -translate-y-1/2 opacity-0 group-hover/row:opacity-100 transition-opacity p-2 rounded-xl text-blue-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20`}
-                          >
-                            <Copy size={14} />
-                          </button>
+                          </div>
 
-                          {/* Delete button — only for custom (non-system) templates */}
-                          {!isSystem && (
+                          <div className="flex items-center gap-1.5 shrink-0 ml-3">
+                            {/* Copy button */}
                             <button
-                              onClick={(e) => { e.stopPropagation(); handleDeleteTemplate(t.key, t.name); }}
-                              disabled={deletingTplKey === t.key}
-                              title="Delete template"
-                              className="absolute right-14 top-1/2 -translate-y-1/2 opacity-0 group-hover/row:opacity-100 transition-opacity p-2 rounded-xl text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                              type="button"
+                              onClick={() => {
+                                setNewTplName(`${currentTpl.name} (Copy)`);
+                                setNewTplKey(`${currentTpl.key}_copy`);
+                                setDuplicateSubject(currentTpl.subject || "");
+                                setDuplicateBodyHtml(currentTpl.body_html || "");
+                                setShowCreateModal(true);
+                              }}
+                              title="Duplicate template"
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/40 dark:text-blue-400 dark:hover:bg-blue-900/40 transition-colors cursor-pointer"
                             >
-                              {deletingTplKey === t.key ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                              <Copy size={13} />
+                              <span className="hidden sm:inline">Duplicate</span>
                             </button>
-                          )}
+
+                            {/* Delete button (if not system) */}
+                            {!isSystem && (
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteTemplate(currentTpl.key, currentTpl.name)}
+                                disabled={deletingTplKey === currentTpl.key}
+                                title="Delete template"
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 dark:bg-red-950/40 dark:text-red-400 dark:hover:bg-red-900/40 transition-colors disabled:opacity-50 cursor-pointer"
+                              >
+                                {deletingTplKey === currentTpl.key ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
+                                <span className="hidden sm:inline">Delete</span>
+                              </button>
+                            )}
+                          </div>
                         </div>
                       );
-                    })}
+                    })()}
                   </div>
                 </div>
 
