@@ -6,8 +6,8 @@ import Link from "next/link";
 import {
   ArrowLeft, Save, Loader2, Trash2, Building2, Lock, Mail,
   Type, Eye, ExternalLink, CheckCircle2, AlertCircle, Sparkles,
-  Calendar, Award, Layers, ChevronDown, AlignLeft, AlignCenter, AlignRight, MapPin,
-  Palette, ShieldCheck, Monitor, Smartphone, X
+  Calendar, Award, Layers, ChevronDown, ChevronUp, AlignLeft, AlignCenter, AlignRight, MapPin,
+  Palette, ShieldCheck, Monitor, Smartphone, X, Sliders, Image as ImageIcon, FileText
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import AdminLayout from "@/components/AdminLayout";
@@ -451,6 +451,27 @@ export default function EditEventPage() {
   const [regTemplates, setRegTemplates] = useState<any[]>([]);
   const [previewDevice, setPreviewDevice] = useState<"desktop" | "mobile">("desktop");
   const [showPreviewModal, setShowPreviewModal] = useState<boolean>(false);
+  const [brandingAccordions, setBrandingAccordions] = useState({
+    imagery: true,
+    logos: true,
+    theme: true,
+    advanced: false,
+    description: true,
+  });
+
+  const toggleBrandingAccordion = (key: keyof typeof brandingAccordions) => {
+    setBrandingAccordions(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const setAllBrandingAccordions = (open: boolean) => {
+    setBrandingAccordions({
+      imagery: open,
+      logos: open,
+      theme: open,
+      advanced: open,
+      description: open,
+    });
+  };
 
   const [formData, setFormData] = useState({
     title: "",
@@ -1516,940 +1537,1042 @@ export default function EditEventPage() {
               )}
 
               <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
-                {/* Left Column: Form Controls */}
-                <div className="xl:col-span-7 space-y-10">
-                  {/* 2. Page Styling & Background */}
-                  <div className="space-y-6">
-                <div className="border-b border-slate-100 dark:border-white/5 pb-3">
-                  <h3 className="text-xs font-black text-[#1e293b] dark:text-white uppercase tracking-[0.2em] flex items-center gap-2">
-                    <Palette size={16} className="text-slate-400 dark:text-slate-500" /> 1. Page Styling &amp; Background
-                  </h3>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-                  {/* Left Column: Background Banner */}
-                  <div className="space-y-4">
-                    <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 flex items-center justify-between">
-                      Background Banner
-                      {formData.banner_url && <button type="button" onClick={() => setFormData({ ...formData, banner_url: "" })} className="text-red-500 hover:underline text-[9px] uppercase font-bold tracking-widest">Remove</button>}
-                    </label>
-                    <div className="relative group">
-                      <input type="file" accept="image/*" onChange={async (e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          try {
-                            const url = await uploadImageFile(file, session?.user?.email || "");
-                            setFormData(prev => ({ ...prev, banner_url: url }));
-                          } catch {
-                            try { const compressed = await compressImage(file, 1600, 1600, 0.85); setFormData(prev => ({ ...prev, banner_url: compressed })); }
-                            catch { const reader = new FileReader(); reader.onloadend = () => setFormData(prev => ({ ...prev, banner_url: reader.result as string })); reader.readAsDataURL(file); }
-                          }
-                        }
-                      }} className="absolute inset-0 opacity-0 cursor-pointer z-10" />
-                      <div className={`w-full h-28 rounded-2xl border-2 border-dashed ${formData.banner_url ? "border-green-500/30 bg-green-50/50 dark:bg-green-950/20" : "border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/60"} relative transition-all overflow-hidden`}>
-                        {formData.banner_url ? (
-                          <div className="absolute inset-0">
-                            {formData.banner_fit === "contain" && (
-                              <div className="absolute inset-0 scale-110 blur-md opacity-40 bg-cover bg-center" style={{ backgroundImage: `url(${formData.banner_url})` }} />
-                            )}
-                            <div 
-                              className="absolute inset-0" 
-                              style={{ 
-                                backgroundImage: `url(${formData.banner_url})`, 
-                                backgroundSize: formData.banner_fit || "cover", 
-                                backgroundPosition: formData.banner_focus || "center", 
-                                backgroundRepeat: "no-repeat" 
-                              }} 
-                            />
-                          </div>
-                        ) : (
-                          <div className="flex flex-col items-center justify-center h-full">
-                            <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase">Upload Banner Image</p>
-                            <p className="text-[8px] text-slate-300 dark:text-slate-600 uppercase mt-1">Recommended: 1920x600 or 1200x400</p>
-                          </div>
-                        )}
-                      </div>
+                {/* Left Column: Form Controls (Streamlined Accordions) */}
+                <div className="xl:col-span-7 space-y-4">
+                  {/* Studio Header & Quick Expand / Collapse All */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2">
+                    <div>
+                      <h2 className="text-xs font-black uppercase tracking-[0.2em] text-slate-800 dark:text-white flex items-center gap-2">
+                        <Palette size={15} className="text-yellow-500" /> Branding &amp; Appearance Studio
+                      </h2>
+                      <p className="text-[11px] text-slate-400 font-medium">Customize imagery, style presets, and advanced design overrides.</p>
                     </div>
+                    <div className="flex items-center gap-2 self-start sm:self-auto">
+                      <button
+                        type="button"
+                        onClick={() => setAllBrandingAccordions(true)}
+                        className="text-[9px] font-black uppercase tracking-wider text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 px-2 py-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                      >
+                        Expand All
+                      </button>
+                      <span className="text-slate-300 dark:text-slate-700 text-xs">•</span>
+                      <button
+                        type="button"
+                        onClick={() => setAllBrandingAccordions(false)}
+                        className="text-[9px] font-black uppercase tracking-wider text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 px-2 py-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                      >
+                        Collapse All
+                      </button>
+                    </div>
+                  </div>
 
-                    {/* Banner Specific Controls */}
-                    {formData.banner_url && (
-                      <div className="bg-slate-50/50 dark:bg-slate-900/40 rounded-2xl border border-slate-100 dark:border-slate-800 p-4 space-y-3">
-                        <span className="text-[9px] font-black text-amber-500 uppercase tracking-widest block">
-                          Banner Display Settings
-                        </span>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          <div>
-                            <label className="text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 block mb-1">Fit / Scale</label>
-                            <select name="banner_fit" value={formData.banner_fit} onChange={handleChange}
-                              className="w-full px-3 py-2.5 rounded-xl border border-slate-100 dark:border-slate-800 focus:border-[#1e293b] dark:focus:border-yellow-400 outline-none font-bold text-xs text-slate-700 dark:text-white bg-white dark:bg-slate-900 cursor-pointer">
-                              <option value="cover">Cover (Fill &amp; Crop)</option>
-                              <option value="contain">Contain (Full Image - No Crop)</option>
-                              <option value="100% 100%">Stretch to Fit</option>
-                              <option value="auto">Natural Scale</option>
-                            </select>
-                          </div>
-                          <div>
-                            <label className="text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 block mb-1">Focus / Position</label>
-                            <select name="banner_focus" value={formData.banner_focus} onChange={handleChange}
-                              className="w-full px-3 py-2.5 rounded-xl border border-slate-100 dark:border-slate-800 focus:border-[#1e293b] dark:focus:border-yellow-400 outline-none font-bold text-xs text-slate-700 dark:text-white bg-white dark:bg-slate-900 cursor-pointer">
-                              <option value="center">Center</option>
-                              <option value="top">Top</option>
-                              <option value="bottom">Bottom</option>
-                              <option value="left">Left</option>
-                              <option value="right">Right</option>
-                            </select>
-                          </div>
-                          <div>
-                            <label className="text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 block mb-1">Display Height</label>
-                            <select name="banner_height" value={formData.banner_height} onChange={handleChange}
-                              className="w-full px-3 py-2.5 rounded-xl border border-slate-100 dark:border-slate-800 focus:border-[#1e293b] dark:focus:border-yellow-400 outline-none font-bold text-xs text-slate-700 dark:text-white bg-white dark:bg-slate-900 cursor-pointer">
-                              <option value="auto">Auto (Natural Aspect)</option>
-                              <option value="compact">Compact (160px)</option>
-                              <option value="standard">Standard (240px)</option>
-                              <option value="tall">Tall / Hero (340px)</option>
-                            </select>
-                          </div>
-                          <div>
-                            <label className="text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 block mb-1">Banner Border</label>
-                            <div className="flex bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 p-1 gap-1">
-                              <button
-                                type="button"
-                                onClick={() => setFormData(prev => ({ ...prev, banner_border: true }))}
-                                className={`flex-1 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
-                                  formData.banner_border !== false
-                                    ? "bg-[#0f172a] dark:bg-yellow-400 text-white dark:text-slate-950 shadow-sm"
-                                    : "text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
-                                }`}
-                              >
-                                On (Border)
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setFormData(prev => ({ ...prev, banner_border: false }))}
-                                className={`flex-1 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
-                                  formData.banner_border === false
-                                    ? "bg-[#0f172a] dark:bg-yellow-400 text-white dark:text-slate-950 shadow-sm"
-                                    : "text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
-                                }`}
-                              >
-                                Off (Blend)
-                              </button>
-                            </div>
-                          </div>
+                  {/* 1. Page Banners & Imagery */}
+                  <div className="bg-white dark:bg-[#0f172a]/60 rounded-[1.75rem] border border-slate-200/80 dark:border-slate-800 shadow-xs overflow-hidden transition-all">
+                    <button
+                      type="button"
+                      onClick={() => toggleBrandingAccordion("imagery")}
+                      className="w-full p-5 sm:p-6 flex items-center justify-between text-left hover:bg-slate-50/60 dark:hover:bg-slate-800/30 transition-colors cursor-pointer"
+                    >
+                      <div className="flex items-center gap-3.5">
+                        <div className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200">
+                          <ImageIcon size={18} />
+                        </div>
+                        <div>
+                          <h3 className="text-xs font-black uppercase tracking-[0.15em] text-[#0f172a] dark:text-white">
+                            1. Page Banners &amp; Imagery
+                          </h3>
+                          <p className="text-[11px] text-slate-400 dark:text-slate-500 font-medium">
+                            Header background banner &amp; full-page background wallpaper
+                          </p>
                         </div>
                       </div>
-                    )}
-                  </div>
-
-                  {/* Right Column: Registration Page Background Image */}
-                  <div className="space-y-4">
-                    <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 flex items-center justify-between">
-                      Registration Page Background Image (Optional)
-                      {formData.background_url && <button type="button" onClick={() => setFormData({ ...formData, background_url: "" })} className="text-red-500 hover:underline text-[9px] uppercase font-bold tracking-widest">Remove</button>}
-                    </label>
-                    <div className="relative group">
-                      <input type="file" accept="image/*" onChange={async (e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          try {
-                            const url = await uploadImageFile(file, session?.user?.email || "");
-                            setFormData(prev => ({ ...prev, background_url: url }));
-                          } catch {
-                            try { const compressed = await compressImage(file, 1600, 1600, 0.85); setFormData(prev => ({ ...prev, background_url: compressed })); }
-                            catch { const reader = new FileReader(); reader.onloadend = () => setFormData(prev => ({ ...prev, background_url: reader.result as string })); reader.readAsDataURL(file); }
-                          }
-                        }
-                      }} className="absolute inset-0 opacity-0 cursor-pointer z-10" />
-                      <div className={`w-full h-28 rounded-2xl border-2 border-dashed ${formData.background_url ? "border-green-500/30 bg-green-50/50 dark:bg-green-950/20" : "border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/60"} relative transition-all overflow-hidden`}>
-                        {formData.background_url ? (
-                          <div className="absolute inset-0">
-                            {formData.banner_size === "contain" && <div className="absolute inset-0 scale-110 blur-md opacity-60 bg-cover bg-center" style={{ backgroundImage: `url(${formData.background_url})` }} />}
-                            <div className="absolute inset-0" style={{ backgroundImage: `url(${formData.background_url})`, backgroundSize: formData.banner_size, backgroundPosition: formData.banner_position, backgroundRepeat: "no-repeat" }} />
-                          </div>
-                        ) : (
-                          <div className="flex flex-col items-center justify-center h-full">
-                            <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase">Upload Background Image</p>
-                            <p className="text-[8px] text-slate-300 dark:text-slate-600 uppercase mt-1">Recommended: 1920x1080</p>
-                          </div>
+                      <div className="flex items-center gap-3">
+                        {formData.banner_url && (
+                          <span className="hidden sm:inline-block px-2.5 py-0.5 rounded-md text-[9px] font-bold bg-green-50 dark:bg-green-950/30 text-green-600 dark:text-green-400 border border-green-200/60 dark:border-green-800/60">
+                            Banner Active
+                          </span>
                         )}
-                      </div>
-                    </div>
-
-                    {/* Background Image Specific Controls */}
-                    {formData.background_url && (
-                      <div className="bg-slate-50/50 dark:bg-slate-900/40 rounded-2xl border border-slate-100 dark:border-slate-800 p-4 space-y-3">
-                        <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest block">
-                          Background Image Display Settings
-                        </span>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          <div>
-                            <label className="text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 block mb-1">Fit / Scale</label>
-                            <select name="banner_size" value={formData.banner_size} onChange={handleChange}
-                              className="w-full px-3 py-2.5 rounded-xl border border-slate-100 dark:border-slate-800 focus:border-[#1e293b] dark:focus:border-yellow-400 outline-none font-bold text-xs text-slate-700 dark:text-white bg-white dark:bg-slate-900 cursor-pointer">
-                              <option value="cover">Cover (Fill Screen)</option>
-                              <option value="contain">Contain (Show Full Image)</option>
-                              <option value="100% 100%">Stretch to Fit</option>
-                              <option value="auto 100%">Fit Height (Top to Bottom)</option>
-                              <option value="100% auto">Fit Width</option>
-                            </select>
-                          </div>
-                          <div>
-                            <label className="text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 block mb-1">Focus / Position</label>
-                            <select name="banner_position" value={formData.banner_position} onChange={handleChange}
-                              className="w-full px-3 py-2.5 rounded-xl border border-slate-100 dark:border-slate-800 focus:border-[#1e293b] dark:focus:border-yellow-400 outline-none font-bold text-xs text-slate-700 dark:text-white bg-white dark:bg-slate-900 cursor-pointer">
-                              <option value="center">Center</option>
-                              <option value="top">Top</option>
-                              <option value="bottom">Bottom</option>
-                              <option value="left">Left</option>
-                              <option value="right">Right</option>
-                            </select>
-                          </div>
+                        <div className={`p-1 rounded-lg text-slate-400 transition-transform duration-200 ${brandingAccordions.imagery ? "rotate-180" : ""}`}>
+                          <ChevronDown size={18} />
                         </div>
                       </div>
-                    )}
-                  </div>
-                </div>
-              </div>
+                    </button>
 
-              {/* 3. Form Design & Layout */}
-              <div className="space-y-6 pt-8 border-t border-slate-100 dark:border-white/5">
-                <div className="border-b border-slate-100 dark:border-white/5 pb-3">
-                  <h3 className="text-xs font-black text-[#1e293b] dark:text-white uppercase tracking-[0.2em] flex items-center gap-2">
-                    <Layers size={16} className="text-slate-400 dark:text-slate-500" /> 3. Form Design &amp; Layout
-                  </h3>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-3">
-                    <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 flex items-center justify-between">
-                      Event Email Logo Override
-                      {formData.logo_url && <button type="button" onClick={() => setFormData({ ...formData, logo_url: "" })} className="text-red-500 hover:underline text-[9px] uppercase font-bold tracking-widest">Remove</button>}
-                    </label>
-                    <div className="relative group">
-                      <input type="file" accept="image/*" onChange={async (e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          try {
-                            const url = await uploadImageFile(file, session?.user?.email || "");
-                            setFormData(prev => ({ ...prev, logo_url: url }));
-                          } catch {
-                            try { const compressed = await compressImage(file, 800, 800, 0.85); setFormData(prev => ({ ...prev, logo_url: compressed })); }
-                            catch { const reader = new FileReader(); reader.onloadend = () => setFormData(prev => ({ ...prev, logo_url: reader.result as string })); reader.readAsDataURL(file); }
-                          }
-                        }
-                      }} className="absolute inset-0 opacity-0 cursor-pointer z-10" />
-                      <div className={`w-full h-24 rounded-2xl border-2 border-dashed ${formData.logo_url ? "border-green-500/30 bg-green-50/50 dark:bg-green-950/20" : "border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/60"} relative transition-all overflow-hidden`}>
-                        {formData.logo_url ? (
-                          <div className="absolute inset-0 flex items-center justify-center p-4 bg-slate-900/5">
-                            <img src={formData.logo_url} alt="Logo Preview" className="max-h-full max-w-full object-contain" />
-                          </div>
-                        ) : (
-                          <div className="flex flex-col items-center justify-center h-full">
-                            <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase">Upload Custom Email Logo</p>
-                            <p className="text-[8px] text-slate-300 dark:text-slate-655 uppercase mt-1">Overrides client/default logo for this event</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-3">
-                    <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">Registration Form Design Style</label>
-                    <select name="banner_theme" value={formData.banner_theme} onChange={handleChange}
-                      className="w-full px-4 py-3 rounded-xl border border-slate-100 dark:border-slate-800 focus:border-[#1e293b] dark:focus:border-yellow-400 focus:ring-4 focus:ring-yellow-400/20 outline-none transition-all font-bold text-xs text-slate-700 dark:text-white bg-slate-50/50 dark:bg-slate-900/60 cursor-pointer">
-                      <option value="cyber_dark">Cyber Dark (Premium Black &amp; Gold)</option>
-                      <option value="minimal_light">Minimal Light (Clean White &amp; Slate)</option>
-                      <option value="glassmorphism">Glassmorphism (Frosted Glass Overlay)</option>
-                      <option value="brutalist_retro">Brutalist Retro (Bold Typography &amp; Retro Tech)</option>
-                      <option value="midnight_luxury">Midnight Luxury (Deep Royal Blue &amp; Gold)</option>
-                      <option value="neon_horizon">Neon Horizon (Synthwave &amp; Neon Glow)</option>
-                      <option value="forest_zen">Forest Zen (Deep Emerald &amp; Sage Stacked)</option>
-                      <option value="aurora_glow">Aurora Glow (Dynamic Gradient &amp; Glassmorphism)</option>
-                      <option value="crimson_sunset">Crimson Sunset (Burgundy &amp; Warm Coral)</option>
-                      <option value="cyberpunk_terminal">Cyberpunk Terminal (Matrix Green &amp; Scanlines)</option>
-                      <option value="corporate_mono">Corporate Mono (Slate Grey &amp; Pure Minimalist)</option>
-                      <option value="nordic_alabaster">Nordic Alabaster (Off-White &amp; Editorial Serif)</option>
-                      <option value="midnight_executive">Midnight Executive (Deep Charcoal &amp; Electric Blue)</option>
-                      <option value="champagne_lounge">Champagne Lounge (Warm Alabaster &amp; Brushed Gold)</option>
-                      <option value="logistics_glass">Logistics Glass (Translucent Slate &amp; Steel Borders)</option>
-                    </select>
-                  </div>
-
-                  {/* Registration Form Footer Logos (Up to 5 Sponsor/Partner Logos) */}
-                  <div className="space-y-3 md:col-span-2">
-                    <div className="flex items-center justify-between ml-1">
-                      <div>
-                        <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block">
-                          Registration Form Footer Logos (Up to 5 Sponsor / Partner Logos)
-                        </label>
-                        <p className="text-[9px] text-slate-400 dark:text-slate-500 font-bold mt-0.5">
-                          Displayed as a sponsor/partner footer strip at the bottom of the registration form card below the submit button.
-                        </p>
-                      </div>
-                      {formData.form_logos?.some((u) => !!u) && (
-                        <button
-                          type="button"
-                          onClick={() => setFormData((prev) => ({ ...prev, form_logos: ["", "", "", "", ""] }))}
-                          className="text-red-500 hover:underline text-[9px] uppercase font-bold tracking-widest shrink-0"
-                        >
-                          Clear All
-                        </button>
-                      )}
-                    </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
-                      {[0, 1, 2, 3, 4].map((slotIdx) => {
-                        const slotUrl = formData.form_logos?.[slotIdx] || "";
-                        return (
-                          <div key={slotIdx} className="space-y-1.5">
-                            <div className="flex items-center justify-between px-1">
-                              <span className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-                                Logo {slotIdx + 1}
-                              </span>
-                              {slotUrl && (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setFormData((prev) => {
-                                      const next = [...(prev.form_logos || ["", "", "", "", ""])];
-                                      next[slotIdx] = "";
-                                      return { ...prev, form_logos: next };
-                                    });
-                                  }}
-                                  className="text-red-500 hover:underline text-[8px] uppercase font-bold tracking-wider"
-                                >
+                    {brandingAccordions.imagery && (
+                      <div className="p-6 sm:p-7 pt-2 border-t border-slate-100 dark:border-slate-800/60 animate-in fade-in duration-200">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                          {/* Background Banner */}
+                          <div className="space-y-4">
+                            <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 flex items-center justify-between">
+                              Background Banner
+                              {formData.banner_url && (
+                                <button type="button" onClick={() => setFormData({ ...formData, banner_url: "" })} className="text-red-500 hover:underline text-[9px] uppercase font-bold tracking-widest">
                                   Remove
                                 </button>
                               )}
-                            </div>
+                            </label>
                             <div className="relative group">
-                              <input
-                                type="file"
-                                accept="image/*"
-                                multiple
-                                onChange={async (e) => {
-                                  const files = Array.from(e.target.files || []);
-                                  if (files.length === 0) return;
-                                  const uploadedUrls: string[] = [];
-                                  for (const file of files.slice(0, 5 - slotIdx)) {
-                                    try {
-                                      const url = await uploadImageFile(file, session?.user?.email || "");
-                                      uploadedUrls.push(url);
-                                    } catch {
-                                      try {
-                                        const compressed = await compressImage(file, 800, 800, 0.85);
-                                        uploadedUrls.push(compressed);
-                                      } catch {
-                                        const dataUrl = await new Promise<string>((resolve) => {
-                                          const reader = new FileReader();
-                                          reader.onloadend = () => resolve((reader.result as string) || "");
-                                          reader.readAsDataURL(file);
-                                        });
-                                        if (dataUrl) uploadedUrls.push(dataUrl);
-                                      }
-                                    }
+                              <input type="file" accept="image/*" onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  try {
+                                    const url = await uploadImageFile(file, session?.user?.email || "");
+                                    setFormData(prev => ({ ...prev, banner_url: url }));
+                                  } catch {
+                                    try { const compressed = await compressImage(file, 1600, 1600, 0.85); setFormData(prev => ({ ...prev, banner_url: compressed })); }
+                                    catch { const reader = new FileReader(); reader.onloadend = () => setFormData(prev => ({ ...prev, banner_url: reader.result as string })); reader.readAsDataURL(file); }
                                   }
-                                  if (uploadedUrls.length > 0) {
-                                    setFormData((prev) => {
-                                      const next = [...(prev.form_logos || ["", "", "", "", ""])];
-                                      uploadedUrls.forEach((u, idx) => {
-                                        if (slotIdx + idx < 5) {
-                                          next[slotIdx + idx] = u;
-                                        }
-                                      });
-                                      return { ...prev, form_logos: next };
-                                    });
-                                  }
-                                  e.target.value = "";
-                                }}
-                                className="absolute inset-0 opacity-0 cursor-pointer z-10"
-                              />
-                              <div
-                                className={`w-full h-24 rounded-2xl border-2 border-dashed ${
-                                  slotUrl
-                                    ? "border-green-500/30 bg-green-50/50 dark:bg-green-950/20"
-                                    : "border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/60 hover:border-slate-300 dark:hover:border-slate-700"
-                                } relative transition-all overflow-hidden`}
-                              >
-                                {slotUrl ? (
-                                  <div className="absolute inset-0 flex items-center justify-center p-3 bg-slate-900/5">
-                                    <img
-                                      src={slotUrl}
-                                      alt={`Footer Logo ${slotIdx + 1}`}
-                                      className="max-h-full max-w-full object-contain"
+                                }
+                              }} className="absolute inset-0 opacity-0 cursor-pointer z-10" />
+                              <div className={`w-full h-28 rounded-2xl border-2 border-dashed ${formData.banner_url ? "border-green-500/30 bg-green-50/50 dark:bg-green-950/20" : "border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/60"} relative transition-all overflow-hidden`}>
+                                {formData.banner_url ? (
+                                  <div className="absolute inset-0">
+                                    {formData.banner_fit === "contain" && (
+                                      <div className="absolute inset-0 scale-110 blur-md opacity-40 bg-cover bg-center" style={{ backgroundImage: `url(${formData.banner_url})` }} />
+                                    )}
+                                    <div 
+                                      className="absolute inset-0" 
+                                      style={{ 
+                                        backgroundImage: `url(${formData.banner_url})`, 
+                                        backgroundSize: formData.banner_fit || "cover", 
+                                        backgroundPosition: formData.banner_focus || "center", 
+                                        backgroundRepeat: "no-repeat" 
+                                      }} 
                                     />
                                   </div>
                                 ) : (
-                                  <div className="flex flex-col items-center justify-center h-full px-2 text-center">
-                                    <p className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase">
-                                      + Upload Logo {slotIdx + 1}
-                                    </p>
-                                    <p className="text-[7px] text-slate-300 dark:text-slate-600 uppercase mt-0.5">
-                                      PNG / SVG / JPG
-                                    </p>
+                                  <div className="flex flex-col items-center justify-center h-full">
+                                    <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase">Upload Banner Image</p>
+                                    <p className="text-[8px] text-slate-300 dark:text-slate-600 uppercase mt-1">Recommended: 1920x600 or 1200x400</p>
                                   </div>
                                 )}
                               </div>
                             </div>
+
+                            {/* Banner Specific Controls */}
+                            {formData.banner_url && (
+                              <div className="bg-slate-50/50 dark:bg-slate-900/40 rounded-2xl border border-slate-100 dark:border-slate-800 p-4 space-y-3">
+                                <span className="text-[9px] font-black text-amber-500 uppercase tracking-widest block">
+                                  Banner Display Settings
+                                </span>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                  <div>
+                                    <label className="text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 block mb-1">Fit / Scale</label>
+                                    <select name="banner_fit" value={formData.banner_fit} onChange={handleChange}
+                                      className="w-full px-3 py-2.5 rounded-xl border border-slate-100 dark:border-slate-800 focus:border-[#1e293b] dark:focus:border-yellow-400 outline-none font-bold text-xs text-slate-700 dark:text-white bg-white dark:bg-slate-900 cursor-pointer">
+                                      <option value="cover">Cover (Fill &amp; Crop)</option>
+                                      <option value="contain">Contain (Full Image - No Crop)</option>
+                                      <option value="100% 100%">Stretch to Fit</option>
+                                      <option value="auto">Natural Scale</option>
+                                    </select>
+                                  </div>
+                                  <div>
+                                    <label className="text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 block mb-1">Focus / Position</label>
+                                    <select name="banner_focus" value={formData.banner_focus} onChange={handleChange}
+                                      className="w-full px-3 py-2.5 rounded-xl border border-slate-100 dark:border-slate-800 focus:border-[#1e293b] dark:focus:border-yellow-400 outline-none font-bold text-xs text-slate-700 dark:text-white bg-white dark:bg-slate-900 cursor-pointer">
+                                      <option value="center">Center</option>
+                                      <option value="top">Top</option>
+                                      <option value="bottom">Bottom</option>
+                                      <option value="left">Left</option>
+                                      <option value="right">Right</option>
+                                    </select>
+                                  </div>
+                                  <div>
+                                    <label className="text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 block mb-1">Display Height</label>
+                                    <select name="banner_height" value={formData.banner_height} onChange={handleChange}
+                                      className="w-full px-3 py-2.5 rounded-xl border border-slate-100 dark:border-slate-800 focus:border-[#1e293b] dark:focus:border-yellow-400 outline-none font-bold text-xs text-slate-700 dark:text-white bg-white dark:bg-slate-900 cursor-pointer">
+                                      <option value="auto">Auto (Natural Aspect)</option>
+                                      <option value="compact">Compact (160px)</option>
+                                      <option value="standard">Standard (240px)</option>
+                                      <option value="tall">Tall / Hero (340px)</option>
+                                    </select>
+                                  </div>
+                                  <div>
+                                    <label className="text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 block mb-1">Banner Border</label>
+                                    <div className="flex bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 p-1 gap-1">
+                                      <button
+                                        type="button"
+                                        onClick={() => setFormData(prev => ({ ...prev, banner_border: true }))}
+                                        className={`flex-1 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
+                                          formData.banner_border !== false
+                                            ? "bg-[#0f172a] dark:bg-yellow-400 text-white dark:text-slate-950 shadow-sm"
+                                            : "text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                                        }`}
+                                      >
+                                        On
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => setFormData(prev => ({ ...prev, banner_border: false }))}
+                                        className={`flex-1 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
+                                          formData.banner_border === false
+                                            ? "bg-[#0f172a] dark:bg-yellow-400 text-white dark:text-slate-950 shadow-sm"
+                                            : "text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                                        }`}
+                                      >
+                                        Off
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
                           </div>
-                        );
-                      })}
-                    </div>
+
+                          {/* Registration Page Background Image */}
+                          <div className="space-y-4">
+                            <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 flex items-center justify-between">
+                              Registration Page Backdrop (Optional)
+                              {formData.background_url && (
+                                <button type="button" onClick={() => setFormData({ ...formData, background_url: "" })} className="text-red-500 hover:underline text-[9px] uppercase font-bold tracking-widest">
+                                  Remove
+                                </button>
+                              )}
+                            </label>
+                            <div className="relative group">
+                              <input type="file" accept="image/*" onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  try {
+                                    const url = await uploadImageFile(file, session?.user?.email || "");
+                                    setFormData(prev => ({ ...prev, background_url: url }));
+                                  } catch {
+                                    try { const compressed = await compressImage(file, 1600, 1600, 0.85); setFormData(prev => ({ ...prev, background_url: compressed })); }
+                                    catch { const reader = new FileReader(); reader.onloadend = () => setFormData(prev => ({ ...prev, background_url: reader.result as string })); reader.readAsDataURL(file); }
+                                  }
+                                }
+                              }} className="absolute inset-0 opacity-0 cursor-pointer z-10" />
+                              <div className={`w-full h-28 rounded-2xl border-2 border-dashed ${formData.background_url ? "border-green-500/30 bg-green-50/50 dark:bg-green-950/20" : "border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/60"} relative transition-all overflow-hidden`}>
+                                {formData.background_url ? (
+                                  <div className="absolute inset-0">
+                                    {formData.banner_size === "contain" && <div className="absolute inset-0 scale-110 blur-md opacity-60 bg-cover bg-center" style={{ backgroundImage: `url(${formData.background_url})` }} />}
+                                    <div className="absolute inset-0" style={{ backgroundImage: `url(${formData.background_url})`, backgroundSize: formData.banner_size, backgroundPosition: formData.banner_position, backgroundRepeat: "no-repeat" }} />
+                                  </div>
+                                ) : (
+                                  <div className="flex flex-col items-center justify-center h-full">
+                                    <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase">Upload Background Wallpaper</p>
+                                    <p className="text-[8px] text-slate-300 dark:text-slate-600 uppercase mt-1">Recommended: 1920x1080</p>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Background Image Specific Controls */}
+                            {formData.background_url && (
+                              <div className="bg-slate-50/50 dark:bg-slate-900/40 rounded-2xl border border-slate-100 dark:border-slate-800 p-4 space-y-3">
+                                <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest block">
+                                  Backdrop Display Settings
+                                </span>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                  <div>
+                                    <label className="text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 block mb-1">Fit / Scale</label>
+                                    <select name="banner_size" value={formData.banner_size} onChange={handleChange}
+                                      className="w-full px-3 py-2.5 rounded-xl border border-slate-100 dark:border-slate-800 focus:border-[#1e293b] dark:focus:border-yellow-400 outline-none font-bold text-xs text-slate-700 dark:text-white bg-white dark:bg-slate-900 cursor-pointer">
+                                      <option value="cover">Cover (Fill Screen)</option>
+                                      <option value="contain">Contain (Show Full Image)</option>
+                                      <option value="100% 100%">Stretch to Fit</option>
+                                      <option value="auto 100%">Fit Height</option>
+                                      <option value="100% auto">Fit Width</option>
+                                    </select>
+                                  </div>
+                                  <div>
+                                    <label className="text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 block mb-1">Focus / Position</label>
+                                    <select name="banner_position" value={formData.banner_position} onChange={handleChange}
+                                      className="w-full px-3 py-2.5 rounded-xl border border-slate-100 dark:border-slate-800 focus:border-[#1e293b] dark:focus:border-yellow-400 outline-none font-bold text-xs text-slate-700 dark:text-white bg-white dark:bg-slate-900 cursor-pointer">
+                                      <option value="center">Center</option>
+                                      <option value="top">Top</option>
+                                      <option value="bottom">Bottom</option>
+                                      <option value="left">Left</option>
+                                      <option value="right">Right</option>
+                                    </select>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
-                  <div className="space-y-3 md:col-span-2">
-                    <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">Registration Form Layout</label>
-                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-                      {[
-                        { id: "", label: "Default", desc: "Theme default" },
-                        { id: "stacked", label: "Stacked", desc: "Top Banner" },
-                        { id: "split", label: "Split Right", desc: "Form on Right" },
-                        { id: "reversed", label: "Split Left", desc: "Form on Left" },
-                        { id: "centered", label: "Centered", desc: "Centered Card" }
-                      ].map((lay) => {
-                        const active = formData.banner_layout === lay.id;
-                        return (
-                          <button key={lay.id} type="button" onClick={() => setFormData(prev => ({ ...prev, banner_layout: lay.id }))}
-                            className={`flex flex-col items-center justify-between p-2.5 rounded-xl border text-center transition-all bg-white dark:bg-slate-900 hover:border-slate-350 dark:hover:border-slate-700 ${active ? "border-slate-800 dark:border-yellow-400 ring-2 ring-slate-800/10 dark:ring-yellow-400/25 shadow-sm" : "border-slate-100 dark:border-slate-800 shadow-sm opacity-80 hover:opacity-100"}`}>
-                            {lay.id === "" && <div className="relative w-full h-10 bg-slate-100 dark:bg-slate-800 rounded flex items-center justify-center border border-slate-200/60 dark:border-slate-700 mb-2 overflow-hidden"><div className="text-[9px] font-black tracking-tighter text-slate-400 dark:text-slate-500 uppercase">Default</div></div>}
-                            {lay.id === "stacked" && <div className="flex flex-col gap-0.5 w-full h-10 bg-slate-150 dark:bg-slate-800 rounded p-1 border border-slate-200/60 dark:border-slate-700 mb-2"><div className="bg-slate-350 dark:bg-slate-700 h-2 w-full rounded-sm"></div><div className="bg-white dark:bg-slate-900 h-5 w-4/5 mx-auto rounded-sm border border-slate-200 dark:border-slate-750 flex items-center justify-center"><span className="w-1.5 h-1.5 bg-slate-300 dark:bg-slate-600 rounded-full"></span></div></div>}
-                            {lay.id === "split" && <div className="flex gap-0.5 w-full h-10 bg-slate-150 dark:bg-slate-800 rounded p-1 border border-slate-200/60 dark:border-slate-700 mb-2"><div className="bg-slate-350 dark:bg-slate-700 w-2/5 h-full rounded-sm"></div><div className="bg-white dark:bg-slate-900 w-3/5 h-full rounded-sm border border-slate-200 dark:border-slate-750 flex items-center justify-center"><span className="w-1.5 h-1.5 bg-slate-300 dark:bg-slate-600 rounded-full"></span></div></div>}
-                            {lay.id === "reversed" && <div className="flex gap-0.5 w-full h-10 bg-slate-150 dark:bg-slate-800 rounded p-1 border border-slate-200/60 dark:border-slate-700 mb-2"><div className="bg-white dark:bg-slate-900 w-3/5 h-full rounded-sm border border-slate-200 dark:border-slate-750 flex items-center justify-center"><span className="w-1.5 h-1.5 bg-slate-300 dark:bg-slate-600 rounded-full"></span></div><div className="bg-slate-350 dark:bg-slate-700 w-2/5 h-full rounded-sm"></div></div>}
-                            {lay.id === "centered" && <div className="relative w-full h-10 bg-slate-200 dark:bg-slate-800 rounded p-1 border border-slate-250 dark:border-slate-700 mb-2 flex items-center justify-center"><div className="bg-white dark:bg-slate-900 w-3/4 h-6 rounded-sm border border-slate-300 dark:border-slate-750 shadow-sm flex items-center justify-center"><span className="w-1.5 h-1.5 bg-slate-300 dark:bg-slate-600 rounded-full"></span></div></div>}
-                            <span className="text-[10px] font-black tracking-tight text-slate-800 dark:text-slate-200 block leading-tight">{lay.label}</span>
-                            <span className="text-[8px] text-slate-400 dark:text-slate-500 font-bold block">{lay.desc}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  <div className="space-y-3 md:col-span-2">
-                    <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">Registration Form Template</label>
-                    <select 
-                      name="registration_form_template_id" 
-                      value={formData.registration_form_template_id || ""} 
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setFormData({ 
-                          ...formData, 
-                          registration_form_template_id: val ? parseInt(val) : null 
-                        });
-                      }}
-                      className="w-full px-4 py-3 rounded-xl border border-slate-100 dark:border-slate-800 focus:border-[#1e293b] dark:focus:border-yellow-400 focus:ring-4 focus:ring-yellow-400/20 outline-none transition-all font-bold text-xs text-slate-700 dark:text-white bg-slate-50/50 dark:bg-slate-900/60 cursor-pointer"
+                  {/* 2. Logos & Sponsors */}
+                  <div className="bg-white dark:bg-[#0f172a]/60 rounded-[1.75rem] border border-slate-200/80 dark:border-slate-800 shadow-xs overflow-hidden transition-all">
+                    <button
+                      type="button"
+                      onClick={() => toggleBrandingAccordion("logos")}
+                      className="w-full p-5 sm:p-6 flex items-center justify-between text-left hover:bg-slate-50/60 dark:hover:bg-slate-800/30 transition-colors cursor-pointer"
                     >
-                      <option value="">Default Form (Custom questions managed below)</option>
-                      {regTemplates.map((t) => (
-                        <option key={t.id} value={t.id}>{t.name} ({t.description || "No description"})</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="space-y-3 md:col-span-2">
-                    <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">
-                      Confirmation Screen Access Pass & QR Code
-                    </label>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50/50 dark:bg-slate-900/60 rounded-2xl border border-slate-100 dark:border-slate-800 p-5">
-                      <label className="flex items-center gap-3 cursor-pointer">
-                        <input 
-                          type="checkbox"
-                          name="show_qr_code"
-                          checked={formData.show_qr_code}
-                          onChange={(e) => setFormData(prev => ({ ...prev, show_qr_code: e.target.checked }))}
-                          className="w-5 h-5 rounded text-[#0f172a] dark:text-yellow-400 focus:ring-0 border-slate-300 dark:border-slate-700 shrink-0"
-                        />
-                        <div className="space-y-0.5">
-                          <span className="text-xs font-bold text-slate-800 dark:text-white block">Display QR Code</span>
-                          <span className="text-[10px] text-slate-400 block leading-tight">Show scannable QR ticket on confirmation screen</span>
+                      <div className="flex items-center gap-3.5">
+                        <div className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200">
+                          <Sparkles size={18} className="text-amber-500" />
                         </div>
-                      </label>
-
-                      <label className="flex items-center gap-3 cursor-pointer">
-                        <input 
-                          type="checkbox"
-                          name="show_pin_code"
-                          checked={formData.show_pin_code}
-                          onChange={(e) => setFormData(prev => ({ ...prev, show_pin_code: e.target.checked }))}
-                          className="w-5 h-5 rounded text-[#0f172a] dark:text-yellow-400 focus:ring-0 border-slate-300 dark:border-slate-700 shrink-0"
-                        />
-                        <div className="space-y-0.5">
-                          <span className="text-xs font-bold text-slate-800 dark:text-white block">Display PIN / Access Pass Number</span>
-                          <span className="text-[10px] text-slate-400 block leading-tight">Show clearance PIN and label on confirmation screen</span>
+                        <div>
+                          <h3 className="text-xs font-black uppercase tracking-[0.15em] text-[#0f172a] dark:text-white">
+                            2. Logos &amp; Sponsors
+                          </h3>
+                          <p className="text-[11px] text-slate-400 dark:text-slate-500 font-medium">
+                            Event logo override &amp; up to 5 footer sponsor / partner badges
+                          </p>
                         </div>
-                      </label>
-                    </div>
-                  </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        {formData.form_logos?.some(Boolean) && (
+                          <span className="hidden sm:inline-block px-2.5 py-0.5 rounded-md text-[9px] font-bold bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 border border-amber-200/60 dark:border-amber-800/60">
+                            {formData.form_logos.filter(Boolean).length} Sponsors
+                          </span>
+                        )}
+                        <div className={`p-1 rounded-lg text-slate-400 transition-transform duration-200 ${brandingAccordions.logos ? "rotate-180" : ""}`}>
+                          <ChevronDown size={18} />
+                        </div>
+                      </div>
+                    </button>
 
-                  <div className="space-y-3 md:col-span-2">
-                    <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">Custom Color Overrides</label>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 bg-slate-50/50 dark:bg-slate-900/60 rounded-2xl border border-slate-100 dark:border-slate-800 p-6">
-                      {[
-                        { name: "banner_primary_color", label: "Primary Brand Color", placeholder: "e.g. #0f172a" },
-                        { name: "banner_accent_color", label: "Accent Color", placeholder: "e.g. #eab308" },
-                        { name: "banner_text_color", label: "Heading Text Color", placeholder: "e.g. #ffffff" },
-                        { name: "banner_input_bg_color", label: "Textbox / Input Background", placeholder: "e.g. #ffffff or #1e293b" },
-                      ].map((field) => (
-                        <div key={field.name} className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 block">{field.label}</label>
-                            {(formData as any)[field.name] && (
-                              <button
-                                type="button"
-                                onClick={() => setFormData(prev => ({ ...prev, [field.name]: "" }))}
-                                className="text-[9px] font-bold text-slate-400 hover:text-red-500 transition-colors"
-                              >
-                                Reset
+                    {brandingAccordions.logos && (
+                      <div className="p-6 sm:p-7 pt-2 border-t border-slate-100 dark:border-slate-800/60 space-y-6 animate-in fade-in duration-200">
+                        {/* Event Custom Email / Header Logo */}
+                        <div className="space-y-3">
+                          <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 flex items-center justify-between">
+                            Event Custom Logo Override (Optional)
+                            {formData.logo_url && (
+                              <button type="button" onClick={() => setFormData({ ...formData, logo_url: "" })} className="text-red-500 hover:underline text-[9px] uppercase font-bold tracking-widest">
+                                Remove
                               </button>
                             )}
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <input type="color" name={field.name} value={(formData as any)[field.name] || "#000000"} onChange={handleChange}
-                              className="w-10 h-10 rounded-xl border border-slate-200 dark:border-slate-700 cursor-pointer p-0 bg-transparent shrink-0" />
-                            <input type="text" name={field.name} value={(formData as any)[field.name]} onChange={handleChange}
-                              placeholder={field.placeholder}
-                              className="w-full px-4 py-2.5 rounded-xl border border-slate-100 dark:border-slate-800 focus:border-[#1e293b] dark:focus:border-yellow-400 outline-none font-bold text-xs text-slate-700 dark:text-white bg-white dark:bg-slate-900" />
+                          </label>
+                          <div className="relative group">
+                            <input type="file" accept="image/*" onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                try {
+                                  const url = await uploadImageFile(file, session?.user?.email || "");
+                                  setFormData(prev => ({ ...prev, logo_url: url }));
+                                } catch {
+                                  try { const compressed = await compressImage(file, 800, 800, 0.85); setFormData(prev => ({ ...prev, logo_url: compressed })); }
+                                  catch { const reader = new FileReader(); reader.onloadend = () => setFormData(prev => ({ ...prev, logo_url: reader.result as string })); reader.readAsDataURL(file); }
+                                }
+                              }
+                            }} className="absolute inset-0 opacity-0 cursor-pointer z-10" />
+                            <div className={`w-full h-24 rounded-2xl border-2 border-dashed ${formData.logo_url ? "border-green-500/30 bg-green-50/50 dark:bg-green-950/20" : "border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/60"} relative transition-all overflow-hidden`}>
+                              {formData.logo_url ? (
+                                <div className="absolute inset-0 flex items-center justify-center p-4 bg-slate-900/5">
+                                  <img src={formData.logo_url} alt="Logo Preview" className="max-h-full max-w-full object-contain" />
+                                </div>
+                              ) : (
+                                <div className="flex flex-col items-center justify-center h-full">
+                                  <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase">Upload Custom Event Logo</p>
+                                  <p className="text-[8px] text-slate-300 dark:text-slate-600 uppercase mt-1">Overrides client/default logo for this event</p>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  </div>
 
-                  {/* Item Alignment & Positioning (Left / Center / Right) */}
-                  <div className="space-y-3 md:col-span-2">
-                    <div className="flex items-center justify-between">
-                      <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">
-                        Form Item Alignment & Positioning (Left / Center / Right)
-                      </label>
-                      <span className="text-[10px] font-bold text-slate-400">Move elements independently across the form</span>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 bg-slate-50/50 dark:bg-slate-900/60 rounded-2xl border border-slate-100 dark:border-slate-800 p-6">
-                      {[
-                        { key: "title_align", label: "Event Title Alignment", desc: "Main event headline" },
-                        { key: "description_align", label: "Event Description Block", desc: "Intro & rich text block" },
-                        { key: "meta_align", label: "Date & Venue Row", desc: "Calendar & location badges" },
-                        { key: "form_header_align", label: "Form Heading & Subheading", desc: "'Complete Registration' header" },
-                        { key: "fields_align", label: "Form Questions & Labels", desc: "Default question alignment" },
-                        { key: "logos_align", label: "Footer Sponsor Logos", desc: "Bottom partner logo strip" },
-                      ].map((item) => {
-                        const currentVal = (formData as any)[item.key] || "left";
-                        return (
-                          <div key={item.key} className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 p-3.5 flex flex-col justify-between gap-2.5 shadow-sm">
+                        {/* Registration Form Footer Logos */}
+                        <div className="space-y-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+                          <div className="flex items-center justify-between ml-1">
                             <div>
-                              <span className="text-xs font-black text-slate-800 dark:text-white block">{item.label}</span>
-                              <span className="text-[10px] text-slate-400 font-medium block">{item.desc}</span>
+                              <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block">
+                                Registration Form Footer Logos (Up to 5 Sponsor / Partner Logos)
+                              </label>
+                              <p className="text-[9px] text-slate-400 dark:text-slate-500 font-medium mt-0.5">
+                                Displayed as a sponsor/partner footer strip at the bottom of the registration form card.
+                              </p>
                             </div>
-                            <div className="grid grid-cols-3 gap-1.5 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
-                              {([
-                                { val: "left", label: "Left", Icon: AlignLeft },
-                                { val: "center", label: "Center", Icon: AlignCenter },
-                                { val: "right", label: "Right", Icon: AlignRight },
-                              ] as const).map(({ val, label, Icon }) => {
-                                const active = currentVal === val;
-                                return (
-                                  <button
-                                    key={val}
-                                    type="button"
-                                    onClick={() => setFormData(prev => ({ ...prev, [item.key]: val }))}
-                                    className={`flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-md text-[10px] font-black uppercase tracking-wider transition-all ${
-                                      active
-                                        ? "bg-slate-900 text-white dark:bg-yellow-400 dark:text-slate-950 shadow-sm"
-                                        : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white"
-                                    }`}
-                                  >
-                                    <Icon className="w-3.5 h-3.5" />
-                                    {label}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        );
-                      })}
-
-                      {/* Date & Venue Positioning / Swap Order */}
-                      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 p-3.5 flex flex-col justify-between gap-2.5 shadow-sm sm:col-span-2 lg:col-span-3">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-                          <div>
-                            <span className="text-xs font-black text-slate-800 dark:text-white block">Date & Venue Arrangement / Order</span>
-                            <span className="text-[10px] text-slate-400 font-medium block">Swap which item appears on the left or right, or stack them vertically</span>
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 bg-slate-100 dark:bg-slate-800 p-1.5 rounded-lg">
-                          {[
-                            { val: "date_first", label: "Date Left  •  Venue Right" },
-                            { val: "venue_first", label: "Venue Left  •  Date Right" },
-                            { val: "stacked", label: "Stacked Vertically" },
-                          ].map((opt) => {
-                            const active = (formData.meta_order || "date_first") === opt.val;
-                            return (
+                            {formData.form_logos?.some(Boolean) && (
                               <button
-                                key={opt.val}
                                 type="button"
-                                onClick={() => setFormData(prev => ({ ...prev, meta_order: opt.val as any }))}
-                                className={`py-2 px-3 rounded-md text-[10px] font-black uppercase tracking-wider transition-all ${
-                                  active
-                                    ? "bg-slate-900 text-white dark:bg-yellow-400 dark:text-slate-950 shadow-sm"
-                                    : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white"
-                                }`}
+                                onClick={() => setFormData((prev) => ({ ...prev, form_logos: ["", "", "", "", ""] }))}
+                                className="text-red-500 hover:underline text-[9px] uppercase font-bold tracking-widest shrink-0"
                               >
-                                {opt.label}
+                                Clear All
                               </button>
-                            );
-                          })}
+                            )}
+                          </div>
+                          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                            {[0, 1, 2, 3, 4].map((slotIdx) => {
+                              const slotUrl = formData.form_logos?.[slotIdx] || "";
+                              return (
+                                <div key={slotIdx} className="space-y-1.5">
+                                  <div className="flex items-center justify-between px-1">
+                                    <span className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                                      Logo {slotIdx + 1}
+                                    </span>
+                                    {slotUrl && (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setFormData((prev) => {
+                                            const next = [...(prev.form_logos || ["", "", "", "", ""])];
+                                            next[slotIdx] = "";
+                                            return { ...prev, form_logos: next };
+                                          });
+                                        }}
+                                        className="text-red-500 hover:underline text-[8px] uppercase font-bold tracking-wider"
+                                      >
+                                        Remove
+                                      </button>
+                                    )}
+                                  </div>
+                                  <div className="relative group">
+                                    <input
+                                      type="file"
+                                      accept="image/*"
+                                      multiple
+                                      onChange={async (e) => {
+                                        const files = Array.from(e.target.files || []);
+                                        if (files.length === 0) return;
+                                        const uploadedUrls: string[] = [];
+                                        for (const file of files.slice(0, 5 - slotIdx)) {
+                                          try {
+                                            const url = await uploadImageFile(file, session?.user?.email || "");
+                                            uploadedUrls.push(url);
+                                          } catch {
+                                            try {
+                                              const compressed = await compressImage(file, 800, 800, 0.85);
+                                              uploadedUrls.push(compressed);
+                                            } catch {
+                                              const dataUrl = await new Promise<string>((resolve) => {
+                                                const reader = new FileReader();
+                                                reader.onloadend = () => resolve((reader.result as string) || "");
+                                                reader.readAsDataURL(file);
+                                              });
+                                              if (dataUrl) uploadedUrls.push(dataUrl);
+                                            }
+                                          }
+                                        }
+                                        if (uploadedUrls.length > 0) {
+                                          setFormData((prev) => {
+                                            const next = [...(prev.form_logos || ["", "", "", "", ""])];
+                                            uploadedUrls.forEach((u, idx) => {
+                                              if (slotIdx + idx < 5) {
+                                                next[slotIdx + idx] = u;
+                                              }
+                                            });
+                                            return { ...prev, form_logos: next };
+                                          });
+                                        }
+                                        e.target.value = "";
+                                      }}
+                                      className="absolute inset-0 opacity-0 cursor-pointer z-10"
+                                    />
+                                    <div
+                                      className={`w-full h-22 rounded-2xl border-2 border-dashed ${
+                                        slotUrl
+                                          ? "border-green-500/30 bg-green-50/50 dark:bg-green-950/20"
+                                          : "border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/60 hover:border-slate-300 dark:hover:border-slate-700"
+                                      } relative transition-all overflow-hidden`}
+                                    >
+                                      {slotUrl ? (
+                                        <div className="absolute inset-0 flex items-center justify-center p-2.5 bg-slate-900/5">
+                                          <img
+                                            src={slotUrl}
+                                            alt={`Footer Logo ${slotIdx + 1}`}
+                                            className="max-h-full max-w-full object-contain"
+                                          />
+                                        </div>
+                                      ) : (
+                                        <div className="flex flex-col items-center justify-center h-full px-2 text-center">
+                                          <p className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase">
+                                            + Logo {slotIdx + 1}
+                                          </p>
+                                          <p className="text-[7px] text-slate-300 dark:text-slate-600 uppercase mt-0.5">
+                                            PNG / SVG
+                                          </p>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    )}
                   </div>
 
-                  {/* Date & Venue Icons & Typography Styling */}
-                  <div className="space-y-3 md:col-span-2">
-                    <div className="flex items-center justify-between">
-                      <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">
-                        Date & Venue Icons & Text Styling (Color, Size & Font)
-                      </label>
-                      {(formData.meta_icon_color || formData.meta_icon_bg_color || formData.meta_font_family || formData.meta_label_color || formData.meta_value_color || formData.meta_icon_size !== 22 || formData.meta_label_size !== 10 || formData.meta_value_size !== 12) && (
-                        <button
-                          type="button"
-                          onClick={() => setFormData(prev => ({
-                            ...prev,
-                            meta_icon_color: "",
-                            meta_icon_bg_color: "",
-                            meta_icon_size: 22,
-                            meta_font_family: "",
-                            meta_label_size: 10,
-                            meta_label_color: "",
-                            meta_value_size: 12,
-                            meta_value_color: "",
-                          }))}
-                          className="text-[10px] font-bold text-slate-400 hover:text-red-500 transition-colors"
-                        >
-                          Reset All Date/Venue Styles
-                        </button>
-                      )}
-                    </div>
-
-                    {(() => {
-                      const selectedClientObj = clients.find((c: any) => c.id?.toString() === formData.client_id?.toString());
-                      const activeThemeDefaults = THEME_DEFAULTS[formData.banner_theme as keyof typeof THEME_DEFAULTS] || THEME_DEFAULTS.cyber_dark;
-                      const defaultMetaIconColor = formData.banner_accent_color || selectedClientObj?.accent_color || activeThemeDefaults.accent || "#eab308";
-                      const effectivePreviewIconColor = formData.meta_icon_color || defaultMetaIconColor;
-                      return (
-                    <div className="bg-slate-50/50 dark:bg-slate-900/60 rounded-2xl border border-slate-100 dark:border-slate-800 p-6 space-y-6">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                        {/* Icon Color */}
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block">Icon Color</label>
-                            {formData.meta_icon_color && (
-                              <button type="button" onClick={() => setFormData(prev => ({ ...prev, meta_icon_color: "" }))} className="text-[9px] font-bold text-slate-400 hover:text-red-500">Reset</button>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2.5">
-                            <input
-                              type="color"
-                              value={effectivePreviewIconColor}
-                              onInput={(e) => setFormData(prev => ({ ...prev, meta_icon_color: (e.target as HTMLInputElement).value }))}
-                              onChange={(e) => setFormData(prev => ({ ...prev, meta_icon_color: e.target.value }))}
-                              className="w-10 h-10 rounded-xl border border-slate-200 dark:border-slate-700 cursor-pointer p-0 bg-transparent shrink-0"
-                            />
-                            <input
-                              type="text"
-                              value={formData.meta_icon_color}
-                              onChange={(e) => setFormData(prev => ({ ...prev, meta_icon_color: e.target.value }))}
-                              placeholder={`Default (${defaultMetaIconColor})`}
-                              className="w-full px-3 py-2.5 rounded-xl border border-slate-100 dark:border-slate-800 font-bold text-xs text-slate-700 dark:text-white bg-white dark:bg-slate-900"
-                            />
-                          </div>
+                  {/* 3. Theme & Form Layout */}
+                  <div className="bg-white dark:bg-[#0f172a]/60 rounded-[1.75rem] border border-slate-200/80 dark:border-slate-800 shadow-xs overflow-hidden transition-all">
+                    <button
+                      type="button"
+                      onClick={() => toggleBrandingAccordion("theme")}
+                      className="w-full p-5 sm:p-6 flex items-center justify-between text-left hover:bg-slate-50/60 dark:hover:bg-slate-800/30 transition-colors cursor-pointer"
+                    >
+                      <div className="flex items-center gap-3.5">
+                        <div className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200">
+                          <Layers size={18} />
                         </div>
-
-                        {/* Icon Badge Background Color */}
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block">Icon Box Background</label>
-                            {formData.meta_icon_bg_color && (
-                              <button type="button" onClick={() => setFormData(prev => ({ ...prev, meta_icon_bg_color: "" }))} className="text-[9px] font-bold text-slate-400 hover:text-red-500">Reset</button>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2.5">
-                            <input
-                              type="color"
-                              value={formData.meta_icon_bg_color || "#1e293b"}
-                              onChange={(e) => setFormData(prev => ({ ...prev, meta_icon_bg_color: e.target.value }))}
-                              className="w-10 h-10 rounded-xl border border-slate-200 dark:border-slate-700 cursor-pointer p-0 bg-transparent shrink-0"
-                            />
-                            <input
-                              type="text"
-                              value={formData.meta_icon_bg_color}
-                              onChange={(e) => setFormData(prev => ({ ...prev, meta_icon_bg_color: e.target.value }))}
-                              placeholder="Default (Glass)"
-                              className="w-full px-3 py-2.5 rounded-xl border border-slate-100 dark:border-slate-800 font-bold text-xs text-slate-700 dark:text-white bg-white dark:bg-slate-900"
-                            />
-                          </div>
-                        </div>
-
-                        {/* Label Text Color ("DATE & TIME" / "VENUE") */}
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block">Label Color (DATE / VENUE)</label>
-                            {formData.meta_label_color && (
-                              <button type="button" onClick={() => setFormData(prev => ({ ...prev, meta_label_color: "" }))} className="text-[9px] font-bold text-slate-400 hover:text-red-500">Reset</button>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2.5">
-                            <input
-                              type="color"
-                              value={formData.meta_label_color || "#94a3b8"}
-                              onChange={(e) => setFormData(prev => ({ ...prev, meta_label_color: e.target.value }))}
-                              className="w-10 h-10 rounded-xl border border-slate-200 dark:border-slate-700 cursor-pointer p-0 bg-transparent shrink-0"
-                            />
-                            <input
-                              type="text"
-                              value={formData.meta_label_color}
-                              onChange={(e) => setFormData(prev => ({ ...prev, meta_label_color: e.target.value }))}
-                              placeholder="e.g. #94a3b8"
-                              className="w-full px-3 py-2.5 rounded-xl border border-slate-100 dark:border-slate-800 font-bold text-xs text-slate-700 dark:text-white bg-white dark:bg-slate-900"
-                            />
-                          </div>
-                        </div>
-
-                        {/* Value Text Color (Actual Date & Location text) */}
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block">Value Text Color</label>
-                            {formData.meta_value_color && (
-                              <button type="button" onClick={() => setFormData(prev => ({ ...prev, meta_value_color: "" }))} className="text-[9px] font-bold text-slate-400 hover:text-red-500">Reset</button>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2.5">
-                            <input
-                              type="color"
-                              value={formData.meta_value_color || formData.banner_text_color || "#ffffff"}
-                              onChange={(e) => setFormData(prev => ({ ...prev, meta_value_color: e.target.value }))}
-                              className="w-10 h-10 rounded-xl border border-slate-200 dark:border-slate-700 cursor-pointer p-0 bg-transparent shrink-0"
-                            />
-                            <input
-                              type="text"
-                              value={formData.meta_value_color}
-                              onChange={(e) => setFormData(prev => ({ ...prev, meta_value_color: e.target.value }))}
-                              placeholder="e.g. #ffffff"
-                              className="w-full px-3 py-2.5 rounded-xl border border-slate-100 dark:border-slate-800 font-bold text-xs text-slate-700 dark:text-white bg-white dark:bg-slate-900"
-                            />
-                          </div>
+                        <div>
+                          <h3 className="text-xs font-black uppercase tracking-[0.15em] text-[#0f172a] dark:text-white">
+                            3. Theme &amp; Form Layout
+                          </h3>
+                          <p className="text-[11px] text-slate-400 dark:text-slate-500 font-medium">
+                            Design style preset, card layout structure, and confirmation badges
+                          </p>
                         </div>
                       </div>
+                      <div className="flex items-center gap-3">
+                        <span className="hidden sm:inline-block px-2.5 py-0.5 rounded-md text-[9px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 capitalize">
+                          {(formData.banner_theme || "cyber_dark").replace(/_/g, " ")}
+                        </span>
+                        <div className={`p-1 rounded-lg text-slate-400 transition-transform duration-200 ${brandingAccordions.theme ? "rotate-180" : ""}`}>
+                          <ChevronDown size={18} />
+                        </div>
+                      </div>
+                    </button>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2 border-t border-slate-200/60 dark:border-slate-800">
-                        {/* Font Family */}
+                    {brandingAccordions.theme && (
+                      <div className="p-6 sm:p-7 pt-2 border-t border-slate-100 dark:border-slate-800/60 space-y-6 animate-in fade-in duration-200">
+                        {/* Theme Style Dropdown */}
                         <div className="space-y-2">
-                          <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block">Date & Venue Font Family</label>
-                          <select
-                            value={formData.meta_font_family}
-                            onChange={(e) => setFormData(prev => ({ ...prev, meta_font_family: e.target.value }))}
-                            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-100 dark:border-slate-800 font-bold text-xs text-slate-700 dark:text-white bg-white dark:bg-slate-900 cursor-pointer"
-                          >
-                            <option value="">Inherit Form Font</option>
-                            <option value="Inter, system-ui, sans-serif">Inter (Modern Sans)</option>
-                            <option value="'Plus Jakarta Sans', sans-serif">Plus Jakarta Sans</option>
-                            <option value="'Playfair Display', Georgia, serif">Playfair Display (Editorial Serif)</option>
-                            <option value="Georgia, serif">Georgia (Classic Serif)</option>
-                            <option value="'Space Grotesk', sans-serif">Space Grotesk (Tech)</option>
-                            <option value="'JetBrains Mono', monospace">JetBrains Mono (Monospace)</option>
-                            <option value="Arial, Helvetica, sans-serif">Arial / Helvetica</option>
-                            <option value="'Trebuchet MS', sans-serif">Trebuchet MS</option>
+                          <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">
+                            Registration Form Design Style Preset
+                          </label>
+                          <select name="banner_theme" value={formData.banner_theme} onChange={handleChange}
+                            className="w-full px-4 py-3 rounded-xl border border-slate-100 dark:border-slate-800 focus:border-[#1e293b] dark:focus:border-yellow-400 focus:ring-4 focus:ring-yellow-400/20 outline-none transition-all font-bold text-xs text-slate-700 dark:text-white bg-slate-50/50 dark:bg-slate-900/60 cursor-pointer">
+                            <option value="cyber_dark">Cyber Dark (Premium Black &amp; Gold)</option>
+                            <option value="minimal_light">Minimal Light (Clean White &amp; Slate)</option>
+                            <option value="glassmorphism">Glassmorphism (Frosted Glass Overlay)</option>
+                            <option value="brutalist_retro">Brutalist Retro (Bold Typography &amp; Retro Tech)</option>
+                            <option value="midnight_luxury">Midnight Luxury (Deep Royal Blue &amp; Gold)</option>
+                            <option value="neon_horizon">Neon Horizon (Synthwave &amp; Neon Glow)</option>
+                            <option value="forest_zen">Forest Zen (Deep Emerald &amp; Sage Stacked)</option>
+                            <option value="aurora_glow">Aurora Glow (Dynamic Gradient &amp; Glassmorphism)</option>
+                            <option value="crimson_sunset">Crimson Sunset (Burgundy &amp; Warm Coral)</option>
+                            <option value="cyberpunk_terminal">Cyberpunk Terminal (Matrix Green &amp; Scanlines)</option>
+                            <option value="corporate_mono">Corporate Mono (Slate Grey &amp; Pure Minimalist)</option>
+                            <option value="nordic_alabaster">Nordic Alabaster (Off-White &amp; Editorial Serif)</option>
+                            <option value="midnight_executive">Midnight Executive (Deep Charcoal &amp; Electric Blue)</option>
+                            <option value="champagne_lounge">Champagne Lounge (Warm Alabaster &amp; Brushed Gold)</option>
+                            <option value="logistics_glass">Logistics Glass (Translucent Slate &amp; Steel Borders)</option>
                           </select>
                         </div>
 
-                        {/* Icon Size (px) */}
+                        {/* Layout Mode */}
                         <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block">Icon Size</label>
-                            <span className="text-xs font-black text-slate-700 dark:text-yellow-400">{formData.meta_icon_size || 22}px</span>
-                          </div>
-                          <input
-                            type="range"
-                            min={14}
-                            max={40}
-                            value={formData.meta_icon_size || 22}
-                            onChange={(e) => setFormData(prev => ({ ...prev, meta_icon_size: parseInt(e.target.value) || 22 }))}
-                            className="w-full accent-slate-900 dark:accent-yellow-400 cursor-pointer mt-2"
-                          />
-                          <div className="flex justify-between text-[9px] font-bold text-slate-400">
-                            <span>14px (Small)</span>
-                            <span>22px (Default)</span>
-                            <span>40px (Large)</span>
+                          <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">Registration Form Layout</label>
+                          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                            {[
+                              { id: "", label: "Default", desc: "Theme default" },
+                              { id: "stacked", label: "Stacked", desc: "Top Banner" },
+                              { id: "split", label: "Split Right", desc: "Form on Right" },
+                              { id: "reversed", label: "Split Left", desc: "Form on Left" },
+                              { id: "centered", label: "Centered", desc: "Centered Card" }
+                            ].map((lay) => {
+                              const active = formData.banner_layout === lay.id;
+                              return (
+                                <button key={lay.id} type="button" onClick={() => setFormData(prev => ({ ...prev, banner_layout: lay.id }))}
+                                  className={`flex flex-col items-center justify-between p-2.5 rounded-xl border text-center transition-all bg-white dark:bg-slate-900 hover:border-slate-350 dark:hover:border-slate-700 cursor-pointer ${active ? "border-slate-800 dark:border-yellow-400 ring-2 ring-slate-800/10 dark:ring-yellow-400/25 shadow-sm" : "border-slate-100 dark:border-slate-800 shadow-sm opacity-80 hover:opacity-100"}`}>
+                                  {lay.id === "" && <div className="relative w-full h-10 bg-slate-100 dark:bg-slate-800 rounded flex items-center justify-center border border-slate-200/60 dark:border-slate-700 mb-2 overflow-hidden"><div className="text-[9px] font-black tracking-tighter text-slate-400 dark:text-slate-500 uppercase">Default</div></div>}
+                                  {lay.id === "stacked" && <div className="flex flex-col gap-0.5 w-full h-10 bg-slate-150 dark:bg-slate-800 rounded p-1 border border-slate-200/60 dark:border-slate-700 mb-2"><div className="bg-slate-350 dark:bg-slate-700 h-2 w-full rounded-sm"></div><div className="bg-white dark:bg-slate-900 h-5 w-4/5 mx-auto rounded-sm border border-slate-200 dark:border-slate-750 flex items-center justify-center"><span className="w-1.5 h-1.5 bg-slate-300 dark:bg-slate-600 rounded-full"></span></div></div>}
+                                  {lay.id === "split" && <div className="flex gap-0.5 w-full h-10 bg-slate-150 dark:bg-slate-800 rounded p-1 border border-slate-200/60 dark:border-slate-700 mb-2"><div className="bg-slate-350 dark:bg-slate-700 w-2/5 h-full rounded-sm"></div><div className="bg-white dark:bg-slate-900 w-3/5 h-full rounded-sm border border-slate-200 dark:border-slate-750 flex items-center justify-center"><span className="w-1.5 h-1.5 bg-slate-300 dark:bg-slate-600 rounded-full"></span></div></div>}
+                                  {lay.id === "reversed" && <div className="flex gap-0.5 w-full h-10 bg-slate-150 dark:bg-slate-800 rounded p-1 border border-slate-200/60 dark:border-slate-700 mb-2"><div className="bg-white dark:bg-slate-900 w-3/5 h-full rounded-sm border border-slate-200 dark:border-slate-750 flex items-center justify-center"><span className="w-1.5 h-1.5 bg-slate-300 dark:bg-slate-600 rounded-full"></span></div><div className="bg-slate-350 dark:bg-slate-700 w-2/5 h-full rounded-sm"></div></div>}
+                                  {lay.id === "centered" && <div className="relative w-full h-10 bg-slate-200 dark:bg-slate-800 rounded p-1 border border-slate-250 dark:border-slate-700 mb-2 flex items-center justify-center"><div className="bg-white dark:bg-slate-900 w-3/4 h-6 rounded-sm border border-slate-300 dark:border-slate-750 shadow-sm flex items-center justify-center"><span className="w-1.5 h-1.5 bg-slate-300 dark:bg-slate-600 rounded-full"></span></div></div>}
+                                  <span className="text-[10px] font-black tracking-tight text-slate-800 dark:text-slate-200 block leading-tight">{lay.label}</span>
+                                  <span className="text-[8px] text-slate-400 dark:text-slate-500 font-bold block">{lay.desc}</span>
+                                </button>
+                              );
+                            })}
                           </div>
                         </div>
 
-                        {/* Label Text Size (px) */}
+                        {/* Template Selection */}
                         <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block">Label Font Size</label>
-                            <span className="text-xs font-black text-slate-700 dark:text-yellow-400">{formData.meta_label_size || 10}px</span>
-                          </div>
-                          <input
-                            type="range"
-                            min={8}
-                            max={20}
-                            value={formData.meta_label_size || 10}
-                            onChange={(e) => setFormData(prev => ({ ...prev, meta_label_size: parseInt(e.target.value) || 10 }))}
-                            className="w-full accent-slate-900 dark:accent-yellow-400 cursor-pointer mt-2"
-                          />
-                          <div className="flex justify-between text-[9px] font-bold text-slate-400">
-                            <span>8px</span>
-                            <span>10px (Default)</span>
-                            <span>20px</span>
-                          </div>
+                          <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">Registration Form Template</label>
+                          <select 
+                            name="registration_form_template_id" 
+                            value={formData.registration_form_template_id || ""} 
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setFormData({ 
+                                ...formData, 
+                                registration_form_template_id: val ? parseInt(val) : null 
+                              });
+                            }}
+                            className="w-full px-4 py-3 rounded-xl border border-slate-100 dark:border-slate-800 focus:border-[#1e293b] dark:focus:border-yellow-400 focus:ring-4 focus:ring-yellow-400/20 outline-none transition-all font-bold text-xs text-slate-700 dark:text-white bg-slate-50/50 dark:bg-slate-900/60 cursor-pointer"
+                          >
+                            <option value="">Default Form (Custom questions managed below)</option>
+                            {regTemplates.map((t) => (
+                              <option key={t.id} value={t.id}>{t.name} ({t.description || "No description"})</option>
+                            ))}
+                          </select>
                         </div>
 
-                        {/* Value Text Size (px) */}
+                        {/* Confirmation Screen Badges */}
                         <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block">Date / Venue Text Size</label>
-                            <span className="text-xs font-black text-slate-700 dark:text-yellow-400">{formData.meta_value_size || 12}px</span>
-                          </div>
-                          <input
-                            type="range"
-                            min={10}
-                            max={28}
-                            value={formData.meta_value_size || 12}
-                            onChange={(e) => setFormData(prev => ({ ...prev, meta_value_size: parseInt(e.target.value) || 12 }))}
-                            className="w-full accent-slate-900 dark:accent-yellow-400 cursor-pointer mt-2"
-                          />
-                          <div className="flex justify-between text-[9px] font-bold text-slate-400">
-                            <span>10px</span>
-                            <span>12px (Default)</span>
-                            <span>28px</span>
+                          <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">
+                            Confirmation Screen Access Pass &amp; QR Code
+                          </label>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50/50 dark:bg-slate-900/60 rounded-2xl border border-slate-100 dark:border-slate-800 p-4 sm:p-5">
+                            <label className="flex items-center gap-3 cursor-pointer">
+                              <input 
+                                type="checkbox"
+                                name="show_qr_code"
+                                checked={formData.show_qr_code}
+                                onChange={(e) => setFormData(prev => ({ ...prev, show_qr_code: e.target.checked }))}
+                                className="w-5 h-5 rounded text-[#0f172a] dark:text-yellow-400 focus:ring-0 border-slate-300 dark:border-slate-700 shrink-0"
+                              />
+                              <div className="space-y-0.5">
+                                <span className="text-xs font-bold text-slate-800 dark:text-white block">Display QR Code</span>
+                                <span className="text-[10px] text-slate-400 block leading-tight">Show scannable QR ticket on confirmation screen</span>
+                              </div>
+                            </label>
+
+                            <label className="flex items-center gap-3 cursor-pointer">
+                              <input 
+                                type="checkbox"
+                                name="show_pin_code"
+                                checked={formData.show_pin_code}
+                                onChange={(e) => setFormData(prev => ({ ...prev, show_pin_code: e.target.checked }))}
+                                className="w-5 h-5 rounded text-[#0f172a] dark:text-yellow-400 focus:ring-0 border-slate-300 dark:border-slate-700 shrink-0"
+                              />
+                              <div className="space-y-0.5">
+                                <span className="text-xs font-bold text-slate-800 dark:text-white block">Display PIN / Access Pass Number</span>
+                                <span className="text-[10px] text-slate-400 block leading-tight">Show clearance PIN and label on confirmation screen</span>
+                              </div>
+                            </label>
                           </div>
                         </div>
                       </div>
+                    )}
+                  </div>
 
-                      {/* Live Mini-Preview of Date & Venue */}
-                      <div className="rounded-xl bg-slate-900/95 p-4 border border-slate-800">
-                        <div className="flex items-center justify-between mb-3">
-                          <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Live Date & Venue Badge Preview</span>
-                          <span className="text-[9px] font-bold text-slate-500 uppercase">Align: {formData.meta_align} • Order: {formData.meta_order.replace("_", " ")}</span>
+                  {/* 4. Advanced Custom Styling (COLLAPSED BY DEFAULT) */}
+                  <div className="bg-white dark:bg-[#0f172a]/60 rounded-[1.75rem] border border-slate-200/80 dark:border-slate-800 shadow-xs overflow-hidden transition-all">
+                    <button
+                      type="button"
+                      onClick={() => toggleBrandingAccordion("advanced")}
+                      className="w-full p-5 sm:p-6 flex items-center justify-between text-left hover:bg-slate-50/60 dark:hover:bg-slate-800/30 transition-colors cursor-pointer"
+                    >
+                      <div className="flex items-center gap-3.5">
+                        <div className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200">
+                          <Sliders size={18} />
                         </div>
-                        <div
-                          className={`flex flex-wrap gap-6 ${
-                            formData.meta_order === "stacked" ? "flex-col" : formData.meta_order === "venue_first" ? "flex-row-reverse" : "flex-row"
-                          } ${
-                            formData.meta_align === "center"
-                              ? formData.meta_order === "stacked" ? "items-center text-center" : "justify-center"
-                              : formData.meta_align === "right"
-                              ? formData.meta_order === "stacked" ? "items-end text-right" : "justify-end"
-                              : formData.meta_order === "stacked" ? "items-start text-left" : "justify-start"
-                          }`}
-                          style={{ fontFamily: formData.meta_font_family || undefined }}
-                        >
-                          <div className={`flex items-center gap-3.5 ${formData.meta_align === "right" ? "flex-row-reverse text-right" : ""}`}>
-                            <div
-                              className="rounded-2xl flex items-center justify-center border border-white/10 shadow-sm shrink-0"
-                              style={{
-                                width: `${Math.max(36, (formData.meta_icon_size || 22) + 22)}px`,
-                                height: `${Math.max(36, (formData.meta_icon_size || 22) + 22)}px`,
-                                backgroundColor: formData.meta_icon_bg_color || "rgba(255,255,255,0.08)",
-                              }}
-                            >
-                              <Calendar
-                                style={{
-                                  width: `${formData.meta_icon_size || 22}px`,
-                                  height: `${formData.meta_icon_size || 22}px`,
-                                  color: effectivePreviewIconColor,
-                                  stroke: effectivePreviewIconColor,
-                                }}
-                              />
-                            </div>
-                            <div>
-                              <span
-                                className="font-black uppercase tracking-widest block mb-0.5"
-                                style={{
-                                  fontSize: `${formData.meta_label_size || 10}px`,
-                                  color: formData.meta_label_color || "rgba(255,255,255,0.5)",
-                                }}
-                              >
-                                Date & Time
-                              </span>
-                              <p
-                                className="font-bold tracking-tight"
-                                style={{
-                                  fontSize: `${formData.meta_value_size || 12}px`,
-                                  color: formData.meta_value_color || formData.banner_text_color || "#ffffff",
-                                }}
-                              >
-                                {formData.start_date ? new Date(formData.start_date).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" }) : "Nov 16, 2026, 2:30 PM"}
-                              </p>
-                            </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-xs font-black uppercase tracking-[0.15em] text-[#0f172a] dark:text-white">
+                              4. Advanced Custom Styling
+                            </h3>
+                            <span className="px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200/60 dark:border-slate-700">
+                              Optional / Pro
+                            </span>
                           </div>
-
-                          <div className={`flex items-center gap-3.5 ${formData.meta_align === "right" ? "flex-row-reverse text-right" : ""}`}>
-                            <div
-                              className="rounded-2xl flex items-center justify-center border border-white/10 shadow-sm shrink-0"
-                              style={{
-                                width: `${Math.max(36, (formData.meta_icon_size || 22) + 22)}px`,
-                                height: `${Math.max(36, (formData.meta_icon_size || 22) + 22)}px`,
-                                backgroundColor: formData.meta_icon_bg_color || "rgba(255,255,255,0.08)",
-                              }}
-                            >
-                              <MapPin
-                                style={{
-                                  width: `${formData.meta_icon_size || 22}px`,
-                                  height: `${formData.meta_icon_size || 22}px`,
-                                  color: effectivePreviewIconColor,
-                                  stroke: effectivePreviewIconColor,
-                                }}
-                              />
-                            </div>
-                            <div>
-                              <span
-                                className="font-black uppercase tracking-widest block mb-0.5"
-                                style={{
-                                  fontSize: `${formData.meta_label_size || 10}px`,
-                                  color: formData.meta_label_color || "rgba(255,255,255,0.5)",
-                                }}
-                              >
-                                Venue
-                              </span>
-                              <p
-                                className="font-bold tracking-tight"
-                                style={{
-                                  fontSize: `${formData.meta_value_size || 12}px`,
-                                  color: formData.meta_value_color || formData.banner_text_color || "#ffffff",
-                                }}
-                              >
-                                {formData.location || "Event Venue Location"}
-                              </p>
-                            </div>
-                          </div>
+                          <p className="text-[11px] text-slate-400 dark:text-slate-500 font-medium">
+                            Custom hex colors, element alignment, and typography sizing
+                          </p>
                         </div>
                       </div>
-                    </div>
-                      );
-                    })()}
+                      <div className="flex items-center gap-3">
+                        <span className="text-[10px] font-bold text-slate-400 hidden sm:inline">
+                          {brandingAccordions.advanced ? "Hide Details" : "Click to Customize"}
+                        </span>
+                        <div className={`p-1 rounded-lg text-slate-400 transition-transform duration-200 ${brandingAccordions.advanced ? "rotate-180" : ""}`}>
+                          <ChevronDown size={18} />
+                        </div>
+                      </div>
+                    </button>
+
+                    {brandingAccordions.advanced && (
+                      <div className="p-6 sm:p-7 pt-2 border-t border-slate-100 dark:border-slate-800/60 space-y-8 animate-in fade-in duration-200">
+                        {/* A. Custom Color Overrides */}
+                        <div className="space-y-3">
+                          <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">Custom Color Overrides</label>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 bg-slate-50/50 dark:bg-slate-900/60 rounded-2xl border border-slate-100 dark:border-slate-800 p-5">
+                            {[
+                              { name: "banner_primary_color", label: "Primary Brand Color", placeholder: "e.g. #0f172a" },
+                              { name: "banner_accent_color", label: "Accent Color", placeholder: "e.g. #eab308" },
+                              { name: "banner_text_color", label: "Heading Text Color", placeholder: "e.g. #ffffff" },
+                              { name: "banner_input_bg_color", label: "Textbox / Input Background", placeholder: "e.g. #ffffff or #1e293b" },
+                            ].map((field) => (
+                              <div key={field.name} className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <label className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 block">{field.label}</label>
+                                  {(formData as any)[field.name] && (
+                                    <button
+                                      type="button"
+                                      onClick={() => setFormData(prev => ({ ...prev, [field.name]: "" }))}
+                                      className="text-[8px] font-bold text-slate-400 hover:text-red-500 transition-colors"
+                                    >
+                                      Reset
+                                    </button>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2.5">
+                                  <input type="color" name={field.name} value={(formData as any)[field.name] || "#000000"} onChange={handleChange}
+                                    className="w-9 h-9 rounded-xl border border-slate-200 dark:border-slate-700 cursor-pointer p-0 bg-transparent shrink-0" />
+                                  <input type="text" name={field.name} value={(formData as any)[field.name]} onChange={handleChange}
+                                    placeholder={field.placeholder}
+                                    className="w-full px-3 py-2 rounded-xl border border-slate-100 dark:border-slate-800 focus:border-[#1e293b] dark:focus:border-yellow-400 outline-none font-bold text-xs text-slate-700 dark:text-white bg-white dark:bg-slate-900" />
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* B. Form Item Alignment & Positioning */}
+                        <div className="space-y-3 pt-6 border-t border-slate-100 dark:border-slate-800">
+                          <div className="flex items-center justify-between">
+                            <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">
+                              Form Item Alignment &amp; Positioning (Left / Center / Right)
+                            </label>
+                            <span className="text-[10px] font-bold text-slate-400">Position elements independently</span>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 bg-slate-50/50 dark:bg-slate-900/60 rounded-2xl border border-slate-100 dark:border-slate-800 p-5">
+                            {[
+                              { key: "title_align", label: "Event Title Alignment", desc: "Main headline" },
+                              { key: "description_align", label: "Event Description Block", desc: "Intro text block" },
+                              { key: "meta_align", label: "Date & Venue Row", desc: "Calendar & location badges" },
+                              { key: "form_header_align", label: "Form Heading & Subheading", desc: "'Complete Registration'" },
+                              { key: "fields_align", label: "Form Questions & Labels", desc: "Question text alignment" },
+                              { key: "logos_align", label: "Footer Sponsor Logos", desc: "Partner logo strip" },
+                            ].map((item) => {
+                              const currentVal = (formData as any)[item.key] || "left";
+                              return (
+                                <div key={item.key} className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 p-3.5 flex flex-col justify-between gap-2.5 shadow-sm">
+                                  <div>
+                                    <span className="text-xs font-black text-slate-800 dark:text-white block">{item.label}</span>
+                                    <span className="text-[10px] text-slate-400 font-medium block">{item.desc}</span>
+                                  </div>
+                                  <div className="grid grid-cols-3 gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
+                                    {([
+                                      { val: "left", label: "Left", Icon: AlignLeft },
+                                      { val: "center", label: "Center", Icon: AlignCenter },
+                                      { val: "right", label: "Right", Icon: AlignRight },
+                                    ] as const).map(({ val, label, Icon }) => {
+                                      const active = currentVal === val;
+                                      return (
+                                        <button
+                                          key={val}
+                                          type="button"
+                                          onClick={() => setFormData(prev => ({ ...prev, [item.key]: val }))}
+                                          className={`flex items-center justify-center gap-1 py-1.5 px-2 rounded-md text-[9px] font-black uppercase tracking-wider transition-all cursor-pointer ${
+                                            active
+                                              ? "bg-slate-900 text-white dark:bg-yellow-400 dark:text-slate-950 shadow-sm"
+                                              : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white"
+                                          }`}
+                                        >
+                                          <Icon className="w-3 h-3" />
+                                          {label}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              );
+                            })}
+
+                            {/* Date & Venue Arrangement / Order */}
+                            <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 p-3.5 flex flex-col justify-between gap-2.5 shadow-sm sm:col-span-2 lg:col-span-3">
+                              <div>
+                                <span className="text-xs font-black text-slate-800 dark:text-white block">Date &amp; Venue Arrangement / Order</span>
+                                <span className="text-[10px] text-slate-400 font-medium block">Swap horizontal order or stack them vertically</span>
+                              </div>
+                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 bg-slate-100 dark:bg-slate-800 p-1.5 rounded-lg">
+                                {[
+                                  { val: "date_first", label: "Date Left  •  Venue Right" },
+                                  { val: "venue_first", label: "Venue Left  •  Date Right" },
+                                  { val: "stacked", label: "Stacked Vertically" },
+                                ].map((opt) => {
+                                  const active = (formData.meta_order || "date_first") === opt.val;
+                                  return (
+                                    <button
+                                      key={opt.val}
+                                      type="button"
+                                      onClick={() => setFormData(prev => ({ ...prev, meta_order: opt.val as any }))}
+                                      className={`py-2 px-3 rounded-md text-[9px] font-black uppercase tracking-wider transition-all cursor-pointer ${
+                                        active
+                                          ? "bg-slate-900 text-white dark:bg-yellow-400 dark:text-slate-950 shadow-sm"
+                                          : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white"
+                                      }`}
+                                    >
+                                      {opt.label}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* C. Date & Venue Icons & Typography */}
+                        <div className="space-y-3 pt-6 border-t border-slate-100 dark:border-slate-800">
+                          <div className="flex items-center justify-between">
+                            <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">
+                              Date &amp; Venue Icons &amp; Text Styling (Color, Size &amp; Font)
+                            </label>
+                            {(formData.meta_icon_color || formData.meta_icon_bg_color || formData.meta_font_family || formData.meta_label_color || formData.meta_value_color || formData.meta_icon_size !== 22 || formData.meta_label_size !== 10 || formData.meta_value_size !== 12) && (
+                              <button
+                                type="button"
+                                onClick={() => setFormData(prev => ({
+                                  ...prev,
+                                  meta_icon_color: "",
+                                  meta_icon_bg_color: "",
+                                  meta_icon_size: 22,
+                                  meta_font_family: "",
+                                  meta_label_size: 10,
+                                  meta_label_color: "",
+                                  meta_value_size: 12,
+                                  meta_value_color: "",
+                                }))}
+                                className="text-[10px] font-bold text-slate-400 hover:text-red-500 transition-colors"
+                              >
+                                Reset All Date/Venue Styles
+                              </button>
+                            )}
+                          </div>
+
+                          {(() => {
+                            const selectedClientObj = clients.find((c: any) => c.id?.toString() === formData.client_id?.toString());
+                            const activeThemeDefaults = THEME_DEFAULTS[formData.banner_theme as keyof typeof THEME_DEFAULTS] || THEME_DEFAULTS.cyber_dark;
+                            const defaultMetaIconColor = formData.banner_accent_color || selectedClientObj?.accent_color || activeThemeDefaults.accent || "#eab308";
+                            const effectivePreviewIconColor = formData.meta_icon_color || defaultMetaIconColor;
+                            return (
+                              <div className="bg-slate-50/50 dark:bg-slate-900/60 rounded-2xl border border-slate-100 dark:border-slate-800 p-5 space-y-6">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                  {/* Icon Color */}
+                                  <div className="space-y-1.5">
+                                    <div className="flex items-center justify-between">
+                                      <label className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block">Icon Color</label>
+                                      {formData.meta_icon_color && (
+                                        <button type="button" onClick={() => setFormData(prev => ({ ...prev, meta_icon_color: "" }))} className="text-[8px] font-bold text-slate-400 hover:text-red-500">Reset</button>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <input
+                                        type="color"
+                                        value={effectivePreviewIconColor}
+                                        onChange={(e) => setFormData(prev => ({ ...prev, meta_icon_color: e.target.value }))}
+                                        className="w-9 h-9 rounded-xl border border-slate-200 dark:border-slate-700 cursor-pointer p-0 bg-transparent shrink-0"
+                                      />
+                                      <input
+                                        type="text"
+                                        value={formData.meta_icon_color}
+                                        onChange={(e) => setFormData(prev => ({ ...prev, meta_icon_color: e.target.value }))}
+                                        placeholder={`Default (${defaultMetaIconColor})`}
+                                        className="w-full px-2.5 py-2 rounded-xl border border-slate-100 dark:border-slate-800 font-bold text-xs text-slate-700 dark:text-white bg-white dark:bg-slate-900"
+                                      />
+                                    </div>
+                                  </div>
+
+                                  {/* Icon Box Background Color */}
+                                  <div className="space-y-1.5">
+                                    <div className="flex items-center justify-between">
+                                      <label className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block">Icon Box Background</label>
+                                      {formData.meta_icon_bg_color && (
+                                        <button type="button" onClick={() => setFormData(prev => ({ ...prev, meta_icon_bg_color: "" }))} className="text-[8px] font-bold text-slate-400 hover:text-red-500">Reset</button>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <input
+                                        type="color"
+                                        value={formData.meta_icon_bg_color || "#1e293b"}
+                                        onChange={(e) => setFormData(prev => ({ ...prev, meta_icon_bg_color: e.target.value }))}
+                                        className="w-9 h-9 rounded-xl border border-slate-200 dark:border-slate-700 cursor-pointer p-0 bg-transparent shrink-0"
+                                      />
+                                      <input
+                                        type="text"
+                                        value={formData.meta_icon_bg_color}
+                                        onChange={(e) => setFormData(prev => ({ ...prev, meta_icon_bg_color: e.target.value }))}
+                                        placeholder="Default (Glass)"
+                                        className="w-full px-2.5 py-2 rounded-xl border border-slate-100 dark:border-slate-800 font-bold text-xs text-slate-700 dark:text-white bg-white dark:bg-slate-900"
+                                      />
+                                    </div>
+                                  </div>
+
+                                  {/* Label Text Color */}
+                                  <div className="space-y-1.5">
+                                    <div className="flex items-center justify-between">
+                                      <label className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block">Label Color</label>
+                                      {formData.meta_label_color && (
+                                        <button type="button" onClick={() => setFormData(prev => ({ ...prev, meta_label_color: "" }))} className="text-[8px] font-bold text-slate-400 hover:text-red-500">Reset</button>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <input
+                                        type="color"
+                                        value={formData.meta_label_color || "#94a3b8"}
+                                        onChange={(e) => setFormData(prev => ({ ...prev, meta_label_color: e.target.value }))}
+                                        className="w-9 h-9 rounded-xl border border-slate-200 dark:border-slate-700 cursor-pointer p-0 bg-transparent shrink-0"
+                                      />
+                                      <input
+                                        type="text"
+                                        value={formData.meta_label_color}
+                                        onChange={(e) => setFormData(prev => ({ ...prev, meta_label_color: e.target.value }))}
+                                        placeholder="e.g. #94a3b8"
+                                        className="w-full px-2.5 py-2 rounded-xl border border-slate-100 dark:border-slate-800 font-bold text-xs text-slate-700 dark:text-white bg-white dark:bg-slate-900"
+                                      />
+                                    </div>
+                                  </div>
+
+                                  {/* Value Text Color */}
+                                  <div className="space-y-1.5">
+                                    <div className="flex items-center justify-between">
+                                      <label className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block">Value Text Color</label>
+                                      {formData.meta_value_color && (
+                                        <button type="button" onClick={() => setFormData(prev => ({ ...prev, meta_value_color: "" }))} className="text-[8px] font-bold text-slate-400 hover:text-red-500">Reset</button>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <input
+                                        type="color"
+                                        value={formData.meta_value_color || formData.banner_text_color || "#ffffff"}
+                                        onChange={(e) => setFormData(prev => ({ ...prev, meta_value_color: e.target.value }))}
+                                        className="w-9 h-9 rounded-xl border border-slate-200 dark:border-slate-700 cursor-pointer p-0 bg-transparent shrink-0"
+                                      />
+                                      <input
+                                        type="text"
+                                        value={formData.meta_value_color}
+                                        onChange={(e) => setFormData(prev => ({ ...prev, meta_value_color: e.target.value }))}
+                                        placeholder="e.g. #ffffff"
+                                        className="w-full px-2.5 py-2 rounded-xl border border-slate-100 dark:border-slate-800 font-bold text-xs text-slate-700 dark:text-white bg-white dark:bg-slate-900"
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t border-slate-200/60 dark:border-slate-800">
+                                  {/* Font Family */}
+                                  <div className="space-y-1.5">
+                                    <label className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block">Font Family</label>
+                                    <select
+                                      value={formData.meta_font_family}
+                                      onChange={(e) => setFormData(prev => ({ ...prev, meta_font_family: e.target.value }))}
+                                      className="w-full px-3 py-2 rounded-xl border border-slate-100 dark:border-slate-800 font-bold text-xs text-slate-700 dark:text-white bg-white dark:bg-slate-900 cursor-pointer"
+                                    >
+                                      <option value="">Inherit Form Font</option>
+                                      <option value="Inter, system-ui, sans-serif">Inter (Modern Sans)</option>
+                                      <option value="'Plus Jakarta Sans', sans-serif">Plus Jakarta Sans</option>
+                                      <option value="'Playfair Display', Georgia, serif">Playfair Display (Editorial)</option>
+                                      <option value="Georgia, serif">Georgia (Classic Serif)</option>
+                                      <option value="'Space Grotesk', sans-serif">Space Grotesk (Tech)</option>
+                                      <option value="'JetBrains Mono', monospace">JetBrains Mono (Monospace)</option>
+                                      <option value="Arial, Helvetica, sans-serif">Arial / Helvetica</option>
+                                    </select>
+                                  </div>
+
+                                  {/* Icon Size */}
+                                  <div className="space-y-1.5">
+                                    <div className="flex items-center justify-between">
+                                      <label className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block">Icon Size</label>
+                                      <span className="text-xs font-black text-slate-700 dark:text-yellow-400">{formData.meta_icon_size || 22}px</span>
+                                    </div>
+                                    <input
+                                      type="range"
+                                      min={14}
+                                      max={40}
+                                      value={formData.meta_icon_size || 22}
+                                      onChange={(e) => setFormData(prev => ({ ...prev, meta_icon_size: parseInt(e.target.value) || 22 }))}
+                                      className="w-full accent-slate-900 dark:accent-yellow-400 cursor-pointer mt-1"
+                                    />
+                                    <div className="flex justify-between text-[8px] font-bold text-slate-400">
+                                      <span>14px</span>
+                                      <span>22px</span>
+                                      <span>40px</span>
+                                    </div>
+                                  </div>
+
+                                  {/* Label Text Size */}
+                                  <div className="space-y-1.5">
+                                    <div className="flex items-center justify-between">
+                                      <label className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block">Label Size</label>
+                                      <span className="text-xs font-black text-slate-700 dark:text-yellow-400">{formData.meta_label_size || 10}px</span>
+                                    </div>
+                                    <input
+                                      type="range"
+                                      min={8}
+                                      max={20}
+                                      value={formData.meta_label_size || 10}
+                                      onChange={(e) => setFormData(prev => ({ ...prev, meta_label_size: parseInt(e.target.value) || 10 }))}
+                                      className="w-full accent-slate-900 dark:accent-yellow-400 cursor-pointer mt-1"
+                                    />
+                                    <div className="flex justify-between text-[8px] font-bold text-slate-400">
+                                      <span>8px</span>
+                                      <span>10px</span>
+                                      <span>20px</span>
+                                    </div>
+                                  </div>
+
+                                  {/* Value Text Size */}
+                                  <div className="space-y-1.5">
+                                    <div className="flex items-center justify-between">
+                                      <label className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block">Value Size</label>
+                                      <span className="text-xs font-black text-slate-700 dark:text-yellow-400">{formData.meta_value_size || 12}px</span>
+                                    </div>
+                                    <input
+                                      type="range"
+                                      min={10}
+                                      max={28}
+                                      value={formData.meta_value_size || 12}
+                                      onChange={(e) => setFormData(prev => ({ ...prev, meta_value_size: parseInt(e.target.value) || 12 }))}
+                                      className="w-full accent-slate-900 dark:accent-yellow-400 cursor-pointer mt-1"
+                                    />
+                                    <div className="flex justify-between text-[8px] font-bold text-slate-400">
+                                      <span>10px</span>
+                                      <span>12px</span>
+                                      <span>28px</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
-                  <div className="space-y-3 md:col-span-2">
-                    <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">Intelligence / Description</label>
-                    <RichTextEditor 
-                      value={formData.description || ""} 
-                      onChange={(val) => setFormData(prev => ({ ...prev, description: val }))} 
-                      placeholder="Type event description here..."
-                      minHeight="120px"
-                    />
+                  {/* 5. Event Subtitle & Description */}
+                  <div className="bg-white dark:bg-[#0f172a]/60 rounded-[1.75rem] border border-slate-200/80 dark:border-slate-800 shadow-xs overflow-hidden transition-all">
+                    <button
+                      type="button"
+                      onClick={() => toggleBrandingAccordion("description")}
+                      className="w-full p-5 sm:p-6 flex items-center justify-between text-left hover:bg-slate-50/60 dark:hover:bg-slate-800/30 transition-colors cursor-pointer"
+                    >
+                      <div className="flex items-center gap-3.5">
+                        <div className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200">
+                          <FileText size={18} />
+                        </div>
+                        <div>
+                          <h3 className="text-xs font-black uppercase tracking-[0.15em] text-[#0f172a] dark:text-white">
+                            5. Event Subtitle &amp; Description
+                          </h3>
+                          <p className="text-[11px] text-slate-400 dark:text-slate-500 font-medium">
+                            Rich text intro &amp; description displayed on the registration form
+                          </p>
+                        </div>
+                      </div>
+                      <div className={`p-1 rounded-lg text-slate-400 transition-transform duration-200 ${brandingAccordions.description ? "rotate-180" : ""}`}>
+                        <ChevronDown size={18} />
+                      </div>
+                    </button>
+
+                    {brandingAccordions.description && (
+                      <div className="p-6 sm:p-7 pt-2 border-t border-slate-100 dark:border-slate-800/60 animate-in fade-in duration-200">
+                        <RichTextEditor 
+                          value={formData.description || ""} 
+                          onChange={(val) => setFormData(prev => ({ ...prev, description: val }))} 
+                          placeholder="Type event description here..."
+                          minHeight="120px"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Save Changes Bottom Action Bar */}
+                  <div className="pt-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <p className="text-xs text-slate-400 font-medium">
+                      Configure theme colors, banners, typography, and card styles.
+                    </p>
+                    <button
+                      type="submit"
+                      disabled={saving}
+                      className="w-full sm:w-auto bg-[#1e293b] hover:bg-[#0f172a] dark:bg-yellow-400 dark:hover:bg-yellow-300 dark:text-black text-white font-black px-8 py-4 rounded-2xl shadow-xl transition-all flex items-center justify-center gap-2.5 uppercase tracking-widest text-xs disabled:opacity-50 active:scale-95 cursor-pointer"
+                    >
+                      {saving ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
+                      <span>{saving ? "Deploying..." : "Save Changes"}</span>
+                    </button>
                   </div>
                 </div>
-
-                <div className="pt-8 border-t border-slate-100 dark:border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">
-                  <p className="text-xs text-slate-400 font-medium">
-                    Configure theme colors, banners, typography, and card styles.
-                  </p>
-                  <button
-                    type="submit"
-                    disabled={saving}
-                    className="w-full sm:w-auto bg-[#1e293b] hover:bg-[#0f172a] dark:bg-yellow-400 dark:hover:bg-yellow-300 dark:text-black text-white font-black px-8 py-4 rounded-2xl shadow-xl transition-all flex items-center justify-center gap-2.5 uppercase tracking-widest text-xs disabled:opacity-50 active:scale-95 cursor-pointer"
-                  >
-                    {saving ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
-                    <span>{saving ? "Deploying..." : "Save Changes"}</span>
-                  </button>
-                </div>
-              </div>
-            </div>
 
             {/* Right Column: Sticky Live Form Preview */}
             <div className="xl:col-span-5 sticky top-28 space-y-4">
