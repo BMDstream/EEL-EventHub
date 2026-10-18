@@ -17,6 +17,7 @@ import {
   Info,
   Check,
   ChevronRight,
+  ChevronDown,
   Sparkles,
   Layers,
   Award,
@@ -2013,15 +2014,15 @@ export default function SettingsPage() {
                         className="w-full px-5 py-4 pr-12 rounded-2xl border border-slate-200 dark:border-slate-800 focus:border-[#0f172a] dark:focus:border-yellow-400 focus:ring-4 focus:ring-yellow-400/20 outline-none transition-all font-bold text-slate-800 dark:text-white bg-slate-50 dark:bg-slate-900 appearance-none cursor-pointer text-sm shadow-sm"
                       >
                         <optgroup label="System Templates">
-                          {templates.filter(t => SYSTEM_TEMPLATE_KEYS.has(t.key)).map(t => (
+                          {(templates || []).filter(t => t?.key && SYSTEM_TEMPLATE_KEYS.has(t.key)).map(t => (
                             <option key={t.key} value={t.key}>
                               {t.name} (System)
                             </option>
                           ))}
                         </optgroup>
-                        {templates.some(t => !SYSTEM_TEMPLATE_KEYS.has(t.key)) && (
+                        {(templates || []).some(t => t?.key && !SYSTEM_TEMPLATE_KEYS.has(t.key)) && (
                           <optgroup label="Custom Templates">
-                            {templates.filter(t => !SYSTEM_TEMPLATE_KEYS.has(t.key)).map(t => (
+                            {(templates || []).filter(t => t?.key && !SYSTEM_TEMPLATE_KEYS.has(t.key)).map(t => (
                               <option key={t.key} value={t.key}>
                                 {t.name}
                               </option>
@@ -2034,10 +2035,10 @@ export default function SettingsPage() {
 
                     {/* Active Template Quick Info & Action Bar */}
                     {(() => {
-                      const currentTpl = templates.find(t => t.key === selectedKey);
+                      const currentTpl = (templates || []).find(t => t?.key === selectedKey);
                       if (!currentTpl) return null;
-                      const Icon = TEMPLATE_ICONS[currentTpl.key] || Mail;
-                      const isSystem = SYSTEM_TEMPLATE_KEYS.has(currentTpl.key);
+                      const Icon = (currentTpl.key && TEMPLATE_ICONS[currentTpl.key]) || Mail;
+                      const isSystem = currentTpl.key ? SYSTEM_TEMPLATE_KEYS.has(currentTpl.key) : false;
 
                       return (
                         <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-50/80 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800/80">
