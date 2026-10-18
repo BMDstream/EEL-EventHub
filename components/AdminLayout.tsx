@@ -158,6 +158,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       return item.name !== "Team" && item.name !== "Security" && item.name !== "Clients";
     }
     return item.name === "Dashboard" || item.name === "Events";
+  }).map(item => {
+    if (userRole === "staff" && item.name === "Dashboard") {
+      return { ...item, name: "Today's Check-In" };
+    }
+    return item;
   });
 
   // Determine sidebar branding: use assigned client branding for non-admins

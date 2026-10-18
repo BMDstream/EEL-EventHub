@@ -41,7 +41,8 @@ import {
   Presentation,
   Save,
   Copy,
-  Camera
+  Camera,
+  KeyRound
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import AdminLayout from "@/components/AdminLayout";
@@ -1631,6 +1632,103 @@ export default function EventDetailsPage() {
     };
   };
 
+  const handleQuickPinCheckIn = async (pinValue?: string) => {
+    const targetPin = (pinValue || pin).trim();
+    if (!targetPin || (targetPin.length !== 4 && targetPin.length !== 6 && targetPin.length !== 8)) {
+      setPinStatus("error");
+      setPinMessage("Please enter a valid 4, 6, or 8 digit PIN.");
+      return;
+    }
+    setPinLoading(true);
+    setPinStatus("processing");
+    setPinMessage("Verifying PIN clearance...");
+    const targetDay = selectedScanDay === "auto" ? 1 : selectedScanDay;
+
+    try {
+      if (!isOnline) {
+        const localReg = await dbOffline.getLocalRegistration(targetPin, Number(id));
+        if (!localReg) {
+          setPinStatus("error");
+          setPinMessage(`PIN ${targetPin} not found in local offline cache.`);
+          setPinLoading(false);
+          return;
+        }
+        if (localReg.status === "declined") {
+          setPinStatus("error");
+          setPinMessage("Declined registrations cannot be checked in.");
+          setPinLoading(false);
+          return;
+        }
+        const checkedInDays = localReg.checked_in_days || [];
+        if (checkedInDays.includes(targetDay)) {
+          setPinStatus("warning");
+          setPinMessage(`${localReg.attendee?.first_name || 'Guest'} (${targetPin}) is ALREADY Checked In.`);
+          setPinLoading(false);
+          return;
+        }
+        const scanObj: dbOffline.OfflineScan = {
+          registration_id: localReg.id,
+          event_id: Number(id),
+          day: targetDay,
+          timestamp: new Date().toISOString(),
+          mode: "checkin",
+          synced: false
+        };
+        await dbOffline.addOfflineScan(scanObj);
+        await updateOfflineStats();
+        setPinStatus("success");
+        setPinMessage(`✓ Checked In: ${localReg.attendee?.first_name || 'Guest'} ${localReg.attendee?.last_name || ''} (PIN: ${targetPin})`);
+        setRegistrations(prev => prev.map(r => r.id === localReg.id ? { ...r, checked_in: true, checked_in_days: [...checkedInDays, targetDay] } : r));
+        setPin("");
+        setPinLoading(false);
+        return;
+      }
+
+      const payload: Record<string, any> = { pin: targetPin };
+      if (selectedScanDay !== "auto") {
+        payload.day = selectedScanDay;
+      }
+      const res = await fetch(`/api/py/events/${id}/checkin-by-pin`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-email": session?.user?.email || ""
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        const updated = await res.json();
+        setRegistrations(prev => prev.map(r => r.id === updated.id ? { ...r, checked_in: updated.checked_in, checked_in_days: updated.checked_in_days ?? [] } : r));
+        setPinStatus("success");
+        setPinMessage(`✓ Checked In: ${updated.attendee?.first_name || 'Guest'} ${updated.attendee?.last_name || ''} (PIN: ${targetPin})`);
+        setPin("");
+        dbOffline.initDb().then(async (db) => {
+          const tx = db.transaction(["registrations"], "readwrite");
+          tx.objectStore("registrations").put({
+            ...updated,
+            event_id: updated.event_id || Number(id)
+          });
+        }).catch(() => {});
+      } else {
+        const err = await res.json().catch(() => ({}));
+        const errMsg = err.detail || "Invalid PIN credential";
+        if (err.already_checked_in || errMsg.toLowerCase().includes("already checked in")) {
+          setPinStatus("warning");
+          setPinMessage(errMsg);
+        } else {
+          setPinStatus("error");
+          setPinMessage(errMsg);
+        }
+      }
+    } catch (err) {
+      setPinStatus("error");
+      setPinMessage("Network error verifying PIN.");
+    } finally {
+      setPinLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <AdminLayout>
@@ -1661,10 +1759,10 @@ export default function EventDetailsPage() {
     <AdminLayout>
       <div className={`max-w-7xl mx-auto font-outfit ${isPresentationOpen ? 'presentation-no-print print:hidden' : ''}`}>
         <Link 
-          href="/admin/events" 
-          className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] hover:text-[#0f172a] transition-colors mb-4 block"
+          href={userRole === "staff" ? "/admin" : "/admin/events"} 
+          className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] hover:text-[#0f172a] dark:hover:text-white transition-colors mb-4 block"
         >
-          ← Back to Catalog
+          {userRole === "staff" ? "← Back to Today's Events" : "← Back to Catalog"}
         </Link>
 
         {/* Event Header Card */}
@@ -1679,7 +1777,7 @@ export default function EventDetailsPage() {
                   </div>
                 )}
                 <span className="px-3 py-1 bg-yellow-400/10 text-yellow-600 dark:text-yellow-400 text-[10px] font-black uppercase tracking-[0.2em] rounded-lg border border-yellow-400/20">
-                  {event.client?.name || "Command Panel"}
+                  {event.client?.name || (userRole === "staff" ? "Staff Station" : "Command Panel")}
                 </span>
                 <span className="text-[10px] font-mono text-slate-300 dark:text-slate-600">ID: {id}</span>
                 {(() => {
@@ -1752,95 +1850,121 @@ export default function EventDetailsPage() {
               );
             })()}
 
-            {/* Row 3: 5 Key Performance Metrics (Full-Width Responsive Grid) */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5 sm:gap-4">
-              {/* Date Button */}
-              <button 
-                onClick={() => setSelectedMetric("date")}
-                className="flex flex-col justify-between gap-4 min-w-0 text-left bg-white dark:bg-[#0f172a]/40 border border-slate-100 dark:border-slate-800/80 p-5 rounded-[2rem] transition-all hover:bg-slate-50/50 dark:hover:bg-slate-800/20 hover:border-slate-200 dark:hover:border-slate-700 hover:shadow-sm active:scale-[0.98] w-full shadow-xs"
-              >
-                <div className="p-2.5 bg-slate-50 dark:bg-slate-800 text-[#0f172a] dark:text-white rounded-2xl shrink-0 self-start">
-                  <Calendar size={20} className="sm:w-[22px] sm:h-[22px]" />
+            {/* Row 3: 5 Key Performance Metrics (Admin/Manager) OR Live Check-in Progress Bar (Staff) */}
+            {userRole === "staff" ? (
+              <div className="bg-slate-50 dark:bg-slate-900/60 p-5 sm:p-6 rounded-2xl border border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="p-3.5 bg-emerald-500/10 text-emerald-500 rounded-2xl border border-emerald-500/20 shrink-0">
+                    <CheckCircle2 size={26} />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Live Check-in Status</p>
+                    <p className="text-xl sm:text-2xl font-black text-[#0f172a] dark:text-white font-bricolage">
+                      <span className="text-emerald-500">{checkedInCount}</span>
+                      <span className="text-slate-400 font-medium text-sm sm:text-base"> / {confirmedCount} Confirmed Attendees</span>
+                    </p>
+                  </div>
                 </div>
-                <div className="min-w-0">
-                  <p className="text-[10px] font-black text-slate-400 dark:text-slate-300 uppercase tracking-wider whitespace-nowrap">Date</p>
-                  <p className="font-bold text-[#0f172a] dark:text-slate-200 text-sm sm:text-base whitespace-nowrap mt-1">{new Date(event.start_date).toLocaleDateString(undefined, { dateStyle: 'medium' })}</p>
+                <div className="flex flex-wrap items-center gap-5 text-xs font-bold text-slate-500 dark:text-slate-400">
+                  <div className="flex items-center gap-2">
+                    <Calendar size={15} className="text-yellow-400" />
+                    <span>{new Date(event.start_date).toLocaleDateString(undefined, { dateStyle: 'medium' })}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <MapPin size={15} className="text-yellow-400" />
+                    <span className="truncate max-w-[220px]">{event.location}</span>
+                  </div>
                 </div>
-              </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5 sm:gap-4">
+                {/* Date Button */}
+                <button 
+                  onClick={() => setSelectedMetric("date")}
+                  className="flex flex-col justify-between gap-4 min-w-0 text-left bg-white dark:bg-[#0f172a]/40 border border-slate-100 dark:border-slate-800/80 p-5 rounded-[2rem] transition-all hover:bg-slate-50/50 dark:hover:bg-slate-800/20 hover:border-slate-200 dark:hover:border-slate-700 hover:shadow-sm active:scale-[0.98] w-full shadow-xs"
+                >
+                  <div className="p-2.5 bg-slate-50 dark:bg-slate-800 text-[#0f172a] dark:text-white rounded-2xl shrink-0 self-start">
+                    <Calendar size={20} className="sm:w-[22px] sm:h-[22px]" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-black text-slate-400 dark:text-slate-300 uppercase tracking-wider whitespace-nowrap">Date</p>
+                    <p className="font-bold text-[#0f172a] dark:text-slate-200 text-sm sm:text-base whitespace-nowrap mt-1">{new Date(event.start_date).toLocaleDateString(undefined, { dateStyle: 'medium' })}</p>
+                  </div>
+                </button>
 
-              {/* Venue Button */}
-              <button 
-                onClick={() => setSelectedMetric("venue")}
-                className="flex flex-col justify-between gap-4 min-w-0 text-left bg-white dark:bg-[#0f172a]/40 border border-slate-100 dark:border-slate-800/80 p-5 rounded-[2rem] transition-all hover:bg-slate-50/50 dark:hover:bg-slate-800/20 hover:border-slate-200 dark:hover:border-slate-700 hover:shadow-sm active:scale-[0.98] w-full shadow-xs"
-              >
-                <div className="p-2.5 bg-slate-50 dark:bg-slate-800 text-[#0f172a] dark:text-white rounded-2xl shrink-0 self-start">
-                  <MapPin size={20} className="sm:w-[22px] sm:h-[22px]" />
-                </div>
-                <div className="min-w-0 w-full">
-                  <p className="text-[10px] font-black text-slate-400 dark:text-slate-300 uppercase tracking-wider whitespace-nowrap">Venue</p>
-                  <p className="font-bold text-[#0f172a] dark:text-slate-200 text-sm sm:text-base line-clamp-2 break-words mt-1" title={event.location}>{event.location}</p>
-                  {event.address && (
-                    <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider truncate mt-0.5" title={event.address}>{event.address}</p>
-                  )}
-                </div>
-              </button>
-
-              {/* Enrollment Button */}
-              <button 
-                onClick={() => setSelectedMetric("enrollment")}
-                className="flex flex-col justify-between gap-4 min-w-0 text-left bg-white dark:bg-[#0f172a]/40 border border-slate-100 dark:border-slate-800/80 p-5 rounded-[2rem] transition-all hover:bg-slate-50/50 dark:hover:bg-slate-800/20 hover:border-slate-200 dark:hover:border-slate-700 hover:shadow-sm active:scale-[0.98] w-full shadow-xs"
-              >
-                <div className="p-2.5 bg-slate-50 dark:bg-slate-800 text-[#0f172a] dark:text-white rounded-2xl shrink-0 self-start">
-                  <Users size={20} className="sm:w-[22px] sm:h-[22px]" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-[10px] font-black text-slate-400 dark:text-slate-300 uppercase tracking-wider whitespace-nowrap">Enrollment</p>
-                  <p className="font-bold text-[#0f172a] dark:text-slate-200 text-sm sm:text-base whitespace-nowrap mt-1">{confirmedCount} / {event.capacity}</p>
-                </div>
-              </button>
-
-              {/* Declined Button */}
-              <button 
-                onClick={() => setSelectedMetric("declined")}
-                className="flex flex-col justify-between gap-4 min-w-0 text-left bg-white dark:bg-[#0f172a]/40 border border-slate-100 dark:border-slate-800/80 p-5 rounded-[2rem] transition-all hover:bg-slate-50/50 dark:hover:bg-slate-800/20 hover:border-slate-200 dark:hover:border-slate-700 hover:shadow-sm active:scale-[0.98] w-full shadow-xs"
-              >
-                <div className="p-2.5 bg-red-50 dark:bg-red-950/30 text-red-500 rounded-2xl shrink-0 self-start">
-                  <UserX size={20} className="sm:w-[22px] sm:h-[22px]" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-[10px] font-black text-slate-400 dark:text-slate-300 uppercase tracking-wider whitespace-nowrap">Declined</p>
-                  <p className="font-bold text-red-500 dark:text-red-400 text-sm sm:text-base whitespace-nowrap mt-1">{declinedCount}</p>
-                </div>
-              </button>
-
-              {/* Checked In Button */}
-              <button 
-                onClick={() => setSelectedMetric("checked_in")}
-                className="flex flex-col justify-between gap-4 min-w-0 text-left bg-white dark:bg-[#0f172a]/40 border border-slate-100 dark:border-slate-800/80 p-5 rounded-[2rem] transition-all hover:bg-slate-50/50 dark:hover:bg-slate-800/20 hover:border-slate-200 dark:hover:border-slate-700 hover:shadow-sm active:scale-[0.98] w-full col-span-2 sm:col-span-1 md:col-span-1 lg:col-span-1 shadow-xs"
-              >
-                <div className="p-2.5 bg-green-50 dark:bg-green-950/30 text-green-600 rounded-2xl shrink-0 self-start">
-                  <CheckCircle2 size={20} className="sm:w-[22px] sm:h-[22px]" />
-                </div>
-                <div className="min-w-0 w-full">
-                  <p className="text-[10px] font-black text-slate-400 dark:text-slate-300 uppercase tracking-wider whitespace-nowrap">Checked In</p>
-                  <div className="flex items-baseline gap-1.5 flex-wrap min-w-0 mt-1">
-                    <p className="font-bold text-green-600 dark:text-green-400 text-sm sm:text-base whitespace-nowrap">{checkedInCount}</p>
-                    {event.duration_days && event.duration_days > 1 && (
-                      <span className="text-[8px] text-slate-400 font-bold uppercase whitespace-nowrap">(Unique)</span>
+                {/* Venue Button */}
+                <button 
+                  onClick={() => setSelectedMetric("venue")}
+                  className="flex flex-col justify-between gap-4 min-w-0 text-left bg-white dark:bg-[#0f172a]/40 border border-slate-100 dark:border-slate-800/80 p-5 rounded-[2rem] transition-all hover:bg-slate-50/50 dark:hover:bg-slate-800/20 hover:border-slate-200 dark:hover:border-slate-700 hover:shadow-sm active:scale-[0.98] w-full shadow-xs"
+                >
+                  <div className="p-2.5 bg-slate-50 dark:bg-slate-800 text-[#0f172a] dark:text-white rounded-2xl shrink-0 self-start">
+                    <MapPin size={20} className="sm:w-[22px] sm:h-[22px]" />
+                  </div>
+                  <div className="min-w-0 w-full">
+                    <p className="text-[10px] font-black text-slate-400 dark:text-slate-300 uppercase tracking-wider whitespace-nowrap">Venue</p>
+                    <p className="font-bold text-[#0f172a] dark:text-slate-200 text-sm sm:text-base line-clamp-2 break-words mt-1" title={event.location}>{event.location}</p>
+                    {event.address && (
+                      <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider truncate mt-0.5" title={event.address}>{event.address}</p>
                     )}
                   </div>
-                  {event.duration_days && event.duration_days > 1 && (
-                    <div className="mt-1.5 flex flex-wrap gap-1">
-                      {Array.from({ length: event.duration_days }, (_, i) => i + 1).map(d => (
-                        <span key={d} className="px-1.5 py-0.5 bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-400 text-[8px] font-bold rounded border border-green-200/50 dark:border-green-900/50 shrink-0">
-                          Day {d}: {registrations.filter(r => r.checked_in_days?.includes(d)).length}
-                        </span>
-                      ))}
+                </button>
+
+                {/* Enrollment Button */}
+                <button 
+                  onClick={() => setSelectedMetric("enrollment")}
+                  className="flex flex-col justify-between gap-4 min-w-0 text-left bg-white dark:bg-[#0f172a]/40 border border-slate-100 dark:border-slate-800/80 p-5 rounded-[2rem] transition-all hover:bg-slate-50/50 dark:hover:bg-slate-800/20 hover:border-slate-200 dark:hover:border-slate-700 hover:shadow-sm active:scale-[0.98] w-full shadow-xs"
+                >
+                  <div className="p-2.5 bg-slate-50 dark:bg-slate-800 text-[#0f172a] dark:text-white rounded-2xl shrink-0 self-start">
+                    <Users size={20} className="sm:w-[22px] sm:h-[22px]" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-black text-slate-400 dark:text-slate-300 uppercase tracking-wider whitespace-nowrap">Enrollment</p>
+                    <p className="font-bold text-[#0f172a] dark:text-slate-200 text-sm sm:text-base whitespace-nowrap mt-1">{confirmedCount} / {event.capacity}</p>
+                  </div>
+                </button>
+
+                {/* Declined Button */}
+                <button 
+                  onClick={() => setSelectedMetric("declined")}
+                  className="flex flex-col justify-between gap-4 min-w-0 text-left bg-white dark:bg-[#0f172a]/40 border border-slate-100 dark:border-slate-800/80 p-5 rounded-[2rem] transition-all hover:bg-slate-50/50 dark:hover:bg-slate-800/20 hover:border-slate-200 dark:hover:border-slate-700 hover:shadow-sm active:scale-[0.98] w-full shadow-xs"
+                >
+                  <div className="p-2.5 bg-red-50 dark:bg-red-950/30 text-red-500 rounded-2xl shrink-0 self-start">
+                    <UserX size={20} className="sm:w-[22px] sm:h-[22px]" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-black text-slate-400 dark:text-slate-300 uppercase tracking-wider whitespace-nowrap">Declined</p>
+                    <p className="font-bold text-red-500 dark:text-red-400 text-sm sm:text-base whitespace-nowrap mt-1">{declinedCount}</p>
+                  </div>
+                </button>
+
+                {/* Checked In Button */}
+                <button 
+                  onClick={() => setSelectedMetric("checked_in")}
+                  className="flex flex-col justify-between gap-4 min-w-0 text-left bg-white dark:bg-[#0f172a]/40 border border-slate-100 dark:border-slate-800/80 p-5 rounded-[2rem] transition-all hover:bg-slate-50/50 dark:hover:bg-slate-800/20 hover:border-slate-200 dark:hover:border-slate-700 hover:shadow-sm active:scale-[0.98] w-full col-span-2 sm:col-span-1 md:col-span-1 lg:col-span-1 shadow-xs"
+                >
+                  <div className="p-2.5 bg-green-50 dark:bg-green-950/30 text-green-600 rounded-2xl shrink-0 self-start">
+                    <CheckCircle2 size={20} className="sm:w-[22px] sm:h-[22px]" />
+                  </div>
+                  <div className="min-w-0 w-full">
+                    <p className="text-[10px] font-black text-slate-400 dark:text-slate-300 uppercase tracking-wider whitespace-nowrap">Checked In</p>
+                    <div className="flex items-baseline gap-1.5 flex-wrap min-w-0 mt-1">
+                      <p className="font-bold text-green-600 dark:text-green-400 text-sm sm:text-base whitespace-nowrap">{checkedInCount}</p>
+                      {event.duration_days && event.duration_days > 1 && (
+                        <span className="text-[8px] text-slate-400 font-bold uppercase whitespace-nowrap">(Unique)</span>
+                      )}
                     </div>
-                  )}
-                </div>
-              </button>
-            </div>
+                    {event.duration_days && event.duration_days > 1 && (
+                      <div className="mt-1.5 flex flex-wrap gap-1">
+                        {Array.from({ length: event.duration_days }, (_, i) => i + 1).map(d => (
+                          <span key={d} className="px-1.5 py-0.5 bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-400 text-[8px] font-bold rounded border border-green-200/50 dark:border-green-900/50 shrink-0">
+                            Day {d}: {registrations.filter(r => r.checked_in_days?.includes(d)).length}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </button>
+            )}
 
             {/* Row 4: Action Command Bar (Enterprise Full-Width Grid) */}
             {(userRole === "admin" || userRole === "manager") && (
@@ -2023,64 +2147,54 @@ export default function EventDetailsPage() {
             )}
           </div>
           
-          {/* Tab Navigation */}
-          <div className="px-6 sm:px-10 flex border-t border-slate-50 dark:border-slate-800 bg-slate-50/20 overflow-x-auto whitespace-nowrap scrollbar-hide">
-            {userRole === "staff" ? (
+          {/* Tab Navigation (Hidden for Staff) */}
+          {userRole !== "staff" && (
+            <div className="px-6 sm:px-10 flex border-t border-slate-50 dark:border-slate-800 bg-slate-50/20 overflow-x-auto whitespace-nowrap scrollbar-hide">
               <button 
                 onClick={() => setActiveTab("registrants")}
-                className={`px-6 md:px-8 py-5 sm:py-6 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2 shrink-0 flex items-center gap-2 ${activeTab === "registrants" ? "border-yellow-400 text-[#0f172a] dark:text-white" : "border-transparent text-slate-400"}`}
+                className={`px-6 md:px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2 shrink-0 ${activeTab === "registrants" ? "border-yellow-400 text-[#0f172a] dark:text-white" : "border-transparent text-slate-400"}`}
               >
-                <CheckCircle2 size={14} className="text-emerald-500" />
-                Check-In (Scan & Search)
+                Registrants
               </button>
-            ) : (
-              <>
+              {(userRole === "admin" || userRole === "manager") && (
                 <button 
-                  onClick={() => setActiveTab("registrants")}
-                  className={`px-6 md:px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2 shrink-0 ${activeTab === "registrants" ? "border-yellow-400 text-[#0f172a] dark:text-white" : "border-transparent text-slate-400"}`}
+                  onClick={() => setActiveTab("form")}
+                  className={`px-6 md:px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2 shrink-0 ${activeTab === "form" ? "border-yellow-400 text-[#0f172a] dark:text-white" : "border-transparent text-slate-400"}`}
                 >
-                  Registrants
+                  Form Studio
                 </button>
-                {(userRole === "admin" || userRole === "manager") && (
-                  <button 
-                    onClick={() => setActiveTab("form")}
-                    className={`px-6 md:px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2 shrink-0 ${activeTab === "form" ? "border-yellow-400 text-[#0f172a] dark:text-white" : "border-transparent text-slate-400"}`}
-                  >
-                    Form Studio
-                  </button>
-                )}
+              )}
+              <button 
+                onClick={() => setActiveTab("scanner")}
+                className={`px-6 md:px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2 shrink-0 ${activeTab === "scanner" ? "border-yellow-400 text-[#0f172a] dark:text-white" : "border-transparent text-slate-400"}`}
+              >
+                Live Scanner
+              </button>
+              {(userRole === "admin" || userRole === "manager") && (
                 <button 
-                  onClick={() => setActiveTab("scanner")}
-                  className={`px-6 md:px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2 shrink-0 ${activeTab === "scanner" ? "border-yellow-400 text-[#0f172a] dark:text-white" : "border-transparent text-slate-400"}`}
+                  onClick={() => setActiveTab("communications")}
+                  className={`px-6 md:px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2 shrink-0 ${activeTab === "communications" ? "border-yellow-400 text-[#0f172a] dark:text-white" : "border-transparent text-slate-400"}`}
                 >
-                  Live Scanner
+                  Communications
                 </button>
-                {(userRole === "admin" || userRole === "manager") && (
-                  <button 
-                    onClick={() => setActiveTab("communications")}
-                    className={`px-6 md:px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2 shrink-0 ${activeTab === "communications" ? "border-yellow-400 text-[#0f172a] dark:text-white" : "border-transparent text-slate-400"}`}
-                  >
-                    Communications
-                  </button>
-                )}
-                {(userRole === "admin" || userRole === "manager") && (
-                  <button 
-                    onClick={() => setActiveTab("staff")}
-                    className={`px-6 md:px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2 shrink-0 ${activeTab === "staff" ? "border-yellow-400 text-[#0f172a] dark:text-white" : "border-transparent text-slate-400"}`}
-                  >
-                    Staff Assignment
-                  </button>
-                )}
-              </>
-            )}
-          </div>
+              )}
+              {(userRole === "admin" || userRole === "manager") && (
+                <button 
+                  onClick={() => setActiveTab("staff")}
+                  className={`px-6 md:px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2 shrink-0 ${activeTab === "staff" ? "border-yellow-400 text-[#0f172a] dark:text-white" : "border-transparent text-slate-400"}`}
+                >
+                  Staff Assignment
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         {activeTab === "registrants" ? (
           <div className="space-y-6">
             <div className="bg-white dark:bg-[#0d1527] rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-800/80 p-6 sm:p-8 flex flex-col gap-6">
               
-              {/* Unified Mobile/Staff Camera QR Scanner Bar */}
+              {/* Live Camera QR Scanner Modal/Drop */}
               {isEmbeddedScannerOpen && (
                 <div className="bg-slate-900 text-white p-6 sm:p-8 rounded-[2rem] border border-slate-800 shadow-xl space-y-4 animate-in fade-in duration-300">
                   <div className="flex items-center justify-between pb-3 border-b border-slate-800">
@@ -2095,7 +2209,7 @@ export default function EventDetailsPage() {
                     </div>
                     <button
                       onClick={() => setIsEmbeddedScannerOpen(false)}
-                      className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all"
+                      className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer"
                     >
                       Close Camera
                     </button>
@@ -2123,74 +2237,137 @@ export default function EventDetailsPage() {
                 </div>
               )}
 
-              {/* Row 1: Search, Camera Toggle, and Check-in Tabs */}
-              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 sm:gap-6">
-                 <div className="flex items-center gap-2.5 flex-1 max-w-lg">
-                   <div className="relative flex-1">
-                     <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 dark:text-slate-500" size={18} />
-                     <input 
-                       type="text" 
-                       placeholder="Search by name, email, company, or PIN..." 
-                       value={searchTerm}
-                       onChange={(e) => setSearchTerm(e.target.value)}
-                       className="w-full pl-13 pr-6 py-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-xs sm:text-sm text-[#0f172a] dark:text-white placeholder-slate-400 dark:placeholder-slate-500 transition-all"
-                     />
-                   </div>
-                   <button
-                     onClick={() => setIsEmbeddedScannerOpen(!isEmbeddedScannerOpen)}
-                     className={`px-4 sm:px-5 py-4 rounded-2xl font-black uppercase text-[10px] tracking-wider flex items-center gap-2 transition-all shrink-0 ${
-                       isEmbeddedScannerOpen
-                         ? "bg-red-500 hover:bg-red-600 text-white shadow-md shadow-red-500/20"
-                         : "bg-yellow-400 hover:bg-yellow-500 text-black shadow-md shadow-yellow-400/20"
-                     }`}
-                     title="Toggle Live Camera QR Scanner"
-                   >
-                     <Camera size={16} />
-                     <span className="hidden sm:inline">{isEmbeddedScannerOpen ? "Close Camera" : "Scan QR"}</span>
-                   </button>
-                 </div>
-                 <div className="flex flex-wrap items-center gap-4">
-                   <div className="flex bg-slate-100/85 dark:bg-slate-900/50 p-1.5 rounded-2xl border border-slate-100 dark:border-slate-800/60 flex-wrap items-center gap-1">
-                     <button
-                       onClick={() => setCheckInFilter("all")}
-                       className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${checkInFilter === "all" ? "bg-[#0f172a] dark:bg-yellow-400 text-white dark:text-black shadow-sm" : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"}`}
-                     >
-                       All ({registrations.length})
-                     </button>
-                     <button
-                       onClick={() => setCheckInFilter("checked_in")}
-                       className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${checkInFilter === "checked_in" ? "bg-emerald-500 text-white shadow-sm" : "text-slate-400 dark:text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400"}`}
-                     >
-                       Checked In ({registrations.filter(r => r.checked_in).length})
-                     </button>
-                     <button
-                       onClick={() => setCheckInFilter("not_checked_in")}
-                       className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${checkInFilter === "not_checked_in" ? "bg-slate-900 dark:bg-slate-800 text-white shadow-sm" : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"}`}
-                     >
-                       Not Checked In ({registrations.filter(r => !r.checked_in).length})
-                     </button>
-                   </div>
-                   <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
-                      <button 
-                        onClick={fetchRegistrations}
-                        disabled={refreshing}
-                        className="px-5 py-4 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-2xl transition-all text-[#0f172a] dark:text-slate-300 disabled:text-slate-400 flex items-center justify-center border border-slate-100 dark:border-slate-700 hover:border-slate-200 dark:hover:border-slate-600"
-                        title="Refresh List"
-                      >
-                         <RefreshCw size={18} className={refreshing ? "animate-spin" : ""} />
-                      </button>
-                      <div className="flex items-center gap-4 px-6 py-4 bg-slate-50 dark:bg-[#121b2e] rounded-2xl">
-                         <span className="text-[10px] font-black text-slate-300 dark:text-slate-500 uppercase tracking-widest">Showing:</span>
-                         <span className="text-xs font-black text-[#0f172a] dark:text-slate-200">{filteredRegistrations.length} Registrants</span>
-                      </div>
-                   </div>
-                 </div>
+              {/* PRIMARY CHECK-IN ACTION CENTER (STANDOUT QR BUTTON & QUICK PIN CHECK-IN) */}
+              <div className="p-5 sm:p-6 rounded-[2rem] bg-gradient-to-r from-slate-900 via-slate-900 to-slate-950 border border-slate-800 shadow-xl space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+                  {/* Standout Scan QR Action */}
+                  <button
+                    onClick={() => setIsEmbeddedScannerOpen(!isEmbeddedScannerOpen)}
+                    className={`w-full py-4 px-6 rounded-2xl font-black text-xs sm:text-sm uppercase tracking-wider flex items-center justify-center gap-3 shadow-lg transition-all cursor-pointer ${
+                      isEmbeddedScannerOpen
+                        ? "bg-rose-500 hover:bg-rose-600 text-white shadow-rose-500/30 ring-4 ring-rose-500/20"
+                        : "bg-yellow-400 hover:bg-yellow-300 text-slate-950 shadow-yellow-400/25 ring-4 ring-yellow-400/20 hover:scale-[1.01] active:scale-[0.99]"
+                    }`}
+                  >
+                    <Camera size={22} className={isEmbeddedScannerOpen ? "animate-spin" : ""} />
+                    <span>{isEmbeddedScannerOpen ? "Close Camera Scanner" : "📷 Scan Attendee QR Code"}</span>
+                  </button>
+
+                  {/* Dedicated Quick PIN Check-In */}
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      handleQuickPinCheckIn();
+                    }}
+                    className="flex items-center gap-2 bg-slate-800/90 border border-slate-700/80 rounded-2xl p-1.5 focus-within:ring-4 focus-within:ring-emerald-400/20 transition-all"
+                  >
+                    <div className="flex items-center gap-2 pl-3 text-slate-400 shrink-0">
+                      <KeyRound size={18} className="text-emerald-400" />
+                      <span className="text-[10px] font-black uppercase tracking-wider hidden sm:inline text-slate-300">PIN:</span>
+                    </div>
+                    <input
+                      type="text"
+                      maxLength={8}
+                      placeholder="Enter 4-6 digit PIN..."
+                      value={pin}
+                      onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
+                      className="flex-1 min-w-0 bg-transparent border-none text-white font-mono font-bold text-sm outline-none px-2 placeholder-slate-500 tracking-wider"
+                    />
+                    <button
+                      type="submit"
+                      disabled={pin.length < 4 || pinLoading}
+                      className="px-5 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:opacity-40 disabled:hover:bg-emerald-500 text-slate-950 font-black text-xs uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer shrink-0 shadow-md"
+                    >
+                      {pinLoading ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
+                      <span>Check In</span>
+                    </button>
+                  </form>
+                </div>
+
+                {/* Instant PIN Status Feedback Banner */}
+                {pinStatus !== "idle" && (
+                  <div className={`p-3.5 rounded-xl border flex items-center justify-between text-xs font-bold transition-all ${
+                    pinStatus === "success" ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400" :
+                    pinStatus === "warning" ? "bg-amber-500/10 border-amber-500/30 text-amber-400" :
+                    "bg-rose-500/10 border-rose-500/30 text-rose-400"
+                  }`}>
+                    <div className="flex items-center gap-2.5">
+                      {pinStatus === "success" && <CheckCircle2 size={18} className="text-emerald-400 shrink-0" />}
+                      {pinStatus === "warning" && <AlertCircle size={18} className="text-amber-400 shrink-0" />}
+                      {pinStatus === "error" && <XCircle size={18} className="text-rose-400 shrink-0" />}
+                      <span>{pinMessage}</span>
+                    </div>
+                    <button 
+                      type="button" 
+                      onClick={() => { setPinStatus("idle"); setPinMessage(""); }}
+                      className="text-slate-400 hover:text-white text-[10px] uppercase font-black cursor-pointer"
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                )}
               </div>
-              
-              {/* Row 2: Advanced Filtering and Sorting */}
-              <div className="flex flex-col sm:flex-row sm:items-center gap-6 border-t border-slate-50 dark:border-slate-800/80 pt-6">
-                 {/* Company Filter Dropdown */}
-                 <div className="flex flex-col gap-1.5 flex-1 min-w-[200px]">
+
+              {/* Row 1: Search and Check-in Triage Filters */}
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 sm:gap-6">
+                <div className="relative flex-1 max-w-lg">
+                  <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 dark:text-slate-500" size={18} />
+                  <input 
+                    type="text" 
+                    placeholder="Search attendee by name, email, or PIN..." 
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && /^\d{4,8}$/.test(searchTerm.trim())) {
+                        handleQuickPinCheckIn(searchTerm.trim());
+                      }
+                    }}
+                    className="w-full pl-14 pr-6 py-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border-none focus:ring-4 focus:ring-yellow-400/20 outline-none font-bold text-xs sm:text-sm text-[#0f172a] dark:text-white placeholder-slate-400 dark:placeholder-slate-500 transition-all"
+                  />
+                </div>
+                <div className="flex flex-wrap items-center gap-4">
+                  <div className="flex bg-slate-100/85 dark:bg-slate-900/50 p-1.5 rounded-2xl border border-slate-100 dark:border-slate-800/60 flex-wrap items-center gap-1">
+                    <button
+                      onClick={() => setCheckInFilter("all")}
+                      className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${checkInFilter === "all" ? "bg-[#0f172a] dark:bg-yellow-400 text-white dark:text-black shadow-sm" : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"}`}
+                    >
+                      All ({registrations.length})
+                    </button>
+                    <button
+                      onClick={() => setCheckInFilter("checked_in")}
+                      className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${checkInFilter === "checked_in" ? "bg-emerald-500 text-white shadow-sm" : "text-slate-400 dark:text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400"}`}
+                    >
+                      Checked In ({registrations.filter(r => r.checked_in).length})
+                    </button>
+                    <button
+                      onClick={() => setCheckInFilter("not_checked_in")}
+                      className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${checkInFilter === "not_checked_in" ? "bg-slate-900 dark:bg-slate-800 text-white shadow-sm" : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"}`}
+                    >
+                      Not Checked In ({registrations.filter(r => !r.checked_in).length})
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button 
+                      onClick={fetchRegistrations}
+                      disabled={refreshing}
+                      className="p-3.5 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-2xl transition-all text-[#0f172a] dark:text-slate-300 disabled:text-slate-400 flex items-center justify-center border border-slate-100 dark:border-slate-700"
+                      title="Refresh List"
+                    >
+                      <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} />
+                    </button>
+                    <div className="flex items-center gap-2 px-4 py-3.5 bg-slate-50 dark:bg-[#121b2e] rounded-2xl">
+                      <span className="text-[10px] font-black text-slate-300 dark:text-slate-500 uppercase tracking-widest">Showing:</span>
+                      <span className="text-xs font-black text-[#0f172a] dark:text-slate-200">{filteredRegistrations.length}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Row 2: Advanced Filtering and Sorting (Only for Admins & Managers) */}
+              {userRole !== "staff" && (
+                <div className="flex flex-col sm:flex-row sm:items-center gap-6 border-t border-slate-50 dark:border-slate-800/80 pt-6">
+                  {/* Company Filter Dropdown */}
+                  <div className="flex flex-col gap-1.5 flex-1 min-w-[200px]">
                     <label className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">Filter by Company</label>
                     <select
                       value={companyFilter}
@@ -2202,10 +2379,10 @@ export default function EventDetailsPage() {
                         <option key={c} value={c}>{c}</option>
                       ))}
                     </select>
-                 </div>
+                  </div>
 
-                 {/* Date Filter Dropdown */}
-                 <div className="flex flex-col gap-1.5 flex-1 min-w-[200px]">
+                  {/* Date Filter Dropdown */}
+                  <div className="flex flex-col gap-1.5 flex-1 min-w-[200px]">
                     <label className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">Filter by Reg Date</label>
                     <select
                       value={dateFilter}
@@ -2218,10 +2395,10 @@ export default function EventDetailsPage() {
                         return <option key={d} value={d}>{formattedDate}</option>;
                       })}
                     </select>
-                 </div>
+                  </div>
 
-                 {/* Sort By Dropdown */}
-                 <div className="flex flex-col gap-1.5 min-w-[180px]">
+                  {/* Sort By Dropdown */}
+                  <div className="flex flex-col gap-1.5 min-w-[180px]">
                     <label className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">Sort by</label>
                     <select
                       value={sortBy}
@@ -2231,10 +2408,10 @@ export default function EventDetailsPage() {
                       <option value="registration_date">Registration Date</option>
                       <option value="alphabetical">Alphabetical Order</option>
                     </select>
-                 </div>
+                  </div>
 
-                 {/* Sort Order Toggle Button */}
-                 <div className="flex flex-col gap-1.5">
+                  {/* Sort Order Toggle Button */}
+                  <div className="flex flex-col gap-1.5">
                     <label className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">Order</label>
                     <button
                       onClick={() => setSortOrder(prev => prev === "asc" ? "desc" : "asc")}
@@ -2243,8 +2420,9 @@ export default function EventDetailsPage() {
                       {sortOrder === "asc" ? <ArrowUpAZ size={16} /> : <ArrowDownAZ size={16} />}
                       {sortOrder === "asc" ? "Asc" : "Desc"}
                     </button>
-                 </div>
-              </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="bg-white dark:bg-[#0d1527] rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-800/80 overflow-hidden">
@@ -2419,15 +2597,22 @@ export default function EventDetailsPage() {
                                   console.error(err);
                                 }
                               }}
-                              className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${
+                              className={`px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5 cursor-pointer ${
                                 reg.status === "declined"
                                   ? "bg-slate-100 dark:bg-slate-800 text-slate-300 dark:text-slate-600 cursor-not-allowed opacity-55"
                                   : reg.checked_in 
-                                    ? "bg-green-500 text-white shadow-lg shadow-green-500/20" 
-                                    : "bg-slate-50 dark:bg-slate-800 text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700"
+                                    ? "bg-emerald-600/90 text-white shadow-sm" 
+                                    : "bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white shadow-md shadow-emerald-500/20 hover:shadow-emerald-500/30"
                               }`}
                             >
-                              {reg.checked_in ? "Checked In" : "Check In"}
+                              {reg.checked_in ? (
+                                <>
+                                  <CheckCircle2 size={13} />
+                                  <span>Checked In</span>
+                                </>
+                              ) : (
+                                <span>Check In</span>
+                              )}
                             </button>
                           )}
                           <button
@@ -2574,15 +2759,22 @@ export default function EventDetailsPage() {
                                   console.error(err);
                                 }
                               }}
-                              className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                              className={`flex-1 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                                 reg.status === "declined"
                                   ? "bg-slate-100 dark:bg-slate-800 text-slate-300 dark:text-slate-600 cursor-not-allowed opacity-55"
                                   : reg.checked_in 
-                                    ? "bg-green-500 text-white shadow-sm shadow-green-500/20" 
-                                    : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
+                                    ? "bg-emerald-600/90 text-white shadow-sm" 
+                                    : "bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white shadow-md shadow-emerald-500/20"
                               }`}
                             >
-                              {reg.checked_in ? "Checked In" : "Check In"}
+                              {reg.checked_in ? (
+                                <>
+                                  <CheckCircle2 size={13} />
+                                  <span>Checked In</span>
+                                </>
+                              ) : (
+                                <span>Check In</span>
+                              )}
                             </button>
                           )}
                         </div>

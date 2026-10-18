@@ -182,6 +182,108 @@ export default function AdminDashboard() {
     show: { opacity: 1, y: 0 }
   };
 
+  if (userRole === "staff") {
+    const isToday = (dateStr: string) => {
+      if (!dateStr) return false;
+      const d = new Date(dateStr);
+      const now = new Date();
+      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+    };
+
+    const todayEvents = events.filter(e => isToday(e.start_date));
+    const activeStaffEvents = todayEvents.length > 0 ? todayEvents : events;
+
+    return (
+      <AdminLayout>
+        <div className="max-w-5xl mx-auto space-y-8">
+          {/* Staff Station Header */}
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="text-[10px] font-black uppercase tracking-[0.25em] text-emerald-500">Staff Check-In Station</span>
+            </div>
+            <h1 className="text-3xl md:text-5xl font-black text-[#0f172a] dark:text-white tracking-tighter font-bricolage italic uppercase">
+              Today&apos;s <span className="text-slate-300 dark:text-slate-600">Events</span>
+            </h1>
+            <p className="text-slate-500 font-medium text-sm md:text-base dark:text-slate-400 mt-1">
+              Select your assigned event to launch attendee check-in and QR scanning.
+            </p>
+          </div>
+
+          {/* Event Cards */}
+          {loading ? (
+            <div className="p-20 flex items-center justify-center">
+              <Loader2 className="animate-spin text-yellow-400" size={40} />
+            </div>
+          ) : activeStaffEvents.length === 0 ? (
+            <div className="p-16 rounded-[2.5rem] bg-white dark:bg-[#0d1527] border border-slate-100 dark:border-slate-800 text-center space-y-3">
+              <Calendar size={48} className="mx-auto text-slate-300 dark:text-slate-700" />
+              <h3 className="text-xl font-black text-slate-800 dark:text-white font-bricolage">No Events Assigned For Today</h3>
+              <p className="text-xs text-slate-400 max-w-md mx-auto">
+                You do not have any active check-in events scheduled today. Please contact your event administrator if you believe this is an error.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {activeStaffEvents.map((event) => {
+                const happeningToday = isToday(event.start_date);
+                return (
+                  <div
+                    key={event.id}
+                    className="p-7 rounded-[2.2rem] bg-white dark:bg-[#0d1527] border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col justify-between gap-6 transition-all hover:border-yellow-400/50 hover:shadow-xl"
+                  >
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between gap-2">
+                        {happeningToday ? (
+                          <span className="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest bg-emerald-500/10 text-emerald-500 border border-emerald-500/30 flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                            Happening Today
+                          </span>
+                        ) : (
+                          <span className="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest bg-slate-100 dark:bg-slate-800 text-slate-400 border border-slate-200 dark:border-slate-700">
+                            Upcoming Event
+                          </span>
+                        )}
+                        {event.client?.name && (
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                            {event.client.name}
+                          </span>
+                        )}
+                      </div>
+
+                      <h2 className="text-2xl font-black text-[#0f172a] dark:text-white font-bricolage tracking-tight">
+                        {cleanHtmlText(event.title || "")}
+                      </h2>
+
+                      <div className="space-y-2 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                        <div className="flex items-center gap-2.5">
+                          <Calendar size={14} className="text-yellow-400 shrink-0" />
+                          <span>{new Date(event.start_date).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}</span>
+                        </div>
+                        <div className="flex items-center gap-2.5">
+                          <MapPin size={14} className="text-yellow-400 shrink-0" />
+                          <span className="truncate">{event.location}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <Link
+                      href={`/admin/events/${event.id}`}
+                      className="w-full py-4 px-6 rounded-2xl bg-yellow-400 hover:bg-yellow-300 text-slate-950 font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2.5 shadow-lg shadow-yellow-400/20 hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer"
+                    >
+                      <span>Open Event Check-In</span>
+                      <ArrowUpRight size={16} />
+                    </Link>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </AdminLayout>
+    );
+  }
+
   return (
     <AdminLayout>
       <div className="max-w-7xl mx-auto">
