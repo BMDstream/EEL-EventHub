@@ -39,7 +39,8 @@ import {
   Layers,
   Info,
   Presentation,
-  Save
+  Save,
+  Copy
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import AdminLayout from "@/components/AdminLayout";
@@ -1756,16 +1757,41 @@ export default function EventDetailsPage() {
                     </div>
                   </button>
                 </div>
+
+                {/* Event Capacity & Operations Meter */}
+                <div className="mt-8 bg-slate-50/70 dark:bg-slate-900/50 p-5 rounded-[1.5rem] border border-slate-100 dark:border-slate-800/80">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-3">
+                    <div className="flex items-center gap-2.5">
+                      <span className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 dark:text-slate-500">
+                        Registration &amp; Capacity
+                      </span>
+                      <span className="text-[10px] font-bold text-amber-600 dark:text-yellow-400 bg-amber-50 dark:bg-yellow-400/10 px-2 py-0.5 rounded-md border border-amber-200/60 dark:border-yellow-400/20">
+                        {Math.round((confirmedCount / Math.max(1, event.capacity)) * 100)}% Filled
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-4 text-[10px] font-bold text-slate-500 dark:text-slate-400">
+                      <span>Available: <strong className="text-[#0f172a] dark:text-white font-black">{Math.max(0, event.capacity - confirmedCount)}</strong></span>
+                      <span>Checked-in: <strong className="text-green-600 dark:text-green-400 font-black">{checkedInCount} ({confirmedCount > 0 ? Math.round((checkedInCount / confirmedCount) * 100) : 0}%)</strong></span>
+                    </div>
+                  </div>
+                  <div className="w-full h-3 bg-slate-200/70 dark:bg-slate-800 rounded-full overflow-hidden flex">
+                    <div 
+                      className="h-full bg-gradient-to-r from-yellow-400 to-amber-500 transition-all duration-500 rounded-full" 
+                      style={{ width: `${Math.min(100, Math.round((confirmedCount / Math.max(1, event.capacity)) * 100))}%` }}
+                    />
+                  </div>
+                </div>
               </div>
+
               {(userRole === "admin" || userRole === "manager") && (
-                <div className="flex flex-col gap-4 w-full md:w-auto">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 w-full lg:w-[480px] shrink-0">
                   <button
                     onClick={exportToExcel}
                     disabled={registrations.length === 0}
-                    className="flex items-center justify-center gap-3 bg-[#0f172a] hover:bg-black disabled:bg-slate-200 dark:bg-yellow-400 dark:hover:bg-yellow-500 dark:text-[#0f172a] dark:disabled:bg-slate-800 dark:disabled:text-slate-500 text-white px-8 py-5 rounded-2xl font-black transition-all shadow-2xl shadow-slate-200 dark:shadow-none uppercase tracking-widest text-xs"
+                    className="flex items-center justify-center gap-2.5 bg-[#0f172a] hover:bg-black disabled:bg-slate-200 dark:bg-yellow-400 dark:hover:bg-yellow-500 dark:text-[#0f172a] dark:disabled:bg-slate-800 dark:disabled:text-slate-500 text-white px-4 py-3.5 rounded-xl font-black transition-all shadow-md shadow-slate-200 dark:shadow-none uppercase tracking-widest text-[11px]"
                   >
-                    <Download size={20} />
-                    Export to Excel
+                    <Download size={16} />
+                    Export Excel
                   </button>
                   <button
                     onClick={async () => {
@@ -1790,10 +1816,10 @@ export default function EventDetailsPage() {
                       }
                     }}
                     disabled={registrations.length === 0}
-                    className="flex items-center justify-center gap-3 bg-[#eab308] hover:bg-[#ca8a04] disabled:bg-slate-200 dark:disabled:bg-slate-800 dark:disabled:text-slate-500 text-[#0f172a] px-8 py-5 rounded-2xl font-black transition-all shadow-2xl shadow-yellow-500/10 dark:shadow-none uppercase tracking-widest text-xs"
+                    className="flex items-center justify-center gap-2.5 bg-[#eab308] hover:bg-[#ca8a04] disabled:bg-slate-200 dark:disabled:bg-slate-800 dark:disabled:text-slate-500 text-[#0f172a] px-4 py-3.5 rounded-xl font-black transition-all shadow-md shadow-yellow-500/10 dark:shadow-none uppercase tracking-widest text-[11px]"
                   >
-                    <Download size={20} />
-                    Download QR Codes (ZIP)
+                    <Download size={16} />
+                    QR Codes (ZIP)
                   </button>
                   {(() => {
                     const cleanSlug = (event.slug || "").replace(/&nbsp;/g, " ").replace(/\u00a0/g, " ").trim() || String(event.id);
@@ -1806,19 +1832,19 @@ export default function EventDetailsPage() {
                             navigator.clipboard.writeText(url);
                             alert("Client dashboard link copied to clipboard!");
                           }}
-                          className="flex-1 flex items-center justify-center gap-3 bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-[#0f172a] dark:text-slate-200 px-6 py-5 rounded-2xl font-black transition-all border border-slate-200 dark:border-slate-700 uppercase tracking-widest text-xs"
+                          className="flex-1 flex items-center justify-center gap-2 bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-[#0f172a] dark:text-slate-200 px-3 py-3.5 rounded-xl font-black transition-all border border-slate-200 dark:border-slate-700 uppercase tracking-widest text-[10px]"
                         >
-                          <Eye size={20} />
-                          Share Client Link
+                          <Eye size={16} />
+                          Share Link
                         </button>
                         <a
                           href={clientViewPath}
                           target="_blank"
                           rel="noopener noreferrer"
                           title="Open Client Dashboard in new tab"
-                          className="flex items-center justify-center px-4 bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-400 hover:text-[#0f172a] dark:hover:text-white rounded-2xl border border-slate-200 dark:border-slate-700 transition-all"
+                          className="flex items-center justify-center px-3 bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-400 hover:text-[#0f172a] dark:hover:text-white rounded-xl border border-slate-200 dark:border-slate-700 transition-all"
                         >
-                          <ArrowUpRight size={18} />
+                          <ArrowUpRight size={15} />
                         </a>
                       </div>
                     );
@@ -1828,16 +1854,16 @@ export default function EventDetailsPage() {
                       setCurrentSlide(0);
                       setIsPresentationOpen(true);
                     }}
-                    className="flex items-center justify-center gap-3 bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-600 hover:to-yellow-500 text-slate-950 px-8 py-5 rounded-2xl font-black transition-all shadow-xl shadow-yellow-500/20 uppercase tracking-widest text-xs"
+                    className="flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-600 hover:to-yellow-500 text-slate-950 px-4 py-3.5 rounded-xl font-black transition-all shadow-md shadow-yellow-500/20 uppercase tracking-widest text-[11px]"
                   >
-                    <Presentation size={20} />
-                    Post-Event Presentation
+                    <Presentation size={16} />
+                    Presentation
                   </button>
                   <Link
                     href={`/admin/events/${id}/badges`}
-                    className="flex items-center justify-center gap-3 bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-[#0f172a] dark:text-slate-200 px-8 py-5 rounded-2xl font-black transition-all border border-slate-200 dark:border-slate-700 uppercase tracking-widest text-xs text-center"
+                    className="flex items-center justify-center gap-2 bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-[#0f172a] dark:text-slate-200 px-4 py-3.5 rounded-xl font-black transition-all border border-slate-200 dark:border-slate-700 uppercase tracking-widest text-[11px] text-center"
                   >
-                    <Printer size={20} />
+                    <Printer size={16} />
                     Print Badges
                   </Link>
                   <button
@@ -1865,16 +1891,17 @@ export default function EventDetailsPage() {
                         }
                       }
                     }}
-                    className="flex items-center justify-center gap-3 bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-[#0f172a] dark:text-slate-200 px-8 py-5 rounded-2xl font-black transition-all border border-slate-200 dark:border-slate-700 uppercase tracking-widest text-xs"
+                    className="flex items-center justify-center gap-2 bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-[#0f172a] dark:text-slate-200 px-4 py-3.5 rounded-xl font-black transition-all border border-slate-200 dark:border-slate-700 uppercase tracking-widest text-[11px]"
                   >
-                    <Mail size={20} />
+                    <Mail size={16} />
                     Send Reminders
                   </button>
                   <Link
                     href={`/admin/events/${id}/edit`}
-                    className="flex items-center justify-center gap-3 bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-[#0f172a] dark:text-slate-200 px-8 py-5 rounded-2xl font-black transition-all border border-slate-200 dark:border-slate-700 uppercase tracking-widest text-xs text-center"
+                    className="flex items-center justify-center gap-2 bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-[#0f172a] dark:text-slate-200 px-4 py-3.5 rounded-xl font-black transition-all border border-slate-200 dark:border-slate-700 uppercase tracking-widest text-[11px] text-center"
                   >
-                    Edit Configuration
+                    <Settings size={16} />
+                    Edit Config
                   </Link>
                   {(userRole === "admin" || userRole === "manager") && (
                     <button
@@ -1898,9 +1925,10 @@ export default function EventDetailsPage() {
                           }
                         }
                       }}
-                      className="flex items-center justify-center gap-3 bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-[#0f172a] dark:text-slate-200 px-8 py-5 rounded-2xl font-black transition-all border border-slate-200 dark:border-slate-700 uppercase tracking-widest text-xs"
+                      className="flex items-center justify-center gap-2 bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-[#0f172a] dark:text-slate-200 px-4 py-3.5 rounded-xl font-black transition-all border border-slate-200 dark:border-slate-700 uppercase tracking-widest text-[11px]"
                     >
-                      Duplicate Event
+                      <Copy size={16} />
+                      Duplicate
                     </button>
                   )}
                   {userRole === "admin" && (
@@ -1926,7 +1954,7 @@ export default function EventDetailsPage() {
                           alert("Error sending test email");
                         }
                       }}
-                      className="flex items-center justify-center gap-3 bg-slate-50 hover:bg-slate-100 text-[#0f172a] px-8 py-5 rounded-2xl font-black transition-all border border-slate-100 uppercase tracking-widest text-xs"
+                      className="col-span-1 sm:col-span-2 flex items-center justify-center gap-2 bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 px-4 py-3 rounded-xl font-black transition-all border border-slate-200/80 dark:border-slate-700 uppercase tracking-widest text-[10px]"
                     >
                       Test Email Service
                     </button>

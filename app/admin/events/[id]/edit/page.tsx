@@ -7,7 +7,7 @@ import {
   ArrowLeft, Save, Loader2, Trash2, Building2, Lock, Mail,
   Type, Eye, ExternalLink, CheckCircle2, AlertCircle, Sparkles,
   Calendar, Award, Layers, ChevronDown, AlignLeft, AlignCenter, AlignRight, MapPin,
-  Palette, ShieldCheck
+  Palette, ShieldCheck, Monitor, Smartphone, X
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import AdminLayout from "@/components/AdminLayout";
@@ -449,6 +449,8 @@ export default function EditEventPage() {
   const previewFrameRef = useRef<HTMLIFrameElement>(null);
   const declinePreviewFrameRef = useRef<HTMLIFrameElement>(null);
   const [regTemplates, setRegTemplates] = useState<any[]>([]);
+  const [previewDevice, setPreviewDevice] = useState<"desktop" | "mobile">("desktop");
+  const [showPreviewModal, setShowPreviewModal] = useState<boolean>(false);
 
   const [formData, setFormData] = useState({
     title: "",
@@ -904,12 +906,383 @@ export default function EditEventPage() {
         : templates.find((t) => t.key === formData.decline_template_key));
   const activeDeclineTemplateName = activeDeclineTemplate ? activeDeclineTemplate.name : (formData.decline_template_key === "global" ? "Global Decline Default" : formData.decline_template_key);
 
+  const renderLivePreviewCard = () => {
+    const selectedClientObj = clients.find((c: any) => c.id?.toString() === formData.client_id?.toString());
+    const activeTheme = formData.banner_theme || "cyber_dark";
+    const isLight = activeTheme === "minimal_light" || activeTheme === "brutalist_retro" || activeTheme === "corporate_mono" || activeTheme === "nordic_alabaster" || activeTheme === "champagne_lounge";
+    const themeDefaults = THEME_DEFAULTS[activeTheme as keyof typeof THEME_DEFAULTS] || THEME_DEFAULTS.cyber_dark;
+    const effectivePrimaryColor = formData.banner_primary_color || selectedClientObj?.primary_color || themeDefaults.primary;
+    const effectiveAccentColor = formData.banner_accent_color || selectedClientObj?.accent_color || themeDefaults.accent;
+    const effectiveTextColor = formData.banner_text_color || (isLight ? "#0f172a" : "#ffffff");
+    const effectiveInputBg = formData.banner_input_bg_color || (isLight ? "#ffffff" : "rgba(255,255,255,0.06)");
+    const effectiveMetaIconColor = formData.meta_icon_color || effectiveAccentColor;
+    const effectiveMetaIconBg = formData.meta_icon_bg_color || (isLight ? "rgba(0,0,0,0.05)" : "rgba(255,255,255,0.08)");
+    const bannerHeightStyle = formData.banner_height === "compact" ? "120px" : formData.banner_height === "tall" ? "200px" : "155px";
+    const hasBannerBorder = formData.banner_border !== false;
+
+    return (
+      <div 
+        className={`w-full rounded-3xl overflow-hidden transition-all duration-200 border text-left shadow-2xl ${
+          isLight ? "bg-[#f8fafc] text-slate-800 border-slate-200" : "bg-[#090d16] text-white border-slate-800/80"
+        }`}
+      >
+        {/* Banner */}
+        {formData.banner_url ? (
+          <div 
+            className={`w-full relative overflow-hidden transition-all ${
+              hasBannerBorder ? (isLight ? "border-b border-slate-200" : "border-b border-white/10") : ""
+            }`}
+            style={{ height: bannerHeightStyle }}
+          >
+            {formData.banner_fit === "contain" && (
+              <div 
+                className="absolute inset-0 scale-125 blur-lg opacity-40 bg-cover bg-center" 
+                style={{ backgroundImage: `url(${formData.banner_url})` }} 
+              />
+            )}
+            <div 
+              className="absolute inset-0" 
+              style={{
+                backgroundImage: `url(${formData.banner_url})`,
+                backgroundSize: formData.banner_fit || "cover",
+                backgroundPosition: formData.banner_focus || "center",
+                backgroundRepeat: "no-repeat"
+              }}
+            />
+            <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest text-white/90">
+              Live Banner
+            </div>
+          </div>
+        ) : (
+          <div 
+            className="w-full flex flex-col items-center justify-center p-6 text-center border-b border-dashed"
+            style={{ 
+              height: bannerHeightStyle,
+              borderColor: isLight ? "#e2e8f0" : "rgba(255,255,255,0.1)",
+              background: isLight ? "linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)" : "linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)"
+            }}
+          >
+            <span className="text-[10px] font-black uppercase tracking-widest opacity-40">No Banner Uploaded</span>
+            <span className="text-[9px] opacity-30 mt-0.5">Upload a banner in section 1 to preview here</span>
+          </div>
+        )}
+
+        {/* Logo & Status Badge */}
+        <div className="pt-5 px-6 flex items-center justify-between">
+          {formData.logo_url || selectedClientObj?.logo_url ? (
+            <img 
+              src={formData.logo_url || selectedClientObj?.logo_url} 
+              alt="Logo" 
+              className="max-h-7 max-w-[120px] object-contain" 
+            />
+          ) : (
+            <span className="text-[10px] font-black uppercase tracking-widest opacity-50">
+              {selectedClientObj?.name || "Official Event"}
+            </span>
+          )}
+          <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+            {formData.registration_active ? "Registration Open" : "Registration Paused"}
+          </span>
+        </div>
+
+        {/* Event Title & Description */}
+        <div className="px-6 pt-4 pb-2 space-y-2">
+          <h2 
+            className="text-xl sm:text-2xl font-black tracking-tight leading-tight"
+            style={{ 
+              color: effectiveTextColor,
+              textAlign: formData.title_align || "left" 
+            }}
+          >
+            {formData.title || "Untitled Event Title"}
+          </h2>
+
+          {formData.description ? (
+            <div 
+              className="text-xs leading-relaxed opacity-75 line-clamp-3 prose prose-sm dark:prose-invert max-w-none"
+              style={{ textAlign: formData.description_align || "left" }}
+              dangerouslySetInnerHTML={{ __html: formData.description }}
+            />
+          ) : (
+            <p 
+              className="text-xs leading-relaxed opacity-50 italic"
+              style={{ textAlign: formData.description_align || "left" }}
+            >
+              Add an event description below to preview it here.
+            </p>
+          )}
+        </div>
+
+        {/* Date & Venue Meta */}
+        <div className="px-6 py-3">
+          <div 
+            className={`flex flex-wrap gap-4 ${
+              formData.meta_order === "stacked" ? "flex-col" : formData.meta_order === "venue_first" ? "flex-row-reverse" : "flex-row"
+            } ${
+              formData.meta_align === "center"
+                ? formData.meta_order === "stacked" ? "items-center text-center" : "justify-center"
+                : formData.meta_align === "right"
+                ? formData.meta_order === "stacked" ? "items-end text-right" : "justify-end"
+                : formData.meta_order === "stacked" ? "items-start text-left" : "justify-start"
+            }`}
+            style={{ fontFamily: formData.meta_font_family || undefined }}
+          >
+            {/* Date Badge */}
+            <div className={`flex items-center gap-2.5 ${formData.meta_align === "right" ? "flex-row-reverse text-right" : ""}`}>
+              <div 
+                className="rounded-xl flex items-center justify-center border border-white/10 shadow-sm shrink-0"
+                style={{
+                  width: `${Math.max(30, (formData.meta_icon_size || 22) + 12)}px`,
+                  height: `${Math.max(30, (formData.meta_icon_size || 22) + 12)}px`,
+                  backgroundColor: effectiveMetaIconBg,
+                }}
+              >
+                <Calendar 
+                  style={{
+                    width: `${formData.meta_icon_size || 22}px`,
+                    height: `${formData.meta_icon_size || 22}px`,
+                    color: effectiveMetaIconColor,
+                    stroke: effectiveMetaIconColor,
+                  }}
+                />
+              </div>
+              <div>
+                <span 
+                  className="font-black uppercase tracking-widest block mb-0.5"
+                  style={{
+                    fontSize: `${formData.meta_label_size || 10}px`,
+                    color: formData.meta_label_color || (isLight ? "#64748b" : "rgba(255,255,255,0.5)"),
+                  }}
+                >
+                  Date & Time
+                </span>
+                <p 
+                  className="font-bold tracking-tight"
+                  style={{
+                    fontSize: `${formData.meta_value_size || 12}px`,
+                    color: formData.meta_value_color || effectiveTextColor,
+                  }}
+                >
+                  {formData.start_date ? new Date(formData.start_date).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" }) : "Nov 16, 2026, 2:30 PM"}
+                </p>
+              </div>
+            </div>
+
+            {/* Venue Badge */}
+            <div className={`flex items-center gap-2.5 ${formData.meta_align === "right" ? "flex-row-reverse text-right" : ""}`}>
+              <div 
+                className="rounded-xl flex items-center justify-center border border-white/10 shadow-sm shrink-0"
+                style={{
+                  width: `${Math.max(30, (formData.meta_icon_size || 22) + 12)}px`,
+                  height: `${Math.max(30, (formData.meta_icon_size || 22) + 12)}px`,
+                  backgroundColor: effectiveMetaIconBg,
+                }}
+              >
+                <MapPin 
+                  style={{
+                    width: `${formData.meta_icon_size || 22}px`,
+                    height: `${formData.meta_icon_size || 22}px`,
+                    color: effectiveMetaIconColor,
+                    stroke: effectiveMetaIconColor,
+                  }}
+                />
+              </div>
+              <div>
+                <span 
+                  className="font-black uppercase tracking-widest block mb-0.5"
+                  style={{
+                    fontSize: `${formData.meta_label_size || 10}px`,
+                    color: formData.meta_label_color || (isLight ? "#64748b" : "rgba(255,255,255,0.5)"),
+                  }}
+                >
+                  Venue
+                </span>
+                <p 
+                  className="font-bold tracking-tight"
+                  style={{
+                    fontSize: `${formData.meta_value_size || 12}px`,
+                    color: formData.meta_value_color || effectiveTextColor,
+                  }}
+                >
+                  {formData.location || "Event Venue Location"}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Registration Form Mockup */}
+        <div className="p-6 pt-3 space-y-4">
+          <div 
+            className="border-t pt-4"
+            style={{ borderColor: isLight ? "#e2e8f0" : "rgba(255,255,255,0.08)" }}
+          >
+            <h3 
+              className="text-xs font-black uppercase tracking-widest mb-1"
+              style={{ 
+                color: effectiveTextColor,
+                textAlign: formData.form_header_align || "left" 
+              }}
+            >
+              Attendee Registration
+            </h3>
+            <p 
+              className="text-[10px] opacity-60"
+              style={{ textAlign: formData.form_header_align || "left" }}
+            >
+              Please provide your credentials below to claim your access pass.
+            </p>
+          </div>
+
+          {/* Mock Fields */}
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-2.5">
+              <div className="space-y-1">
+                <label 
+                  className="block text-[9px] font-black uppercase tracking-widest opacity-60"
+                  style={{ textAlign: formData.fields_align || "left" }}
+                >
+                  First Name *
+                </label>
+                <div 
+                  className="px-3 py-2 rounded-xl text-xs font-semibold border opacity-80"
+                  style={{ 
+                    backgroundColor: effectiveInputBg,
+                    borderColor: isLight ? "#cbd5e1" : "rgba(255,255,255,0.12)",
+                    color: effectiveTextColor
+                  }}
+                >
+                  John
+                </div>
+              </div>
+              <div className="space-y-1">
+                <label 
+                  className="block text-[9px] font-black uppercase tracking-widest opacity-60"
+                  style={{ textAlign: formData.fields_align || "left" }}
+                >
+                  Last Name *
+                </label>
+                <div 
+                  className="px-3 py-2 rounded-xl text-xs font-semibold border opacity-80"
+                  style={{ 
+                    backgroundColor: effectiveInputBg,
+                    borderColor: isLight ? "#cbd5e1" : "rgba(255,255,255,0.12)",
+                    color: effectiveTextColor
+                  }}
+                >
+                  Doe
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label 
+                className="block text-[9px] font-black uppercase tracking-widest opacity-60"
+                style={{ textAlign: formData.fields_align || "left" }}
+              >
+                Email Address *
+              </label>
+              <div 
+                className="px-3 py-2 rounded-xl text-xs font-semibold border opacity-80"
+                style={{ 
+                  backgroundColor: effectiveInputBg,
+                  borderColor: isLight ? "#cbd5e1" : "rgba(255,255,255,0.12)",
+                  color: effectiveTextColor
+                }}
+              >
+                john.doe@company.com
+              </div>
+            </div>
+
+            {formData.collect_company && (
+              <div className="space-y-1">
+                <label 
+                  className="block text-[9px] font-black uppercase tracking-widest opacity-60"
+                  style={{ textAlign: formData.fields_align || "left" }}
+                >
+                  Company / Organization {formData.company_required ? "*" : "(Optional)"}
+                </label>
+                <div 
+                  className="px-3 py-2 rounded-xl text-xs font-semibold border opacity-80"
+                  style={{ 
+                    backgroundColor: effectiveInputBg,
+                    borderColor: isLight ? "#cbd5e1" : "rgba(255,255,255,0.12)",
+                    color: effectiveTextColor
+                  }}
+                >
+                  Acme Corporation
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Submit Button */}
+          <div className="pt-2">
+            <div 
+              className="w-full py-3 px-4 rounded-xl font-black text-xs uppercase tracking-widest text-center shadow-lg transition-transform"
+              style={{
+                backgroundColor: effectivePrimaryColor,
+                color: effectiveAccentColor,
+              }}
+            >
+              Complete Registration
+            </div>
+          </div>
+
+          {/* Access Pass badge preview */}
+          {(formData.show_qr_code || formData.show_pin_code) && (
+            <div 
+              className="flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-[9px] font-bold border"
+              style={{
+                backgroundColor: isLight ? "rgba(0,0,0,0.03)" : "rgba(255,255,255,0.04)",
+                borderColor: isLight ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.08)",
+                color: isLight ? "#475569" : "#94a3b8"
+              }}
+            >
+              <Sparkles size={11} style={{ color: effectiveAccentColor }} />
+              <span>Includes: {formData.show_qr_code ? "Digital QR Ticket" : ""}{formData.show_qr_code && formData.show_pin_code ? " & " : ""}{formData.show_pin_code ? "Access PIN" : ""}</span>
+            </div>
+          )}
+
+          {/* Sponsor Logos */}
+          {formData.form_logos?.some(u => !!u) && (
+            <div 
+              className="pt-4 border-t space-y-2"
+              style={{ borderColor: isLight ? "#e2e8f0" : "rgba(255,255,255,0.08)" }}
+            >
+              <span 
+                className="block text-[8px] font-black uppercase tracking-widest opacity-50"
+                style={{ textAlign: formData.logos_align || "center" }}
+              >
+                Event Partners & Sponsors
+              </span>
+              <div 
+                className={`flex flex-wrap items-center gap-3 ${
+                  formData.logos_align === "center" ? "justify-center" : formData.logos_align === "right" ? "justify-end" : "justify-start"
+                }`}
+              >
+                {formData.form_logos.filter(Boolean).map((logoUrl, idx) => (
+                  <img 
+                    key={idx} 
+                    src={logoUrl} 
+                    alt={`Sponsor ${idx + 1}`} 
+                    className="max-h-6 max-w-[70px] object-contain opacity-75" 
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   // ---------------------------------------------------------------------------
   // Render
   // ---------------------------------------------------------------------------
   return (
     <AdminLayout>
-      <div className="max-w-5xl mx-auto font-outfit">
+      <div className="max-w-7xl mx-auto font-outfit">
         {/* Sticky Top Action Bar */}
         <div className="sticky top-0 z-30 bg-[#f8fafc]/90 dark:bg-[#090d16]/90 backdrop-blur-md py-4 mb-6 border-b border-slate-200/80 dark:border-white/10">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -934,21 +1307,34 @@ export default function EditEventPage() {
                   {formData.registration_active ? "Registration Live" : "Registration Paused"}
                 </span>
 
-                {formData.slug && (
-                  <a
-                    href={`/${formData.slug}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-[11px] font-black uppercase tracking-wider text-blue-600 dark:text-blue-400 hover:underline px-2 py-1"
-                  >
-                    <span>View Public Page</span>
-                    <ExternalLink size={12} />
-                  </a>
-                )}
+                {formData.slug && (() => {
+                  const cleanSlug = (formData.slug || "").replace(/&nbsp;/g, " ").replace(/\u00a0/g, " ").trim() || String(id);
+                  return (
+                    <a
+                      href={`/register/${encodeURIComponent(cleanSlug)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider text-blue-600 dark:text-blue-400 hover:underline px-2 py-1"
+                    >
+                      <span>View Public Page</span>
+                      <ExternalLink size={12} />
+                    </a>
+                  );
+                })()}
               </div>
             </div>
 
             <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+              <button
+                type="button"
+                onClick={() => setShowPreviewModal(true)}
+                className="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-white px-3.5 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all border border-slate-200 dark:border-slate-700 active:scale-95 cursor-pointer shadow-sm"
+                title="Preview registration form"
+              >
+                <Eye size={14} className="text-amber-500" />
+                <span className="hidden sm:inline">Live Preview</span>
+              </button>
+
               <button
                 type="button"
                 onClick={handleDelete}
@@ -1112,7 +1498,7 @@ export default function EditEventPage() {
 
           {/* ===== BRANDING TAB ===== */}
           {activeTab === "branding" && (
-            <form onSubmit={handleSubmit} className="p-8 sm:p-10 space-y-12">
+            <form onSubmit={handleSubmit} className="p-6 sm:p-10 space-y-8">
               {saveNotification && (
                 <div className={`p-5 rounded-2xl flex items-center justify-between transition-all ${
                   saveNotification.type === "success" 
@@ -1129,8 +1515,11 @@ export default function EditEventPage() {
                 </div>
               )}
 
-              {/* 2. Page Styling & Background */}
-              <div className="space-y-6">
+              <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
+                {/* Left Column: Form Controls */}
+                <div className="xl:col-span-7 space-y-10">
+                  {/* 2. Page Styling & Background */}
+                  <div className="space-y-6">
                 <div className="border-b border-slate-100 dark:border-white/5 pb-3">
                   <h3 className="text-xs font-black text-[#1e293b] dark:text-white uppercase tracking-[0.2em] flex items-center gap-2">
                     <Palette size={16} className="text-slate-400 dark:text-slate-500" /> 1. Page Styling &amp; Background
@@ -2060,8 +2449,89 @@ export default function EditEventPage() {
                   </button>
                 </div>
               </div>
-            </form>
-          )}
+            </div>
+
+            {/* Right Column: Sticky Live Form Preview */}
+            <div className="xl:col-span-5 sticky top-28 space-y-4">
+              <div className="flex items-center justify-between px-1">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-widest">
+                    Live Form Preview
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {/* Device Mode Toggle */}
+                  <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+                    <button
+                      type="button"
+                      onClick={() => setPreviewDevice("desktop")}
+                      title="Desktop View"
+                      className={`p-1.5 rounded-lg transition-all ${
+                        previewDevice === "desktop"
+                          ? "bg-slate-900 text-white dark:bg-yellow-400 dark:text-slate-950 shadow-sm"
+                          : "text-slate-400 hover:text-slate-700 dark:hover:text-white"
+                      }`}
+                    >
+                      <Monitor size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPreviewDevice("mobile")}
+                      title="Mobile View"
+                      className={`p-1.5 rounded-lg transition-all ${
+                        previewDevice === "mobile"
+                          ? "bg-slate-900 text-white dark:bg-yellow-400 dark:text-slate-950 shadow-sm"
+                          : "text-slate-400 hover:text-slate-700 dark:hover:text-white"
+                      }`}
+                    >
+                      <Smartphone size={14} />
+                    </button>
+                  </div>
+
+                  {formData.slug && (() => {
+                    const cleanSlug = (formData.slug || "").replace(/&nbsp;/g, " ").replace(/\u00a0/g, " ").trim() || String(id);
+                    return (
+                      <a
+                        href={`/register/${encodeURIComponent(cleanSlug)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-2 rounded-xl text-slate-400 hover:text-blue-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                        title="Open Live Public Registration Page"
+                      >
+                        <ExternalLink size={14} />
+                      </a>
+                    );
+                  })()}
+                </div>
+              </div>
+
+              {/* Preview Container Frame */}
+              <div className="p-3 sm:p-4 rounded-3xl bg-slate-100/70 dark:bg-slate-900/60 border border-slate-200/80 dark:border-white/5 flex justify-center shadow-inner">
+                <div className={`transition-all duration-300 ${previewDevice === "mobile" ? "w-[340px]" : "w-full"}`}>
+                  {renderLivePreviewCard()}
+                </div>
+              </div>
+
+              {/* Quick Save Card */}
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/40 border border-slate-200/60 dark:border-slate-800 flex items-center justify-between gap-3">
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                  Preview reflects real-time edits
+                </p>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="bg-yellow-400 hover:bg-yellow-300 text-slate-950 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-md active:scale-95 disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
+                >
+                  {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+                  <span>Save</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </form>
+      )}
 
           {/* ===== ACCESS TAB ===== */}
           {activeTab === "access" && (
@@ -2490,6 +2960,72 @@ export default function EditEventPage() {
             </form>
           )}
         </div>
+        {/* Live Form Preview Modal */}
+        {showPreviewModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/70 backdrop-blur-sm animate-in fade-in">
+            <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-xl w-full max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+              {/* Modal header */}
+              <div className="p-4 sm:p-5 border-b border-slate-800 flex items-center justify-between bg-slate-950/80">
+                <div className="flex items-center gap-2.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="text-xs font-black uppercase tracking-widest text-white">Live Form Preview</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="flex bg-slate-800 p-1 rounded-xl">
+                    <button
+                      type="button"
+                      onClick={() => setPreviewDevice("desktop")}
+                      title="Desktop View"
+                      className={`p-1.5 rounded-lg transition-all ${
+                        previewDevice === "desktop" ? "bg-yellow-400 text-slate-950 shadow-sm" : "text-slate-400 hover:text-white"
+                      }`}
+                    >
+                      <Monitor size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPreviewDevice("mobile")}
+                      title="Mobile View"
+                      className={`p-1.5 rounded-lg transition-all ${
+                        previewDevice === "mobile" ? "bg-yellow-400 text-slate-950 shadow-sm" : "text-slate-400 hover:text-white"
+                      }`}
+                    >
+                      <Smartphone size={14} />
+                    </button>
+                  </div>
+                  {formData.slug && (() => {
+                    const cleanSlug = (formData.slug || "").replace(/&nbsp;/g, " ").replace(/\u00a0/g, " ").trim() || String(id);
+                    return (
+                      <a
+                        href={`/register/${encodeURIComponent(cleanSlug)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-1.5 rounded-xl text-slate-400 hover:text-blue-400 hover:bg-slate-800 transition-colors"
+                        title="Open in new window"
+                      >
+                        <ExternalLink size={15} />
+                      </a>
+                    );
+                  })()}
+                  <button
+                    type="button"
+                    onClick={() => setShowPreviewModal(false)}
+                    className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                    title="Close"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+              </div>
+              {/* Modal scrollable content */}
+              <div className="p-4 sm:p-6 overflow-y-auto max-h-[calc(92vh-80px)] flex justify-center bg-slate-950/40">
+                <div className={`transition-all duration-300 ${previewDevice === "mobile" ? "w-[340px]" : "w-full"}`}>
+                  {renderLivePreviewCard()}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </AdminLayout>
   );
