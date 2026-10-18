@@ -2605,8 +2605,8 @@ export default function EventDetailsPage() {
                                 reg.status === "declined"
                                   ? "bg-slate-100 dark:bg-slate-800 text-slate-300 dark:text-slate-600 cursor-not-allowed opacity-55"
                                   : reg.checked_in 
-                                    ? "bg-emerald-600/90 text-white shadow-sm" 
-                                    : "bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white shadow-md shadow-emerald-500/20 hover:shadow-emerald-500/30"
+                                    ? "bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black shadow-md shadow-emerald-500/20" 
+                                    : "bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800/90 dark:hover:bg-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700/80 hover:text-[#0f172a] dark:hover:text-white shadow-xs"
                               }`}
                             >
                               {reg.checked_in ? (
@@ -2767,8 +2767,8 @@ export default function EventDetailsPage() {
                                 reg.status === "declined"
                                   ? "bg-slate-100 dark:bg-slate-800 text-slate-300 dark:text-slate-600 cursor-not-allowed opacity-55"
                                   : reg.checked_in 
-                                    ? "bg-emerald-600/90 text-white shadow-sm" 
-                                    : "bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white shadow-md shadow-emerald-500/20"
+                                    ? "bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black shadow-md shadow-emerald-500/20" 
+                                    : "bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800/90 dark:hover:bg-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700/80 hover:text-[#0f172a] dark:hover:text-white shadow-xs"
                               }`}
                             >
                               {reg.checked_in ? (
