@@ -1069,7 +1069,7 @@ export default function EditEventPage() {
     if (!hasEmail) {
       missingDefaults.push({ id: "field_email", key: "email", label: "Email Address", placeholder: "e.g. turing@bletchleypark.org.uk", type: "email", required: true, visible: true, showBeforeAttendance: true });
     }
-    if (!hasCompany && formData.collect_company) {
+    if (!hasCompany) {
       missingDefaults.push({ id: "field_company", key: "company", label: "Organization / Company", placeholder: "e.g. GC&CS", type: "text", required: !!formData.company_required, visible: true, showBeforeAttendance: true });
     }
 
@@ -1100,13 +1100,11 @@ export default function EditEventPage() {
 
     const preAttendanceQuestions = flatQuestions.filter((f: any) => {
       if (f.inactive || f.visible === false) return false;
-      if ((f.key === "company" || f.id === "field_company") && !formData.collect_company) return false;
       return getEffectiveShowBefore(f);
     });
 
     const postAttendanceQuestions = flatQuestions.filter((f: any) => {
       if (f.inactive || f.visible === false) return false;
-      if ((f.key === "company" || f.id === "field_company") && !formData.collect_company) return false;
       return !getEffectiveShowBefore(f);
     });
 
@@ -1502,23 +1500,23 @@ export default function EditEventPage() {
               </button>
             </div>
 
-            {/* Sponsor Logos */}
+            {/* Sponsor Logos (Single Horizontal Row) */}
             {activeLogos.length > 0 && (
               <div 
-                className="pt-5 pb-2 border-t space-y-2.5 w-full"
+                className="pt-5 pb-2 border-t w-full overflow-hidden"
                 style={{ borderColor: isLight ? "#e2e8f0" : "rgba(255,255,255,0.1)" }}
               >
                 <div 
-                  className={`flex flex-wrap items-center gap-4 sm:gap-6 ${
+                  className={`flex flex-nowrap items-center gap-2 sm:gap-3 w-full ${
                     formData.logos_align === "center" ? "justify-center" : formData.logos_align === "right" ? "justify-end" : "justify-start"
                   }`}
                 >
                   {activeLogos.map((logoUrl: string, idx: number) => (
-                    <div key={idx} className="flex items-center justify-center p-1 min-h-[38px] shrink-0">
+                    <div key={idx} className="flex-1 min-w-0 flex items-center justify-center p-1 max-w-[120px]">
                       <img 
                         src={logoUrl} 
                         alt={`Sponsor ${idx + 1}`} 
-                        className="max-h-10 sm:max-h-11 max-w-[95px] sm:max-w-[110px] w-auto h-auto object-contain opacity-90 hover:opacity-100 transition-opacity" 
+                        className="max-h-7 sm:max-h-8 md:max-h-9 w-auto max-w-full object-contain opacity-95 hover:opacity-100 transition-opacity" 
                       />
                     </div>
                   ))}
