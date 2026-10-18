@@ -449,6 +449,7 @@ export default function EditEventPage() {
   const previewFrameRef = useRef<HTMLIFrameElement>(null);
   const declinePreviewFrameRef = useRef<HTMLIFrameElement>(null);
   const [regTemplates, setRegTemplates] = useState<any[]>([]);
+  const [rawEvent, setRawEvent] = useState<any>(null);
   const [previewDevice, setPreviewDevice] = useState<"desktop" | "mobile">("desktop");
   const [showPreviewModal, setShowPreviewModal] = useState<boolean>(false);
   const [brandingAccordions, setBrandingAccordions] = useState({
@@ -569,6 +570,7 @@ export default function EditEventPage() {
         return res.json();
       })
       .then((data) => {
+        setRawEvent(data);
         const formattedDate = data.start_date ? data.start_date.slice(0, 16) : "";
         const existingLogos = Array.isArray(data.banner_settings?.form_logos) ? data.banner_settings.form_logos : [];
         const paddedLogos = [0, 1, 2, 3, 4].map((i) => existingLogos[i] || "");
@@ -933,366 +935,394 @@ export default function EditEventPage() {
     const isLight = activeTheme === "minimal_light" || activeTheme === "brutalist_retro" || activeTheme === "corporate_mono" || activeTheme === "nordic_alabaster" || activeTheme === "champagne_lounge";
     const themeDefaults = THEME_DEFAULTS[activeTheme as keyof typeof THEME_DEFAULTS] || THEME_DEFAULTS.cyber_dark;
     const effectivePrimaryColor = formData.banner_primary_color || selectedClientObj?.primary_color || themeDefaults.primary;
-    const effectiveAccentColor = formData.banner_accent_color || selectedClientObj?.accent_color || themeDefaults.accent;
+    const effectiveAccentColor = formData.banner_accent_color || selectedClientObj?.accent_color || themeDefaults.accent || "#a3e635";
     const effectiveTextColor = formData.banner_text_color || (isLight ? "#0f172a" : "#ffffff");
-    const effectiveInputBg = formData.banner_input_bg_color || (isLight ? "#ffffff" : "rgba(255,255,255,0.06)");
-    const effectiveMetaIconColor = formData.meta_icon_color || effectiveAccentColor;
-    const effectiveMetaIconBg = formData.meta_icon_bg_color || (isLight ? "rgba(0,0,0,0.05)" : "rgba(255,255,255,0.08)");
-    const bannerHeightStyle = formData.banner_height === "compact" ? "120px" : formData.banner_height === "tall" ? "200px" : "155px";
+    const effectiveInputBg = formData.banner_input_bg_color || (isLight ? "#f8fafc" : "rgba(2, 6, 23, 0.7)");
+    const bannerHeightStyle = formData.banner_height === "compact" ? "130px" : formData.banner_height === "tall" ? "220px" : "175px";
     const hasBannerBorder = formData.banner_border !== false;
+
+    // Resolve template info
+    const activeTemplate = regTemplates.find((t: any) => t.id === formData.registration_form_template_id) || rawEvent?.registration_form_template;
+    const templateSubheading = activeTemplate?.theme_config?.form_subheading || 
+      activeTemplate?.description || 
+      "DFA invites you to a day of padel and pickleball at The Glen in Clifton! Please complete the form below to confirm your attendance and secure your spot.";
+
+    // Active questions from event or template
+    const rawSchema = (rawEvent?.custom_fields_schema && rawEvent.custom_fields_schema.length > 0)
+      ? rawEvent.custom_fields_schema
+      : (activeTemplate?.layout_schema || []);
+
+    const flatQuestions: any[] = [];
+    if (Array.isArray(rawSchema)) {
+      for (const item of rawSchema) {
+        if (item && Array.isArray(item.fields)) {
+          flatQuestions.push(...item.fields);
+        } else if (item && item.label) {
+          flatQuestions.push(item);
+        }
+      }
+    }
+
+    const postAttendanceQuestions = flatQuestions.filter((f: any) => {
+      const k = f.key || f.id;
+      return !["first_name", "last_name", "email", "company"].includes(k) && !f.showBeforeAttendance;
+    });
+
+    const activeLogos = (formData.form_logos || []).filter((u: any) => typeof u === "string" && u.trim() !== "");
 
     return (
       <div 
-        className={`w-full rounded-3xl overflow-hidden transition-all duration-200 border text-left shadow-2xl ${
-          isLight ? "bg-[#f8fafc] text-slate-800 border-slate-200" : "bg-[#090d16] text-white border-slate-800/80"
-        }`}
+        className="w-full rounded-[2rem] overflow-hidden border border-slate-700/60 shadow-2xl relative transition-all duration-300 text-left font-outfit"
+        style={{
+          backgroundImage: formData.background_url ? `url(${formData.background_url})` : undefined,
+          backgroundColor: isLight ? "#f1f5f9" : "#070b19",
+          backgroundSize: formData.banner_size || "cover",
+          backgroundPosition: formData.banner_position || "center",
+          backgroundRepeat: "no-repeat",
+        }}
       >
-        {/* Banner */}
-        {formData.banner_url ? (
-          <div 
-            className={`w-full relative overflow-hidden transition-all ${
-              hasBannerBorder ? (isLight ? "border-b border-slate-200" : "border-b border-white/10") : ""
-            }`}
-            style={{ height: bannerHeightStyle }}
-          >
-            {formData.banner_fit === "contain" && (
+        {/* Dark translucent overlay matching actual public page */}
+        <div 
+          className={`absolute inset-0 pointer-events-none ${
+            isLight ? "bg-slate-900/40 backdrop-blur-[2px]" : "bg-slate-950/75 backdrop-blur-[2px]"
+          }`} 
+        />
+
+        {/* Inner container */}
+        <div className="relative z-10 p-4 sm:p-7 max-w-lg mx-auto flex flex-col items-center">
+          
+          {/* ================= HEADER (OUTSIDE CARD) ================= */}
+          <div className="w-full text-center mb-6 space-y-2">
+            <h1 
+              className="text-2xl sm:text-3xl font-black tracking-tight leading-tight text-white drop-shadow-md"
+              style={{ textAlign: formData.title_align || "center" }}
+            >
+              {cleanHtmlText(formData.title || "") || "Untitled Event Title"}
+            </h1>
+
+            {formData.description && (
               <div 
-                className="absolute inset-0 scale-125 blur-lg opacity-40 bg-cover bg-center" 
-                style={{ backgroundImage: `url(${formData.banner_url})` }} 
+                className="text-xs sm:text-sm text-zinc-200/90 font-medium max-w-md mx-auto line-clamp-2 leading-relaxed drop-shadow"
+                style={{ textAlign: formData.description_align || "center" }}
+                dangerouslySetInnerHTML={{ __html: formData.description }}
               />
             )}
+
+            {/* Date & Venue Compact Badges */}
             <div 
-              className="absolute inset-0" 
-              style={{
-                backgroundImage: `url(${formData.banner_url})`,
-                backgroundSize: formData.banner_fit || "cover",
-                backgroundPosition: formData.banner_focus || "center",
-                backgroundRepeat: "no-repeat"
-              }}
-            />
-            <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest text-white/90">
-              Live Banner
+              className={`flex flex-wrap items-center justify-center gap-2 pt-2 ${
+                formData.meta_order === "stacked" ? "flex-col" : formData.meta_order === "venue_first" ? "flex-row-reverse" : "flex-row"
+              }`}
+            >
+              {/* Date Pill */}
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/80 border border-white/10 text-white shadow-sm backdrop-blur-md">
+                <Calendar size={13} style={{ color: effectiveAccentColor }} />
+                <span className="text-[11px] font-bold text-zinc-200">
+                  {formData.start_date ? new Date(formData.start_date).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" }) : "Nov 11, 2026, 11:00 AM"}
+                </span>
+              </div>
+
+              {/* Venue Pill */}
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/80 border border-white/10 text-white shadow-sm backdrop-blur-md">
+                <MapPin size={13} style={{ color: effectiveAccentColor }} />
+                <span className="text-[11px] font-bold text-zinc-200">
+                  {formData.location || "The Glen Country Club, Clifton"}
+                </span>
+              </div>
             </div>
           </div>
-        ) : (
+
+          {/* ================= REGISTRATION FORM CARD ================= */}
           <div 
-            className="w-full flex flex-col items-center justify-center p-6 text-center border-b border-dashed"
-            style={{ 
-              height: bannerHeightStyle,
-              borderColor: isLight ? "#e2e8f0" : "rgba(255,255,255,0.1)",
-              background: isLight ? "linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)" : "linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)"
-            }}
-          >
-            <span className="text-[10px] font-black uppercase tracking-widest opacity-40">No Banner Uploaded</span>
-            <span className="text-[9px] opacity-30 mt-0.5">Upload a banner in section 1 to preview here</span>
-          </div>
-        )}
-
-        {/* Logo & Status Badge */}
-        <div className="pt-5 px-6 flex items-center justify-between">
-          {formData.logo_url || selectedClientObj?.logo_url ? (
-            <img 
-              src={formData.logo_url || selectedClientObj?.logo_url} 
-              alt="Logo" 
-              className="max-h-7 max-w-[120px] object-contain" 
-            />
-          ) : (
-            <span className="text-[10px] font-black uppercase tracking-widest opacity-50">
-              {selectedClientObj?.name || "Official Event"}
-            </span>
-          )}
-          <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
-            {formData.registration_active ? "Registration Open" : "Registration Paused"}
-          </span>
-        </div>
-
-        {/* Event Title & Description */}
-        <div className="px-6 pt-4 pb-2 space-y-2">
-          <h2 
-            className="text-xl sm:text-2xl font-black tracking-tight leading-tight"
-            style={{ 
+            className="w-full rounded-[2.2rem] p-5 sm:p-6 border shadow-2xl backdrop-blur-xl space-y-5"
+            style={{
+              backgroundColor: isLight ? "rgba(255, 255, 255, 0.95)" : "rgba(15, 23, 42, 0.88)",
+              borderColor: isLight ? "rgba(226, 232, 240, 0.8)" : "rgba(255, 255, 255, 0.12)",
               color: effectiveTextColor,
-              textAlign: formData.title_align || "left" 
             }}
           >
-            {cleanHtmlText(formData.title || "") || "Untitled Event Title"}
-          </h2>
-
-          {formData.description ? (
-            <div 
-              className="text-xs leading-relaxed opacity-75 line-clamp-3 prose prose-sm dark:prose-invert max-w-none"
-              style={{ textAlign: formData.description_align || "left" }}
-              dangerouslySetInnerHTML={{ __html: formData.description }}
-            />
-          ) : (
-            <p 
-              className="text-xs leading-relaxed opacity-50 italic"
-              style={{ textAlign: formData.description_align || "left" }}
-            >
-              Add an event description below to preview it here.
-            </p>
-          )}
-        </div>
-
-        {/* Date & Venue Meta */}
-        <div className="px-6 py-3">
-          <div 
-            className={`flex flex-wrap gap-4 ${
-              formData.meta_order === "stacked" ? "flex-col" : formData.meta_order === "venue_first" ? "flex-row-reverse" : "flex-row"
-            } ${
-              formData.meta_align === "center"
-                ? formData.meta_order === "stacked" ? "items-center text-center" : "justify-center"
-                : formData.meta_align === "right"
-                ? formData.meta_order === "stacked" ? "items-end text-right" : "justify-end"
-                : formData.meta_order === "stacked" ? "items-start text-left" : "justify-start"
-            }`}
-            style={{ fontFamily: formData.meta_font_family || undefined }}
-          >
-            {/* Date Badge */}
-            <div className={`flex items-center gap-2.5 ${formData.meta_align === "right" ? "flex-row-reverse text-right" : ""}`}>
+            {/* Banner Inside Card */}
+            {formData.banner_url ? (
               <div 
-                className="rounded-xl flex items-center justify-center border border-white/10 shadow-sm shrink-0"
-                style={{
-                  width: `${Math.max(30, (formData.meta_icon_size || 22) + 12)}px`,
-                  height: `${Math.max(30, (formData.meta_icon_size || 22) + 12)}px`,
-                  backgroundColor: effectiveMetaIconBg,
-                }}
+                className={`w-full rounded-2xl overflow-hidden relative shadow-md ${
+                  hasBannerBorder ? "border border-white/10" : ""
+                }`}
+                style={{ height: bannerHeightStyle }}
               >
-                <Calendar 
+                {formData.banner_fit === "contain" && (
+                  <div 
+                    className="absolute inset-0 scale-125 blur-lg opacity-40 bg-cover bg-center pointer-events-none" 
+                    style={{ backgroundImage: `url(${formData.banner_url})` }} 
+                  />
+                )}
+                <div 
+                  className="absolute inset-0" 
                   style={{
-                    width: `${formData.meta_icon_size || 22}px`,
-                    height: `${formData.meta_icon_size || 22}px`,
-                    color: effectiveMetaIconColor,
-                    stroke: effectiveMetaIconColor,
+                    backgroundImage: `url(${formData.banner_url})`,
+                    backgroundSize: formData.banner_fit || "cover",
+                    backgroundPosition: formData.banner_focus || "center",
+                    backgroundRepeat: "no-repeat"
                   }}
                 />
               </div>
-              <div>
-                <span 
-                  className="font-black uppercase tracking-widest block mb-0.5"
-                  style={{
-                    fontSize: `${formData.meta_label_size || 10}px`,
-                    color: formData.meta_label_color || (isLight ? "#64748b" : "rgba(255,255,255,0.5)"),
-                  }}
-                >
-                  Date & Time
-                </span>
-                <p 
-                  className="font-bold tracking-tight"
-                  style={{
-                    fontSize: `${formData.meta_value_size || 12}px`,
-                    color: formData.meta_value_color || effectiveTextColor,
-                  }}
-                >
-                  {formData.start_date ? new Date(formData.start_date).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" }) : "Nov 16, 2026, 2:30 PM"}
-                </p>
-              </div>
-            </div>
+            ) : null}
 
-            {/* Venue Badge */}
-            <div className={`flex items-center gap-2.5 ${formData.meta_align === "right" ? "flex-row-reverse text-right" : ""}`}>
-              <div 
-                className="rounded-xl flex items-center justify-center border border-white/10 shadow-sm shrink-0"
-                style={{
-                  width: `${Math.max(30, (formData.meta_icon_size || 22) + 12)}px`,
-                  height: `${Math.max(30, (formData.meta_icon_size || 22) + 12)}px`,
-                  backgroundColor: effectiveMetaIconBg,
-                }}
-              >
-                <MapPin 
-                  style={{
-                    width: `${formData.meta_icon_size || 22}px`,
-                    height: `${formData.meta_icon_size || 22}px`,
-                    color: effectiveMetaIconColor,
-                    stroke: effectiveMetaIconColor,
-                  }}
+            {/* Template Subheading / Description */}
+            {templateSubheading && (
+              <div className="text-center px-1">
+                <p 
+                  className={`text-xs font-medium leading-relaxed ${isLight ? "text-slate-600" : "text-zinc-300"}`}
+                  dangerouslySetInnerHTML={{ __html: templateSubheading }}
                 />
               </div>
-              <div>
-                <span 
-                  className="font-black uppercase tracking-widest block mb-0.5"
-                  style={{
-                    fontSize: `${formData.meta_label_size || 10}px`,
-                    color: formData.meta_label_color || (isLight ? "#64748b" : "rgba(255,255,255,0.5)"),
-                  }}
-                >
-                  Venue
-                </span>
-                <p 
-                  className="font-bold tracking-tight"
-                  style={{
-                    fontSize: `${formData.meta_value_size || 12}px`,
-                    color: formData.meta_value_color || effectiveTextColor,
-                  }}
-                >
-                  {formData.location || "Event Venue Location"}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
+            )}
 
-        {/* Registration Form Mockup */}
-        <div className="p-6 pt-3 space-y-4">
-          <div 
-            className="border-t pt-4"
-            style={{ borderColor: isLight ? "#e2e8f0" : "rgba(255,255,255,0.08)" }}
-          >
-            <h3 
-              className="text-xs font-black uppercase tracking-widest mb-1"
-              style={{ 
-                color: effectiveTextColor,
-                textAlign: formData.form_header_align || "left" 
-              }}
-            >
-              Attendee Registration
-            </h3>
-            <p 
-              className="text-[10px] opacity-60"
-              style={{ textAlign: formData.form_header_align || "left" }}
-            >
-              Please provide your credentials below to claim your access pass.
-            </p>
-          </div>
-
-          {/* Mock Fields */}
-          <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-2.5">
+            {/* Standard Identity Fields */}
+            <div className="space-y-3.5">
               <div className="space-y-1">
-                <label 
-                  className="block text-[9px] font-black uppercase tracking-widest opacity-60"
-                  style={{ textAlign: formData.fields_align || "left" }}
-                >
-                  First Name *
+                <label className="block text-[10px] font-black uppercase tracking-wider text-zinc-400">
+                  First Name <span style={{ color: effectiveAccentColor }}>*</span>
                 </label>
                 <div 
-                  className="px-3 py-2 rounded-xl text-xs font-semibold border opacity-80"
+                  className="w-full px-4 py-2.5 rounded-xl text-xs font-semibold border transition-all"
                   style={{ 
                     backgroundColor: effectiveInputBg,
-                    borderColor: isLight ? "#cbd5e1" : "rgba(255,255,255,0.12)",
+                    borderColor: isLight ? "#cbd5e1" : "rgba(255,255,255,0.14)",
                     color: effectiveTextColor
                   }}
                 >
                   John
                 </div>
               </div>
+
               <div className="space-y-1">
-                <label 
-                  className="block text-[9px] font-black uppercase tracking-widest opacity-60"
-                  style={{ textAlign: formData.fields_align || "left" }}
-                >
-                  Last Name *
+                <label className="block text-[10px] font-black uppercase tracking-wider text-zinc-400">
+                  Last Name <span style={{ color: effectiveAccentColor }}>*</span>
                 </label>
                 <div 
-                  className="px-3 py-2 rounded-xl text-xs font-semibold border opacity-80"
+                  className="w-full px-4 py-2.5 rounded-xl text-xs font-semibold border transition-all"
                   style={{ 
                     backgroundColor: effectiveInputBg,
-                    borderColor: isLight ? "#cbd5e1" : "rgba(255,255,255,0.12)",
+                    borderColor: isLight ? "#cbd5e1" : "rgba(255,255,255,0.14)",
                     color: effectiveTextColor
                   }}
                 >
                   Doe
                 </div>
               </div>
-            </div>
 
-            <div className="space-y-1">
-              <label 
-                className="block text-[9px] font-black uppercase tracking-widest opacity-60"
-                style={{ textAlign: formData.fields_align || "left" }}
-              >
-                Email Address *
-              </label>
-              <div 
-                className="px-3 py-2 rounded-xl text-xs font-semibold border opacity-80"
-                style={{ 
-                  backgroundColor: effectiveInputBg,
-                  borderColor: isLight ? "#cbd5e1" : "rgba(255,255,255,0.12)",
-                  color: effectiveTextColor
-                }}
-              >
-                john.doe@company.com
-              </div>
-            </div>
-
-            {formData.collect_company && (
               <div className="space-y-1">
-                <label 
-                  className="block text-[9px] font-black uppercase tracking-widest opacity-60"
-                  style={{ textAlign: formData.fields_align || "left" }}
-                >
-                  Company / Organization {formData.company_required ? "*" : "(Optional)"}
+                <label className="block text-[10px] font-black uppercase tracking-wider text-zinc-400">
+                  Email Address <span style={{ color: effectiveAccentColor }}>*</span>
                 </label>
                 <div 
-                  className="px-3 py-2 rounded-xl text-xs font-semibold border opacity-80"
+                  className="w-full px-4 py-2.5 rounded-xl text-xs font-semibold border transition-all"
                   style={{ 
                     backgroundColor: effectiveInputBg,
-                    borderColor: isLight ? "#cbd5e1" : "rgba(255,255,255,0.12)",
+                    borderColor: isLight ? "#cbd5e1" : "rgba(255,255,255,0.14)",
                     color: effectiveTextColor
                   }}
                 >
-                  Acme Corporation
+                  john.doe@company.com
+                </div>
+              </div>
+
+              {formData.collect_company && (
+                <div className="space-y-1">
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-zinc-400">
+                    Organization / Company {formData.company_required ? <span style={{ color: effectiveAccentColor }}>*</span> : <span className="opacity-60">(Optional)</span>}
+                  </label>
+                  <div 
+                    className="w-full px-4 py-2.5 rounded-xl text-xs font-semibold border transition-all"
+                    style={{ 
+                      backgroundColor: effectiveInputBg,
+                      borderColor: isLight ? "#cbd5e1" : "rgba(255,255,255,0.14)",
+                      color: effectiveTextColor
+                    }}
+                  >
+                    Acme Corporation
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Attendance Status Toggle */}
+            <div className="py-4 border-y border-white/10 space-y-2.5">
+              <label className="block text-[10px] font-black uppercase tracking-wider text-zinc-400">
+                Attendance Status <span style={{ color: effectiveAccentColor }}>*</span>
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  className="w-full py-2.5 px-3 rounded-xl font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm"
+                  style={{
+                    backgroundColor: effectiveAccentColor,
+                    color: "#0f172a",
+                  }}
+                >
+                  <span>I am attending</span>
+                </button>
+                <button
+                  type="button"
+                  className="w-full py-2.5 px-3 rounded-xl font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 border border-white/15 text-zinc-400 bg-white/5"
+                >
+                  <span>Unable to attend</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Custom Questions (Dietary, Player or Spectator, etc.) */}
+            <div className="space-y-3.5">
+              {postAttendanceQuestions.length > 0 ? (
+                postAttendanceQuestions.map((field: any, idx: number) => {
+                  const labelClean = (field.label || "").replace(/<[^>]*>/g, "");
+                  return (
+                    <div key={idx} className="space-y-1">
+                      <label className="block text-[10px] font-black uppercase tracking-wider text-zinc-400">
+                        {labelClean} {field.required ? <span style={{ color: effectiveAccentColor }}>*</span> : ""}
+                      </label>
+                      {field.type === "select" ? (
+                        <div 
+                          className="w-full px-4 py-2.5 rounded-xl text-xs font-semibold border flex items-center justify-between"
+                          style={{ 
+                            backgroundColor: effectiveInputBg,
+                            borderColor: isLight ? "#cbd5e1" : "rgba(255,255,255,0.14)",
+                            color: effectiveTextColor
+                          }}
+                        >
+                          <span>{field.options?.[0] || "Select Option"}</span>
+                          <ChevronDown size={14} className="opacity-60" />
+                        </div>
+                      ) : (
+                        <div 
+                          className="w-full px-4 py-2.5 rounded-xl text-xs font-semibold border"
+                          style={{ 
+                            backgroundColor: effectiveInputBg,
+                            borderColor: isLight ? "#cbd5e1" : "rgba(255,255,255,0.14)",
+                            color: effectiveTextColor
+                          }}
+                        >
+                          {field.placeholder || "Enter answer"}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              ) : (
+                <>
+                  {/* Default Sensible Previews matching template questions */}
+                  <div className="space-y-1">
+                    <label className="block text-[10px] font-black uppercase tracking-wider text-zinc-400">
+                      Dietary Requirements
+                    </label>
+                    <div 
+                      className="w-full px-4 py-2.5 rounded-xl text-xs font-semibold border flex items-center justify-between"
+                      style={{ 
+                        backgroundColor: effectiveInputBg,
+                        borderColor: isLight ? "#cbd5e1" : "rgba(255,255,255,0.14)",
+                        color: effectiveTextColor
+                      }}
+                    >
+                      <span>None</span>
+                      <ChevronDown size={14} className="opacity-60" />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="block text-[10px] font-black uppercase tracking-wider text-zinc-400">
+                      Player or Spectator
+                    </label>
+                    <div 
+                      className="w-full px-4 py-2.5 rounded-xl text-xs font-semibold border flex items-center justify-between"
+                      style={{ 
+                        backgroundColor: effectiveInputBg,
+                        borderColor: isLight ? "#cbd5e1" : "rgba(255,255,255,0.14)",
+                        color: effectiveTextColor
+                      }}
+                    >
+                      <span>Player</span>
+                      <ChevronDown size={14} className="opacity-60" />
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Disclaimer & Indemnity Checkbox */}
+            {formData.disclaimer_enabled && (
+              <div 
+                className="p-3.5 rounded-xl border space-y-2"
+                style={{
+                  backgroundColor: isLight ? "rgba(0,0,0,0.03)" : "rgba(255,255,255,0.04)",
+                  borderColor: isLight ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.1)",
+                }}
+              >
+                <div className="flex items-center gap-2">
+                  <div 
+                    className="w-4 h-4 rounded border flex items-center justify-center shrink-0"
+                    style={{
+                      backgroundColor: effectiveAccentColor,
+                      borderColor: effectiveAccentColor,
+                      color: "#0f172a",
+                    }}
+                  >
+                    <CheckCircle2 size={12} />
+                  </div>
+                  <span className="text-[10px] font-bold text-zinc-300">
+                    {formData.disclaimer_checkbox_label || "I have read and accept the Disclaimer and Indemnity"} *
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Submit Button */}
+            <div className="pt-2">
+              <button
+                type="button"
+                className="w-full py-4 px-6 rounded-2xl font-black text-xs uppercase tracking-[0.25em] text-center shadow-lg transition-transform"
+                style={{
+                  backgroundColor: effectiveAccentColor,
+                  color: "#0f172a",
+                }}
+              >
+                Submit Registration
+              </button>
+            </div>
+
+            {/* Sponsor Logos */}
+            {activeLogos.length > 0 && (
+              <div 
+                className="pt-4 border-t space-y-2"
+                style={{ borderColor: isLight ? "#e2e8f0" : "rgba(255,255,255,0.1)" }}
+              >
+                <div 
+                  className={`flex flex-wrap items-center gap-4 ${
+                    formData.logos_align === "center" ? "justify-center" : formData.logos_align === "right" ? "justify-end" : "justify-start"
+                  }`}
+                >
+                  {activeLogos.map((logoUrl: string, idx: number) => (
+                    <img 
+                      key={idx} 
+                      src={logoUrl} 
+                      alt={`Sponsor ${idx + 1}`} 
+                      className="max-h-8 max-w-[85px] object-contain opacity-80" 
+                    />
+                  ))}
                 </div>
               </div>
             )}
           </div>
 
-          {/* Submit Button */}
-          <div className="pt-2">
-            <div 
-              className="w-full py-3 px-4 rounded-xl font-black text-xs uppercase tracking-widest text-center shadow-lg transition-transform"
-              style={{
-                backgroundColor: effectivePrimaryColor,
-                color: effectiveAccentColor,
-              }}
-            >
-              Complete Registration
+          {/* ================= BOTTOM LOGISTICS PILL ================= */}
+          <div className="mt-5 flex justify-center">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-900/80 border border-white/10 backdrop-blur-md shadow-md">
+              <span className="w-2 h-2 rounded-full animate-pulse bg-emerald-400" />
+              <span className="text-[10px] font-black uppercase tracking-[0.25em] text-zinc-300">
+                {selectedClientObj?.name || "EXCELLENCE ENTERTAINMENT LOGISTICS"}
+              </span>
             </div>
           </div>
 
-          {/* Access Pass badge preview */}
-          {(formData.show_qr_code || formData.show_pin_code) && (
-            <div 
-              className="flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-[9px] font-bold border"
-              style={{
-                backgroundColor: isLight ? "rgba(0,0,0,0.03)" : "rgba(255,255,255,0.04)",
-                borderColor: isLight ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.08)",
-                color: isLight ? "#475569" : "#94a3b8"
-              }}
-            >
-              <Sparkles size={11} style={{ color: effectiveAccentColor }} />
-              <span>Includes: {formData.show_qr_code ? "Digital QR Ticket" : ""}{formData.show_qr_code && formData.show_pin_code ? " & " : ""}{formData.show_pin_code ? "Access PIN" : ""}</span>
-            </div>
-          )}
-
-          {/* Sponsor Logos */}
-          {formData.form_logos?.some(u => !!u) && (
-            <div 
-              className="pt-4 border-t space-y-2"
-              style={{ borderColor: isLight ? "#e2e8f0" : "rgba(255,255,255,0.08)" }}
-            >
-              <span 
-                className="block text-[8px] font-black uppercase tracking-widest opacity-50"
-                style={{ textAlign: formData.logos_align || "center" }}
-              >
-                Event Partners & Sponsors
-              </span>
-              <div 
-                className={`flex flex-wrap items-center gap-3 ${
-                  formData.logos_align === "center" ? "justify-center" : formData.logos_align === "right" ? "justify-end" : "justify-start"
-                }`}
-              >
-                {formData.form_logos.filter(Boolean).map((logoUrl, idx) => (
-                  <img 
-                    key={idx} 
-                    src={logoUrl} 
-                    alt={`Sponsor ${idx + 1}`} 
-                    className="max-h-6 max-w-[70px] object-contain opacity-75" 
-                  />
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       </div>
     );
