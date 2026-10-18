@@ -6,7 +6,8 @@ import Link from "next/link";
 import {
   ArrowLeft, Save, Loader2, Trash2, Building2, Lock, Mail,
   Type, Eye, ExternalLink, CheckCircle2, AlertCircle, Sparkles,
-  Calendar, Award, Layers, ChevronDown, AlignLeft, AlignCenter, AlignRight, MapPin
+  Calendar, Award, Layers, ChevronDown, AlignLeft, AlignCenter, AlignRight, MapPin,
+  Palette, ShieldCheck
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import AdminLayout from "@/components/AdminLayout";
@@ -436,7 +437,7 @@ export default function EditEventPage() {
   const [originalBg, setOriginalBg] = useState("");
   const [eventUserRole, setEventUserRole] = useState<string>("staff");
   const effectiveRole = userRole === "admin" ? "admin" : eventUserRole;
-  const [activeTab, setActiveTab] = useState<"details" | "email">("details");
+  const [activeTab, setActiveTab] = useState<"general" | "branding" | "access" | "email">("general");
 
   // Email tab states
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
@@ -909,34 +910,81 @@ export default function EditEventPage() {
   return (
     <AdminLayout>
       <div className="max-w-5xl mx-auto font-outfit">
-        <div className="flex justify-between items-center mb-10">
-          <Link
-            href={`/admin/events/${id}`}
-            className="flex items-center gap-2 text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-350 transition-colors text-sm font-bold uppercase tracking-widest"
-          >
-            <ArrowLeft size={18} />
-            Back to Event
-          </Link>
-          <button
-            onClick={handleDelete}
-            className="flex items-center gap-2 text-red-500 hover:text-red-650 font-bold px-4 py-2 rounded-xl hover:bg-red-50 dark:hover:bg-red-950/20 transition-all border border-transparent hover:border-red-100 dark:hover:border-red-900/35"
-          >
-            <Trash2 size={20} />
-            Delete Event
-          </button>
+        {/* Sticky Top Action Bar */}
+        <div className="sticky top-0 z-30 bg-[#f8fafc]/90 dark:bg-[#090d16]/90 backdrop-blur-md py-4 mb-6 border-b border-slate-200/80 dark:border-white/10">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div className="flex items-center gap-3">
+              <Link
+                href={`/admin/events/${id}`}
+                className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition-colors bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 px-3.5 py-2 rounded-xl shadow-sm hover:shadow"
+              >
+                <ArrowLeft size={14} />
+                <span>Back to Hub</span>
+              </Link>
+              
+              <div className="h-4 w-px bg-slate-300 dark:bg-slate-700 hidden sm:block" />
+
+              <div className="flex items-center gap-2">
+                <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider ${
+                  formData.registration_active
+                    ? "bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800"
+                    : "bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800"
+                }`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${formData.registration_active ? "bg-emerald-500 animate-pulse" : "bg-amber-500"}`} />
+                  {formData.registration_active ? "Registration Live" : "Registration Paused"}
+                </span>
+
+                {formData.slug && (
+                  <a
+                    href={`/${formData.slug}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-[11px] font-black uppercase tracking-wider text-blue-600 dark:text-blue-400 hover:underline px-2 py-1"
+                  >
+                    <span>View Public Page</span>
+                    <ExternalLink size={12} />
+                  </a>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+              <button
+                type="button"
+                onClick={handleDelete}
+                className="hidden md:flex items-center gap-1.5 text-slate-400 hover:text-red-500 text-xs font-bold px-3 py-2 rounded-xl transition-all hover:bg-red-50 dark:hover:bg-red-950/20"
+                title="Delete this event"
+              >
+                <Trash2 size={15} />
+                <span>Delete</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleSubmit as any}
+                disabled={saving}
+                className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-yellow-400 hover:bg-yellow-300 text-black px-6 py-2 rounded-xl font-black transition-all shadow-lg shadow-yellow-500/20 uppercase tracking-widest text-xs disabled:opacity-50 active:scale-95 cursor-pointer"
+              >
+                {saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
+                <span>{saving ? "Deploying..." : "Save Changes"}</span>
+              </button>
+            </div>
+          </div>
         </div>
 
         <div className="bg-white dark:bg-[#0a0f1d]/40 dark:backdrop-blur-md rounded-[2.5rem] border border-slate-100 dark:border-white/5 overflow-hidden shadow-2xl dark:shadow-none">
           {/* Header */}
-          <div className="bg-[#1e293b] dark:bg-slate-900/50 px-10 py-10 dark:border-b dark:border-white/5">
+          <div className="bg-[#1e293b] dark:bg-slate-900/50 px-8 sm:px-10 py-8 dark:border-b dark:border-white/5">
             <h1 className="text-3xl font-black text-white italic tracking-tight font-bricolage uppercase">Edit Event Settings</h1>
-            <p className="text-slate-450 dark:text-slate-500 font-medium mt-2">Configure event details, email templates, and registration preferences.</p>
+            <p className="text-slate-450 dark:text-slate-500 font-medium mt-1 text-sm">Configure event details, visual branding, registration rules, and email templates.</p>
           </div>
 
           {/* Tab Bar */}
-          <div className="flex border-b border-slate-100 dark:border-white/5 bg-slate-50/60 dark:bg-slate-900/30 px-10">
+          <div className="flex border-b border-slate-100 dark:border-white/5 bg-slate-50/60 dark:bg-slate-900/30 px-6 sm:px-10 overflow-x-auto no-scrollbar">
             {[
-              { id: "details", label: "Event Details", icon: Building2 },
+              { id: "general", label: "General & Venue", icon: Calendar },
+              { id: "branding", label: "Branding & Appearance", icon: Palette },
+              { id: "access", label: "Access & Rules", icon: ShieldCheck },
               { id: "email", label: "Email & Templates", icon: Mail },
             ].map((tab) => {
               const Icon = tab.icon;
@@ -946,22 +994,22 @@ export default function EditEventPage() {
                   key={tab.id}
                   type="button"
                   onClick={() => setActiveTab(tab.id as any)}
-                  className={`flex items-center gap-2 px-6 py-4 text-xs font-black uppercase tracking-widest border-b-2 transition-all ${
+                  className={`flex items-center gap-2.5 px-6 py-4 text-xs font-black uppercase tracking-widest border-b-2 transition-all shrink-0 ${
                     active
-                      ? "border-yellow-400 text-slate-800 dark:text-yellow-400"
+                      ? "border-yellow-400 text-slate-800 dark:text-yellow-400 bg-white/40 dark:bg-white/5"
                       : "border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
                   }`}
                 >
                   <Icon size={14} />
-                  {tab.label}
+                  <span>{tab.label}</span>
                 </button>
               );
             })}
           </div>
 
-          {/* ===== DETAILS TAB ===== */}
-          {activeTab === "details" && (
-            <form onSubmit={handleSubmit} className="p-10 space-y-12">
+          {/* ===== GENERAL TAB ===== */}
+          {activeTab === "general" && (
+            <form onSubmit={handleSubmit} className="p-8 sm:p-10 space-y-10">
               {saveNotification && (
                 <div className={`p-5 rounded-2xl flex items-center justify-between transition-all ${
                   saveNotification.type === "success" 
@@ -1044,13 +1092,48 @@ export default function EditEventPage() {
                       className="w-full px-5 py-4 rounded-2xl border border-slate-100 dark:border-slate-800 focus:border-[#1e293b] dark:focus:border-yellow-400 focus:ring-4 focus:ring-yellow-400/20 outline-none transition-all font-bold text-slate-700 dark:text-white bg-slate-50/50 dark:bg-slate-900/60" />
                   </div>
                 </div>
+
+                <div className="pt-8 border-t border-slate-100 dark:border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <p className="text-xs text-slate-400 font-medium">
+                    Configure dates, venue address, and attendee capacity here.
+                  </p>
+                  <button
+                    type="submit"
+                    disabled={saving}
+                    className="w-full sm:w-auto bg-[#1e293b] hover:bg-[#0f172a] dark:bg-yellow-400 dark:hover:bg-yellow-300 dark:text-black text-white font-black px-8 py-4 rounded-2xl shadow-xl transition-all flex items-center justify-center gap-2.5 uppercase tracking-widest text-xs disabled:opacity-50 active:scale-95 cursor-pointer"
+                  >
+                    {saving ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
+                    <span>{saving ? "Deploying..." : "Save Changes"}</span>
+                  </button>
+                </div>
               </div>
+            </form>
+          )}
+
+          {/* ===== BRANDING TAB ===== */}
+          {activeTab === "branding" && (
+            <form onSubmit={handleSubmit} className="p-8 sm:p-10 space-y-12">
+              {saveNotification && (
+                <div className={`p-5 rounded-2xl flex items-center justify-between transition-all ${
+                  saveNotification.type === "success" 
+                    ? "bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 shadow-sm"
+                    : "bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-300 shadow-sm"
+                }`}>
+                  <div className="flex items-center gap-3">
+                    {saveNotification.type === "success" ? <CheckCircle2 size={20} className="text-emerald-600 dark:text-emerald-400 shrink-0" /> : <AlertCircle size={20} className="text-red-600 dark:text-red-400 shrink-0" />}
+                    <span className="font-bold text-sm">{saveNotification.text}</span>
+                  </div>
+                  <button type="button" onClick={() => setSaveNotification(null)} className="text-xs uppercase tracking-widest font-black opacity-60 hover:opacity-100 transition-opacity ml-4">
+                    Dismiss
+                  </button>
+                </div>
+              )}
 
               {/* 2. Page Styling & Background */}
-              <div className="space-y-6 pt-8 border-t border-slate-100 dark:border-white/5">
+              <div className="space-y-6">
                 <div className="border-b border-slate-100 dark:border-white/5 pb-3">
                   <h3 className="text-xs font-black text-[#1e293b] dark:text-white uppercase tracking-[0.2em] flex items-center gap-2">
-                    <Calendar size={16} className="text-slate-400 dark:text-slate-500" /> 2. Page Styling &amp; Background
+                    <Palette size={16} className="text-slate-400 dark:text-slate-500" /> 1. Page Styling &amp; Background
                   </h3>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
@@ -1962,13 +2045,48 @@ export default function EditEventPage() {
                     />
                   </div>
                 </div>
-              </div>
 
-              {/* 4. Access Rules & Options */}
-              <div className="space-y-6 pt-8 border-t border-slate-100 dark:border-white/5">
+                <div className="pt-8 border-t border-slate-100 dark:border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <p className="text-xs text-slate-400 font-medium">
+                    Configure theme colors, banners, typography, and card styles.
+                  </p>
+                  <button
+                    type="submit"
+                    disabled={saving}
+                    className="w-full sm:w-auto bg-[#1e293b] hover:bg-[#0f172a] dark:bg-yellow-400 dark:hover:bg-yellow-300 dark:text-black text-white font-black px-8 py-4 rounded-2xl shadow-xl transition-all flex items-center justify-center gap-2.5 uppercase tracking-widest text-xs disabled:opacity-50 active:scale-95 cursor-pointer"
+                  >
+                    {saving ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
+                    <span>{saving ? "Deploying..." : "Save Changes"}</span>
+                  </button>
+                </div>
+              </div>
+            </form>
+          )}
+
+          {/* ===== ACCESS TAB ===== */}
+          {activeTab === "access" && (
+            <form onSubmit={handleSubmit} className="p-8 sm:p-10 space-y-12">
+              {saveNotification && (
+                <div className={`p-5 rounded-2xl flex items-center justify-between transition-all ${
+                  saveNotification.type === "success" 
+                    ? "bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 shadow-sm"
+                    : "bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-300 shadow-sm"
+                }`}>
+                  <div className="flex items-center gap-3">
+                    {saveNotification.type === "success" ? <CheckCircle2 size={20} className="text-emerald-600 dark:text-emerald-400 shrink-0" /> : <AlertCircle size={20} className="text-red-600 dark:text-red-400 shrink-0" />}
+                    <span className="font-bold text-sm">{saveNotification.text}</span>
+                  </div>
+                  <button type="button" onClick={() => setSaveNotification(null)} className="text-xs uppercase tracking-widest font-black opacity-60 hover:opacity-100 transition-opacity ml-4">
+                    Dismiss
+                  </button>
+                </div>
+              )}
+
+              {/* 1. Access Rules & Options */}
+              <div className="space-y-6">
                 <div className="border-b border-slate-100 dark:border-white/5 pb-3">
                   <h3 className="text-xs font-black text-[#1e293b] dark:text-white uppercase tracking-[0.2em] flex items-center gap-2">
-                    <Award size={16} className="text-slate-400 dark:text-slate-500" /> 4. Access Rules &amp; Options
+                    <ShieldCheck size={16} className="text-slate-400 dark:text-slate-500" /> 1. Access Rules &amp; Options
                   </h3>
                 </div>
                 <div className="grid grid-cols-1 gap-6">
@@ -2059,13 +2177,19 @@ export default function EditEventPage() {
                 </div>
               </div>
 
-              <div className="pt-6">
-                <button type="submit" disabled={saving}
-                  className="w-full bg-[#1e293b] hover:bg-[#0f172a] disabled:bg-slate-300 text-white font-black py-5 rounded-2xl shadow-2xl shadow-slate-200 transition-all flex items-center justify-center gap-3 uppercase tracking-widest text-sm">
-                  {saving ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />}
-                  {saving ? "Deploying Changes..." : "Commit Changes"}
-                </button>
-              </div>
+                <div className="pt-8 border-t border-slate-100 dark:border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <p className="text-xs text-slate-400 font-medium">
+                    Configure registration access status, domain whitelist, company collection, and disclaimers.
+                  </p>
+                  <button
+                    type="submit"
+                    disabled={saving}
+                    className="w-full sm:w-auto bg-[#1e293b] hover:bg-[#0f172a] dark:bg-yellow-400 dark:hover:bg-yellow-300 dark:text-black text-white font-black px-8 py-4 rounded-2xl shadow-xl transition-all flex items-center justify-center gap-2.5 uppercase tracking-widest text-xs disabled:opacity-50 active:scale-95 cursor-pointer"
+                  >
+                    {saving ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
+                    <span>{saving ? "Deploying..." : "Save Changes"}</span>
+                  </button>
+                </div>
             </form>
           )}
 
@@ -2350,11 +2474,17 @@ export default function EditEventPage() {
               </p>
 
               {/* Save button */}
-              <div className="pt-2">
-                <button type="submit" disabled={saving}
-                  className="w-full bg-[#1e293b] dark:bg-yellow-400 hover:bg-[#0f172a] dark:hover:bg-yellow-500 disabled:bg-slate-300 dark:disabled:bg-slate-800 text-white dark:text-slate-950 font-black py-5 rounded-2xl shadow-2xl dark:shadow-none transition-all flex items-center justify-center gap-3 uppercase tracking-widest text-sm">
-                  {saving ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />}
-                  {saving ? "Deploying Changes..." : "Commit Changes"}
+              <div className="pt-6 border-t border-slate-100 dark:border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <p className="text-xs text-slate-400 font-medium">
+                  Configure confirmation and decline email templates and dispatch details.
+                </p>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="w-full sm:w-auto bg-[#1e293b] hover:bg-[#0f172a] dark:bg-yellow-400 dark:hover:bg-yellow-300 dark:text-black text-white font-black px-8 py-4 rounded-2xl shadow-xl transition-all flex items-center justify-center gap-2.5 uppercase tracking-widest text-xs disabled:opacity-50 active:scale-95 cursor-pointer"
+                >
+                  {saving ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
+                  <span>{saving ? "Deploying..." : "Save Changes"}</span>
                 </button>
               </div>
             </form>
