@@ -2209,18 +2209,18 @@ export default function EditEventPage() {
                                       className="absolute inset-0 opacity-0 cursor-pointer z-10"
                                     />
                                     <div
-                                      className={`w-full h-22 rounded-2xl border-2 border-dashed ${
+                                      className={`w-full h-24 min-h-[96px] rounded-2xl border-2 border-dashed ${
                                         slotUrl
-                                          ? "border-green-500/30 bg-green-50/50 dark:bg-green-950/20"
+                                          ? "border-green-500/40 bg-green-50/30 dark:bg-green-950/20"
                                           : "border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/60 hover:border-slate-300 dark:hover:border-slate-700"
                                       } relative transition-all overflow-hidden`}
                                     >
                                       {slotUrl ? (
-                                        <div className="absolute inset-0 flex items-center justify-center p-2.5 bg-slate-900/5">
+                                        <div className="absolute inset-0 flex items-center justify-center p-3 bg-white/60 dark:bg-slate-950/70 backdrop-blur-xs">
                                           <img
                                             src={slotUrl}
                                             alt={`Footer Logo ${slotIdx + 1}`}
-                                            className="max-h-full max-w-full object-contain"
+                                            className="max-h-full max-w-full object-contain drop-shadow-xs"
                                           />
                                         </div>
                                       ) : (
