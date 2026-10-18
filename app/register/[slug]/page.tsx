@@ -2207,14 +2207,14 @@ function PublicRegistrationPageContent() {
         </div>
 
         {activeFormLogos.length > 0 && (
-          <div className={`mt-8 pt-6 border-t ${isFormLight ? "border-slate-200/80" : "border-white/10"}`}>
+          <div className={`mt-8 pt-6 pb-4 border-t ${isFormLight ? "border-slate-200/80" : "border-white/10"}`}>
             <div className={`flex flex-wrap items-center ${logosFlexClass} gap-6 sm:gap-8`}>
               {activeFormLogos.map((logoUrl: string, idx: number) => (
-                <div key={idx} className="flex items-center justify-center">
+                <div key={idx} className="flex items-center justify-center p-1 min-h-[44px]">
                   <img
                     src={logoUrl}
                     alt={`Partner Logo ${idx + 1}`}
-                    className="max-h-12 sm:max-h-14 max-w-[110px] sm:max-w-[130px] w-auto h-auto object-contain"
+                    className="max-h-12 sm:max-h-14 max-w-[110px] sm:max-w-[130px] w-auto h-auto object-contain opacity-95 hover:opacity-100 transition-opacity"
                   />
                 </div>
               ))}

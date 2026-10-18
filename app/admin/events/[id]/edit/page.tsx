@@ -12,7 +12,7 @@ import {
 import { useSession } from "next-auth/react";
 import AdminLayout from "@/components/AdminLayout";
 import RichTextEditor from "@/components/RichTextEditor";
-import { unescapeHtmlLinks, cleanHtmlText } from "@/lib/utils";
+import { unescapeHtmlLinks, cleanHtmlText, sanitizeEventTitle, extractAlignmentFromHtml } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
 // Helpers shared with settings page
@@ -412,6 +412,77 @@ const compressImage = (file: File, maxWidth = 1200, maxHeight = 630, quality = 0
         if (!ctx) { resolve(event.target?.result as string); return; }
         ctx.drawImage(img, 0, 0, width, height);
         resolve(canvas.toDataURL("image/jpeg", quality));
+      };
+      img.onerror = (err) => reject(err);
+    };
+    reader.onerror = (err) => reject(err);
+  });
+};
+
+const compressLogoImage = (file: File, maxWidth = 800, maxHeight = 400): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        try {
+          const tempCanvas = document.createElement("canvas");
+          tempCanvas.width = img.width;
+          tempCanvas.height = img.height;
+          const tempCtx = tempCanvas.getContext("2d");
+          if (!tempCtx) { resolve(event.target?.result as string); return; }
+          tempCtx.drawImage(img, 0, 0);
+
+          let minX = 0, minY = 0, maxX = img.width, maxY = img.height;
+          const imgData = tempCtx.getImageData(0, 0, img.width, img.height);
+          const data = imgData.data;
+          let found = false;
+
+          let top = img.height, bottom = 0, left = img.width, right = 0;
+          for (let y = 0; y < img.height; y++) {
+            for (let x = 0; x < img.width; x++) {
+              const alpha = data[(y * img.width + x) * 4 + 3];
+              if (alpha > 15) {
+                if (x < left) left = x;
+                if (x > right) right = x;
+                if (y < top) top = y;
+                if (y > bottom) bottom = y;
+                found = true;
+              }
+            }
+          }
+
+          if (found && right > left && bottom > top) {
+            minX = Math.max(0, left - 4);
+            minY = Math.max(0, top - 4);
+            maxX = Math.min(img.width, right + 4);
+            maxY = Math.min(img.height, bottom + 4);
+          }
+
+          const cropWidth = maxX - minX;
+          const cropHeight = maxY - minY;
+
+          let finalWidth = cropWidth;
+          let finalHeight = cropHeight;
+          if (finalWidth > maxWidth || finalHeight > maxHeight) {
+            const ratio = Math.min(maxWidth / finalWidth, maxHeight / finalHeight);
+            finalWidth = Math.round(finalWidth * ratio);
+            finalHeight = Math.round(finalHeight * ratio);
+          }
+
+          const outCanvas = document.createElement("canvas");
+          outCanvas.width = finalWidth;
+          outCanvas.height = finalHeight;
+          const outCtx = outCanvas.getContext("2d");
+          if (!outCtx) { resolve(event.target?.result as string); return; }
+
+          outCtx.drawImage(img, minX, minY, cropWidth, cropHeight, 0, 0, finalWidth, finalHeight);
+          resolve(outCanvas.toDataURL("image/png"));
+        } catch {
+          resolve(event.target?.result as string);
+        }
       };
       img.onerror = (err) => reject(err);
     };
@@ -995,83 +1066,89 @@ export default function EditEventPage() {
         <div className="relative z-10 p-4 sm:p-7 max-w-lg mx-auto flex flex-col items-center">
           
           {/* ================= HEADER (OUTSIDE CARD) ================= */}
-          <div className={`w-full mb-6 space-y-2.5 ${
-            formData.title_align === "left" ? "text-left items-start" : formData.title_align === "right" ? "text-right items-end" : "text-center items-center"
-          } flex flex-col`}>
-            <h1 
-              className={`text-2xl sm:text-3xl font-black tracking-tight leading-tight text-white drop-shadow-md w-full ${
-                formData.title_align === "left" ? "text-left" : formData.title_align === "right" ? "text-right" : "text-center"
-              }`}
-              style={{ textAlign: (formData.title_align as any) || "center" }}
-            >
-              {cleanHtmlText(formData.title || "") || "Untitled Event Title"}
-            </h1>
+          {(() => {
+            const effectiveTitleAlign = formData.title_align || extractAlignmentFromHtml(formData.title || "") || "left";
+            const effectiveDescAlign = formData.description_align || extractAlignmentFromHtml(formData.description || "") || "left";
 
-            {formData.description && (
-              <div 
-                className={`text-xs sm:text-sm text-zinc-200/90 font-medium leading-relaxed drop-shadow max-w-md w-full ${
-                  formData.description_align === "left" ? "text-left mr-auto" : formData.description_align === "right" ? "text-right ml-auto" : "text-center mx-auto"
-                }`}
-                style={{ textAlign: (formData.description_align as any) || "center" }}
-                dangerouslySetInnerHTML={{ __html: formData.description }}
-              />
-            )}
+            return (
+              <div className={`w-full mb-6 space-y-2.5 ${
+                effectiveTitleAlign === "left" ? "text-left items-start" : effectiveTitleAlign === "right" ? "text-right items-end" : "text-center items-center"
+              } flex flex-col`}>
+                <h1 
+                  className={`text-2xl sm:text-3xl font-black tracking-tight leading-tight text-white drop-shadow-md w-full ${
+                    effectiveTitleAlign === "left" ? "text-left" : effectiveTitleAlign === "right" ? "text-right" : "text-center"
+                  }`}
+                  style={{ textAlign: effectiveTitleAlign }}
+                  dangerouslySetInnerHTML={{ __html: sanitizeEventTitle(formData.title || "") || "Untitled Event Title" }}
+                />
 
-            {/* Date & Venue Badges matching live public registration page */}
-            <div 
-              className={`flex flex-wrap items-center gap-4 pt-3 w-full ${
-                formData.meta_align === "left" ? "justify-start" : formData.meta_align === "right" ? "justify-end" : "justify-center"
-              } ${
-                formData.meta_order === "stacked" ? "flex-col !items-stretch" : formData.meta_order === "venue_first" ? "flex-row-reverse" : "flex-row"
-              }`}
-            >
-              {/* Date & Time Badge */}
-              <div className={`flex items-center gap-3 ${formData.meta_align === "right" ? "flex-row-reverse text-right" : ""}`}>
+                {formData.description && (
+                  <div 
+                    className={`text-xs sm:text-sm text-zinc-200/90 font-medium leading-relaxed drop-shadow max-w-md w-full ${
+                      effectiveDescAlign === "left" ? "text-left mr-auto" : effectiveDescAlign === "right" ? "text-right ml-auto" : "text-center mx-auto"
+                    }`}
+                    style={{ textAlign: effectiveDescAlign }}
+                    dangerouslySetInnerHTML={{ __html: formData.description }}
+                  />
+                )}
+
+                {/* Date & Venue Badges matching live public registration page */}
                 <div 
-                  className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border border-white/10 shadow-sm"
-                  style={{
-                    backgroundColor: isLight ? "rgba(255,255,255,0.7)" : "rgba(255,255,255,0.06)",
-                    borderColor: isLight ? "rgba(0,0,0,0.1)" : "rgba(255,255,255,0.12)"
-                  }}
+                  className={`flex flex-wrap items-center gap-4 pt-3 w-full ${
+                    formData.meta_align === "left" ? "justify-start" : formData.meta_align === "right" ? "justify-end" : "justify-center"
+                  } ${
+                    formData.meta_order === "stacked" ? "flex-col !items-stretch" : formData.meta_order === "venue_first" ? "flex-row-reverse" : "flex-row"
+                  }`}
                 >
-                  <Calendar size={18} style={{ color: effectiveAccentColor }} />
-                </div>
-                <div className={formData.meta_align === "right" ? "text-right" : "text-left"}>
-                  <p className="text-[9px] font-black uppercase tracking-widest text-zinc-400">
-                    Date &amp; Time
-                  </p>
-                  <p className="text-xs font-bold text-white mt-0.5">
-                    {formData.start_date ? new Date(formData.start_date).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" }) : "Nov 11, 2026, 11:00 AM"}
-                  </p>
+                  {/* Date & Time Badge */}
+                  <div className={`flex items-center gap-3 ${formData.meta_align === "right" ? "flex-row-reverse text-right" : ""}`}>
+                    <div 
+                      className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border border-white/10 shadow-sm"
+                      style={{
+                        backgroundColor: isLight ? "rgba(255,255,255,0.7)" : "rgba(255,255,255,0.06)",
+                        borderColor: isLight ? "rgba(0,0,0,0.1)" : "rgba(255,255,255,0.12)"
+                      }}
+                    >
+                      <Calendar size={18} style={{ color: effectiveAccentColor }} />
+                    </div>
+                    <div className={formData.meta_align === "right" ? "text-right" : "text-left"}>
+                      <p className="text-[9px] font-black uppercase tracking-widest text-zinc-400">
+                        Date &amp; Time
+                      </p>
+                      <p className="text-xs font-bold text-white mt-0.5">
+                        {formData.start_date ? new Date(formData.start_date).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" }) : "Nov 11, 2026, 11:00 AM"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Venue Badge */}
+                  <div className={`flex items-center gap-3 ${formData.meta_align === "right" ? "flex-row-reverse text-right" : ""}`}>
+                    <div 
+                      className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border border-white/10 shadow-sm"
+                      style={{
+                        backgroundColor: isLight ? "rgba(255,255,255,0.7)" : "rgba(255,255,255,0.06)",
+                        borderColor: isLight ? "rgba(0,0,0,0.1)" : "rgba(255,255,255,0.12)"
+                      }}
+                    >
+                      <MapPin size={18} style={{ color: effectiveAccentColor }} />
+                    </div>
+                    <div className={formData.meta_align === "right" ? "text-right" : "text-left"}>
+                      <p className="text-[9px] font-black uppercase tracking-widest text-zinc-400">
+                        Venue
+                      </p>
+                      <p className="text-xs font-bold text-white mt-0.5">
+                        {formData.location || "The Glen Country Club, Clifton"}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
-
-              {/* Venue Badge */}
-              <div className={`flex items-center gap-3 ${formData.meta_align === "right" ? "flex-row-reverse text-right" : ""}`}>
-                <div 
-                  className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border border-white/10 shadow-sm"
-                  style={{
-                    backgroundColor: isLight ? "rgba(255,255,255,0.7)" : "rgba(255,255,255,0.06)",
-                    borderColor: isLight ? "rgba(0,0,0,0.1)" : "rgba(255,255,255,0.12)"
-                  }}
-                >
-                  <MapPin size={18} style={{ color: effectiveAccentColor }} />
-                </div>
-                <div className={formData.meta_align === "right" ? "text-right" : "text-left"}>
-                  <p className="text-[9px] font-black uppercase tracking-widest text-zinc-400">
-                    Venue
-                  </p>
-                  <p className="text-xs font-bold text-white mt-0.5">
-                    {formData.location || "The Glen Country Club, Clifton"}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
+            );
+          })()}
 
           {/* ================= REGISTRATION FORM CARD ================= */}
           <div 
-            className="w-full rounded-[2.2rem] p-5 sm:p-6 border shadow-2xl backdrop-blur-xl space-y-5"
+            className="w-full rounded-[2.2rem] p-5 sm:p-6 pb-8 sm:pb-9 border shadow-2xl backdrop-blur-xl space-y-5"
             style={{
               backgroundColor: isLight ? "rgba(255, 255, 255, 0.95)" : "rgba(15, 23, 42, 0.88)",
               borderColor: isLight ? "rgba(226, 232, 240, 0.8)" : "rgba(255, 255, 255, 0.12)",
@@ -1332,21 +1409,22 @@ export default function EditEventPage() {
             {/* Sponsor Logos */}
             {activeLogos.length > 0 && (
               <div 
-                className="pt-4 border-t space-y-2"
+                className="pt-5 pb-2 border-t space-y-2.5 w-full"
                 style={{ borderColor: isLight ? "#e2e8f0" : "rgba(255,255,255,0.1)" }}
               >
                 <div 
-                  className={`flex flex-wrap items-center gap-4 ${
+                  className={`flex flex-wrap items-center gap-4 sm:gap-6 ${
                     formData.logos_align === "center" ? "justify-center" : formData.logos_align === "right" ? "justify-end" : "justify-start"
                   }`}
                 >
                   {activeLogos.map((logoUrl: string, idx: number) => (
-                    <img 
-                      key={idx} 
-                      src={logoUrl} 
-                      alt={`Sponsor ${idx + 1}`} 
-                      className="max-h-8 max-w-[85px] object-contain opacity-80" 
-                    />
+                    <div key={idx} className="flex items-center justify-center p-1 min-h-[38px] shrink-0">
+                      <img 
+                        src={logoUrl} 
+                        alt={`Sponsor ${idx + 1}`} 
+                        className="max-h-10 sm:max-h-11 max-w-[95px] sm:max-w-[110px] w-auto h-auto object-contain opacity-90 hover:opacity-100 transition-opacity" 
+                      />
+                    </div>
                   ))}
                 </div>
               </div>
@@ -1515,7 +1593,16 @@ export default function EditEventPage() {
                     <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">Event Title</label>
                     <RichTextEditor 
                       value={formData.title || ""} 
-                      onChange={(val) => setFormData(prev => ({ ...prev, title: val }))} 
+                      onChange={(val) => {
+                        const detected = extractAlignmentFromHtml(val);
+                        setFormData(prev => ({ 
+                          ...prev, 
+                          title: val,
+                          ...(detected ? { title_align: detected } : {})
+                        }));
+                      }}
+                      onAlignChange={(align) => setFormData(prev => ({ ...prev, title_align: align }))}
+                      externalAlign={formData.title_align || "left"}
                       placeholder="e.g. Excellence Gala 2026"
                       minHeight="80px"
                     />
@@ -1998,7 +2085,7 @@ export default function EditEventPage() {
                                             uploadedUrls.push(url);
                                           } catch {
                                             try {
-                                              const compressed = await compressImage(file, 800, 800, 0.85);
+                                              const compressed = await compressLogoImage(file, 800, 400);
                                               uploadedUrls.push(compressed);
                                             } catch {
                                               const dataUrl = await new Promise<string>((resolve) => {
@@ -2314,7 +2401,28 @@ export default function EditEventPage() {
                                         <button
                                           key={val}
                                           type="button"
-                                          onClick={() => setFormData(prev => ({ ...prev, [item.key]: val }))}
+                                          onClick={() => {
+                                            setFormData(prev => {
+                                              let newTitle = prev.title;
+                                              if (item.key === "title_align" && newTitle) {
+                                                if (/text-align:\s*(left|center|right)/i.test(newTitle)) {
+                                                  newTitle = newTitle.replace(/text-align:\s*(left|center|right)/gi, `text-align: ${val}`);
+                                                }
+                                              }
+                                              let newDesc = prev.description;
+                                              if (item.key === "description_align" && newDesc) {
+                                                if (/text-align:\s*(left|center|right)/i.test(newDesc)) {
+                                                  newDesc = newDesc.replace(/text-align:\s*(left|center|right)/gi, `text-align: ${val}`);
+                                                }
+                                              }
+                                              return {
+                                                ...prev,
+                                                [item.key]: val,
+                                                title: newTitle,
+                                                description: newDesc
+                                              };
+                                            });
+                                          }}
                                           className={`flex items-center justify-center gap-1 py-1.5 px-2 rounded-md text-[9px] font-black uppercase tracking-wider transition-all cursor-pointer ${
                                             active
                                               ? "bg-slate-900 text-white dark:bg-yellow-400 dark:text-slate-950 shadow-sm"
@@ -2620,7 +2728,16 @@ export default function EditEventPage() {
                       <div className="p-6 sm:p-7 pt-2 border-t border-slate-100 dark:border-slate-800/60 animate-in fade-in duration-200">
                         <RichTextEditor 
                           value={formData.description || ""} 
-                          onChange={(val) => setFormData(prev => ({ ...prev, description: val }))} 
+                          onChange={(val) => {
+                            const detected = extractAlignmentFromHtml(val);
+                            setFormData(prev => ({ 
+                              ...prev, 
+                              description: val,
+                              ...(detected ? { description_align: detected } : {})
+                            }));
+                          }}
+                          onAlignChange={(align) => setFormData(prev => ({ ...prev, description_align: align }))}
+                          externalAlign={formData.description_align || "left"}
                           placeholder="Type event description here..."
                           minHeight="120px"
                         />

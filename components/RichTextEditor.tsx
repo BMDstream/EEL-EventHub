@@ -21,6 +21,8 @@ import {
 interface RichTextEditorProps {
   value: string;
   onChange: (value: string) => void;
+  onAlignChange?: (align: "left" | "center" | "right") => void;
+  externalAlign?: "left" | "center" | "right";
   placeholder?: string;
   className?: string;
   minHeight?: string;
@@ -165,6 +167,8 @@ const HIGHLIGHT_COLORS = [
 export default function RichTextEditor({
   value,
   onChange,
+  onAlignChange,
+  externalAlign,
   placeholder = "Type template content here...",
   className = "",
   minHeight = "200px",
@@ -189,6 +193,15 @@ export default function RichTextEditor({
   const [showSizeDropdown, setShowSizeDropdown] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
   const [editorBg, setEditorBg] = useState<"light" | "dark">("light");
+
+  useEffect(() => {
+    if (externalAlign && (externalAlign === "left" || externalAlign === "center" || externalAlign === "right")) {
+      setActiveAlign(externalAlign);
+      if (editorRef.current) {
+        editorRef.current.style.textAlign = externalAlign;
+      }
+    }
+  }, [externalAlign]);
 
   const updateActiveStylesFromSelection = () => {
     if (typeof window === "undefined") return;
@@ -594,6 +607,7 @@ export default function RichTextEditor({
 
   const applyTextAlign = (align: "left" | "center" | "right") => {
     setActiveAlign(align);
+    onAlignChange?.(align);
     if (!editorRef.current) return;
 
     restoreSelection();
@@ -610,6 +624,7 @@ export default function RichTextEditor({
     } else {
       applyStyleToSelection({ display: "block", width: "100%", textAlign: align });
     }
+    triggerChange();
   };
 
   const applyTextColor = (color: string, keepInputFocus = false) => {

@@ -44,3 +44,19 @@ export function cleanHtmlText(html: string): string {
   return text.trim();
 }
 
+export function sanitizeEventTitle(rawTitle: string): string {
+  if (!rawTitle) return "";
+  let processed = rawTitle;
+  // Ensure spaces between inline tags and words are preserved
+  processed = processed.replace(/([a-zA-Z0-9])(<span)/g, "$1 $2");
+  processed = processed.replace(/(<\/span>)([a-zA-Z0-9])/g, "$1 $2");
+  return processed;
+}
+
+export function extractAlignmentFromHtml(html: string): "left" | "center" | "right" | null {
+  if (!html) return null;
+  const match = html.match(/text-align:\s*(left|center|right)/i) || html.match(/align=["'](left|center|right)["']/i);
+  if (match) return match[1].toLowerCase() as "left" | "center" | "right";
+  return null;
+}
+
