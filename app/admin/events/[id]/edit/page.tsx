@@ -7,7 +7,7 @@ import {
   ArrowLeft, Save, Loader2, Trash2, Building2, Lock, Mail,
   Type, Eye, ExternalLink, CheckCircle2, AlertCircle, Sparkles,
   Calendar, Award, Layers, ChevronDown, ChevronUp, AlignLeft, AlignCenter, AlignRight, MapPin,
-  Palette, ShieldCheck, Monitor, Smartphone, X, Sliders, Image as ImageIcon, FileText
+  Palette, ShieldCheck, Monitor, Smartphone, X, Sliders, Image as ImageIcon, FileText, Users
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import AdminLayout from "@/components/AdminLayout";
@@ -1019,28 +1019,253 @@ export default function EditEventPage() {
       activeTemplate?.description || 
       "DFA invites you to a day of padel and pickleball at The Glen in Clifton! Please complete the form below to confirm your attendance and secure your spot.";
 
-    // Active questions from event or template
-    const rawSchema = (rawEvent?.custom_fields_schema && rawEvent.custom_fields_schema.length > 0)
-      ? rawEvent.custom_fields_schema
-      : (activeTemplate?.layout_schema || []);
+    // Active questions from event (Form Studio) or template
+    const isDifferentTemplatePicked = formData.registration_form_template_id && 
+      rawEvent?.registration_form_template_id && 
+      formData.registration_form_template_id !== rawEvent.registration_form_template_id;
 
-    const flatQuestions: any[] = [];
+    const rawSchema = (!isDifferentTemplatePicked && rawEvent?.custom_fields_schema && rawEvent.custom_fields_schema.length > 0)
+      ? rawEvent.custom_fields_schema
+      : (activeTemplate?.layout_schema || rawEvent?.custom_fields_schema || []);
+
+    let flatQuestions: any[] = [];
     if (Array.isArray(rawSchema)) {
       for (const item of rawSchema) {
-        if (item && Array.isArray(item.fields)) {
+        if (item && typeof item === "object" && "fields" in item && Array.isArray(item.fields)) {
+          if (item.title && item.title !== "Registration Details" && item.id !== "default_section") {
+            const allFieldsBefore = item.fields.every((f: any) => 
+              ["first_name", "last_name", "email", "company"].includes(f.key || f.id || "") || !!f.showBeforeAttendance
+            );
+            flatQuestions.push({
+              id: item.id || `section_${Date.now()}`,
+              key: item.id,
+              label: item.title,
+              type: "section_header",
+              visible: true,
+              showBeforeAttendance: allFieldsBefore,
+              align: item.align,
+            });
+          }
           flatQuestions.push(...item.fields);
-        } else if (item && item.label) {
+        } else if (item && (item.label || item.type || item.key)) {
           flatQuestions.push(item);
         }
       }
     }
 
-    const postAttendanceQuestions = flatQuestions.filter((f: any) => {
-      const k = f.key || f.id;
-      if (["first_name", "last_name", "email", "company"].includes(k) || f.showBeforeAttendance) return false;
-      if (f.dependsOn && f.dependsOn.fieldId) return false;
-      return true;
+    // Ensure standard identity fields are present in the preview flat list if not already in schema
+    const hasFirstName = flatQuestions.some((f: any) => f.key === "first_name" || f.id === "field_first_name");
+    const hasLastName = flatQuestions.some((f: any) => f.key === "last_name" || f.id === "field_last_name");
+    const hasEmail = flatQuestions.some((f: any) => f.key === "email" || f.id === "field_email");
+    const hasCompany = flatQuestions.some((f: any) => f.key === "company" || f.id === "field_company");
+
+    const missingDefaults: any[] = [];
+    if (!hasFirstName) {
+      missingDefaults.push({ id: "field_first_name", key: "first_name", label: "First Name", placeholder: "e.g. Alan", type: "text", required: true, visible: true, showBeforeAttendance: true });
+    }
+    if (!hasLastName) {
+      missingDefaults.push({ id: "field_last_name", key: "last_name", label: "Last Name", placeholder: "e.g. Turing", type: "text", required: true, visible: true, showBeforeAttendance: true });
+    }
+    if (!hasEmail) {
+      missingDefaults.push({ id: "field_email", key: "email", label: "Email Address", placeholder: "e.g. turing@bletchleypark.org.uk", type: "email", required: true, visible: true, showBeforeAttendance: true });
+    }
+    if (!hasCompany && formData.collect_company) {
+      missingDefaults.push({ id: "field_company", key: "company", label: "Organization / Company", placeholder: "e.g. GC&CS", type: "text", required: !!formData.company_required, visible: true, showBeforeAttendance: true });
+    }
+
+    flatQuestions = [...missingDefaults, ...flatQuestions];
+
+    const getEffectiveShowBefore = (f: any, visited = new Set<string>()): boolean => {
+      const fId = f.id || f.key || "";
+      if (fId && visited.has(fId)) return !!f.showBeforeAttendance;
+      if (fId) visited.add(fId);
+
+      const isIdentity = ["first_name", "last_name", "email", "company"].includes(f.key || f.id || "");
+      if (isIdentity) return true;
+      if (f.dependsOn?.fieldId) {
+        const parentField = flatQuestions.find(
+          (pf: any) => pf && (pf.id === f.dependsOn.fieldId || pf.key === f.dependsOn.fieldId)
+        );
+        if (parentField && parentField !== f) {
+          return getEffectiveShowBefore(parentField, visited);
+        }
+      }
+      return !!f.showBeforeAttendance;
+    };
+
+    const defaultFieldsAlign: "left" | "center" | "right" =
+      formData.fields_align ||
+      activeTemplate?.theme_config?.fields_align ||
+      "left";
+
+    const preAttendanceQuestions = flatQuestions.filter((f: any) => {
+      if (f.inactive || f.visible === false) return false;
+      if ((f.key === "company" || f.id === "field_company") && !formData.collect_company) return false;
+      return getEffectiveShowBefore(f);
     });
+
+    const postAttendanceQuestions = flatQuestions.filter((f: any) => {
+      if (f.inactive || f.visible === false) return false;
+      if ((f.key === "company" || f.id === "field_company") && !formData.collect_company) return false;
+      return !getEffectiveShowBefore(f);
+    });
+
+    const renderPreviewQuestion = (field: any, idx: number) => {
+      const fieldAlign: "left" | "center" | "right" = field.align || defaultFieldsAlign;
+      const textAlignClass = fieldAlign === "center" ? "text-center" : fieldAlign === "right" ? "text-right" : "text-left";
+      const flexAlignClass = fieldAlign === "center" ? "justify-center text-center" : fieldAlign === "right" ? "justify-end text-right" : "justify-start text-left";
+      const blockPositionClass = fieldAlign === "center" ? "mx-auto" : fieldAlign === "right" ? "ml-auto" : "mr-auto";
+
+      if (field.type === "section_header") {
+        return (
+          <div key={field.id || idx} className={`pt-4 border-t border-white/10 ${textAlignClass}`}>
+            <h4 
+              className={`text-[11px] font-black uppercase tracking-wider ${isLight ? "text-slate-800" : "text-white"} ${textAlignClass}`} 
+              dangerouslySetInnerHTML={{ __html: field.label }} 
+            />
+          </div>
+        );
+      }
+
+      const cleanLabelHtml = field.label || "Untitled Question";
+      const sampleValue = field.placeholder || (
+        field.key === "first_name" ? "e.g. Alan" :
+        field.key === "last_name" ? "e.g. Turing" :
+        field.key === "email" ? "e.g. turing@bletchleypark.org.uk" :
+        field.key === "company" ? "e.g. GC&CS" :
+        "Enter your answer"
+      );
+
+      return (
+        <div key={field.id || idx} className={`space-y-1.5 ${textAlignClass}`}>
+          <label className={`block text-[10px] font-black uppercase tracking-wider text-zinc-400 ${textAlignClass}`}>
+            <span dangerouslySetInnerHTML={{ __html: cleanLabelHtml }} />
+            {field.required && <span style={{ color: effectiveAccentColor }} className="ml-0.5">*</span>}
+          </label>
+
+          {field.description && (
+            <p className={`text-[10px] text-zinc-400 italic font-medium leading-relaxed ${textAlignClass}`}>
+              {field.description}
+            </p>
+          )}
+
+          {field.image_url && (
+            <div className={`mt-1.5 max-w-xs rounded-xl overflow-hidden border border-white/10 ${blockPositionClass}`}>
+              <img src={field.image_url} alt="" className="w-full h-auto max-h-32 object-contain" />
+            </div>
+          )}
+
+          {field.type === "partner_card" ? (
+            <div className={`p-4 rounded-2xl border space-y-3 ${
+              isLight ? "bg-slate-50/70 border-slate-200" : "bg-white/5 border-white/10"
+            }`}>
+              <div className="flex items-center gap-2">
+                <Users size={16} style={{ color: effectiveAccentColor }} />
+                <span className={`text-xs font-black uppercase tracking-wider ${isLight ? "text-slate-900" : "text-white"}`}>
+                  Corporate Partner Details
+                </span>
+              </div>
+              <p className="text-[10px] text-zinc-400 font-medium">
+                Provide your partner's details to link your registrations.
+              </p>
+              <div className="grid grid-cols-2 gap-2.5">
+                <div className="space-y-1">
+                  <label className="text-[9px] font-bold text-zinc-400 uppercase">First Name {field.required && "*"}</label>
+                  <div 
+                    className="px-3 py-2 rounded-lg text-xs border text-zinc-400/80"
+                    style={{ backgroundColor: effectiveInputBg, borderColor: isLight ? "#cbd5e1" : "rgba(255,255,255,0.14)" }}
+                  >
+                    Partner First Name
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[9px] font-bold text-zinc-400 uppercase">Last Name {field.required && "*"}</label>
+                  <div 
+                    className="px-3 py-2 rounded-lg text-xs border text-zinc-400/80"
+                    style={{ backgroundColor: effectiveInputBg, borderColor: isLight ? "#cbd5e1" : "rgba(255,255,255,0.14)" }}
+                  >
+                    Partner Last Name
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-1">
+                <label className="text-[9px] font-bold text-zinc-400 uppercase">Corporate Email {field.required && "*"}</label>
+                <div 
+                  className="px-3 py-2 rounded-lg text-xs border text-zinc-400/80"
+                  style={{ backgroundColor: effectiveInputBg, borderColor: isLight ? "#cbd5e1" : "rgba(255,255,255,0.14)" }}
+                >
+                  partner@company.com
+                </div>
+              </div>
+            </div>
+          ) : field.type === "select" ? (
+            <div 
+              className={`w-full px-4 py-2.5 rounded-xl text-xs font-semibold border flex items-center justify-between ${textAlignClass}`}
+              style={{ 
+                backgroundColor: effectiveInputBg,
+                borderColor: isLight ? "#cbd5e1" : "rgba(255,255,255,0.14)",
+                color: effectiveTextColor
+              }}
+            >
+              <span>{field.options?.[0] || field.placeholder || "Select Option"}</span>
+              <ChevronDown size={14} className="opacity-60 shrink-0 ml-2" />
+            </div>
+          ) : field.type === "multiselect" ? (
+            <div className="space-y-1.5 pt-0.5">
+              {(field.options && field.options.length > 0 ? field.options : ["Option A", "Option B"]).map((opt: string, optIdx: number) => (
+                <div 
+                  key={optIdx} 
+                  className={`flex items-center gap-2.5 p-2 rounded-lg border text-xs font-medium ${
+                    isLight ? "bg-slate-50 border-slate-200 text-slate-700" : "bg-white/5 border-white/10 text-zinc-300"
+                  } ${flexAlignClass}`}
+                >
+                  <div 
+                    className="w-4 h-4 rounded border flex items-center justify-center shrink-0"
+                    style={{ borderColor: isLight ? "#cbd5e1" : "rgba(255,255,255,0.3)" }}
+                  />
+                  <span>{opt}</span>
+                </div>
+              ))}
+            </div>
+          ) : field.type === "checkbox" ? (
+            <div className={`p-3 rounded-xl border flex items-center gap-3 ${
+              isLight ? "bg-slate-50 border-slate-200" : "bg-white/5 border-white/10"
+            } ${flexAlignClass}`}>
+              <div 
+                className="w-4 h-4 rounded border flex items-center justify-center shrink-0"
+                style={{ borderColor: isLight ? "#cbd5e1" : "rgba(255,255,255,0.3)" }}
+              />
+              <span className={`text-xs font-bold ${isLight ? "text-slate-800" : "text-white"}`}>
+                <span dangerouslySetInnerHTML={{ __html: cleanLabelHtml }} />
+                {field.required && <span style={{ color: effectiveAccentColor }} className="ml-0.5">*</span>}
+              </span>
+            </div>
+          ) : field.type === "numeric" ? (
+            <div 
+              className={`w-full px-4 py-2.5 rounded-xl text-xs font-medium border transition-all text-zinc-400/80 ${textAlignClass}`}
+              style={{ 
+                backgroundColor: effectiveInputBg,
+                borderColor: isLight ? "#cbd5e1" : "rgba(255,255,255,0.14)",
+                color: effectiveTextColor,
+              }}
+            >
+              {field.placeholder || "0"}
+            </div>
+          ) : (
+            <div 
+              className={`w-full px-4 py-2.5 rounded-xl text-xs font-medium border transition-all text-zinc-400/80 ${textAlignClass}`}
+              style={{ 
+                backgroundColor: effectiveInputBg,
+                borderColor: isLight ? "#cbd5e1" : "rgba(255,255,255,0.14)",
+                color: effectiveTextColor,
+              }}
+            >
+              {sampleValue}
+            </div>
+          )}
+        </div>
+      );
+    };
 
     const activeLogos = (formData.form_logos || []).filter((u: any) => typeof u === "string" && u.trim() !== "");
 
@@ -1191,70 +1416,12 @@ export default function EditEventPage() {
               </div>
             )}
 
-            {/* Standard Identity Fields */}
-            <div className="space-y-3.5">
-              <div className="space-y-1">
-                <label className="block text-[10px] font-black uppercase tracking-wider text-zinc-400">
-                  First Name <span style={{ color: effectiveAccentColor }}>*</span>
-                </label>
-                <div 
-                  className="w-full px-4 py-2.5 rounded-xl text-xs font-medium border transition-all text-zinc-400/80"
-                  style={{ 
-                    backgroundColor: effectiveInputBg,
-                    borderColor: isLight ? "#cbd5e1" : "rgba(255,255,255,0.14)",
-                  }}
-                >
-                  e.g. Alan
-                </div>
+            {/* Dynamic Pre-Attendance Questions (Normal + Custom fields configured before attendance in Form Studio) */}
+            {preAttendanceQuestions.length > 0 && (
+              <div className="space-y-3.5">
+                {preAttendanceQuestions.map((field: any, idx: number) => renderPreviewQuestion(field, idx))}
               </div>
-
-              <div className="space-y-1">
-                <label className="block text-[10px] font-black uppercase tracking-wider text-zinc-400">
-                  Last Name <span style={{ color: effectiveAccentColor }}>*</span>
-                </label>
-                <div 
-                  className="w-full px-4 py-2.5 rounded-xl text-xs font-medium border transition-all text-zinc-400/80"
-                  style={{ 
-                    backgroundColor: effectiveInputBg,
-                    borderColor: isLight ? "#cbd5e1" : "rgba(255,255,255,0.14)",
-                  }}
-                >
-                  e.g. Turing
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <label className="block text-[10px] font-black uppercase tracking-wider text-zinc-400">
-                  Email Address <span style={{ color: effectiveAccentColor }}>*</span>
-                </label>
-                <div 
-                  className="w-full px-4 py-2.5 rounded-xl text-xs font-medium border transition-all text-zinc-400/80"
-                  style={{ 
-                    backgroundColor: effectiveInputBg,
-                    borderColor: isLight ? "#cbd5e1" : "rgba(255,255,255,0.14)",
-                  }}
-                >
-                  e.g. turing@bletchleypark.org.uk
-                </div>
-              </div>
-
-              {formData.collect_company && (
-                <div className="space-y-1">
-                  <label className="block text-[10px] font-black uppercase tracking-wider text-zinc-400">
-                    Organization / Company {formData.company_required ? <span style={{ color: effectiveAccentColor }}>*</span> : <span className="opacity-60">(Optional)</span>}
-                  </label>
-                  <div 
-                    className="w-full px-4 py-2.5 rounded-xl text-xs font-medium border transition-all text-zinc-400/80"
-                    style={{ 
-                      backgroundColor: effectiveInputBg,
-                      borderColor: isLight ? "#cbd5e1" : "rgba(255,255,255,0.14)",
-                    }}
-                  >
-                    e.g. GC&amp;CS
-                  </div>
-                </div>
-              )}
-            </div>
+            )}
 
             {/* Attendance Status Toggle */}
             <div className="py-4 border-y border-white/10 space-y-2.5">
@@ -1287,81 +1454,10 @@ export default function EditEventPage() {
               </div>
             </div>
 
-            {/* Custom Questions (Dietary, Player or Spectator, etc.) - shown only when attending */}
-            {previewAttending && (
+            {/* Dynamic Post-Attendance Questions (Custom & Normal questions shown only when attending) */}
+            {previewAttending && postAttendanceQuestions.length > 0 && (
               <div className="space-y-3.5">
-                {postAttendanceQuestions.length > 0 ? (
-                  postAttendanceQuestions.map((field: any, idx: number) => {
-                    const labelClean = (field.label || "").replace(/<[^>]*>/g, "");
-                    return (
-                      <div key={idx} className="space-y-1">
-                        <label className="block text-[10px] font-black uppercase tracking-wider text-zinc-400">
-                          {labelClean} {field.required ? <span style={{ color: effectiveAccentColor }}>*</span> : ""}
-                        </label>
-                        {field.type === "select" ? (
-                          <div 
-                            className="w-full px-4 py-2.5 rounded-xl text-xs font-semibold border flex items-center justify-between"
-                            style={{ 
-                              backgroundColor: effectiveInputBg,
-                              borderColor: isLight ? "#cbd5e1" : "rgba(255,255,255,0.14)",
-                              color: effectiveTextColor
-                            }}
-                          >
-                            <span>{field.options?.[0] || "Select Option"}</span>
-                            <ChevronDown size={14} className="opacity-60" />
-                          </div>
-                        ) : (
-                          <div 
-                            className="w-full px-4 py-2.5 rounded-xl text-xs font-medium border text-zinc-400/80"
-                            style={{ 
-                              backgroundColor: effectiveInputBg,
-                              borderColor: isLight ? "#cbd5e1" : "rgba(255,255,255,0.14)",
-                            }}
-                          >
-                            {field.placeholder || "Enter answer"}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })
-                ) : (
-                  <>
-                    {/* Default Sensible Previews matching template questions */}
-                    <div className="space-y-1">
-                      <label className="block text-[10px] font-black uppercase tracking-wider text-zinc-400">
-                        Dietary Requirements
-                      </label>
-                      <div 
-                        className="w-full px-4 py-2.5 rounded-xl text-xs font-semibold border flex items-center justify-between"
-                        style={{ 
-                          backgroundColor: effectiveInputBg,
-                          borderColor: isLight ? "#cbd5e1" : "rgba(255,255,255,0.14)",
-                          color: effectiveTextColor
-                        }}
-                      >
-                        <span>None</span>
-                        <ChevronDown size={14} className="opacity-60" />
-                      </div>
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="block text-[10px] font-black uppercase tracking-wider text-zinc-400">
-                        Player or Spectator
-                      </label>
-                      <div 
-                        className="w-full px-4 py-2.5 rounded-xl text-xs font-semibold border flex items-center justify-between"
-                        style={{ 
-                          backgroundColor: effectiveInputBg,
-                          borderColor: isLight ? "#cbd5e1" : "rgba(255,255,255,0.14)",
-                          color: effectiveTextColor
-                        }}
-                      >
-                        <span>Player</span>
-                        <ChevronDown size={14} className="opacity-60" />
-                      </div>
-                    </div>
-                  </>
-                )}
+                {postAttendanceQuestions.map((field: any, idx: number) => renderPreviewQuestion(field, idx))}
               </div>
             )}
 

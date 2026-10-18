@@ -329,6 +329,8 @@ def read_event_by_id(
         from backend.models import RegistrationFormTemplate
         reg_tpl = session.exec(select(RegistrationFormTemplate)).first()
     event_dict["registration_form_template"] = reg_tpl.dict() if reg_tpl else None
+    if not event.custom_fields_schema and reg_tpl and reg_tpl.layout_schema:
+        event_dict["custom_fields_schema"] = reg_tpl.layout_schema
     event_dict["operator_config"] = getattr(event, "operator_config", None) or (reg_tpl.operator_config if reg_tpl else {})
     
     event_dict["user_role_for_client"] = user_role
