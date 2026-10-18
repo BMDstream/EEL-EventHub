@@ -206,6 +206,7 @@ export default function EventDetailsPage() {
   const [pinStatus, setPinStatus] = useState<"idle" | "success" | "error" | "processing" | "warning">("idle");
   const [pinMessage, setPinMessage] = useState("");
   const [checkedInReg, setCheckedInReg] = useState<any | null>(null);
+  const [showPinPostCheckInModal, setShowPinPostCheckInModal] = useState(false);
   const [editedAnswers, setEditedAnswers] = useState<Record<string, any>>({});
   const [isSavingAnswers, setIsSavingAnswers] = useState(false);
   const [detailsEditedAnswers, setDetailsEditedAnswers] = useState<Record<string, any>>({});
@@ -1640,6 +1641,7 @@ export default function EventDetailsPage() {
     if (!targetPin || (targetPin.length !== 4 && targetPin.length !== 6 && targetPin.length !== 8)) {
       setPinStatus("error");
       setPinMessage("Please enter a valid 4, 6, or 8 digit PIN.");
+      setShowPinPostCheckInModal(false);
       return;
     }
     setPinLoading(true);
@@ -1653,19 +1655,32 @@ export default function EventDetailsPage() {
         if (!localReg) {
           setPinStatus("error");
           setPinMessage(`PIN ${targetPin} not found in local offline cache.`);
+          setShowPinPostCheckInModal(false);
           setPinLoading(false);
           return;
         }
         if (localReg.status === "declined") {
           setPinStatus("error");
           setPinMessage("Declined registrations cannot be checked in.");
+          setShowPinPostCheckInModal(false);
           setPinLoading(false);
           return;
         }
         const checkedInDays = localReg.checked_in_days || [];
         if (checkedInDays.includes(targetDay)) {
+          const fullReg = { ...localReg };
+          const resultObj = {
+            ...fullReg,
+            operator_fields: formatOperatorFields(fullReg),
+            card_layout_text: (operatorCardLayoutText || (event as any)?.operator_config?.card_layout_text || event?.registration_form_template?.operator_config?.card_layout_text)
+              ? compileOperatorCustomLayout(operatorCardLayoutText || (event as any)?.operator_config?.card_layout_text || event?.registration_form_template?.operator_config?.card_layout_text, fullReg)
+              : null
+          };
           setPinStatus("warning");
-          setPinMessage(`${localReg.attendee?.first_name || 'Guest'} (${targetPin}) is ALREADY Checked In.`);
+          setPinMessage("ALREADY CHECKED IN");
+          setCheckedInReg(resultObj);
+          setEditedAnswers(fullReg.custom_answers || {});
+          setShowPinPostCheckInModal(true);
           setPinLoading(false);
           return;
         }
@@ -1679,9 +1694,21 @@ export default function EventDetailsPage() {
         };
         await dbOffline.addOfflineScan(scanObj);
         await updateOfflineStats();
+        
+        const fullReg = { ...localReg, checked_in: true, checked_in_days: [...checkedInDays, targetDay] };
+        const resultObj = {
+          ...fullReg,
+          operator_fields: formatOperatorFields(fullReg),
+          card_layout_text: (operatorCardLayoutText || (event as any)?.operator_config?.card_layout_text || event?.registration_form_template?.operator_config?.card_layout_text)
+            ? compileOperatorCustomLayout(operatorCardLayoutText || (event as any)?.operator_config?.card_layout_text || event?.registration_form_template?.operator_config?.card_layout_text, fullReg)
+            : null
+        };
         setPinStatus("success");
-        setPinMessage(`✓ Checked In: ${localReg.attendee?.first_name || 'Guest'} ${localReg.attendee?.last_name || ''} (PIN: ${targetPin})`);
-        setRegistrations(prev => prev.map(r => r.id === localReg.id ? { ...r, checked_in: true, checked_in_days: [...checkedInDays, targetDay] } : r));
+        setPinMessage("CHECK-IN SUCCESSFUL");
+        setCheckedInReg(resultObj);
+        setEditedAnswers(fullReg.custom_answers || {});
+        setShowPinPostCheckInModal(true);
+        setRegistrations(prev => prev.map(r => r.id === localReg.id ? fullReg : r));
         setPin("");
         setPinLoading(false);
         return;
@@ -1702,31 +1729,66 @@ export default function EventDetailsPage() {
 
       if (res.ok) {
         const updated = await res.json();
-        setRegistrations(prev => prev.map(r => r.id === updated.id ? { ...r, checked_in: updated.checked_in, checked_in_days: updated.checked_in_days ?? [] } : r));
+        const existing = registrations.find(r => r.id === updated.id || String(r.pin) === String(targetPin));
+        const merged = {
+          ...existing,
+          ...updated,
+          attendee: updated.attendee || existing?.attendee,
+          custom_answers: updated.custom_answers || existing?.custom_answers
+        };
+        const resultObj = {
+          ...merged,
+          operator_fields: formatOperatorFields(merged),
+          card_layout_text: (operatorCardLayoutText || (event as any)?.operator_config?.card_layout_text || event?.registration_form_template?.operator_config?.card_layout_text)
+            ? compileOperatorCustomLayout(operatorCardLayoutText || (event as any)?.operator_config?.card_layout_text || event?.registration_form_template?.operator_config?.card_layout_text, merged)
+            : null
+        };
+        setRegistrations(prev => prev.map(r => r.id === updated.id ? { ...r, ...merged } : r));
         setPinStatus("success");
-        setPinMessage(`✓ Checked In: ${updated.attendee?.first_name || 'Guest'} ${updated.attendee?.last_name || ''} (PIN: ${targetPin})`);
+        setPinMessage("CHECK-IN SUCCESSFUL");
+        setCheckedInReg(resultObj);
+        setEditedAnswers(merged.custom_answers || {});
+        setShowPinPostCheckInModal(true);
         setPin("");
         dbOffline.initDb().then(async (db) => {
           const tx = db.transaction(["registrations"], "readwrite");
           tx.objectStore("registrations").put({
-            ...updated,
-            event_id: updated.event_id || Number(id)
+            ...merged,
+            event_id: merged.event_id || Number(id)
           });
         }).catch(() => {});
       } else {
         const err = await res.json().catch(() => ({}));
         const errMsg = err.detail || "Invalid PIN credential";
+        const matched = err.registration || registrations.find(r => String(r.pin) === String(targetPin));
         if (err.already_checked_in || errMsg.toLowerCase().includes("already checked in")) {
           setPinStatus("warning");
-          setPinMessage(errMsg);
+          setPinMessage("ALREADY CHECKED IN");
+          if (matched) {
+            const resultObj = {
+              ...matched,
+              operator_fields: formatOperatorFields(matched),
+              card_layout_text: (operatorCardLayoutText || (event as any)?.operator_config?.card_layout_text || event?.registration_form_template?.operator_config?.card_layout_text)
+                ? compileOperatorCustomLayout(operatorCardLayoutText || (event as any)?.operator_config?.card_layout_text || event?.registration_form_template?.operator_config?.card_layout_text, matched)
+                : null
+            };
+            setCheckedInReg(resultObj);
+            setEditedAnswers(matched.custom_answers || {});
+            setShowPinPostCheckInModal(true);
+          } else {
+            setShowPinPostCheckInModal(false);
+          }
         } else {
           setPinStatus("error");
           setPinMessage(errMsg);
+          setCheckedInReg(null);
+          setShowPinPostCheckInModal(false);
         }
       }
     } catch (err) {
       setPinStatus("error");
       setPinMessage("Network error verifying PIN.");
+      setShowPinPostCheckInModal(false);
     } finally {
       setPinLoading(false);
     }
@@ -2289,7 +2351,7 @@ export default function EventDetailsPage() {
                 </div>
 
                 {/* Instant PIN Status Feedback Banner */}
-                {pinStatus !== "idle" && (
+                {pinStatus !== "idle" && !showPinPostCheckInModal && (
                   <div className={`p-3.5 rounded-xl border flex items-center justify-between text-xs font-bold transition-all ${
                     pinStatus === "success" ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400" :
                     pinStatus === "warning" ? "bg-amber-500/10 border-amber-500/30 text-amber-400" :
@@ -4074,6 +4136,131 @@ export default function EventDetailsPage() {
              </div>
            </div>
         )}
+        {/* Post PIN Check-In Result Screen Modal */}
+        {showPinPostCheckInModal && checkedInReg && (
+          <div 
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 font-outfit"
+            onClick={() => {
+              setShowPinPostCheckInModal(false);
+              setPinStatus("idle");
+              setCheckedInReg(null);
+              setPinMessage("");
+            }}
+          >
+            <div 
+              style={{
+                backgroundColor: pinStatus === "success" 
+                  ? (operatorSuccessBgColor || (event as any)?.operator_config?.success_bg_color || event?.registration_form_template?.operator_config?.success_bg_color || "#22c55e")
+                  : pinStatus === "warning"
+                    ? "#f97316"
+                    : "#ef4444"
+              }}
+              onClick={(e) => e.stopPropagation()}
+              className="flex flex-col items-center gap-6 px-5 py-8 sm:py-10 md:p-12 rounded-[2.5rem] sm:rounded-[3rem] shadow-2xl w-full max-w-md animate-in zoom-in-95 duration-200 text-white relative max-h-[90vh] overflow-y-auto"
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  setShowPinPostCheckInModal(false);
+                  setPinStatus("idle");
+                  setCheckedInReg(null);
+                  setPinMessage("");
+                }}
+                className="absolute top-5 right-5 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all cursor-pointer"
+                title="Close"
+              >
+                <X size={18} />
+              </button>
+
+              {pinStatus === "processing" && <Loader2 className="animate-spin" size={64} />}
+              {pinStatus === "success" && <CheckCircle2 size={64} />}
+              {pinStatus === "warning" && <AlertCircle size={64} />}
+              {pinStatus === "error" && <XCircle size={64} />}
+
+              <div className="text-center space-y-3 w-full">
+                <p className="text-2xl font-black italic uppercase tracking-tighter font-bricolage leading-tight">
+                  {pinStatus === "success" ? "CHECK-IN SUCCESSFUL" : pinMessage}
+                </p>
+
+                {(checkedInReg.attendee || checkedInReg) && (
+                  <div className="space-y-4 border-t border-white/20 pt-4 w-full">
+                    <p className="text-lg font-bold tracking-wide text-center">
+                      {`${checkedInReg.attendee?.first_name || ""} ${checkedInReg.attendee?.last_name || ""}`.trim() || "Guest"}
+                    </p>
+
+                    {checkedInReg.card_layout_text ? (
+                      <div className="bg-white/10 p-5 rounded-2xl border border-white/5 text-left mt-4 w-full max-h-60 overflow-y-auto pr-1">
+                        <pre
+                          style={{
+                            color: operatorCardTextColor || (event as any)?.operator_config?.card_text_color || event?.registration_form_template?.operator_config?.card_text_color || "#ffffff",
+                            fontSize: operatorCardFontSize || (event as any)?.operator_config?.card_font_size || event?.registration_form_template?.operator_config?.card_font_size || "13px",
+                            fontWeight: operatorCardFontWeight || (event as any)?.operator_config?.card_font_weight || event?.registration_form_template?.operator_config?.card_font_weight || "600",
+                            textAlign: ((operatorCardTextAlign || (event as any)?.operator_config?.card_text_align || event?.registration_form_template?.operator_config?.card_text_align || "left") as any),
+                            lineHeight: operatorCardLineHeight || (event as any)?.operator_config?.card_line_height || event?.registration_form_template?.operator_config?.card_line_height || "1.5"
+                          }}
+                          className={`whitespace-pre-wrap ${
+                            (operatorCardFontFamily || (event as any)?.operator_config?.card_font_family) === 'mono'
+                              ? 'font-mono'
+                              : (operatorCardFontFamily || (event as any)?.operator_config?.card_font_family) === 'bricolage'
+                              ? 'font-bricolage'
+                              : (operatorCardFontFamily || (event as any)?.operator_config?.card_font_family) === 'serif'
+                              ? 'font-serif'
+                              : 'font-sans'
+                          }`}
+                        >
+                          {checkedInReg.card_layout_text}
+                        </pre>
+                      </div>
+                    ) : checkedInReg.operator_fields && checkedInReg.operator_fields.length > 0 ? (
+                      <div className="grid grid-cols-1 gap-2.5 text-left mt-4 w-full max-h-60 overflow-y-auto pr-1">
+                        {checkedInReg.operator_fields
+                          .filter((f: any) => !["first_name", "last_name", "First Name", "Last Name"].includes(f.label))
+                          .map((f: any, idx: number) => (
+                            <div key={idx} className="bg-white/10 p-3.5 rounded-xl border border-white/5 flex flex-col">
+                              <span className="text-[8px] uppercase tracking-widest text-white/60 font-black">{f.label}</span>
+                              <span className="text-xs font-bold text-white mt-0.5 break-words">{f.value}</span>
+                            </div>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                )}
+
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-8 w-full">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const fullReg = registrations.find(r => r.id === checkedInReg.id) || checkedInReg;
+                      setHideResendButton(true);
+                      setSelectedReg(fullReg);
+                      setShowPinPostCheckInModal(false);
+                      setPinStatus("idle");
+                      setCheckedInReg(null);
+                      setPinMessage("");
+                    }}
+                    className="px-6 py-4 bg-white hover:bg-white/95 text-green-600 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto"
+                  >
+                    <Eye size={12} />
+                    View Details & Edit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowPinPostCheckInModal(false);
+                      setPinStatus("idle");
+                      setCheckedInReg(null);
+                      setPinMessage("");
+                    }}
+                    className="px-6 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border bg-white/20 hover:bg-white/30 border-white/10 w-full sm:w-auto cursor-pointer"
+                  >
+                    {pinStatus === "success" || pinStatus === "warning" ? "Scan Next Guest" : "Close & Resume"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Details Modal */}
         {selectedReg && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 font-outfit">
