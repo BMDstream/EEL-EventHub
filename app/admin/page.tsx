@@ -270,7 +270,7 @@ export default function AdminDashboard() {
                     </div>
 
                     <Link
-                      href={`/admin/events/${event.id}`}
+                      href={`/admin/events/${event.id}?tab=scanner`}
                       className="w-full py-4 px-6 rounded-2xl bg-yellow-400 hover:bg-yellow-300 text-slate-950 font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2.5 shadow-lg shadow-yellow-400/20 hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer"
                     >
                       <span>Open Event Check-In</span>

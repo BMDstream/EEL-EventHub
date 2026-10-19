@@ -157,7 +157,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     if (isManagerLike) {
       return item.name !== "Team" && item.name !== "Security" && item.name !== "Clients";
     }
-    return item.name === "Dashboard" || item.name === "Events";
+    // Staff role only sees the home check-in station
+    return item.name === "Dashboard";
   }).map(item => {
     if (userRole === "staff" && item.name === "Dashboard") {
       return { ...item, name: "Today's Check-In" };

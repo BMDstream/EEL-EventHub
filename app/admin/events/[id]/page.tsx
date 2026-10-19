@@ -191,7 +191,17 @@ export default function EventDetailsPage() {
   const { id } = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const initialTab = searchParams.get("tab") === "form" ? "form" : "registrants";
+  const { data: session } = useSession();
+  const sessionRole = (session?.user as any)?.role || "staff";
+  const [eventUserRole, setEventUserRole] = useState<string>("staff");
+  const userRole = sessionRole === "admin" ? "admin" : eventUserRole;
+
+  const tabParam = searchParams.get("tab");
+  const defaultTab = (userRole === "staff" || sessionRole === "staff" || tabParam === "scanner")
+    ? "scanner"
+    : tabParam === "form"
+    ? "form"
+    : "registrants";
   
   const [event, setEvent] = useState<Event | null>(null);
   const [registrations, setRegistrations] = useState<Registration[]>([]);
@@ -201,13 +211,10 @@ export default function EventDetailsPage() {
   const [selectedReg, setSelectedReg] = useState<Registration | null>(null);
   const [hideResendButton, setHideResendButton] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [scannerSearch, setScannerSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
-  const { data: session } = useSession();
-  const sessionRole = (session?.user as any)?.role || "staff";
-  const [eventUserRole, setEventUserRole] = useState<string>("staff");
-  const userRole = sessionRole === "admin" ? "admin" : eventUserRole;
-  const [activeTab, setActiveTab] = useState<"registrants" | "form" | "scanner" | "communications" | "staff">(initialTab as any || "registrants");
+  const [activeTab, setActiveTab] = useState<"registrants" | "form" | "scanner" | "communications" | "staff">(defaultTab as any);
   const [pin, setPin] = useState("");
   const [pinLoading, setPinLoading] = useState(false);
   const [pinStatus, setPinStatus] = useState<"idle" | "success" | "error" | "processing" | "warning">("idle");
@@ -249,6 +256,12 @@ export default function EventDetailsPage() {
       setOperatorCardLayoutText(prev => prev ? `${prev} ${token}` : token);
     }
   };
+
+  useEffect(() => {
+    if (userRole === "staff" && activeTab !== "scanner") {
+      setActiveTab("scanner");
+    }
+  }, [userRole, activeTab]);
 
   useEffect(() => {
     if (event) {
@@ -1812,6 +1825,106 @@ export default function EventDetailsPage() {
     }
   };
 
+  const handleScannerAttendeeCheckIn = async (reg: Registration) => {
+    try {
+      const targetDay = selectedScanDay === "auto" ? 1 : selectedScanDay;
+      if (!isOnline) {
+        const localReg = await dbOffline.getLocalRegistration(reg.pin || reg.id, Number(id));
+        if (localReg) {
+          const checkedInDays = localReg.checked_in_days || [];
+          const scanObj: dbOffline.OfflineScan = {
+            registration_id: localReg.id,
+            event_id: Number(id),
+            day: targetDay,
+            timestamp: new Date().toISOString(),
+            mode: "checkin",
+            synced: false
+          };
+          await dbOffline.addOfflineScan(scanObj);
+          await updateOfflineStats();
+          const merged = {
+            ...localReg,
+            checked_in: true,
+            checked_in_days: [...checkedInDays, targetDay]
+          };
+          const resultObj = {
+            ...merged,
+            operator_fields: formatOperatorFields(merged),
+            card_layout_text: (operatorCardLayoutText || (event as any)?.operator_config?.card_layout_text || event?.registration_form_template?.operator_config?.card_layout_text)
+              ? compileOperatorCustomLayout(operatorCardLayoutText || (event as any)?.operator_config?.card_layout_text || event?.registration_form_template?.operator_config?.card_layout_text, merged)
+              : null
+          };
+          setRegistrations(prev => prev.map(r => r.id === localReg.id ? { ...r, ...merged } : r));
+          setCheckedInReg(resultObj);
+          setEditedAnswers(merged.custom_answers || {});
+          setShowPinPostCheckInModal(true);
+        }
+        return;
+      }
+
+      const query = selectedScanDay === "auto" 
+        ? `mode=checkin&event_id=${id}` 
+        : `mode=checkin&day=${selectedScanDay}&event_id=${id}`;
+      const res = await fetch(`/api/py/registrations/${encodeURIComponent(reg.id)}/checkin?${query}`, {
+        method: "PUT",
+        headers: { "x-user-email": session?.user?.email || "" }
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        const merged = {
+          ...reg,
+          ...updated,
+          attendee: updated.attendee || reg.attendee,
+          custom_answers: updated.custom_answers || reg.custom_answers
+        };
+        const resultObj = {
+          ...merged,
+          operator_fields: formatOperatorFields(merged),
+          card_layout_text: (operatorCardLayoutText || (event as any)?.operator_config?.card_layout_text || event?.registration_form_template?.operator_config?.card_layout_text)
+            ? compileOperatorCustomLayout(operatorCardLayoutText || (event as any)?.operator_config?.card_layout_text || event?.registration_form_template?.operator_config?.card_layout_text, merged)
+            : null
+        };
+        setRegistrations(prev => prev.map(r => r.id === updated.id ? { ...r, ...merged } : r));
+        setCheckedInReg(resultObj);
+        setEditedAnswers(merged.custom_answers || {});
+        setShowPinPostCheckInModal(true);
+        dbOffline.initDb().then(async (db) => {
+          const tx = db.transaction(["registrations"], "readwrite");
+          tx.objectStore("registrations").put({
+            ...merged,
+            event_id: merged.event_id || Number(id)
+          });
+        }).catch(() => {});
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert(err.detail || "Failed to check in attendee");
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert(err.message || "Network error checking in attendee");
+    }
+  };
+
+  const scannerSearchResults = scannerSearch.trim()
+    ? registrations.filter(r => {
+        const q = scannerSearch.toLowerCase().trim();
+        const firstName = (r.attendee?.first_name || "").toLowerCase();
+        const lastName = (r.attendee?.last_name || "").toLowerCase();
+        const fullName = `${firstName} ${lastName}`.trim();
+        const email = (r.attendee?.email || "").toLowerCase();
+        const company = (r.attendee?.company || "").toLowerCase();
+        const pinVal = (r.pin || "").toLowerCase();
+        return (
+          firstName.includes(q) ||
+          lastName.includes(q) ||
+          fullName.includes(q) ||
+          email.includes(q) ||
+          company.includes(q) ||
+          pinVal.includes(q)
+        );
+      })
+    : [];
+
   if (loading) {
     return (
       <AdminLayout>
@@ -2331,120 +2444,6 @@ export default function EventDetailsPage() {
         {activeTab === "registrants" ? (
           <div className="space-y-6">
             <div className="bg-white dark:bg-[#0d1527] rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-800/80 p-6 sm:p-8 flex flex-col gap-6">
-              
-              {/* Live Camera QR Scanner Modal/Drop */}
-              {isEmbeddedScannerOpen && (
-                <div className="bg-slate-900 text-white p-6 sm:p-8 rounded-[2rem] border border-slate-800 shadow-xl space-y-4 animate-in fade-in duration-300">
-                  <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-                    <div className="flex items-center gap-2.5">
-                      <div className="p-2 bg-yellow-400 text-black rounded-xl">
-                        <Camera size={18} />
-                      </div>
-                      <div>
-                        <h4 className="text-xs sm:text-sm font-black tracking-wide uppercase font-bricolage">Live Camera QR Scanner</h4>
-                        <p className="text-[11px] text-slate-400">Point device camera at attendee QR badge for instant check-in</p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => setIsEmbeddedScannerOpen(false)}
-                      className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer"
-                    >
-                      Close Camera
-                    </button>
-                  </div>
-                  <div className="max-w-md mx-auto">
-                    <QRScanner 
-                      onScan={handleScanCheckin}
-                      onViewDetails={(registrant) => {
-                        const fullReg = registrations.find(r => r.id === registrant.id) || registrant;
-                        setHideResendButton(true);
-                        setSelectedReg(fullReg);
-                      }}
-                      operatorConfig={{
-                        success_bg_color: operatorSuccessBgColor,
-                        card_layout_text: operatorCardLayoutText,
-                        card_text_color: operatorCardTextColor,
-                        card_font_size: operatorCardFontSize,
-                        card_font_weight: operatorCardFontWeight,
-                        card_font_family: operatorCardFontFamily,
-                        card_text_align: operatorCardTextAlign,
-                        card_line_height: operatorCardLineHeight
-                      }}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* PRIMARY CHECK-IN ACTION CENTER (STANDOUT QR BUTTON & QUICK PIN CHECK-IN) */}
-              <div className="p-5 sm:p-6 rounded-[2rem] bg-gradient-to-r from-slate-900 via-slate-900 to-slate-950 border border-slate-800 shadow-xl space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
-                  {/* Standout Scan QR Action */}
-                  <button
-                    onClick={() => setIsEmbeddedScannerOpen(!isEmbeddedScannerOpen)}
-                    className={`w-full py-4 px-6 rounded-2xl font-black text-xs sm:text-sm uppercase tracking-wider flex items-center justify-center gap-3 shadow-lg transition-all cursor-pointer ${
-                      isEmbeddedScannerOpen
-                        ? "bg-rose-500 hover:bg-rose-600 text-white shadow-rose-500/30 ring-4 ring-rose-500/20"
-                        : "bg-yellow-400 hover:bg-yellow-300 text-slate-950 shadow-yellow-400/25 ring-4 ring-yellow-400/20 hover:scale-[1.01] active:scale-[0.99]"
-                    }`}
-                  >
-                    <Camera size={22} className={isEmbeddedScannerOpen ? "animate-spin" : ""} />
-                    <span>{isEmbeddedScannerOpen ? "Close Camera Scanner" : "📷 Scan Attendee QR Code"}</span>
-                  </button>
-
-                  {/* Dedicated Quick PIN Check-In */}
-                  <form
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      handleQuickPinCheckIn();
-                    }}
-                    className="flex items-center gap-2 bg-slate-800/90 border border-slate-700/80 rounded-2xl p-1.5 focus-within:ring-4 focus-within:ring-emerald-400/20 transition-all"
-                  >
-                    <div className="flex items-center gap-2 pl-3 text-slate-400 shrink-0">
-                      <KeyRound size={18} className="text-emerald-400" />
-                      <span className="text-[10px] font-black uppercase tracking-wider hidden sm:inline text-slate-300">PIN:</span>
-                    </div>
-                    <input
-                      type="text"
-                      maxLength={8}
-                      placeholder="Enter 4-6 digit PIN..."
-                      value={pin}
-                      onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
-                      className="flex-1 min-w-0 bg-transparent border-none text-white font-mono font-bold text-sm outline-none px-2 placeholder-slate-500 tracking-wider"
-                    />
-                    <button
-                      type="submit"
-                      disabled={pin.length < 4 || pinLoading}
-                      className="px-5 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:opacity-40 disabled:hover:bg-emerald-500 text-slate-950 font-black text-xs uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer shrink-0 shadow-md"
-                    >
-                      {pinLoading ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
-                      <span>Check In</span>
-                    </button>
-                  </form>
-                </div>
-
-                {/* Instant PIN Status Feedback Banner */}
-                {pinStatus !== "idle" && !showPinPostCheckInModal && (
-                  <div className={`p-3.5 rounded-xl border flex items-center justify-between text-xs font-bold transition-all ${
-                    pinStatus === "success" ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400" :
-                    pinStatus === "warning" ? "bg-amber-500/10 border-amber-500/30 text-amber-400" :
-                    "bg-rose-500/10 border-rose-500/30 text-rose-400"
-                  }`}>
-                    <div className="flex items-center gap-2.5">
-                      {pinStatus === "success" && <CheckCircle2 size={18} className="text-emerald-400 shrink-0" />}
-                      {pinStatus === "warning" && <AlertCircle size={18} className="text-amber-400 shrink-0" />}
-                      {pinStatus === "error" && <XCircle size={18} className="text-rose-400 shrink-0" />}
-                      <span>{pinMessage}</span>
-                    </div>
-                    <button 
-                      type="button" 
-                      onClick={() => { setPinStatus("idle"); setPinMessage(""); }}
-                      className="text-slate-400 hover:text-white text-[10px] uppercase font-black cursor-pointer"
-                    >
-                      Dismiss
-                    </button>
-                  </div>
-                )}
-              </div>
 
               {/* Row 1: Search and Check-in Triage Filters */}
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 sm:gap-6">
@@ -3108,417 +3107,128 @@ export default function EventDetailsPage() {
                </div>
              </div>
 
-             {/* Custom Operator Check-in Card Layout Panel */}
-             <div className="max-w-4xl mx-auto mb-10 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 sm:p-8 shadow-sm">
-               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
-                 <div className="space-y-1">
-                   <div className="flex items-center gap-2">
-                     <Sparkles size={16} className="text-amber-500" />
-                     <h3 className="text-xs font-black uppercase tracking-[0.2em] text-[#0f172a] dark:text-white">
-                       Operator Check-In Card Layout
-                     </h3>
-                   </div>
-                   <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                     Customize what attendee details & Form Studio answers appear on screen when passes are scanned.
-                   </p>
-                 </div>
-                 <button
-                   type="button"
-                   onClick={() => setIsOperatorConfigOpen(!isOperatorConfigOpen)}
-                   className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 transition-all flex items-center gap-1.5 cursor-pointer"
-                 >
-                   <span>{isOperatorConfigOpen ? "Hide Builder" : "Customize Card Layout"}</span>
-                 </button>
+             {/* Attendee Live Search & Instant Results Window */}
+             <div className="max-w-4xl mx-auto mb-10">
+               <div className="relative">
+                 <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+                 <input
+                   type="text"
+                   placeholder="Search attendee by name, email, or PIN..."
+                   value={scannerSearch}
+                   onChange={(e) => setScannerSearch(e.target.value)}
+                   className="w-full pl-14 pr-12 py-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl font-bold text-sm text-[#0f172a] dark:text-white placeholder-slate-400 outline-none focus:ring-4 focus:ring-yellow-400/20 transition-all shadow-sm"
+                 />
+                 {scannerSearch && (
+                   <button
+                     onClick={() => setScannerSearch("")}
+                     className="absolute right-4 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-white rounded-lg transition-colors cursor-pointer"
+                   >
+                     <X size={16} />
+                   </button>
+                 )}
                </div>
 
-               {isOperatorConfigOpen && (
-                 <div className="mt-6 space-y-6 animate-in fade-in duration-300">
-                    {/* Operator Card Typography & Appearance */}
-                    <div className="p-4 sm:p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-800 space-y-4">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                        <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 block">
-                          Operator Card Styling & Typography
-                        </span>
-                        <div className="flex items-center gap-3">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const eventCustomQuestions: Array<{ label: string, token: string }> = [];
-                              if (event && Array.isArray(event.custom_fields_schema)) {
-                                event.custom_fields_schema.forEach((s: any) => {
-                                  (s.fields || []).forEach((f: any) => {
-                                    const label = (f.label || "").replace(/<[^>]*>/g, "").trim();
-                                    const slug = (f.label || "").toLowerCase().replace(/<[^>]*>/g, "").replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
-                                    const token = `[${f.key || slug || f.id}]`;
-                                    if (label && !["[first_name]", "[last_name]", "[email]", "[company]", "[clearance_id]"].includes(token)) {
-                                      eventCustomQuestions.push({ label, token });
-                                    }
-                                  });
-                                });
-                              }
-                              const questionLines = eventCustomQuestions.map(q => `*${q.label}:* ${q.token}`).join("\n");
-                              const template = `*Attendee Details:*\n*Name:* [first_name] [last_name]\n*Company:* [company]\n*Pass Code:* [clearance_id]\n\n*Form Responses:*\n${questionLines || "*Questions:* [custom_responses]"}`;
-                              setOperatorCardLayoutText(template);
-                            }}
-                            className="px-3.5 py-2 rounded-xl border border-amber-300 dark:border-amber-700/60 bg-amber-50 dark:bg-amber-950/20 text-[10px] font-black uppercase tracking-wider text-amber-900 dark:text-amber-200 hover:bg-amber-100 transition-all flex items-center gap-1.5 cursor-pointer"
-                          >
-                            <Sparkles size={12} />
-                            Auto-Fill Questions
-                          </button>
+               {/* Instant Search Results Window */}
+               {scannerSearch.trim() && (
+                 <div className="mt-4 p-4 sm:p-6 bg-white dark:bg-[#0d1527] rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-xl space-y-4 animate-in fade-in duration-200">
+                   <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+                     <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                       Search Results ({scannerSearchResults.length})
+                     </span>
+                     <button
+                       onClick={() => setScannerSearch("")}
+                       className="text-[10px] font-bold text-slate-400 hover:text-slate-600 dark:hover:text-white uppercase tracking-wider cursor-pointer"
+                     >
+                       Clear
+                     </button>
+                   </div>
 
-                          <button
-                            type="button"
-                            onClick={handleSaveOperatorConfig}
-                            disabled={isSavingOperatorConfig}
-                            className="px-5 py-2 rounded-xl bg-[#0f172a] hover:bg-black dark:bg-amber-400 dark:hover:bg-amber-500 text-white dark:text-[#0f172a] text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer shadow-md disabled:opacity-50"
-                          >
-                            {isSavingOperatorConfig ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
-                            Save Layout
-                          </button>
-                        </div>
-                      </div>
+                   {scannerSearchResults.length === 0 ? (
+                     <div className="p-8 text-center bg-slate-50 dark:bg-slate-900/40 rounded-2xl border border-slate-100 dark:border-slate-800/80 space-y-2">
+                       <UserX size={36} className="mx-auto text-slate-300 dark:text-slate-600" />
+                       <h4 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wider font-bricolage">
+                         No Attendee Found
+                       </h4>
+                       <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                         No attendee found matching &quot;{scannerSearch}&quot;. Please check the name spelling, email address, or PIN.
+                       </p>
+                     </div>
+                   ) : (
+                     <div className="max-h-96 overflow-y-auto space-y-3 pr-1">
+                       {scannerSearchResults.map((reg) => {
+                         const isCheckedIn = reg.checked_in;
+                         const initials = `${reg.attendee?.first_name?.[0] || ""}${reg.attendee?.last_name?.[0] || ""}`.toUpperCase() || "??";
+                         return (
+                           <div
+                             key={reg.id}
+                             className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all hover:border-yellow-400/40"
+                           >
+                             <div className="flex items-center gap-3.5 min-w-0">
+                               <div className="w-11 h-11 rounded-xl bg-slate-900 text-white dark:bg-slate-800 dark:text-yellow-400 flex items-center justify-center font-black text-sm shrink-0 border border-slate-800">
+                                 {initials}
+                               </div>
+                               <div className="min-w-0">
+                                 <div className="flex items-center gap-2 flex-wrap">
+                                   <h4 className="text-sm font-black text-[#0f172a] dark:text-white truncate">
+                                     {reg.attendee?.first_name} {reg.attendee?.last_name}
+                                   </h4>
+                                   {reg.pin && (
+                                     <span className="px-2 py-0.5 rounded-md bg-slate-200/70 dark:bg-slate-800 text-[10px] font-mono font-bold text-slate-700 dark:text-slate-300">
+                                       PIN: {reg.pin}
+                                     </span>
+                                   )}
+                                   {isCheckedIn ? (
+                                     <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-500 border border-emerald-500/30 flex items-center gap-1">
+                                       <CheckCircle2 size={10} />
+                                       Checked In
+                                     </span>
+                                   ) : (
+                                     <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-slate-200/60 dark:bg-slate-800 text-slate-500 border border-slate-300 dark:border-slate-700">
+                                       Not Checked In
+                                     </span>
+                                   )}
+                                 </div>
+                                 <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                                   {reg.attendee?.email} {reg.attendee?.company ? `• ${reg.attendee.company}` : ""}
+                                 </p>
+                               </div>
+                             </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                        {/* Background Color */}
-                        <div className="space-y-1.5">
-                          <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
-                            Card Background Color
-                          </label>
-                          <div className="flex items-center gap-2">
-                            <input 
-                              type="color" 
-                              value={operatorSuccessBgColor} 
-                              onChange={(e) => setOperatorSuccessBgColor(e.target.value)}
-                              className="w-9 h-9 rounded-xl border border-slate-200 cursor-pointer p-0 bg-transparent shrink-0" 
-                            />
-                            <input 
-                              type="text" 
-                              value={operatorSuccessBgColor} 
-                              onChange={(e) => setOperatorSuccessBgColor(e.target.value)}
-                              className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 font-mono font-bold text-xs bg-white dark:bg-slate-800 text-slate-800 dark:text-white" 
-                            />
-                          </div>
-                        </div>
+                             <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+                               <button
+                                 onClick={() => {
+                                   setHideResendButton(true);
+                                   setSelectedReg(reg);
+                                 }}
+                                 className="px-3.5 py-2 rounded-xl bg-slate-200/80 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer"
+                               >
+                                 <Eye size={12} />
+                                 View Details
+                               </button>
 
-                        {/* Text Color */}
-                        <div className="space-y-1.5">
-                          <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
-                            Text Color
-                          </label>
-                          <div className="flex items-center gap-2">
-                            <input 
-                              type="color" 
-                              value={operatorCardTextColor} 
-                              onChange={(e) => setOperatorCardTextColor(e.target.value)}
-                              className="w-9 h-9 rounded-xl border border-slate-200 cursor-pointer p-0 bg-transparent shrink-0" 
-                            />
-                            <input 
-                              type="text" 
-                              value={operatorCardTextColor} 
-                              onChange={(e) => setOperatorCardTextColor(e.target.value)}
-                              className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 font-mono font-bold text-xs bg-white dark:bg-slate-800 text-slate-800 dark:text-white" 
-                            />
-                          </div>
-                        </div>
-
-                        {/* Font Size */}
-                        <div className="space-y-1.5">
-                          <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
-                            Font Size
-                          </label>
-                          <select
-                            value={operatorCardFontSize}
-                            onChange={(e) => setOperatorCardFontSize(e.target.value)}
-                            className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-xs bg-white dark:bg-slate-800 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-400 cursor-pointer"
-                          >
-                            <option value="11px">11px — Extra Small</option>
-                            <option value="12px">12px — Small</option>
-                            <option value="13px">13px — Compact</option>
-                            <option value="14px">14px — Regular (Default)</option>
-                            <option value="16px">16px — Medium</option>
-                            <option value="18px">18px — Large</option>
-                            <option value="20px">20px — Extra Large</option>
-                            <option value="24px">24px — Jumbo</option>
-                          </select>
-                        </div>
-
-                        {/* Font Weight */}
-                        <div className="space-y-1.5">
-                          <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
-                            Font Weight
-                          </label>
-                          <select
-                            value={operatorCardFontWeight}
-                            onChange={(e) => setOperatorCardFontWeight(e.target.value)}
-                            className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-xs bg-white dark:bg-slate-800 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-400 cursor-pointer"
-                          >
-                            <option value="400">400 — Regular</option>
-                            <option value="500">500 — Medium</option>
-                            <option value="600">600 — Semibold (Default)</option>
-                            <option value="700">700 — Bold</option>
-                            <option value="800">800 — Extra Bold</option>
-                            <option value="900">900 — Black</option>
-                          </select>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-slate-200/60 dark:border-slate-700/60">
-                        {/* Font Family */}
-                        <div className="space-y-1.5">
-                          <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
-                            Font Family
-                          </label>
-                          <select
-                            value={operatorCardFontFamily}
-                            onChange={(e) => setOperatorCardFontFamily(e.target.value)}
-                            className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-xs bg-white dark:bg-slate-800 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-400 cursor-pointer"
-                          >
-                            <option value="sans">Clean Sans-Serif</option>
-                            <option value="mono">Terminal Monospace</option>
-                            <option value="bricolage">Bricolage Grotesque</option>
-                            <option value="serif">Editorial Serif</option>
-                          </select>
-                        </div>
-
-                        {/* Text Alignment */}
-                        <div className="space-y-1.5">
-                          <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
-                            Text Alignment
-                          </label>
-                          <div className="flex items-center gap-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-1 rounded-xl">
-                            {([
-                              { val: "left", Icon: AlignLeft, label: "Left" },
-                              { val: "center", Icon: AlignCenter, label: "Center" },
-                              { val: "right", Icon: AlignRight, label: "Right" },
-                            ] as const).map(({ val, Icon, label }) => {
-                              const active = operatorCardTextAlign === val;
-                              return (
-                                <button
-                                  key={val}
-                                  type="button"
-                                  onClick={() => setOperatorCardTextAlign(val)}
-                                  title={`Align text ${label}`}
-                                  className={`flex-1 py-1 flex items-center justify-center rounded-lg transition-all ${
-                                    active 
-                                      ? "bg-[#0f172a] text-white dark:bg-amber-400 dark:text-black font-bold shadow-sm" 
-                                      : "text-slate-400 hover:text-slate-700 dark:hover:text-white"
-                                  }`}
-                                >
-                                  <Icon size={13} />
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-
-                        {/* Line Spacing */}
-                        <div className="space-y-1.5">
-                          <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
-                            Line Spacing
-                          </label>
-                          <select
-                            value={operatorCardLineHeight}
-                            onChange={(e) => setOperatorCardLineHeight(e.target.value)}
-                            className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-xs bg-white dark:bg-slate-800 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-400 cursor-pointer"
-                          >
-                            <option value="1.3">1.3 — Compact</option>
-                            <option value="1.5">1.5 — Normal (Default)</option>
-                            <option value="1.7">1.7 — Relaxed</option>
-                            <option value="2.0">2.0 — Double</option>
-                          </select>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Editor & Live Preview Grid */}
-                    <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start pt-2">
-                      {/* Left: Rich Text Editor & Available Tokens */}
-                      <div className="xl:col-span-7 space-y-4">
-                        <div className="space-y-1.5">
-                          <div className="flex items-center justify-between ml-1">
-                            <div>
-                              <label className="text-[9px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 block">
-                                Display Layout Text (WYSIWYG & Real-Time Formatting)
-                              </label>
-                              <span className="text-[9px] text-slate-400 block">
-                                Highlight any text or token in the box below to change its color, font, or weight with 0 raw code shown.
-                              </span>
-                            </div>
-                          </div>
-                          <RichTextEditor
-                            ref={eventOperatorRichEditorRef}
-                            value={operatorCardLayoutText}
-                            onChange={setOperatorCardLayoutText}
-                            placeholder={`*Attendee Details:*\n*Name:* [first_name] [last_name]\n*Company:* [company]\n*Pass Code:* [clearance_id]`}
-                            minHeight="180px"
-                          />
-                        </div>
-
-                        {/* Available Tokens */}
-                        <div className="space-y-2">
-                          <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block ml-1">
-                            Available Tokens from this Event (Click to insert at cursor)
-                          </span>
-                          <div className="flex flex-wrap gap-2">
-                            {[
-                              { label: "First Name", token: "[first_name]" },
-                              { label: "Last Name", token: "[last_name]" },
-                              { label: "Email Address", token: "[email]" },
-                              { label: "Company", token: "[company]" },
-                              { label: "Clearance ID", token: "[clearance_id]" },
-                              { label: "Registration Date", token: "[registration_date]" },
-                              ...(() => {
-                                const qs: Array<{ label: string, token: string }> = [];
-                                const seen = new Set<string>();
-                                if (event && Array.isArray(event.custom_fields_schema)) {
-                                  event.custom_fields_schema.forEach((s: any) => {
-                                    (s.fields || []).forEach((f: any) => {
-                                      const label = (f.label || "").replace(/<[^>]*>/g, "").trim();
-                                      const slug = (f.label || "").toLowerCase().replace(/<[^>]*>/g, "").replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
-                                      const token = `[${f.key || slug || f.id}]`;
-                                      if (label && !["[first_name]", "[last_name]", "[email]", "[company]", "[clearance_id]"].includes(token) && !seen.has(token)) {
-                                        seen.add(token);
-                                        qs.push({ label, token });
-                                      }
-                                    });
-                                  });
-                                }
-                                return qs;
-                              })()
-                            ].map((t, idx) => (
-                              <button
-                                key={idx}
-                                type="button"
-                                onMouseDown={(e) => {
-                                  e.preventDefault();
-                                  insertTokenAtCursor(t.token);
-                                }}
-                                onClick={() => insertTokenAtCursor(t.token)}
-                                className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-[10px] font-black text-slate-700 dark:text-slate-300 transition-all active:scale-95"
-                              >
-                                {t.label} <code className="text-amber-500 font-mono font-bold text-[9px] ml-1">{t.token}</code>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Right: Live Operator Display Preview */}
-                      <div className="xl:col-span-5 space-y-2">
-                        <div className="flex items-center justify-between ml-1">
-                          <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
-                            Live Operator Display Preview
-                          </span>
-                          <span className="text-[8px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800/40">
-                            Real-time View
-                          </span>
-                        </div>
-
-                        {(() => {
-                          const previewReg = (registrations && registrations.length > 0)
-                            ? {
-                                ...registrations[0],
-                                custom_answers: {
-                                  dietary_requirements: "Vegetarian / Halal",
-                                  dietary_other: "Nut allergy",
-                                  entry_role: "VIP Speaker",
-                                  t_shirt_size: "Large (L)",
-                                  ...(registrations[0].custom_answers || {})
-                                }
-                              }
-                            : {
-                                attendee: {
-                                  first_name: "Alex",
-                                  last_name: "Morgan",
-                                  company: "Apex Global Inc.",
-                                  email: "alex.morgan@example.com"
-                                },
-                                pin: "849201",
-                                clearance_id: "849201",
-                                created_at: new Date().toISOString(),
-                                custom_answers: {
-                                  dietary_requirements: "Vegetarian / Halal",
-                                  dietary_other: "Nut allergy",
-                                  entry_role: "VIP Speaker",
-                                  t_shirt_size: "Large (L)"
-                                }
-                              };
-
-                          const compiledPreview = compileOperatorCustomLayout(
-                            operatorCardLayoutText || (event as any)?.operator_config?.card_layout_text || event?.registration_form_template?.operator_config?.card_layout_text,
-                            previewReg
-                          );
-
-                          return (
-                            <div 
-                              style={{
-                                backgroundColor: operatorSuccessBgColor || "#0f172a",
-                                color: operatorCardTextColor || "#ffffff",
-                                fontSize: operatorCardFontSize || "14px",
-                                fontWeight: operatorCardFontWeight || "600",
-                                textAlign: ((operatorCardTextAlign || "left") as any),
-                                lineHeight: operatorCardLineHeight || "1.5"
-                              }}
-                              className={`p-6 rounded-[2rem] shadow-xl border border-white/10 text-white min-h-[260px] flex flex-col justify-between ${
-                                operatorCardFontFamily === 'mono'
-                                  ? 'font-mono'
-                                  : operatorCardFontFamily === 'bricolage'
-                                  ? 'font-bricolage'
-                                  : operatorCardFontFamily === 'serif'
-                                  ? 'font-serif'
-                                  : 'font-sans'
-                              }`}
-                            >
-                              <div className="space-y-3">
-                                <div className="flex items-center justify-between border-b border-white/15 pb-2.5">
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center">
-                                      <Check size={12} className="text-white" />
-                                    </div>
-                                    <span className="text-[10px] font-black uppercase tracking-wider text-white/90">
-                                      Check-in Verified
-                                    </span>
-                                  </div>
-                                  <span className="text-[9px] font-mono font-bold text-white/70">
-                                    PIN: {previewReg.pin || "849201"}
-                                  </span>
-                                </div>
-
-                                <div>
-                                  <p className="text-base font-black tracking-tight text-white">
-                                    {`${previewReg.attendee?.first_name || "Alex"} ${previewReg.attendee?.last_name || "Morgan"}`}
-                                  </p>
-                                  <p className="text-xs text-white/70 font-semibold">
-                                    {previewReg.attendee?.company || "Apex Global Inc."}
-                                  </p>
-                                </div>
-
-                                <div className="bg-black/20 p-4 rounded-xl border border-white/10 max-h-48 overflow-y-auto">
-                                  <div
-                                    className="whitespace-pre-wrap leading-relaxed"
-                                    dangerouslySetInnerHTML={{
-                                      __html: renderFormattedCardLayout(
-                                        compiledPreview || "*Attendee Details:*\n*Name:* Alex Morgan\n*Company:* Apex Global Inc."
-                                      )
-                                    }}
-                                  />
-                                </div>
-                              </div>
-
-                              <div className="pt-3 border-t border-white/10 text-center">
-                                <span className="text-[9px] font-black uppercase tracking-widest text-white/50">
-                                  Operator Display Preview
-                                </span>
-                              </div>
-                            </div>
-                          );
-                        })()}
-                      </div>
-                    </div>
+                               <button
+                                 onClick={async () => {
+                                   await handleScannerAttendeeCheckIn(reg);
+                                 }}
+                                 className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer shadow-sm ${
+                                   isCheckedIn
+                                     ? "bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
+                                     : "bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-emerald-500/20"
+                                 }`}
+                               >
+                                 <CheckCircle2 size={12} />
+                                 <span>{isCheckedIn ? "Checked In" : "Check In"}</span>
+                               </button>
+                             </div>
+                           </div>
+                         );
+                       })}
+                     </div>
+                   )}
                  </div>
                )}
              </div>
-             
+
              <div className="max-w-4xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
                <div className="space-y-8">
                  <div className="bg-slate-50 p-8 rounded-[2rem] border border-slate-100">
@@ -3806,10 +3516,11 @@ export default function EventDetailsPage() {
                                    className="w-full mt-5 bg-white/15 hover:bg-white/25 text-white border border-white/10 font-black py-3 px-4 rounded-xl text-[10px] uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer"
                                  >
                                    <Eye size={14} />
-                                   View Registrant Details & Edit
+                                    {userRole === "staff" ? "View Registrant Details" : "View Registrant Details & Edit"}
                                  </button>
 
-                               {/* Interactive Custom Questions Form inside the Scanner card */}
+                                {/* Interactive Custom Questions Form inside the Scanner card */}
+                                {userRole !== "staff" && (
                                <div className="mt-6 border-t border-white/10 pt-5 text-left w-full space-y-4">
                                  <span className="text-[10px] font-black text-white/70 uppercase tracking-widest block mb-2">Update Custom Answers</span>
                                  {(() => {
@@ -3917,7 +3628,8 @@ export default function EventDetailsPage() {
                                  >
                                    {isSavingAnswers ? "Saving..." : "Save Custom Answers"}
                                  </button>
-                               </div>
+                                </div>
+                                )}
                              </>
                           )}
                           {pinStatus !== "processing" && (
@@ -4491,60 +4203,96 @@ export default function EventDetailsPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
                      <div>
                         <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">First Name</p>
-                        <input 
-                          type="text"
-                          value={editedFirstName}
-                          onChange={(e) => setEditedFirstName(e.target.value)}
-                          className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400 outline-none font-bold text-[#0f172a] dark:text-white text-sm"
-                        />
+                        {userRole === "staff" ? (
+                          <p className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-[#0f172a] dark:text-white text-sm">
+                            {editedFirstName || "—"}
+                          </p>
+                        ) : (
+                          <input 
+                            type="text"
+                            value={editedFirstName}
+                            onChange={(e) => setEditedFirstName(e.target.value)}
+                            className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400 outline-none font-bold text-[#0f172a] dark:text-white text-sm"
+                          />
+                        )}
                      </div>
                      <div>
                         <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">Last Name</p>
-                        <input 
-                          type="text"
-                          value={editedLastName}
-                          onChange={(e) => setEditedLastName(e.target.value)}
-                          className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400 outline-none font-bold text-[#0f172a] dark:text-white text-sm"
-                        />
+                        {userRole === "staff" ? (
+                          <p className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-[#0f172a] dark:text-white text-sm">
+                            {editedLastName || "—"}
+                          </p>
+                        ) : (
+                          <input 
+                            type="text"
+                            value={editedLastName}
+                            onChange={(e) => setEditedLastName(e.target.value)}
+                            className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400 outline-none font-bold text-[#0f172a] dark:text-white text-sm"
+                          />
+                        )}
                      </div>
                      <div>
                         <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">Email Address</p>
-                        <input 
-                          type="email"
-                          value={editedEmail}
-                          onChange={(e) => setEditedEmail(e.target.value)}
-                          className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400 outline-none font-bold text-[#0f172a] dark:text-white text-sm"
-                        />
+                        {userRole === "staff" ? (
+                          <p className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-[#0f172a] dark:text-white text-sm">
+                            {editedEmail || "—"}
+                          </p>
+                        ) : (
+                          <input 
+                            type="email"
+                            value={editedEmail}
+                            onChange={(e) => setEditedEmail(e.target.value)}
+                            className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400 outline-none font-bold text-[#0f172a] dark:text-white text-sm"
+                          />
+                        )}
                      </div>
                      <div>
                         <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">Company</p>
-                        <input 
-                          type="text"
-                          value={editedCompany}
-                          onChange={(e) => setEditedCompany(e.target.value)}
-                          className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400 outline-none font-bold text-[#0f172a] dark:text-white text-sm"
-                        />
+                        {userRole === "staff" ? (
+                          <p className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-[#0f172a] dark:text-white text-sm">
+                            {editedCompany || "—"}
+                          </p>
+                        ) : (
+                          <input 
+                            type="text"
+                            value={editedCompany}
+                            onChange={(e) => setEditedCompany(e.target.value)}
+                            className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400 outline-none font-bold text-[#0f172a] dark:text-white text-sm"
+                          />
+                        )}
                      </div>
                      <div>
                         <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">Clearance ID (PIN)</p>
-                        <input 
-                          type="text"
-                          value={editedPin}
-                          onChange={(e) => setEditedPin(e.target.value)}
-                          className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-850 rounded-xl border border-slate-200 dark:border-slate-700 focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400 outline-none font-mono font-bold text-[#0f172a] dark:text-white text-sm tracking-wider"
-                        />
+                        {userRole === "staff" ? (
+                          <p className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-850 rounded-xl border border-slate-200 dark:border-slate-700 font-mono font-bold text-[#0f172a] dark:text-white text-sm tracking-wider">
+                            {editedPin || "—"}
+                          </p>
+                        ) : (
+                          <input 
+                            type="text"
+                            value={editedPin}
+                            onChange={(e) => setEditedPin(e.target.value)}
+                            className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-850 rounded-xl border border-slate-200 dark:border-slate-700 focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400 outline-none font-mono font-bold text-[#0f172a] dark:text-white text-sm tracking-wider"
+                          />
+                        )}
                      </div>
                      <div>
                         <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">Status</p>
-                        <select 
-                          value={editedStatus}
-                          onChange={(e) => setEditedStatus(e.target.value)}
-                          className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400 outline-none font-bold text-[#0f172a] dark:text-white text-sm capitalize"
-                        >
-                          <option value="confirmed">confirmed</option>
-                          <option value="waitlisted">waitlisted</option>
-                          <option value="cancelled">cancelled</option>
-                        </select>
+                        {userRole === "staff" ? (
+                          <p className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-[#0f172a] dark:text-white text-sm capitalize">
+                            {editedStatus || "confirmed"}
+                          </p>
+                        ) : (
+                          <select 
+                            value={editedStatus}
+                            onChange={(e) => setEditedStatus(e.target.value)}
+                            className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400 outline-none font-bold text-[#0f172a] dark:text-white text-sm capitalize"
+                          >
+                            <option value="confirmed">confirmed</option>
+                            <option value="waitlisted">waitlisted</option>
+                            <option value="cancelled">cancelled</option>
+                          </select>
+                        )}
                      </div>
                      <div>
                         <p className="text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-widest mb-1">Registered On</p>
@@ -4612,12 +4360,18 @@ export default function EventDetailsPage() {
                             return (
                               <div key={field.id} className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-800/80">
                                  <p className="text-[10px] font-black text-yellow-600 uppercase tracking-widest mb-2">{label}</p>
-                                 <input 
-                                   type="text"
-                                   value={valStr}
-                                   onChange={(e) => handleChange(e.target.value)}
-                                   className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400 outline-none font-bold text-[#0f172a] dark:text-white text-sm"
-                                 />
+                                 {userRole === "staff" ? (
+                                   <p className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 font-bold text-[#0f172a] dark:text-white text-sm">
+                                     {valStr || "—"}
+                                   </p>
+                                 ) : (
+                                   <input 
+                                     type="text"
+                                     value={valStr}
+                                     onChange={(e) => handleChange(e.target.value)}
+                                     className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400 outline-none font-bold text-[#0f172a] dark:text-white text-sm"
+                                   />
+                                 )}
                               </div>
                             );
                           });
@@ -4626,7 +4380,16 @@ export default function EventDetailsPage() {
                  </div>
               </div>
               <div className="p-10 bg-slate-50 dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center">
-                  {isDetailsAnswersDirty ? (
+                  {userRole === "staff" ? (
+                    <div className="w-full flex justify-end">
+                      <button 
+                        onClick={() => setSelectedReg(null)}
+                        className="px-8 py-4 bg-[#0f172a] dark:bg-slate-850 text-white dark:text-slate-200 text-[10px] font-black uppercase tracking-widest rounded-2xl hover:bg-black dark:hover:bg-slate-700 transition-all shadow-xl shadow-slate-200 dark:shadow-none cursor-pointer"
+                      >
+                         Close
+                      </button>
+                    </div>
+                  ) : isDetailsAnswersDirty ? (
                     <>
                       <button 
                         onClick={handleCancelDetailsEdit}
