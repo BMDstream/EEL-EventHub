@@ -161,7 +161,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     return item.name === "Dashboard";
   }).map(item => {
     if (userRole === "staff" && item.name === "Dashboard") {
-      return { ...item, name: "Today's Check-In" };
+      return { ...item, name: "Assigned Check-In" };
     }
     return item;
   });

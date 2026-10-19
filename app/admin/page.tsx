@@ -200,7 +200,21 @@ export default function AdminDashboard() {
       return todayStart <= eventEnd && todayEnd >= eventStart;
     };
 
-    const activeStaffEvents = events.filter(e => isHappeningToday(e.start_date, (e as any).duration_days));
+    const isEventConcluded = (dateStr: string, durationDays: number = 1) => {
+      if (!dateStr) return false;
+      const start = new Date(dateStr);
+      const now = new Date();
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+      const eventStart = new Date(start.getFullYear(), start.getMonth(), start.getDate(), 0, 0, 0, 0);
+      const duration = Math.max(1, durationDays || 1);
+      const eventEnd = new Date(eventStart);
+      eventEnd.setDate(eventEnd.getDate() + (duration - 1));
+      eventEnd.setHours(23, 59, 59, 999);
+      return todayStart > eventEnd;
+    };
+
+    // Show active and upcoming assigned events (concluded events are removed the day after the event date)
+    const activeStaffEvents = events.filter(e => !isEventConcluded(e.start_date, (e as any).duration_days));
 
     return (
       <AdminLayout>
@@ -212,7 +226,7 @@ export default function AdminDashboard() {
               <span className="text-[10px] font-black uppercase tracking-[0.25em] text-emerald-500">Staff Check-In Station</span>
             </div>
             <h1 className="text-3xl md:text-5xl font-black text-[#0f172a] dark:text-white tracking-tighter font-bricolage italic uppercase">
-              Today&apos;s <span className="text-slate-300 dark:text-slate-600">Events</span>
+              Assigned <span className="text-slate-300 dark:text-slate-600">Events</span>
             </h1>
             <p className="text-slate-500 font-medium text-sm md:text-base dark:text-slate-400 mt-1">
               Select your assigned event to launch attendee check-in and QR scanning.
@@ -227,14 +241,15 @@ export default function AdminDashboard() {
           ) : activeStaffEvents.length === 0 ? (
             <div className="p-16 rounded-[2.5rem] bg-white dark:bg-[#0d1527] border border-slate-100 dark:border-slate-800 text-center space-y-3">
               <Calendar size={48} className="mx-auto text-slate-300 dark:text-slate-700" />
-              <h3 className="text-xl font-black text-slate-800 dark:text-white font-bricolage">No Events Assigned For Today</h3>
+              <h3 className="text-xl font-black text-slate-800 dark:text-white font-bricolage">No Events Assigned</h3>
               <p className="text-xs text-slate-400 max-w-md mx-auto">
-                You do not have any active check-in events scheduled today. Please contact your event administrator if you believe this is an error.
+                You do not have any active or upcoming check-in events assigned to your account. Please contact your event administrator if you believe this is an error.
               </p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {activeStaffEvents.map((event) => {
+                const isToday = isHappeningToday(event.start_date, (event as any).duration_days);
                 return (
                   <div
                     key={event.id}
@@ -242,10 +257,17 @@ export default function AdminDashboard() {
                   >
                     <div className="space-y-4">
                       <div className="flex items-center justify-between gap-2">
-                        <span className="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest bg-emerald-500/10 text-emerald-500 border border-emerald-500/30 flex items-center gap-1.5">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                          Happening Today
-                        </span>
+                        {isToday ? (
+                          <span className="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest bg-emerald-500/10 text-emerald-500 border border-emerald-500/30 flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                            Happening Today
+                          </span>
+                        ) : (
+                          <span className="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest bg-amber-400/10 text-amber-600 dark:text-amber-400 border border-amber-400/30 flex items-center gap-1.5">
+                            <Calendar size={11} />
+                            Upcoming Event
+                          </span>
+                        )}
                         {event.client?.name && (
                           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                             {event.client.name}
