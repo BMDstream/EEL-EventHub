@@ -4,6 +4,7 @@ import { useEffect, useState, Suspense } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { Calendar, MapPin, CheckCircle2, Loader2, AlertCircle, ChevronDown, Users, XCircle } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
+import { isClientPreviewHost, getAppEnvironmentHeaders } from "@/lib/env-utils";
 
 const THEME_DEFAULTS = {
   cyber_dark: { primary: "#000000", accent: "#eab308" },
@@ -786,15 +787,9 @@ function PublicRegistrationPageContent() {
       decodedSlug = rawSlug;
     }
 
-    const isPreviewHost = typeof window !== "undefined" && (
-      window.location.hostname.includes("preview") || 
-      window.location.hostname.includes("-git-") || 
-      window.location.hostname.includes("localhost")
-    );
-    const reqHeaders: Record<string, string> = {};
-    if (isPreviewHost) {
-      reqHeaders["x-app-environment"] = "preview";
-    }
+    const reqHeaders: Record<string, string> = {
+      ...getAppEnvironmentHeaders()
+    };
 
     fetch(`/api/py/events/${encodeURIComponent(decodedSlug)}`, { headers: reqHeaders })
       .then(async (res) => {
@@ -903,17 +898,11 @@ function PublicRegistrationPageContent() {
     }
 
     try {
-      const isPreviewHost = typeof window !== "undefined" && (
-        window.location.hostname.includes("preview") || 
-        window.location.hostname.includes("-git-") || 
-        window.location.hostname.includes("localhost")
-      );
-
       const response = await fetch(`/api/py/register`, {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
-          ...(isPreviewHost ? { "x-app-environment": "preview" } : {})
+          ...getAppEnvironmentHeaders()
         },
         body: JSON.stringify({
           event_id: event.id,

@@ -10,6 +10,7 @@ import {
   User, Building2, CheckSquare, Square
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
+import { getAppEnvironmentHeaders } from "@/lib/env-utils";
 
 export default function BadgePrintPage() {
   const { id } = useParams();
@@ -33,9 +34,14 @@ export default function BadgePrintPage() {
       try {
         setLoading(true);
         
+        const reqHeaders = { 
+          "x-user-email": session.user?.email || "",
+          ...getAppEnvironmentHeaders()
+        };
+
         // Fetch Event Details
         const eventRes = await fetch(`/api/py/events/id/${id}`, {
-          headers: { "x-user-email": session.user?.email || "" }
+          headers: reqHeaders
         });
         if (!eventRes.ok) throw new Error("Failed to load event details");
         const eventData = await eventRes.json();
@@ -43,7 +49,7 @@ export default function BadgePrintPage() {
 
         // Fetch Event Registrations
         const regRes = await fetch(`/api/py/events/${id}/registrations`, {
-          headers: { "x-user-email": session.user?.email || "" }
+          headers: reqHeaders
         });
         if (!regRes.ok) throw new Error("Failed to load registrants");
         const regData = await regRes.json();

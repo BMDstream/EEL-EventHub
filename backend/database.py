@@ -2,6 +2,7 @@ import os
 import json
 import re
 from typing import Optional, Any
+from fastapi import Request
 from sqlmodel import create_engine, SQLModel, Session
 from sqlalchemy.pool import NullPool
 from dotenv import load_dotenv
@@ -11,19 +12,62 @@ load_dotenv()
 def is_preview_env(request: Optional[Any] = None) -> bool:
     """
     Determines whether code is running or request is arriving in the preview environment.
-    Checks:
-    1. Direct environment variables (VERCEL_ENV, NEXT_PUBLIC_VERCEL_ENV, ENVIRONMENT)
-    2. Checked-in environment configuration (app_environment.json / config/environment.json)
-    3. Git branch reference
-    4. Incoming HTTP request headers (x-app-environment, host, referer, x-vercel-deployment-url)
+    Strictly isolates all preview data to neondb_preview and production to neondb.
     """
-    # 1. Explicit environment variables
+    # 0. Request headers (when called from FastAPI request context)
+    if request and hasattr(request, "headers"):
+        headers = request.headers
+        host = (headers.get("host") or "").lower()
+        deploy_url = (headers.get("x-vercel-deployment-url") or "").lower()
+        referer = (headers.get("referer") or "").lower()
+        app_env_hdr = (headers.get("x-app-environment") or headers.get("x-environment") or "").lower()
+
+        # Explicit header override
+        if app_env_hdr == "preview":
+            return True
+        if app_env_hdr in ("prod", "production", "main"):
+            return False
+
+        # Production domain check: canonical production domains are NEVER preview
+        is_prod_domain = (
+            host == "eel-event-hub-q61e.vercel.app"
+            or "bmdcomputing.com" in host
+            or "rydexgroup.co.za" in host
+        )
+        if is_prod_domain:
+            return False
+
+        # Any other vercel.app domain is a preview deployment!
+        if (
+            host.endswith(".vercel.app")
+            or "preview" in host
+            or "-git-" in host
+            or "localhost" in host
+            or "127.0.0.1" in host
+            or "preview" in deploy_url
+            or "preview" in referer
+        ):
+            return True
+
+    # 1. Bundled branch configuration (tracked on the preview git branch)
+    try:
+        from backend.branch_config import IS_PREVIEW as BRANCH_IS_PREVIEW
+        if BRANCH_IS_PREVIEW is True:
+            return True
+    except Exception:
+        pass
+
+    # 2. Explicit environment variables
     vercel_env = (os.getenv("VERCEL_ENV") or os.getenv("NEXT_PUBLIC_VERCEL_ENV") or os.getenv("ENVIRONMENT") or "").strip().lower()
     git_ref = (os.getenv("VERCEL_GIT_COMMIT_REF") or os.getenv("GIT_BRANCH") or "").strip().lower()
     if vercel_env == "preview" or (git_ref != "" and git_ref not in ("main", "master", "production")):
         return True
 
-    # 2. Checked-in environment configuration file
+    # 3. Dedicated preview database URL presence (when not explicitly on production VERCEL_ENV)
+    if os.getenv("PREVIEW_DATABASE_URL") and vercel_env != "production":
+        return True
+
+    # 4. Checked-in environment configuration file
     current_dir = os.path.dirname(os.path.abspath(__file__))
     project_root = os.path.dirname(current_dir)
     for candidate in [
@@ -39,7 +83,7 @@ def is_preview_env(request: Optional[Any] = None) -> bool:
             except Exception:
                 pass
 
-    # 3. Local git HEAD branch check
+    # 5. Local git HEAD branch check (dev only)
     try:
         head_path = os.path.join(project_root, ".git", "HEAD")
         if os.path.exists(head_path):
@@ -49,23 +93,6 @@ def is_preview_env(request: Optional[Any] = None) -> bool:
                 return True
     except Exception:
         pass
-
-    # 4. Request headers (when called from FastAPI request context)
-    if request and hasattr(request, "headers"):
-        headers = request.headers
-        app_env_hdr = (headers.get("x-app-environment") or headers.get("x-environment") or "").lower()
-        if app_env_hdr == "preview":
-            return True
-        host = (headers.get("host") or "").lower()
-        deploy_url = (headers.get("x-vercel-deployment-url") or "").lower()
-        referer = (headers.get("referer") or "").lower()
-        if (
-            "preview" in host
-            or "-git-" in host
-            or "preview" in deploy_url
-            or "preview" in referer
-        ):
-            return True
 
     return False
 
@@ -121,7 +148,7 @@ engine = engine_preview if IS_PREVIEW else engine_prod
 def init_db(target_engine=None):
     SQLModel.metadata.create_all(target_engine or engine)
 
-def get_session(request: Optional[Any] = None):
+def get_session(request: Request = None):
     use_preview = is_preview_env(request)
     target_engine = engine_preview if use_preview else engine_prod
     with Session(target_engine) as session:

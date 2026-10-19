@@ -58,6 +58,7 @@ import AdminLayout from "@/components/AdminLayout";
 import * as dbOffline from "@/lib/indexedDb";
 import { unescapeHtmlLinks, cleanHtmlText, renderFormattedCardLayout } from "@/lib/utils";
 import RichTextEditor, { RichTextEditorHandle } from "@/components/RichTextEditor";
+import { getAppEnvironmentHeaders } from "@/lib/env-utils";
 
 const FormBuilder = dynamic(() => import("@/components/FormBuilder"), {
   loading: () => (
@@ -1073,7 +1074,10 @@ export default function EventDetailsPage() {
         
         // Refresh registrants list
         const regRes = await fetch(`/api/py/events/${id}/registrations`, {
-          headers: { "x-user-email": session?.user?.email || "" }
+          headers: { 
+            "x-user-email": session?.user?.email || "",
+            ...getAppEnvironmentHeaders()
+          }
         });
         const regData = await regRes.json();
         setRegistrations(regData);
@@ -1155,7 +1159,10 @@ export default function EventDetailsPage() {
     setRefreshing(true);
     try {
       const regRes = await fetch(`/api/py/events/${id}/registrations`, {
-        headers: { "x-user-email": session.user.email || "" }
+        headers: { 
+          "x-user-email": session.user.email || "",
+          ...getAppEnvironmentHeaders()
+        }
       });
       const regData = await regRes.json();
       setRegistrations(regData);
@@ -1209,7 +1216,10 @@ export default function EventDetailsPage() {
     setIsCaching(true);
     try {
       const res = await fetch(`/api/py/events/${id}/registrations`, {
-        headers: { "x-user-email": session?.user?.email || "" }
+        headers: { 
+          "x-user-email": session?.user?.email || "",
+          ...getAppEnvironmentHeaders()
+        }
       });
       if (!res.ok) throw new Error("Failed to fetch fresh registrations");
       const regData = await res.json();
@@ -1310,8 +1320,10 @@ export default function EventDetailsPage() {
     if (!session?.user?.email) return;
     const fetchData = async () => {
       try {
-        setError(null);
-        const headers = { "x-user-email": session.user.email || "" };
+        const headers = { 
+          "x-user-email": session.user.email || "",
+          ...getAppEnvironmentHeaders()
+        };
         const [eventRes, regRes, templatesRes] = await Promise.all([
           fetch(`/api/py/events/id/${id}`, { headers }),
           fetch(`/api/py/events/${id}/registrations`, { headers }),

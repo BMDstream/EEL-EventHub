@@ -8,7 +8,10 @@ function resolveDatabaseUrl(): string {
   const vercelEnv = (process.env.VERCEL_ENV || '').toLowerCase();
   const gitRef = (process.env.VERCEL_GIT_COMMIT_REF || '').toLowerCase();
 
-  let isPreview = vercelEnv === 'preview' || (gitRef !== '' && gitRef !== 'main' && gitRef !== 'master');
+  let isPreview = vercelEnv === 'preview' || vercelEnv === 'development' || (gitRef !== '' && gitRef !== 'main' && gitRef !== 'master');
+  if (!isPreview && previewUrl && vercelEnv !== 'production') {
+    isPreview = true;
+  }
   if (!isPreview) {
     try {
       const envJsonPath = path.join(process.cwd(), 'config', 'environment.json');
