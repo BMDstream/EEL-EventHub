@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Html5Qrcode } from "html5-qrcode";
 import { CheckCircle2, XCircle, Camera, Loader2, AlertCircle, Eye } from "lucide-react";
+import { renderFormattedCardLayout } from "@/lib/utils";
 
 interface QRScannerProps {
   onScan: (decodedText: string) => Promise<any>;
@@ -203,7 +204,7 @@ export default function QRScanner({ onScan, onViewDetails, operatorConfig }: QRS
                  </p>
                  {scannedCardLayoutText ? (
                    <div className="bg-white/10 p-5 rounded-2xl border border-white/5 text-left mt-4 w-full max-h-60 overflow-y-auto pr-1">
-                     <pre 
+                     <div 
                        style={{
                          color: operatorConfig?.card_text_color || "#ffffff",
                          fontSize: operatorConfig?.card_font_size || "13px",
@@ -211,7 +212,7 @@ export default function QRScanner({ onScan, onViewDetails, operatorConfig }: QRS
                          textAlign: (operatorConfig?.card_text_align as any) || "left",
                          lineHeight: operatorConfig?.card_line_height || "1.5"
                        }}
-                       className={`whitespace-pre-wrap ${
+                       className={`whitespace-pre-wrap leading-relaxed ${
                          operatorConfig?.card_font_family === 'mono'
                            ? 'font-mono'
                            : operatorConfig?.card_font_family === 'bricolage'
@@ -220,9 +221,10 @@ export default function QRScanner({ onScan, onViewDetails, operatorConfig }: QRS
                            ? 'font-serif'
                            : 'font-sans'
                        }`}
-                     >
-                       {scannedCardLayoutText}
-                     </pre>
+                       dangerouslySetInnerHTML={{
+                         __html: renderFormattedCardLayout(scannedCardLayoutText)
+                       }}
+                     />
                    </div>
                  ) : scannedOperatorFields && scannedOperatorFields.length > 0 && (
                    <div className="grid grid-cols-1 gap-3 text-left mt-4 w-full max-h-60 overflow-y-auto pr-1">
