@@ -10,6 +10,7 @@ from backend.utils import (
     verify_client_access,
     verify_event_access,
     verify_event_manager_access,
+    is_event_concluded,
     limiter,
     log_audit
 )
@@ -46,6 +47,9 @@ def read_events(
         if assigned_event_ids:
             ass_events = session.exec(select(Event).where(Event.id.in_(assigned_event_ids)).order_by(Event.id.desc())).all()
             for ae in ass_events:
+                # If staff (or not a manager for this client), exclude concluded events
+                if (current_user.role == "staff" or (ae.client_id not in manager_client_ids)) and is_event_concluded(ae):
+                    continue
                 if ae not in events:
                     events.append(ae)
         

@@ -49,8 +49,11 @@ export default function EventsListPage() {
     if (userRole === "staff") {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      const eventDate = new Date(e.start_date);
-      return matchesSearch && eventDate >= today;
+      const duration = Math.max(1, e.duration_days || 1);
+      const eventEndDate = new Date(e.start_date);
+      eventEndDate.setDate(eventEndDate.getDate() + (duration - 1));
+      eventEndDate.setHours(23, 59, 59, 999);
+      return matchesSearch && today <= eventEndDate;
     }
     
     return matchesSearch;

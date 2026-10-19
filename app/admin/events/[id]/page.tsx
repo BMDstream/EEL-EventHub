@@ -1823,16 +1823,70 @@ export default function EventDetailsPage() {
   }
 
   if (!event) {
+    const isConcludedError = error && (error.toLowerCase().includes("concluded") || error.includes("403"));
     return (
       <AdminLayout>
-        <div className="text-center py-20 max-w-xl mx-auto">
-          <h1 className="text-2xl font-bold text-slate-900 mb-2">Event not found</h1>
-          {error && (
+        <div className="text-center py-20 max-w-xl mx-auto space-y-4">
+          <div className="w-16 h-16 rounded-3xl bg-amber-500/10 border border-amber-500/20 text-amber-500 flex items-center justify-center mx-auto">
+            <Calendar size={32} />
+          </div>
+          <h1 className="text-2xl font-black text-slate-900 dark:text-white font-bricolage">
+            {isConcludedError ? "Event Access Concluded" : "Event Not Found"}
+          </h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto">
+            {isConcludedError
+              ? "This event has concluded. Staff check-in access closes once the event has passed."
+              : "The event you are looking for does not exist or you do not have permission to view it."}
+          </p>
+          {error && !isConcludedError && (
             <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 text-red-700 dark:text-red-400 p-4 rounded-xl font-mono text-xs text-left mb-6 whitespace-pre-wrap break-all">
               {error}
             </div>
           )}
-          <Link href="/admin/events" className="text-blue-600 hover:underline">Return to Catalog</Link>
+          <div className="pt-2">
+            <Link
+              href={userRole === "staff" ? "/admin" : "/admin/events"}
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-yellow-400 hover:bg-yellow-300 text-slate-950 font-black text-xs uppercase tracking-wider transition-all"
+            >
+              {userRole === "staff" ? "← Back to Today's Events" : "← Return to Catalog"}
+            </Link>
+          </div>
+        </div>
+      </AdminLayout>
+    );
+  }
+
+  const isStaffConcluded = (() => {
+    if (userRole !== "staff" || !event?.start_date) return false;
+    const start = new Date(event.start_date);
+    const duration = Math.max(1, event.duration_days || 1);
+    const eventEndDate = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+    eventEndDate.setDate(eventEndDate.getDate() + (duration - 1));
+    eventEndDate.setHours(23, 59, 59, 999);
+    return new Date() > eventEndDate;
+  })();
+
+  if (isStaffConcluded) {
+    return (
+      <AdminLayout>
+        <div className="text-center py-20 max-w-xl mx-auto space-y-4">
+          <div className="w-16 h-16 rounded-3xl bg-amber-500/10 border border-amber-500/20 text-amber-500 flex items-center justify-center mx-auto">
+            <Calendar size={32} />
+          </div>
+          <h1 className="text-2xl font-black text-slate-900 dark:text-white font-bricolage">
+            Event Access Concluded
+          </h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto">
+            This event has concluded. Staff check-in access closes once the event has passed.
+          </p>
+          <div className="pt-2">
+            <Link
+              href="/admin"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-yellow-400 hover:bg-yellow-300 text-slate-950 font-black text-xs uppercase tracking-wider transition-all"
+            >
+              ← Back to Today&apos;s Events
+            </Link>
+          </div>
         </div>
       </AdminLayout>
     );

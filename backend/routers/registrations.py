@@ -1207,7 +1207,8 @@ def toggle_checkin(
     mode: str = "toggle",
     day: Optional[int] = None,
     event_id: Optional[int] = None,
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    current_user: Optional[User] = Depends(get_current_user_from_request)
 ):
     registration = None
     try:
@@ -1231,6 +1232,10 @@ def toggle_checkin(
             status_code=400, 
             detail="This registration credential belongs to a different event."
         )
+
+    event = session.get(Event, registration.event_id)
+    if event:
+        verify_event_access(current_user, event, session)
         
     if registration.status == "declined":
         raise HTTPException(status_code=400, detail="Declined registrations cannot be checked in")
@@ -1299,8 +1304,14 @@ def checkin_by_pin(
     event_id: int,
     data: Dict[str, Any],
     background_tasks: BackgroundTasks,
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    current_user: Optional[User] = Depends(get_current_user_from_request)
 ):
+    event = session.get(Event, event_id)
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+    verify_event_access(current_user, event, session)
+
     pin = data.get("pin")
     day = data.get("day")
     if day is not None:

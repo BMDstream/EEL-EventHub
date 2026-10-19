@@ -183,15 +183,24 @@ export default function AdminDashboard() {
   };
 
   if (userRole === "staff") {
-    const isToday = (dateStr: string) => {
+    const isHappeningToday = (dateStr: string, durationDays: number = 1) => {
       if (!dateStr) return false;
-      const d = new Date(dateStr);
+      const start = new Date(dateStr);
       const now = new Date();
-      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+      
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+      const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+      
+      const eventStart = new Date(start.getFullYear(), start.getMonth(), start.getDate(), 0, 0, 0, 0);
+      const duration = Math.max(1, durationDays || 1);
+      const eventEnd = new Date(eventStart);
+      eventEnd.setDate(eventEnd.getDate() + (duration - 1));
+      eventEnd.setHours(23, 59, 59, 999);
+      
+      return todayStart <= eventEnd && todayEnd >= eventStart;
     };
 
-    const todayEvents = events.filter(e => isToday(e.start_date));
-    const activeStaffEvents = todayEvents.length > 0 ? todayEvents : events;
+    const activeStaffEvents = events.filter(e => isHappeningToday(e.start_date, (e as any).duration_days));
 
     return (
       <AdminLayout>
@@ -226,7 +235,6 @@ export default function AdminDashboard() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {activeStaffEvents.map((event) => {
-                const happeningToday = isToday(event.start_date);
                 return (
                   <div
                     key={event.id}
@@ -234,16 +242,10 @@ export default function AdminDashboard() {
                   >
                     <div className="space-y-4">
                       <div className="flex items-center justify-between gap-2">
-                        {happeningToday ? (
-                          <span className="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest bg-emerald-500/10 text-emerald-500 border border-emerald-500/30 flex items-center gap-1.5">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                            Happening Today
-                          </span>
-                        ) : (
-                          <span className="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest bg-slate-100 dark:bg-slate-800 text-slate-400 border border-slate-200 dark:border-slate-700">
-                            Upcoming Event
-                          </span>
-                        )}
+                        <span className="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest bg-emerald-500/10 text-emerald-500 border border-emerald-500/30 flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                          Happening Today
+                        </span>
                         {event.client?.name && (
                           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                             {event.client.name}

@@ -1,5 +1,6 @@
 import os
 import bcrypt
+from datetime import datetime, timedelta
 from fastapi import Header, Depends, HTTPException, Request
 from sqlmodel import Session, select
 from sqlalchemy import func, text
@@ -115,6 +116,34 @@ def verify_client_access(user: Optional[User], client_id: Optional[int], session
         raise HTTPException(status_code=403, detail="Forbidden: Manager permissions required for this client")
     return True
 
+def is_event_concluded(event: Event) -> bool:
+    if not event or not getattr(event, "start_date", None):
+        return False
+    start_dt = event.start_date
+    if isinstance(start_dt, str):
+        s = start_dt.strip()
+        if s.endswith("Z"):
+            s = s[:-1] + "+00:00"
+        try:
+            start_dt = datetime.fromisoformat(s)
+        except Exception:
+            return False
+            
+    if not hasattr(start_dt, "date"):
+        return False
+        
+    duration = max(1, getattr(event, "duration_days", 1) or 1)
+    event_start_date = start_dt.date()
+    event_end_date = event_start_date + timedelta(days=duration - 1)
+    
+    # Check if current date is strictly after event's end date (i.e. starting the next day)
+    if getattr(start_dt, "tzinfo", None) is not None:
+        now_date = datetime.now(start_dt.tzinfo).date()
+    else:
+        now_date = datetime.utcnow().date()
+        
+    return now_date > event_end_date
+
 def verify_event_access(user: Optional[User], event: Event, session: Session):
     if not user:
         raise HTTPException(status_code=401, detail="Authentication required")
@@ -137,6 +166,14 @@ def verify_event_access(user: Optional[User], event: Event, session: Session):
     ).first()
     if not link_exists:
         raise HTTPException(status_code=403, detail="Forbidden: You are not assigned to this event")
+
+    # Staff check-in access closes once the event has concluded (the day after the event date)
+    if is_event_concluded(event):
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: This event has concluded. Staff check-in access closes once the event has passed."
+        )
+
     return True
 
 def verify_event_manager_access(user: Optional[User], event: Event, session: Session):
