@@ -5306,15 +5306,11 @@ export default function EventDetailsPage() {
               <div className={`flex flex-col md:flex-row md:items-end justify-between gap-4 border-b ${isPrint ? 'border-slate-200 pb-4' : 'border-slate-800/80 pb-6'}`}>
                 <div>
                   <span className={`text-[10px] font-black uppercase tracking-[0.3em] ${isPrint ? 'text-slate-500' : 'text-slate-400'}`}>
-                    Slide 01 // Executive Summary
+                    Executive Summary
                   </span>
                   <h2 className={`text-2xl sm:text-3xl font-black font-bricolage italic tracking-tight mt-1 ${isPrint ? 'text-slate-900' : 'text-white'}`}>
                     Key Performance Indicators
                   </h2>
-                </div>
-                <div className={`text-xs font-bold ${isPrint ? 'text-slate-600' : 'text-slate-400'}`}>
-                  <span>{formattedDate}</span>
-                  {event.location && <span className={`block font-mono text-[11px] ${isPrint ? 'text-slate-500' : 'text-slate-500'}`}>{event.location}</span>}
                 </div>
               </div>
 
@@ -5394,7 +5390,7 @@ export default function EventDetailsPage() {
               <div className={`flex flex-col md:flex-row md:items-end justify-between gap-4 border-b ${isPrint ? 'border-slate-200 pb-4' : 'border-slate-800/80 pb-6'}`}>
                 <div>
                   <span className={`text-[10px] font-black uppercase tracking-[0.3em] ${isPrint ? 'text-slate-500' : 'text-slate-400'}`}>
-                    Slide 02 // Check-In Analytics
+                    Check-In Analytics
                   </span>
                   <h2 className={`text-2xl sm:text-3xl font-black font-bricolage italic tracking-tight mt-1 ${isPrint ? 'text-slate-900' : 'text-white'}`}>
                     Attendance & Velocity Breakdown
@@ -5478,7 +5474,7 @@ export default function EventDetailsPage() {
               const c = r.attendee?.company?.trim();
               if (c) orgCounts[c] = (orgCounts[c] || 0) + 1;
             });
-            const sortedOrgs = Object.entries(orgCounts).sort((a, b) => b[1] - a[1]).slice(0, 8);
+            const sortedOrgs = Object.entries(orgCounts).sort((a, b) => b[1] - a[1]);
             const maxCount = sortedOrgs.length > 0 ? sortedOrgs[0][1] : 1;
 
             return (
@@ -5486,32 +5482,32 @@ export default function EventDetailsPage() {
                 <div className={`flex flex-col md:flex-row md:items-end justify-between gap-4 border-b ${isPrint ? 'border-slate-200 pb-4' : 'border-slate-800/80 pb-6'}`}>
                   <div>
                     <span className={`text-[10px] font-black uppercase tracking-[0.3em] ${isPrint ? 'text-slate-500' : 'text-slate-400'}`}>
-                      Slide 03 // Demographics
+                      Demographics
                     </span>
                     <h2 className={`text-2xl sm:text-3xl font-black font-bricolage italic tracking-tight mt-1 ${isPrint ? 'text-slate-900' : 'text-white'}`}>
                       Corporate Representation
                     </h2>
                   </div>
                   <div className={`text-xs font-bold ${isPrint ? 'text-slate-600' : 'text-slate-400'}`}>
-                    {uniqueCompanies.length} Unique Organizations Represented
+                    {sortedOrgs.length} Unique Organizations Represented
                   </div>
                 </div>
 
-                {/* Top Companies List */}
+                {/* All Companies List */}
                 <div className="space-y-3">
                   <h4 className={`text-xs font-black uppercase tracking-wider ${isPrint ? 'text-slate-700' : 'text-slate-300'}`}>
-                    Top Participating Organizations
+                    Participating Organizations
                   </h4>
                   {sortedOrgs.length === 0 ? (
                     <div className={`p-8 rounded-2xl text-center font-bold text-xs uppercase border ${isPrint ? 'bg-slate-50 border-slate-200 text-slate-500' : 'bg-slate-900/60 border-slate-800 text-slate-500'}`}>
                       No company affiliations recorded for this event.
                     </div>
                   ) : (
-                    <div className="space-y-2.5">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                       {sortedOrgs.map(([name, count]) => {
                         const pct = Math.round((count / maxCount) * 100);
                         return (
-                          <div key={name} className={`p-3.5 rounded-xl border flex items-center justify-between gap-4 ${isPrint ? 'bg-slate-50 border-slate-200' : 'bg-slate-900/70 border-slate-800/80'}`}>
+                          <div key={name} className={`p-3 rounded-xl border flex items-center justify-between gap-3 print:break-inside-avoid ${isPrint ? 'bg-slate-50 border-slate-200' : 'bg-slate-900/70 border-slate-800/80'}`}>
                             <div className="min-w-0 flex-1">
                               <div className="flex justify-between text-xs font-bold mb-1">
                                 <span className={`truncate ${isPrint ? 'text-slate-900' : 'text-white'}`}>{name}</span>
@@ -5558,7 +5554,12 @@ export default function EventDetailsPage() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+                    <div className="flex items-center gap-4 sm:gap-6 shrink-0">
+                      <div className="hidden md:block text-right text-[11px] text-slate-400 font-bold">
+                        <span>{formattedDate}</span>
+                        {event.location && <span className="block text-slate-500 font-mono text-[10px]">{event.location}</span>}
+                      </div>
+                      <div className="flex items-center gap-2 sm:gap-3">
                       <button
                         onClick={() => {
                           document.body.classList.add("is-printing-presentation");
@@ -5576,15 +5577,16 @@ export default function EventDetailsPage() {
                       >
                         <X size={20} />
                       </button>
+                      </div>
                     </div>
                   </div>
 
                   {/* Slide Navigation Tabs */}
                   <div className="px-6 sm:px-10 py-3 bg-slate-900/50 border-b border-slate-800/80 flex items-center gap-2 overflow-x-auto scrollbar-hide">
                     {[
-                      { id: 0, label: "1. Overview & KPIs" },
-                      { id: 1, label: "2. Attendance & Velocity" },
-                      { id: 2, label: "3. Corporate Demographics" }
+                      { id: 0, label: "Overview & KPIs" },
+                      { id: 1, label: "Attendance & Velocity" },
+                      { id: 2, label: "Corporate Demographics" }
                     ].map((s) => (
                       <button
                         key={s.id}
