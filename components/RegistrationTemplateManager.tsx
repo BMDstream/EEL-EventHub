@@ -2317,6 +2317,7 @@ export default function RegistrationTemplateManager() {
                                 </div>
                               </div>
                             );
+                          })()}
                         </div>
                       </div>
                     </div>
