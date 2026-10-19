@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSession } from "next-auth/react";
-import RichTextEditor from "./RichTextEditor";
+import RichTextEditor, { RichTextEditorHandle } from "./RichTextEditor";
 import { renderFormattedCardLayout } from "@/lib/utils";
 
 interface FormField {
@@ -124,121 +124,15 @@ export default function RegistrationTemplateManager() {
   const [dragOverFieldId, setDragOverFieldId] = useState<string | null>(null);
   const [eventsList, setEventsList] = useState<any[]>([]);
 
-  const operatorTextareaRef = useRef<HTMLTextAreaElement>(null);
-  const [operatorFormatColor, setOperatorFormatColor] = useState("#f59e0b");
-  const [operatorFormatFontFamily, setOperatorFormatFontFamily] = useState("inherit");
-  const [operatorFormatFontWeight, setOperatorFormatFontWeight] = useState("inherit");
-  const [operatorFormatFontSize, setOperatorFormatFontSize] = useState("inherit");
-  const [operatorFormatToast, setOperatorFormatToast] = useState<string | null>(null);
-
-  const applyOperatorFormatting = (options?: {
-    overrideColor?: string;
-    overrideWeight?: string;
-    overrideFontFamily?: string;
-    overrideFontSize?: string;
-  }) => {
-    const textarea = operatorTextareaRef.current;
-    if (!textarea) return;
-
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const currentText = selectedTemplate?.operator_config?.card_layout_text || "";
-
-    if (start === end) {
-      setOperatorFormatToast("Highlight/select text or a token in the box below first!");
-      setTimeout(() => setOperatorFormatToast(null), 3000);
-      return;
-    }
-
-    const selectedText = currentText.substring(start, end);
-    const colorToUse = options?.overrideColor ?? operatorFormatColor;
-    const weightToUse = options?.overrideWeight ?? operatorFormatFontWeight;
-    const fontToUse = options?.overrideFontFamily ?? operatorFormatFontFamily;
-    const sizeToUse = options?.overrideFontSize ?? operatorFormatFontSize;
-
-    const styles: string[] = [];
-    if (colorToUse) styles.push(`color: ${colorToUse}`);
-    if (weightToUse && weightToUse !== "inherit") styles.push(`font-weight: ${weightToUse}`);
-    if (fontToUse && fontToUse !== "inherit") styles.push(`font-family: ${fontToUse}`);
-    if (sizeToUse && sizeToUse !== "inherit") styles.push(`font-size: ${sizeToUse}`);
-
-    if (styles.length === 0) {
-      setOperatorFormatToast("Pick at least one style property (color, font, or weight) to apply.");
-      setTimeout(() => setOperatorFormatToast(null), 3000);
-      return;
-    }
-
-    const cleanSelected = selectedText.replace(/^<span[^>]*>/i, "").replace(/<\/span>$/i, "");
-    const formatted = `<span style="${styles.join("; ")}">${cleanSelected}</span>`;
-
-    const newText = currentText.substring(0, start) + formatted + currentText.substring(end);
-    updateOperatorConfig("card_layout_text", newText);
-    setOperatorFormatToast("Applied style to selected text!");
-    setTimeout(() => setOperatorFormatToast(null), 2500);
-
-    setTimeout(() => {
-      if (operatorTextareaRef.current) {
-        operatorTextareaRef.current.focus();
-        operatorTextareaRef.current.setSelectionRange(start, start + formatted.length);
-      }
-    }, 50);
-  };
-
-  const clearOperatorFormatting = () => {
-    const textarea = operatorTextareaRef.current;
-    if (!textarea) return;
-
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const currentText = selectedTemplate?.operator_config?.card_layout_text || "";
-
-    if (start === end) {
-      setOperatorFormatToast("Select formatted text to remove tags.");
-      setTimeout(() => setOperatorFormatToast(null), 3000);
-      return;
-    }
-
-    const selectedText = currentText.substring(start, end);
-    const stripped = selectedText
-      .replace(/<span[^>]*>/gi, "")
-      .replace(/<\/span>/gi, "")
-      .replace(/\[color[^\]]*\]/gi, "")
-      .replace(/\[\/color\]/gi, "")
-      .replace(/\[font[^\]]*\]/gi, "")
-      .replace(/\[\/font\]/gi, "")
-      .replace(/\[weight[^\]]*\]/gi, "")
-      .replace(/\[\/weight\]/gi, "")
-      .replace(/\[size[^\]]*\]/gi, "")
-      .replace(/\[\/size\]/gi, "")
-      .replace(/\*/g, "");
-
-    const newText = currentText.substring(0, start) + stripped + currentText.substring(end);
-    updateOperatorConfig("card_layout_text", newText);
-    setOperatorFormatToast("Cleared formatting from selection.");
-    setTimeout(() => setOperatorFormatToast(null), 2500);
-  };
+  const operatorRichEditorRef = useRef<RichTextEditorHandle>(null);
 
   const insertOperatorTokenAtCursor = (token: string) => {
-    const textarea = operatorTextareaRef.current;
-    const currentText = selectedTemplate?.operator_config?.card_layout_text || "";
-    if (!textarea) {
+    if (operatorRichEditorRef.current) {
+      operatorRichEditorRef.current.insertText(token);
+    } else {
+      const currentText = selectedTemplate?.operator_config?.card_layout_text || "";
       updateOperatorConfig("card_layout_text", currentText ? currentText + " " + token : token);
-      return;
     }
-
-    const start = textarea.selectionStart ?? currentText.length;
-    const end = textarea.selectionEnd ?? start;
-
-    const newText = currentText.substring(0, start) + token + currentText.substring(end);
-    updateOperatorConfig("card_layout_text", newText);
-
-    setTimeout(() => {
-      if (operatorTextareaRef.current) {
-        operatorTextareaRef.current.focus();
-        const newPos = start + token.length;
-        operatorTextareaRef.current.setSelectionRange(newPos, newPos);
-      }
-    }, 50);
   };
 
   const compileOperatorPreviewText = (layoutText: string) => {
@@ -2288,158 +2182,16 @@ export default function RegistrationTemplateManager() {
                           </div>
                         </div>
 
-                        {/* Selected Text Styling Toolbar */}
-                        <div className="bg-slate-100/70 dark:bg-slate-900/60 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 space-y-3">
-                          <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-slate-200/80 dark:border-slate-700/80">
-                            <div className="flex items-center gap-2">
-                              <div className="w-6 h-6 rounded-lg bg-amber-100 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center">
-                                <Palette size={13} />
-                              </div>
-                              <div>
-                                <span className="text-[10px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-200 block">
-                                  Selected Text Styling Toolbar
-                                </span>
-                                <span className="text-[9px] text-slate-400 block">
-                                  Highlight text or tokens in the editor below, choose colors & fonts, then click Apply
-                                </span>
-                              </div>
-                            </div>
-
-                            {operatorFormatToast && (
-                              <div className="px-2.5 py-1 rounded-lg bg-amber-500 text-black text-[10px] font-bold animate-in fade-in slide-in-from-top-1 shadow-sm">
-                                {operatorFormatToast}
-                              </div>
-                            )}
-                          </div>
-
-                          <div className="flex flex-wrap items-center gap-2">
-                            {/* Color Picker & Quick Swatches */}
-                            <div className="flex items-center gap-1.5 bg-white dark:bg-slate-800 px-2 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-xs">
-                              <span className="text-[9px] font-black uppercase text-slate-400">Color</span>
-                              <div className="flex items-center gap-1">
-                                {[
-                                  { name: "Gold", hex: "#f59e0b" },
-                                  { name: "Emerald", hex: "#10b981" },
-                                  { name: "Cyan", hex: "#06b6d4" },
-                                  { name: "Purple", hex: "#a855f7" },
-                                  { name: "Rose", hex: "#f43f5e" },
-                                  { name: "White", hex: "#ffffff" },
-                                  { name: "Slate", hex: "#94a3b8" },
-                                ].map(swatch => (
-                                  <button
-                                    key={swatch.hex}
-                                    type="button"
-                                    title={`Set/Apply ${swatch.name} (${swatch.hex})`}
-                                    onClick={() => {
-                                      setOperatorFormatColor(swatch.hex);
-                                      applyOperatorFormatting({ overrideColor: swatch.hex });
-                                    }}
-                                    style={{ backgroundColor: swatch.hex }}
-                                    className={`w-5 h-5 rounded-full border border-black/20 transition-transform hover:scale-110 active:scale-95 shrink-0 ${
-                                      operatorFormatColor.toLowerCase() === swatch.hex.toLowerCase() ? "ring-2 ring-amber-400 ring-offset-1" : ""
-                                    }`}
-                                  />
-                                ))}
-                                <input 
-                                  type="color" 
-                                  value={operatorFormatColor} 
-                                  onChange={(e) => setOperatorFormatColor(e.target.value)}
-                                  title="Custom Color"
-                                  className="w-5 h-5 rounded-md cursor-pointer p-0 bg-transparent shrink-0 border border-slate-200 ml-0.5" 
-                                />
-                              </div>
-                            </div>
-
-                            {/* Font Family */}
-                            <div className="flex items-center gap-1 bg-white dark:bg-slate-800 px-2 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-xs">
-                              <span className="text-[9px] font-black uppercase text-slate-400">Font</span>
-                              <select
-                                value={operatorFormatFontFamily}
-                                onChange={(e) => setOperatorFormatFontFamily(e.target.value)}
-                                className="bg-transparent font-bold text-xs text-slate-800 dark:text-white focus:outline-none cursor-pointer"
-                              >
-                                <option value="inherit">Default Font</option>
-                                <option value="sans">Clean Sans</option>
-                                <option value="mono">Terminal Monospace</option>
-                                <option value="bricolage">Bricolage Grotesque</option>
-                                <option value="serif">Editorial Serif</option>
-                              </select>
-                            </div>
-
-                            {/* Font Weight */}
-                            <div className="flex items-center gap-1 bg-white dark:bg-slate-800 px-2 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-xs">
-                              <span className="text-[9px] font-black uppercase text-slate-400">Weight</span>
-                              <select
-                                value={operatorFormatFontWeight}
-                                onChange={(e) => setOperatorFormatFontWeight(e.target.value)}
-                                className="bg-transparent font-bold text-xs text-slate-800 dark:text-white focus:outline-none cursor-pointer"
-                              >
-                                <option value="inherit">Default Weight</option>
-                                <option value="400">Regular (400)</option>
-                                <option value="600">Semibold (600)</option>
-                                <option value="700">Bold (700)</option>
-                                <option value="800">Extra Bold (800)</option>
-                              </select>
-                            </div>
-
-                            {/* Font Size */}
-                            <div className="flex items-center gap-1 bg-white dark:bg-slate-800 px-2 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-xs">
-                              <span className="text-[9px] font-black uppercase text-slate-400">Size</span>
-                              <select
-                                value={operatorFormatFontSize}
-                                onChange={(e) => setOperatorFormatFontSize(e.target.value)}
-                                className="bg-transparent font-bold text-xs text-slate-800 dark:text-white focus:outline-none cursor-pointer"
-                              >
-                                <option value="inherit">Default Size</option>
-                                <option value="11px">11px</option>
-                                <option value="12px">12px</option>
-                                <option value="13px">13px</option>
-                                <option value="14px">14px</option>
-                                <option value="16px">16px</option>
-                                <option value="18px">18px</option>
-                                <option value="20px">20px</option>
-                              </select>
-                            </div>
-
-                            {/* Bold Button */}
-                            <button
-                              type="button"
-                              onClick={() => applyOperatorFormatting({ overrideWeight: "700" })}
-                              title="Apply Bold to selected text"
-                              className="px-2.5 py-1.5 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white font-black text-xs transition-all active:scale-95 flex items-center gap-1 shadow-xs"
-                            >
-                              <Bold size={13} />
-                            </button>
-
-                            {/* Apply Button */}
-                            <button
-                              type="button"
-                              onClick={() => applyOperatorFormatting()}
-                              title="Apply styles to selected text"
-                              className="px-3 py-1.5 rounded-xl bg-[#0f172a] hover:bg-black dark:bg-amber-400 dark:hover:bg-amber-500 text-white dark:text-[#0f172a] font-black text-xs transition-all active:scale-95 flex items-center gap-1.5 shadow-sm ml-auto"
-                            >
-                              <Paintbrush size={12} />
-                              Apply to Selection
-                            </button>
-
-                            {/* Clear Formatting Button */}
-                            <button
-                              type="button"
-                              onClick={clearOperatorFormatting}
-                              title="Clear tags from selected text"
-                              className="px-2.5 py-1.5 rounded-xl bg-slate-200/80 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs transition-all active:scale-95 flex items-center gap-1"
-                            >
-                              <Eraser size={12} />
-                              Clear
-                            </button>
-                          </div>
-                        </div>
-
                         <div className="space-y-2">
                           <div className="flex items-center justify-between">
-                            <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
-                              Display Card Content Layout Editor (Supports Tokens & Styling)
-                            </label>
+                            <div>
+                              <label className="text-[9px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 block">
+                                Display Card Content Layout Editor (WYSIWYG & Real-Time Formatting)
+                              </label>
+                              <span className="text-[9px] text-slate-400 block">
+                                Highlight any text or token in the box below to change its color, font, or weight with 0 raw code shown.
+                              </span>
+                            </div>
                             <button
                               type="button"
                               onClick={() => {
@@ -2466,18 +2218,18 @@ export default function RegistrationTemplateManager() {
                                 updateOperatorConfig("card_layout_text", fullTemplate);
                                 showNotification("success", "Reset layout to standard attendee details and template fields.");
                               }}
-                              className="text-[9px] font-black text-amber-500 hover:text-amber-600 dark:hover:text-amber-400 uppercase tracking-widest cursor-pointer underline flex items-center gap-1"
+                              className="text-[9px] font-black text-amber-500 hover:text-amber-600 dark:hover:text-amber-400 uppercase tracking-widest cursor-pointer underline flex items-center gap-1 shrink-0"
                             >
                               <Sparkles size={11} />
                               Auto-Fill Default Layout
                             </button>
                           </div>
-                          <textarea
-                            ref={operatorTextareaRef}
+                          <RichTextEditor
+                            ref={operatorRichEditorRef}
                             value={selectedTemplate.operator_config?.card_layout_text || ""}
-                            onChange={(e) => updateOperatorConfig("card_layout_text", e.target.value)}
+                            onChange={(val) => updateOperatorConfig("card_layout_text", val)}
                             placeholder={`*Attendee Details:*\n*Name:* [first_name] [last_name]\n*Company:* [company]\n*Pass Code:* [clearance_id]\n\n*Form Responses:*\n*Questions:* [custom_responses]`}
-                            className="w-full h-44 px-4 py-3 rounded-2xl bg-white border border-slate-200 focus:border-amber-400 focus:ring-1 focus:ring-amber-400 outline-none font-bold text-sm text-[#0f172a] dark:bg-slate-900 dark:border-slate-800 dark:text-white font-mono leading-relaxed"
+                            minHeight="180px"
                           />
                         </div>
 
@@ -2498,6 +2250,10 @@ export default function RegistrationTemplateManager() {
                                 <button
                                   key={idx}
                                   type="button"
+                                  onMouseDown={(e) => {
+                                    e.preventDefault();
+                                    insertOperatorTokenAtCursor(item.token);
+                                  }}
                                   onClick={() => insertOperatorTokenAtCursor(item.token)}
                                   className="px-3 py-1.5 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-900/10 dark:hover:bg-slate-900/30 text-[10px] font-black text-slate-700 dark:text-slate-300 transition-all active:scale-95"
                                 >
@@ -2545,6 +2301,10 @@ export default function RegistrationTemplateManager() {
                                     <button
                                       key={`tmpl-f-${idx}`}
                                       type="button"
+                                      onMouseDown={(e) => {
+                                        e.preventDefault();
+                                        insertOperatorTokenAtCursor(item.token);
+                                      }}
                                       onClick={() => insertOperatorTokenAtCursor(item.token)}
                                       className="px-3 py-1.5 rounded-xl border border-amber-200 dark:border-amber-800/60 bg-amber-50/50 hover:bg-amber-100/60 dark:bg-amber-950/20 dark:hover:bg-amber-950/40 text-[10px] font-black text-amber-900 dark:text-amber-200 transition-all active:scale-95 flex items-center gap-1.5"
                                     >
@@ -2557,7 +2317,6 @@ export default function RegistrationTemplateManager() {
                                 </div>
                               </div>
                             );
-                          })()}
                         </div>
                       </div>
                     </div>

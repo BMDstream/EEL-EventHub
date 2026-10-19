@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect, useState, useImperativeHandle } from "react";
 import { 
   Bold as BoldIcon, 
   Italic as ItalicIcon, 
@@ -18,7 +18,13 @@ import {
   AlignRight
 } from "lucide-react";
 
-interface RichTextEditorProps {
+export interface RichTextEditorHandle {
+  insertText: (text: string) => void;
+  focus: () => void;
+  getEditorElement: () => HTMLDivElement | null;
+}
+
+export interface RichTextEditorProps {
   value: string;
   onChange: (value: string) => void;
   onAlignChange?: (align: "left" | "center" | "right") => void;
@@ -164,21 +170,57 @@ const HIGHLIGHT_COLORS = [
   { name: "Dark Navy Badge", value: "#172554" }
 ];
 
-export default function RichTextEditor({
-  value,
-  onChange,
-  onAlignChange,
-  externalAlign,
-  placeholder = "Type template content here...",
-  className = "",
-  minHeight = "200px",
-  availableTokens = [],
-  toolbarMode = "always",
-  variant = "full"
-}: RichTextEditorProps) {
+const RichTextEditor = React.forwardRef<RichTextEditorHandle, RichTextEditorProps>(
+  function RichTextEditor(
+    {
+      value,
+      onChange,
+      onAlignChange,
+      externalAlign,
+      placeholder = "Type template content here...",
+      className = "",
+      minHeight = "200px",
+      availableTokens = [],
+      toolbarMode = "always",
+      variant = "full"
+    },
+    ref
+  ) {
   const editorRef = useRef<HTMLDivElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const savedSelectionRef = useRef<Range | null>(null);
+
+  const insertTextAtCursor = (text: string) => {
+    if (!editorRef.current) return;
+    editorRef.current.focus();
+    restoreSelection();
+    const sel = window.getSelection();
+    const isInside = sel && sel.rangeCount > 0 && editorRef.current.contains(sel.getRangeAt(0).commonAncestorContainer);
+    if (isInside) {
+      document.execCommand("insertText", false, text);
+    } else {
+      const textNode = document.createTextNode(text);
+      editorRef.current.appendChild(textNode);
+      const newRange = document.createRange();
+      newRange.selectNodeContents(textNode);
+      newRange.collapse(false);
+      if (sel) {
+        sel.removeAllRanges();
+        sel.addRange(newRange);
+        savedSelectionRef.current = newRange;
+      }
+    }
+    triggerChange();
+    saveSelection();
+  };
+
+  useImperativeHandle(ref, () => ({
+    insertText: insertTextAtCursor,
+    focus: () => {
+      editorRef.current?.focus();
+    },
+    getEditorElement: () => editorRef.current
+  }), []);
 
   const [activeFont, setActiveFont] = useState("Calibri, sans-serif");
   const [activeSize, setActiveSize] = useState("16px");
@@ -255,7 +297,16 @@ export default function RichTextEditor({
   useEffect(() => {
     if (editorRef.current && value !== editorRef.current.innerHTML) {
       if (document.activeElement !== editorRef.current) {
-        editorRef.current.innerHTML = value || "";
+        let cleanVal = value || "";
+        if (cleanVal.includes("&lt;") && /&lt;\/?(span|font|strong|b|em|i|div|p|br)/i.test(cleanVal)) {
+          cleanVal = cleanVal
+            .replace(/&lt;/g, "<")
+            .replace(/&gt;/g, ">")
+            .replace(/&quot;/g, '"')
+            .replace(/&#39;/g, "'")
+            .replace(/&amp;/g, "&");
+        }
+        editorRef.current.innerHTML = cleanVal;
       }
     }
     
@@ -627,57 +678,28 @@ export default function RichTextEditor({
     triggerChange();
   };
 
-  const applyTextColor = (color: string, keepInputFocus = false) => {
+  const applyTextColor = (color: string, _keepInputFocus = false) => {
     if (!color) return;
     setActiveTextColor(color);
     setCustomHexInput(color);
     setShowTextColorDropdown(false);
 
-    if (keepInputFocus && editorRef.current) {
-      const savedRange = savedSelectionRef.current;
-      const editorText = editorRef.current.textContent?.trim() || "";
-      const savedText = savedRange && !savedRange.collapsed && editorRef.current.contains(savedRange.commonAncestorContainer)
-        ? savedRange.toString().trim()
-        : "";
+    if (!editorRef.current) return;
 
-      if (savedRange && savedText.length > 0 && savedText !== editorText) {
-        try {
-          const parentEl = savedRange.commonAncestorContainer.nodeType === 1
-            ? (savedRange.commonAncestorContainer as HTMLElement)
-            : (savedRange.commonAncestorContainer.parentElement as HTMLElement | null);
-          if (parentEl && parentEl !== editorRef.current && parentEl.tagName === "SPAN" && parentEl.textContent?.trim() === savedText) {
-            parentEl.style.color = color;
-          } else {
-            const fragment = savedRange.extractContents();
-            fragment.querySelectorAll?.("*").forEach((node) => {
-              const el = node as HTMLElement;
-              if (el.style?.color) el.style.color = "";
-              if (el.tagName === "FONT" && el.hasAttribute("color")) el.removeAttribute("color");
-            });
-            const wrapper = document.createElement("span");
-            wrapper.style.color = color;
-            wrapper.appendChild(fragment);
-            savedRange.insertNode(wrapper);
-            const newRange = document.createRange();
-            newRange.selectNodeContents(wrapper);
-            savedSelectionRef.current = newRange;
-          }
-          triggerChange();
-          return;
-        } catch (err) {
-          console.error("Failed to apply hex color to range:", err);
-        }
-      }
+    restoreSelection();
+    const sel = window.getSelection();
+    const hasHighlight = sel && sel.rangeCount > 0 && !sel.isCollapsed &&
+      sel.toString().trim().length > 0 &&
+      editorRef.current.contains(sel.getRangeAt(0).commonAncestorContainer);
 
-      editorRef.current.querySelectorAll("font[color]").forEach((el) => el.removeAttribute("color"));
+    const editorText = editorRef.current.textContent?.trim() || "";
+    const selectedText = hasHighlight ? (sel?.toString().trim() || "") : "";
+
+    if (hasHighlight && selectedText !== editorText) {
+      applyStyleToSelection({ color });
+    } else {
       applyStyleToEntireContent({ color });
-      return;
     }
-
-    ensureSelection();
-    document.execCommand("styleWithCSS", false, "true");
-    document.execCommand("foreColor", false, color);
-    triggerChange();
   };
 
   const applyHighlightColor = (color: string) => {
@@ -1011,6 +1033,33 @@ export default function RichTextEditor({
                 title="Enter custom hex color (e.g. #a3e635)"
                 className="w-16 px-1.5 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-[10px] font-mono font-bold outline-none focus:ring-1 focus:ring-yellow-400"
               />
+
+              {/* Quick Swatches for 1-click styling */}
+              <div className="flex items-center gap-1 shrink-0 ml-0.5">
+                {[
+                  { name: "Slate", hex: "#94a3b8" },
+                  { name: "Gold", hex: "#f59e0b" },
+                  { name: "Emerald", hex: "#10b981" },
+                  { name: "Cyan", hex: "#06b6d4" },
+                  { name: "Purple", hex: "#a855f7" },
+                  { name: "Rose", hex: "#f43f5e" },
+                  { name: "White", hex: "#ffffff" },
+                ].map((swatch) => (
+                  <button
+                    key={swatch.hex}
+                    type="button"
+                    title={`Color: ${swatch.name} (${swatch.hex})`}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      applyTextColor(swatch.hex);
+                    }}
+                    style={{ backgroundColor: swatch.hex }}
+                    className={`w-3.5 h-3.5 rounded-full border border-black/20 dark:border-white/20 transition-transform hover:scale-125 active:scale-95 shrink-0 ${
+                      activeTextColor.toLowerCase() === swatch.hex.toLowerCase() ? "ring-2 ring-yellow-400 ring-offset-1" : ""
+                    }`}
+                  />
+                ))}
+              </div>
             </div>
 
             {/* 8. Highlight Color Select */}
@@ -1107,13 +1156,26 @@ export default function RichTextEditor({
       {/* Tokens footer, if any */}
       {availableTokens.length > 0 && (
         <div className="px-4 py-2 bg-slate-50 dark:bg-slate-950/30 border-t border-slate-250/20 text-[9px] font-bold text-slate-400 uppercase tracking-wider flex flex-wrap gap-2 items-center select-none rounded-b-2xl">
-          <span>Tokens:</span>
+          <span>Tokens (click to insert):</span>
           {availableTokens.map((t) => (
-            <span key={t} className="bg-slate-200/50 dark:bg-slate-800/80 px-2 py-0.5 rounded text-blue-500 font-mono select-all normal-case font-black tracking-normal">{t}</span>
+            <button
+              key={t}
+              type="button"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                insertTextAtCursor(t);
+              }}
+              className="bg-slate-200/50 hover:bg-slate-300/70 dark:bg-slate-800/80 dark:hover:bg-slate-700/80 px-2 py-0.5 rounded text-blue-500 font-mono select-none normal-case font-black tracking-normal transition-colors cursor-pointer"
+            >
+              {t}
+            </button>
           ))}
         </div>
       )}
 
     </div>
   );
-}
+});
+
+RichTextEditor.displayName = "RichTextEditor";
+export default RichTextEditor;

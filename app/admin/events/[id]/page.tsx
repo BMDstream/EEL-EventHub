@@ -57,6 +57,7 @@ import dynamic from "next/dynamic";
 import AdminLayout from "@/components/AdminLayout";
 import * as dbOffline from "@/lib/indexedDb";
 import { unescapeHtmlLinks, cleanHtmlText, renderFormattedCardLayout } from "@/lib/utils";
+import RichTextEditor, { RichTextEditorHandle } from "@/components/RichTextEditor";
 
 const FormBuilder = dynamic(() => import("@/components/FormBuilder"), {
   loading: () => (
@@ -238,123 +239,15 @@ export default function EventDetailsPage() {
   const [isSavingOperatorConfig, setIsSavingOperatorConfig] = useState(false);
   const [isEmbeddedScannerOpen, setIsEmbeddedScannerOpen] = useState(false);
 
-  // Selected text styling states and helpers
-  const layoutTextareaRef = useRef<HTMLTextAreaElement>(null);
-  const [formatColor, setFormatColor] = useState("#f59e0b");
-  const [formatFontFamily, setFormatFontFamily] = useState("inherit");
-  const [formatFontWeight, setFormatFontWeight] = useState("inherit");
-  const [formatFontSize, setFormatFontSize] = useState("inherit");
-  const [formatToast, setFormatToast] = useState<string | null>(null);
-
-  const applyFormattingToSelection = (options?: {
-    overrideColor?: string;
-    overrideWeight?: string;
-    overrideFontFamily?: string;
-    overrideFontSize?: string;
-  }) => {
-    const textarea = layoutTextareaRef.current;
-    if (!textarea) return;
-
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const currentText = operatorCardLayoutText || "";
-
-    if (start === end) {
-      setFormatToast("Highlight/select text or a token in the box below first!");
-      setTimeout(() => setFormatToast(null), 3000);
-      return;
-    }
-
-    const selectedText = currentText.substring(start, end);
-    const colorToUse = options?.overrideColor ?? formatColor;
-    const weightToUse = options?.overrideWeight ?? formatFontWeight;
-    const fontToUse = options?.overrideFontFamily ?? formatFontFamily;
-    const sizeToUse = options?.overrideFontSize ?? formatFontSize;
-
-    const styles: string[] = [];
-    if (colorToUse) styles.push(`color: ${colorToUse}`);
-    if (weightToUse && weightToUse !== "inherit") styles.push(`font-weight: ${weightToUse}`);
-    if (fontToUse && fontToUse !== "inherit") styles.push(`font-family: ${fontToUse}`);
-    if (sizeToUse && sizeToUse !== "inherit") styles.push(`font-size: ${sizeToUse}`);
-
-    if (styles.length === 0) {
-      setFormatToast("Pick at least one style property (color, font, or weight) to apply.");
-      setTimeout(() => setFormatToast(null), 3000);
-      return;
-    }
-
-    // Strip wrapping span if user selected an already wrapped span
-    const cleanSelected = selectedText.replace(/^<span[^>]*>/i, "").replace(/<\/span>$/i, "");
-    const formatted = `<span style="${styles.join("; ")}">${cleanSelected}</span>`;
-
-    const newText = currentText.substring(0, start) + formatted + currentText.substring(end);
-    setOperatorCardLayoutText(newText);
-    setFormatToast("Applied style to selected text!");
-    setTimeout(() => setFormatToast(null), 2500);
-
-    setTimeout(() => {
-      if (layoutTextareaRef.current) {
-        layoutTextareaRef.current.focus();
-        layoutTextareaRef.current.setSelectionRange(start, start + formatted.length);
-      }
-    }, 50);
-  };
-
-  const clearFormattingFromSelection = () => {
-    const textarea = layoutTextareaRef.current;
-    if (!textarea) return;
-
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const currentText = operatorCardLayoutText || "";
-
-    if (start === end) {
-      setFormatToast("Select formatted text to remove tags.");
-      setTimeout(() => setFormatToast(null), 3000);
-      return;
-    }
-
-    const selectedText = currentText.substring(start, end);
-    const stripped = selectedText
-      .replace(/<span[^>]*>/gi, "")
-      .replace(/<\/span>/gi, "")
-      .replace(/\[color[^\]]*\]/gi, "")
-      .replace(/\[\/color\]/gi, "")
-      .replace(/\[font[^\]]*\]/gi, "")
-      .replace(/\[\/font\]/gi, "")
-      .replace(/\[weight[^\]]*\]/gi, "")
-      .replace(/\[\/weight\]/gi, "")
-      .replace(/\[size[^\]]*\]/gi, "")
-      .replace(/\[\/size\]/gi, "")
-      .replace(/\*/g, "");
-
-    const newText = currentText.substring(0, start) + stripped + currentText.substring(end);
-    setOperatorCardLayoutText(newText);
-    setFormatToast("Cleared formatting from selection.");
-    setTimeout(() => setFormatToast(null), 2500);
-  };
+  // Operator Check-In Rich Editor ref and token insertion
+  const eventOperatorRichEditorRef = useRef<RichTextEditorHandle>(null);
 
   const insertTokenAtCursor = (token: string) => {
-    const textarea = layoutTextareaRef.current;
-    if (!textarea) {
+    if (eventOperatorRichEditorRef.current) {
+      eventOperatorRichEditorRef.current.insertText(token);
+    } else {
       setOperatorCardLayoutText(prev => prev ? `${prev} ${token}` : token);
-      return;
     }
-
-    const start = textarea.selectionStart ?? (operatorCardLayoutText || "").length;
-    const end = textarea.selectionEnd ?? start;
-    const currentText = operatorCardLayoutText || "";
-
-    const newText = currentText.substring(0, start) + token + currentText.substring(end);
-    setOperatorCardLayoutText(newText);
-
-    setTimeout(() => {
-      if (layoutTextareaRef.current) {
-        layoutTextareaRef.current.focus();
-        const newPos = start + token.length;
-        layoutTextareaRef.current.setSelectionRange(newPos, newPos);
-      }
-    }, 50);
   };
 
   useEffect(() => {
@@ -3383,172 +3276,27 @@ export default function EventDetailsPage() {
                       </div>
                     </div>
 
-                    {/* Selected Text Styling Toolbar */}
-                    <div className="bg-slate-100/70 dark:bg-slate-900/60 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 space-y-3">
-                      <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-slate-200/80 dark:border-slate-700/80">
-                        <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-lg bg-amber-100 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center">
-                            <Palette size={13} />
-                          </div>
-                          <div>
-                            <span className="text-[10px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-200 block">
-                              Selected Text Styling Toolbar
-                            </span>
-                            <span className="text-[9px] text-slate-400 block">
-                              Highlight text or tokens in the box below, pick color & font, then click Apply
-                            </span>
-                          </div>
-                        </div>
-
-                        {formatToast && (
-                          <div className="px-2.5 py-1 rounded-lg bg-amber-500 text-black text-[10px] font-bold animate-in fade-in slide-in-from-top-1 shadow-sm">
-                            {formatToast}
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="flex flex-wrap items-center gap-2">
-                        {/* Color Picker & Quick Swatches */}
-                        <div className="flex items-center gap-1.5 bg-white dark:bg-slate-800 px-2 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-xs">
-                          <span className="text-[9px] font-black uppercase text-slate-400">Color</span>
-                          <div className="flex items-center gap-1">
-                            {[
-                              { name: "Gold", hex: "#f59e0b" },
-                              { name: "Emerald", hex: "#10b981" },
-                              { name: "Cyan", hex: "#06b6d4" },
-                              { name: "Purple", hex: "#a855f7" },
-                              { name: "Rose", hex: "#f43f5e" },
-                              { name: "White", hex: "#ffffff" },
-                              { name: "Slate", hex: "#94a3b8" },
-                            ].map(swatch => (
-                              <button
-                                key={swatch.hex}
-                                type="button"
-                                title={`Set/Apply ${swatch.name} (${swatch.hex})`}
-                                onClick={() => {
-                                  setFormatColor(swatch.hex);
-                                  applyFormattingToSelection({ overrideColor: swatch.hex });
-                                }}
-                                style={{ backgroundColor: swatch.hex }}
-                                className={`w-5 h-5 rounded-full border border-black/20 transition-transform hover:scale-110 active:scale-95 shrink-0 ${
-                                  formatColor.toLowerCase() === swatch.hex.toLowerCase() ? "ring-2 ring-amber-400 ring-offset-1" : ""
-                                }`}
-                              />
-                            ))}
-                            <input 
-                              type="color" 
-                              value={formatColor} 
-                              onChange={(e) => setFormatColor(e.target.value)}
-                              title="Custom Color"
-                              className="w-5 h-5 rounded-md cursor-pointer p-0 bg-transparent shrink-0 border border-slate-200 ml-0.5" 
-                            />
-                          </div>
-                        </div>
-
-                        {/* Font Family */}
-                        <div className="flex items-center gap-1 bg-white dark:bg-slate-800 px-2 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-xs">
-                          <span className="text-[9px] font-black uppercase text-slate-400">Font</span>
-                          <select
-                            value={formatFontFamily}
-                            onChange={(e) => setFormatFontFamily(e.target.value)}
-                            className="bg-transparent font-bold text-xs text-slate-800 dark:text-white focus:outline-none cursor-pointer"
-                          >
-                            <option value="inherit">Default Font</option>
-                            <option value="sans">Clean Sans</option>
-                            <option value="mono">Terminal Monospace</option>
-                            <option value="bricolage">Bricolage Grotesque</option>
-                            <option value="serif">Editorial Serif</option>
-                          </select>
-                        </div>
-
-                        {/* Font Weight */}
-                        <div className="flex items-center gap-1 bg-white dark:bg-slate-800 px-2 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-xs">
-                          <span className="text-[9px] font-black uppercase text-slate-400">Weight</span>
-                          <select
-                            value={formatFontWeight}
-                            onChange={(e) => setFormatFontWeight(e.target.value)}
-                            className="bg-transparent font-bold text-xs text-slate-800 dark:text-white focus:outline-none cursor-pointer"
-                          >
-                            <option value="inherit">Default Weight</option>
-                            <option value="400">Regular (400)</option>
-                            <option value="600">Semibold (600)</option>
-                            <option value="700">Bold (700)</option>
-                            <option value="800">Extra Bold (800)</option>
-                          </select>
-                        </div>
-
-                        {/* Font Size */}
-                        <div className="flex items-center gap-1 bg-white dark:bg-slate-800 px-2 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-xs">
-                          <span className="text-[9px] font-black uppercase text-slate-400">Size</span>
-                          <select
-                            value={formatFontSize}
-                            onChange={(e) => setFormatFontSize(e.target.value)}
-                            className="bg-transparent font-bold text-xs text-slate-800 dark:text-white focus:outline-none cursor-pointer"
-                          >
-                            <option value="inherit">Default Size</option>
-                            <option value="11px">11px</option>
-                            <option value="12px">12px</option>
-                            <option value="13px">13px</option>
-                            <option value="14px">14px</option>
-                            <option value="16px">16px</option>
-                            <option value="18px">18px</option>
-                            <option value="20px">20px</option>
-                          </select>
-                        </div>
-
-                        {/* Bold Button */}
-                        <button
-                          type="button"
-                          onClick={() => applyFormattingToSelection({ overrideWeight: "700" })}
-                          title="Apply Bold to selected text"
-                          className="px-2.5 py-1.5 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white font-black text-xs transition-all active:scale-95 flex items-center gap-1 shadow-xs"
-                        >
-                          <Bold size={13} />
-                        </button>
-
-                        {/* Apply Formatting Button */}
-                        <button
-                          type="button"
-                          onClick={() => applyFormattingToSelection()}
-                          title="Apply styles to selected text"
-                          className="px-3 py-1.5 rounded-xl bg-[#0f172a] hover:bg-black dark:bg-amber-400 dark:hover:bg-amber-500 text-white dark:text-[#0f172a] font-black text-xs transition-all active:scale-95 flex items-center gap-1.5 shadow-sm ml-auto"
-                        >
-                          <Paintbrush size={12} />
-                          Apply to Selection
-                        </button>
-
-                        {/* Clear Formatting Button */}
-                        <button
-                          type="button"
-                          onClick={clearFormattingFromSelection}
-                          title="Clear tags from selected text"
-                          className="px-2.5 py-1.5 rounded-xl bg-slate-200/80 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs transition-all active:scale-95 flex items-center gap-1"
-                        >
-                          <Eraser size={12} />
-                          Clear
-                        </button>
-                      </div>
-                    </div>
-
                     {/* Editor & Live Preview Grid */}
                     <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start pt-2">
-                      {/* Left: Textarea & Available Tokens */}
+                      {/* Left: Rich Text Editor & Available Tokens */}
                       <div className="xl:col-span-7 space-y-4">
                         <div className="space-y-1.5">
                           <div className="flex items-center justify-between ml-1">
-                            <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
-                              Display Layout Text (Supports Tokens & Styling)
-                            </label>
-                            <span className="text-[9px] text-slate-400">
-                              Highlight any text or token & click colors/fonts above
-                            </span>
+                            <div>
+                              <label className="text-[9px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 block">
+                                Display Layout Text (WYSIWYG & Real-Time Formatting)
+                              </label>
+                              <span className="text-[9px] text-slate-400 block">
+                                Highlight any text or token in the box below to change its color, font, or weight with 0 raw code shown.
+                              </span>
+                            </div>
                           </div>
-                          <textarea
-                            ref={layoutTextareaRef}
+                          <RichTextEditor
+                            ref={eventOperatorRichEditorRef}
                             value={operatorCardLayoutText}
-                            onChange={(e) => setOperatorCardLayoutText(e.target.value)}
+                            onChange={setOperatorCardLayoutText}
                             placeholder={`*Attendee Details:*\n*Name:* [first_name] [last_name]\n*Company:* [company]\n*Pass Code:* [clearance_id]`}
-                            className="w-full h-44 px-4 py-3 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 font-mono font-bold text-xs text-[#0f172a] dark:text-white outline-none focus:ring-2 focus:ring-amber-400 leading-relaxed shadow-inner"
+                            minHeight="180px"
                           />
                         </div>
 
@@ -3587,6 +3335,10 @@ export default function EventDetailsPage() {
                               <button
                                 key={idx}
                                 type="button"
+                                onMouseDown={(e) => {
+                                  e.preventDefault();
+                                  insertTokenAtCursor(t.token);
+                                }}
                                 onClick={() => insertTokenAtCursor(t.token)}
                                 className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-[10px] font-black text-slate-700 dark:text-slate-300 transition-all active:scale-95"
                               >
