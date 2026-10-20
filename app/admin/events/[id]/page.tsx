@@ -3291,9 +3291,9 @@ export default function EventDetailsPage() {
                                    await handleScannerAttendeeCheckIn(reg);
                                  }}
                                  className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer shadow-sm ${
-                                   isCheckedIn
-                                     ? "bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
-                                     : "bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-emerald-500/20"
+                                    isCheckedIn
+                                      ? "bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black shadow-md shadow-emerald-500/20"
+                                      : "bg-amber-500 hover:bg-amber-400 text-slate-950 font-black shadow-md shadow-amber-500/20"
                                  }`}
                                >
                                  <CheckCircle2 size={12} />
