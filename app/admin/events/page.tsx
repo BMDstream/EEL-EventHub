@@ -7,9 +7,15 @@ import { useSession } from "next-auth/react";
 import AdminLayout from "@/components/AdminLayout";
 import useSWR from "swr";
 import { cleanHtmlText } from "@/lib/utils";
+import { getAppEnvironmentHeaders } from "@/lib/env-utils";
 
 const fetcher = async (url: string, email: string): Promise<Event[]> => {
-  const res = await fetch(url, { headers: { "x-user-email": email } });
+  const res = await fetch(url, {
+    headers: {
+      "x-user-email": email,
+      ...getAppEnvironmentHeaders()
+    }
+  });
   if (!res.ok) {
     throw new Error(`Failed to fetch events (${res.status})`);
   }

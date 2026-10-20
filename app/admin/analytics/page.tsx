@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import AdminLayout from "@/components/AdminLayout";
 import { cleanHtmlText } from "@/lib/utils";
+import { getAppEnvironmentHeaders } from "@/lib/env-utils";
 import { 
   TrendingUp, 
   Users, 
@@ -63,7 +64,10 @@ export default function AnalyticsDashboard() {
     if (!session?.user?.email) return;
     try {
       const res = await fetch("/api/py/analytics", {
-        headers: { "x-user-email": session.user.email || "" }
+        headers: { 
+          "x-user-email": session.user.email || "",
+          ...getAppEnvironmentHeaders()
+        }
       });
       if (res.ok) {
         const data = await res.json();

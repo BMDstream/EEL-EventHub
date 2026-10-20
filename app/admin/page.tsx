@@ -23,6 +23,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useSession } from "next-auth/react";
 import AdminLayout from "@/components/AdminLayout";
 import { cleanHtmlText } from "@/lib/utils";
+import { getAppEnvironmentHeaders } from "@/lib/env-utils";
 
 interface Event {
   id: number;
@@ -97,16 +98,14 @@ export default function AdminDashboard() {
     if (!session?.user?.email) return;
     const fetchData = async () => {
       try {
+        const headers = {
+          "x-user-email": session.user.email || "",
+          ...getAppEnvironmentHeaders()
+        };
         const [eventsRes, statsRes, activitiesRes] = await Promise.all([
-          fetch("/api/py/events", {
-            headers: { "x-user-email": session.user.email || "" }
-          }),
-          fetch("/api/py/stats", {
-            headers: { "x-user-email": session.user.email || "" }
-          }),
-          fetch("/api/py/activities", {
-            headers: { "x-user-email": session.user.email || "" }
-          })
+          fetch("/api/py/events", { headers }),
+          fetch("/api/py/stats", { headers }),
+          fetch("/api/py/activities", { headers })
         ]);
         const eventsData = eventsRes.ok ? await eventsRes.json() : [];
         const sData = statsRes.ok ? await statsRes.json() : null;

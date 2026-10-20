@@ -466,7 +466,7 @@ export default function EventDetailsPage() {
   const [selectedMetric, setSelectedMetric] = useState<"date" | "venue" | "enrollment" | "declined" | "checked_in" | null>(null);
   
   // Custom states for check-in filtering and walk-ins
-  const [checkInFilter, setCheckInFilter] = useState<"all" | "checked_in" | "not_checked_in">("all");
+  const [checkInFilter, setCheckInFilter] = useState<"all" | "checked_in" | "not_checked_in" | "declined">("all");
   const [sortBy, setSortBy] = useState<"registration_date" | "alphabetical">("registration_date");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [companyFilter, setCompanyFilter] = useState<string>("all");
@@ -1533,6 +1533,7 @@ export default function EventDetailsPage() {
   const declinedCount = registrations.filter(r => r.status === "declined").length;
   const confirmedCount = registrations.filter(r => r.status === "confirmed").length;
   const checkedInCount = registrations.filter(r => r.checked_in).length;
+  const notCheckedInCount = registrations.filter(r => r.status !== "declined" && !r.checked_in).length;
 
   // Get unique companies for the company filter
   const uniqueCompanies = Array.from(
@@ -1567,7 +1568,8 @@ export default function EventDetailsPage() {
       if (!matchesSearch) return false;
       
       if (checkInFilter === "checked_in") return reg.checked_in;
-      if (checkInFilter === "not_checked_in") return !reg.checked_in;
+      if (checkInFilter === "not_checked_in") return reg.status !== "declined" && !reg.checked_in;
+      if (checkInFilter === "declined") return reg.status === "declined";
       return true;
     })
     .filter(reg => {
@@ -2530,14 +2532,22 @@ export default function EventDetailsPage() {
                       onClick={() => setCheckInFilter("checked_in")}
                       className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${checkInFilter === "checked_in" ? "bg-emerald-500 text-white shadow-sm" : "text-slate-400 dark:text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400"}`}
                     >
-                      Checked In ({registrations.filter(r => r.checked_in).length})
+                      Checked In ({checkedInCount})
                     </button>
                     <button
                       onClick={() => setCheckInFilter("not_checked_in")}
                       className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${checkInFilter === "not_checked_in" ? "bg-slate-900 dark:bg-slate-800 text-white shadow-sm" : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"}`}
                     >
-                      Not Checked In ({registrations.filter(r => !r.checked_in).length})
+                      Not Checked In ({notCheckedInCount})
                     </button>
+                    {declinedCount > 0 && (
+                      <button
+                        onClick={() => setCheckInFilter("declined")}
+                        className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${checkInFilter === "declined" ? "bg-rose-500 text-white shadow-sm" : "text-slate-400 dark:text-slate-500 hover:text-rose-600 dark:hover:text-rose-400"}`}
+                      >
+                        Declined ({declinedCount})
+                      </button>
+                    )}
                   </div>
                   <div className="flex items-center gap-2">
                     <button 
@@ -3262,6 +3272,10 @@ export default function EventDetailsPage() {
                                        <CheckCircle2 size={10} />
                                        Checked In
                                      </span>
+                                   ) : reg.status === "declined" ? (
+                                     <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-rose-500/10 text-rose-500 border border-rose-500/30">
+                                       Declined
+                                     </span>
                                    ) : (
                                      <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-slate-200/60 dark:bg-slate-800 text-slate-500 border border-slate-300 dark:border-slate-700">
                                        Not Checked In
@@ -3286,19 +3300,25 @@ export default function EventDetailsPage() {
                                  View Details
                                </button>
 
-                               <button
-                                 onClick={async () => {
-                                   await handleScannerAttendeeCheckIn(reg);
-                                 }}
-                                 className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer shadow-sm ${
-                                    isCheckedIn
-                                      ? "bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black shadow-md shadow-emerald-500/20"
-                                      : "bg-amber-500 hover:bg-amber-400 text-slate-950 font-black shadow-md shadow-amber-500/20"
-                                 }`}
-                               >
-                                 <CheckCircle2 size={12} />
-                                 <span>{isCheckedIn ? "Checked In" : "Check In"}</span>
-                               </button>
+                               {reg.status === "declined" ? (
+                                 <span className="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed">
+                                   Declined
+                                 </span>
+                               ) : (
+                                 <button
+                                   onClick={async () => {
+                                     await handleScannerAttendeeCheckIn(reg);
+                                   }}
+                                   className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer shadow-sm ${
+                                      isCheckedIn
+                                        ? "bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black shadow-md shadow-emerald-500/20"
+                                        : "bg-amber-500 hover:bg-amber-400 text-slate-950 font-black shadow-md shadow-amber-500/20"
+                                   }`}
+                                 >
+                                   <CheckCircle2 size={12} />
+                                   <span>{isCheckedIn ? "Checked In" : "Check In"}</span>
+                                 </button>
+                               )}
                              </div>
                            </div>
                          );
@@ -3746,7 +3766,7 @@ export default function EventDetailsPage() {
           <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 p-10 lg:p-24">
              <div className="max-w-2xl mx-auto mb-16">
                 <h2 className="text-5xl font-black text-[#0f172a] mb-6 tracking-tight font-bricolage italic uppercase text-center">BROADCAST <span className="text-slate-300">DISPATCH</span></h2>
-                <p className="text-slate-500 font-medium text-center">Send updates or reminders to all {registrations.length} confirmed attendees.</p>
+                <p className="text-slate-500 font-medium text-center">Send updates or reminders to all {confirmedCount} confirmed attendees.</p>
              </div>
 
              <div className={`${(selectedBroadcastKey || selectedSurveyKey) ? "max-w-6xl" : "max-w-xl"} mx-auto space-y-12 transition-all duration-300`}>
@@ -3769,7 +3789,7 @@ export default function EventDetailsPage() {
                       });
                     };
                     
-                    if (!confirm(`Are you sure you want to send this broadcast to ${registrations.length} attendees?`)) return;
+                    if (!confirm(`Are you sure you want to send this broadcast to ${confirmedCount} confirmed attendees?`)) return;
                     
                     try {
                       const attachments = await Promise.all(

@@ -654,8 +654,9 @@ def get_event_registrations(
     
     registrations = session.exec(
         select(Registration, Attendee)
-        .join(Attendee)
+        .outerjoin(Attendee)
         .where(Registration.event_id == event_id)
+        .order_by(Registration.created_at.desc())
     ).all()
     
     return [
