@@ -1765,7 +1765,8 @@ export default function EventDetailsPage() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-user-email": session?.user?.email || ""
+          "x-user-email": session?.user?.email || "",
+          ...getAppEnvironmentHeaders()
         },
         body: JSON.stringify(payload)
       });
@@ -1788,7 +1789,8 @@ export default function EventDetailsPage() {
         };
         setRegistrations(prev => prev.map(r => r.id === updated.id ? { ...r, ...merged } : r));
         setPinStatus("success");
-        setPinMessage("CHECK-IN SUCCESSFUL");
+        const firstName = (merged.attendee?.first_name || "Guest").toUpperCase();
+        setPinMessage(`CHECK-IN SUCCESSFUL: ${firstName}`);
         setCheckedInReg(resultObj);
         setEditedAnswers(merged.custom_answers || {});
         setShowPinPostCheckInModal(true);
@@ -1839,47 +1841,73 @@ export default function EventDetailsPage() {
 
   const handleScannerAttendeeCheckIn = async (reg: Registration) => {
     try {
-      const targetDay = selectedScanDay === "auto" ? 1 : selectedScanDay;
+      const targetDay = selectedScanDay === "auto" ? 1 : Number(selectedScanDay);
+      const isCurrentlyCheckedIn = !!reg.checked_in || (Array.isArray(reg.checked_in_days) && reg.checked_in_days.includes(targetDay));
+      const mode = isCurrentlyCheckedIn ? "toggle" : "checkin";
+
       if (!isOnline) {
         const localReg = await dbOffline.getLocalRegistration(reg.pin || reg.id, Number(id));
         if (localReg) {
           const checkedInDays = localReg.checked_in_days || [];
+          const isAlreadyInDays = checkedInDays.includes(targetDay);
+          const newDays = isAlreadyInDays
+            ? checkedInDays.filter(d => d !== targetDay)
+            : [...checkedInDays, targetDay];
+          const newCheckedIn = newDays.length > 0;
+
           const scanObj: dbOffline.OfflineScan = {
             registration_id: localReg.id,
             event_id: Number(id),
             day: targetDay,
             timestamp: new Date().toISOString(),
-            mode: "checkin",
+            mode: isAlreadyInDays ? "checkout" : "checkin",
             synced: false
           };
           await dbOffline.addOfflineScan(scanObj);
           await updateOfflineStats();
+
           const merged = {
             ...localReg,
-            checked_in: true,
-            checked_in_days: [...checkedInDays, targetDay]
+            checked_in: newCheckedIn,
+            checked_in_days: newDays
           };
-          const resultObj = {
-            ...merged,
-            operator_fields: formatOperatorFields(merged),
-            card_layout_text: (operatorCardLayoutText || (event as any)?.operator_config?.card_layout_text || event?.registration_form_template?.operator_config?.card_layout_text)
-              ? compileOperatorCustomLayout(operatorCardLayoutText || (event as any)?.operator_config?.card_layout_text || event?.registration_form_template?.operator_config?.card_layout_text, merged)
-              : null
-          };
+
           setRegistrations(prev => prev.map(r => r.id === localReg.id ? { ...r, ...merged } : r));
-          setCheckedInReg(resultObj);
-          setEditedAnswers(merged.custom_answers || {});
-          setShowPinPostCheckInModal(true);
+
+          if (isAlreadyInDays) {
+            if (checkedInReg?.id === reg.id) {
+              setCheckedInReg(null);
+              setPinStatus("idle");
+              setShowPinPostCheckInModal(false);
+            }
+          } else {
+            const resultObj = {
+              ...merged,
+              operator_fields: formatOperatorFields(merged),
+              card_layout_text: (operatorCardLayoutText || (event as any)?.operator_config?.card_layout_text || event?.registration_form_template?.operator_config?.card_layout_text)
+                ? compileOperatorCustomLayout(operatorCardLayoutText || (event as any)?.operator_config?.card_layout_text || event?.registration_form_template?.operator_config?.card_layout_text, merged)
+                : null
+            };
+            setPinStatus("success");
+            const firstName = (merged.attendee?.first_name || "Guest").toUpperCase();
+            setPinMessage(`CHECK-IN SUCCESSFUL: ${firstName}`);
+            setCheckedInReg(resultObj);
+            setEditedAnswers(merged.custom_answers || {});
+            setShowPinPostCheckInModal(true);
+          }
         }
         return;
       }
 
       const query = selectedScanDay === "auto" 
-        ? `mode=checkin&event_id=${id}` 
-        : `mode=checkin&day=${selectedScanDay}&event_id=${id}`;
+        ? `mode=${mode}&event_id=${id}` 
+        : `mode=${mode}&day=${selectedScanDay}&event_id=${id}`;
       const res = await fetch(`/api/py/registrations/${encodeURIComponent(reg.id)}/checkin?${query}`, {
         method: "PUT",
-        headers: { "x-user-email": session?.user?.email || "" }
+        headers: { 
+          "x-user-email": session?.user?.email || "",
+          ...getAppEnvironmentHeaders()
+        }
       });
       if (res.ok) {
         const updated = await res.json();
@@ -1889,17 +1917,9 @@ export default function EventDetailsPage() {
           attendee: updated.attendee || reg.attendee,
           custom_answers: updated.custom_answers || reg.custom_answers
         };
-        const resultObj = {
-          ...merged,
-          operator_fields: formatOperatorFields(merged),
-          card_layout_text: (operatorCardLayoutText || (event as any)?.operator_config?.card_layout_text || event?.registration_form_template?.operator_config?.card_layout_text)
-            ? compileOperatorCustomLayout(operatorCardLayoutText || (event as any)?.operator_config?.card_layout_text || event?.registration_form_template?.operator_config?.card_layout_text, merged)
-            : null
-        };
+
         setRegistrations(prev => prev.map(r => r.id === updated.id ? { ...r, ...merged } : r));
-        setCheckedInReg(resultObj);
-        setEditedAnswers(merged.custom_answers || {});
-        setShowPinPostCheckInModal(true);
+
         dbOffline.initDb().then(async (db) => {
           const tx = db.transaction(["registrations"], "readwrite");
           tx.objectStore("registrations").put({
@@ -1907,13 +1927,37 @@ export default function EventDetailsPage() {
             event_id: merged.event_id || Number(id)
           });
         }).catch(() => {});
+
+        if (isCurrentlyCheckedIn) {
+          // Unchecked successfully
+          if (checkedInReg?.id === reg.id) {
+            setCheckedInReg(null);
+            setPinStatus("idle");
+            setShowPinPostCheckInModal(false);
+          }
+        } else {
+          // Checked in successfully
+          const resultObj = {
+            ...merged,
+            operator_fields: formatOperatorFields(merged),
+            card_layout_text: (operatorCardLayoutText || (event as any)?.operator_config?.card_layout_text || event?.registration_form_template?.operator_config?.card_layout_text)
+              ? compileOperatorCustomLayout(operatorCardLayoutText || (event as any)?.operator_config?.card_layout_text || event?.registration_form_template?.operator_config?.card_layout_text, merged)
+              : null
+          };
+          setPinStatus("success");
+          const firstName = (merged.attendee?.first_name || "Guest").toUpperCase();
+          setPinMessage(`CHECK-IN SUCCESSFUL: ${firstName}`);
+          setCheckedInReg(resultObj);
+          setEditedAnswers(merged.custom_answers || {});
+          setShowPinPostCheckInModal(true);
+        }
       } else {
         const err = await res.json().catch(() => ({}));
-        alert(err.detail || "Failed to check in attendee");
+        alert(err.detail || "Failed to update check-in status");
       }
     } catch (err: any) {
       console.error(err);
-      alert(err.message || "Network error checking in attendee");
+      alert(err.message || "Network error updating check-in status");
     }
   };
 
@@ -2710,7 +2754,13 @@ export default function EventDetailsPage() {
                                     disabled={reg.status === "declined"}
                                     onClick={async () => {
                                       try {
-                                        const res = await fetch(`/api/py/registrations/${reg.id}/checkin?day=${dayNum}&event_id=${id}`, { method: "PUT" });
+                                        const res = await fetch(`/api/py/registrations/${reg.id}/checkin?day=${dayNum}&event_id=${id}`, {
+                                          method: "PUT",
+                                          headers: {
+                                            "x-user-email": session?.user?.email || "",
+                                            ...getAppEnvironmentHeaders()
+                                          }
+                                        });
                                         if (res.ok) {
                                           const updated = await res.json();
                                           setRegistrations(prev => prev.map(r => r.id === reg.id ? { ...r, checked_in: updated.checked_in, checked_in_days: updated.checked_in_days ?? [] } : r));
@@ -2737,7 +2787,13 @@ export default function EventDetailsPage() {
                               disabled={reg.status === "declined"}
                               onClick={async () => {
                                 try {
-                                  const res = await fetch(`/api/py/registrations/${reg.id}/checkin?event_id=${id}`, { method: "PUT" });
+                                  const res = await fetch(`/api/py/registrations/${reg.id}/checkin?event_id=${id}`, {
+                                    method: "PUT",
+                                    headers: {
+                                      "x-user-email": session?.user?.email || "",
+                                      ...getAppEnvironmentHeaders()
+                                    }
+                                  });
                                   if (res.ok) {
                                     const updated = await res.json();
                                     setRegistrations(prev => prev.map(r => r.id === reg.id ? { ...r, checked_in: updated.checked_in, checked_in_days: updated.checked_in_days ?? [] } : r));
@@ -2872,7 +2928,13 @@ export default function EventDetailsPage() {
                                     disabled={reg.status === "declined"}
                                     onClick={async () => {
                                       try {
-                                        const res = await fetch(`/api/py/registrations/${reg.id}/checkin?day=${dayNum}&event_id=${id}`, { method: "PUT" });
+                                        const res = await fetch(`/api/py/registrations/${reg.id}/checkin?day=${dayNum}&event_id=${id}`, {
+                                          method: "PUT",
+                                          headers: {
+                                            "x-user-email": session?.user?.email || "",
+                                            ...getAppEnvironmentHeaders()
+                                          }
+                                        });
                                         if (res.ok) {
                                           const updated = await res.json();
                                           setRegistrations(prev => prev.map(r => r.id === reg.id ? { ...r, checked_in: updated.checked_in, checked_in_days: updated.checked_in_days ?? [] } : r));
@@ -2899,7 +2961,13 @@ export default function EventDetailsPage() {
                               disabled={reg.status === "declined"}
                               onClick={async () => {
                                 try {
-                                  const res = await fetch(`/api/py/registrations/${reg.id}/checkin?event_id=${id}`, { method: "PUT" });
+                                  const res = await fetch(`/api/py/registrations/${reg.id}/checkin?event_id=${id}`, {
+                                    method: "PUT",
+                                    headers: {
+                                      "x-user-email": session?.user?.email || "",
+                                      ...getAppEnvironmentHeaders()
+                                    }
+                                  });
                                   if (res.ok) {
                                     const updated = await res.json();
                                     setRegistrations(prev => prev.map(r => r.id === reg.id ? { ...r, checked_in: updated.checked_in, checked_in_days: updated.checked_in_days ?? [] } : r));
@@ -4107,84 +4175,199 @@ export default function EventDetailsPage() {
               {pinStatus === "warning" && <AlertCircle size={64} />}
               {pinStatus === "error" && <XCircle size={64} />}
 
-              <div className="text-center space-y-3 w-full">
-                <p className="text-2xl font-black italic uppercase tracking-tighter font-bricolage leading-tight">
-                  {pinStatus === "success" ? "CHECK-IN SUCCESSFUL" : pinMessage}
+              <div className="text-center w-full">
+                <p className="text-xl font-black italic uppercase tracking-tighter font-bricolage leading-tight">
+                  {pinMessage || (pinStatus === "success" ? "CHECK-IN SUCCESSFUL" : "")}
                 </p>
 
-                {(checkedInReg.attendee || checkedInReg) && (
-                  <div className="space-y-4 border-t border-white/20 pt-4 w-full">
-                    <p className="text-lg font-bold tracking-wide text-center">
-                      {`${checkedInReg.attendee?.first_name || ""} ${checkedInReg.attendee?.last_name || ""}`.trim() || "Guest"}
-                    </p>
+                {(checkedInReg.attendee || checkedInReg) && (() => {
+                  const layoutTpl = operatorCardLayoutText || (event as any)?.operator_config?.card_layout_text || event?.registration_form_template?.operator_config?.card_layout_text;
+                  const cardLayoutContent = layoutTpl
+                    ? compileOperatorCustomLayout(layoutTpl, checkedInReg)
+                    : (checkedInReg.card_layout_text || null);
 
-                    {checkedInReg.card_layout_text ? (
-                      <div className="bg-white/10 p-5 rounded-2xl border border-white/5 text-left mt-4 w-full max-h-60 overflow-y-auto pr-1">
-                        <div
-                          style={{
-                            color: operatorCardTextColor || (event as any)?.operator_config?.card_text_color || event?.registration_form_template?.operator_config?.card_text_color || "#ffffff",
-                            fontSize: operatorCardFontSize || (event as any)?.operator_config?.card_font_size || event?.registration_form_template?.operator_config?.card_font_size || "13px",
-                            fontWeight: operatorCardFontWeight || (event as any)?.operator_config?.card_font_weight || event?.registration_form_template?.operator_config?.card_font_weight || "600",
-                            textAlign: ((operatorCardTextAlign || (event as any)?.operator_config?.card_text_align || event?.registration_form_template?.operator_config?.card_text_align || "left") as any),
-                            lineHeight: operatorCardLineHeight || (event as any)?.operator_config?.card_line_height || event?.registration_form_template?.operator_config?.card_line_height || "1.5"
-                          }}
-                          className={`whitespace-pre-wrap leading-relaxed ${
-                            (operatorCardFontFamily || (event as any)?.operator_config?.card_font_family) === 'mono'
-                              ? 'font-mono'
-                              : (operatorCardFontFamily || (event as any)?.operator_config?.card_font_family) === 'bricolage'
-                              ? 'font-bricolage'
-                              : (operatorCardFontFamily || (event as any)?.operator_config?.card_font_family) === 'serif'
-                              ? 'font-serif'
-                              : 'font-sans'
-                          }`}
-                          dangerouslySetInnerHTML={{
-                            __html: renderFormattedCardLayout(checkedInReg.card_layout_text)
-                          }}
-                        />
-                      </div>
-                    ) : checkedInReg.operator_fields && checkedInReg.operator_fields.length > 0 ? (
-                      <div className="grid grid-cols-1 gap-2.5 text-left mt-4 w-full max-h-60 overflow-y-auto pr-1">
-                        {checkedInReg.operator_fields
-                          .filter((f: any) => !["first_name", "last_name", "First Name", "Last Name"].includes(f.label))
-                          .map((f: any, idx: number) => (
-                            <div key={idx} className="bg-white/10 p-3.5 rounded-xl border border-white/5 flex flex-col">
+                  return (
+                    <div className="w-full">
+                      {cardLayoutContent ? (
+                        <div className="bg-white/10 p-5 rounded-2xl border border-white/5 text-left mt-5 w-full max-h-60 overflow-y-auto pr-1">
+                          <div
+                            style={{
+                              color: operatorCardTextColor || (event as any)?.operator_config?.card_text_color || event?.registration_form_template?.operator_config?.card_text_color || "#ffffff",
+                              fontSize: operatorCardFontSize || (event as any)?.operator_config?.card_font_size || event?.registration_form_template?.operator_config?.card_font_size || "14px",
+                              fontWeight: operatorCardFontWeight || (event as any)?.operator_config?.card_font_weight || event?.registration_form_template?.operator_config?.card_font_weight || "600",
+                              textAlign: ((operatorCardTextAlign || (event as any)?.operator_config?.card_text_align || event?.registration_form_template?.operator_config?.card_text_align || "left") as any),
+                              lineHeight: operatorCardLineHeight || (event as any)?.operator_config?.card_line_height || event?.registration_form_template?.operator_config?.card_line_height || "1.5"
+                            }}
+                            className={`whitespace-pre-wrap leading-relaxed ${
+                              (operatorCardFontFamily || (event as any)?.operator_config?.card_font_family) === 'mono'
+                                ? 'font-mono'
+                                : (operatorCardFontFamily || (event as any)?.operator_config?.card_font_family) === 'bricolage'
+                                ? 'font-bricolage'
+                                : (operatorCardFontFamily || (event as any)?.operator_config?.card_font_family) === 'serif'
+                                ? 'font-serif'
+                                : 'font-sans'
+                            }`}
+                            dangerouslySetInnerHTML={{
+                              __html: renderFormattedCardLayout(cardLayoutContent)
+                            }}
+                          />
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-left mt-5 w-full max-h-60 overflow-y-auto pr-1">
+                          {formatOperatorFields(checkedInReg).map((f: any, idx: number) => (
+                            <div key={idx} className="bg-white/10 p-3.5 rounded-xl border border-white/5 flex flex-col justify-between">
                               <span className="text-[8px] uppercase tracking-widest text-white/60 font-black">{f.label}</span>
                               <span className="text-xs font-bold text-white mt-0.5 break-words">{f.value}</span>
                             </div>
-                        ))}
-                      </div>
-                    ) : null}
-                  </div>
-                )}
+                          ))}
+                        </div>
+                      )}
 
-                <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-8 w-full">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const fullReg = registrations.find(r => r.id === checkedInReg.id) || checkedInReg;
+                          setHideResendButton(true);
+                          setSelectedReg(fullReg);
+                          setShowPinPostCheckInModal(false);
+                          setPinStatus("idle");
+                          setCheckedInReg(null);
+                          setPinMessage("");
+                        }}
+                        className="w-full mt-4 bg-white/15 hover:bg-white/25 text-white border border-white/10 font-black py-3 px-4 rounded-xl text-[10px] uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        <Eye size={14} />
+                        {userRole === "staff" ? "View Registrant Details" : "View Registrant Details & Edit"}
+                      </button>
+
+                      {/* Interactive Custom Questions Form inside the modal */}
+                      {userRole !== "staff" && (
+                        <div className="mt-5 border-t border-white/10 pt-4 text-left w-full space-y-4">
+                          <span className="text-[10px] font-black text-white/70 uppercase tracking-widest block mb-2">Update Custom Answers</span>
+                          {(() => {
+                            const activeSchema = (event?.custom_fields_schema && event.custom_fields_schema.length > 0)
+                              ? event.custom_fields_schema
+                              : (event?.registration_form_template?.layout_schema || []);
+                            let flatFields: any[] = [];
+                            if (activeSchema.length > 0 && "fields" in activeSchema[0]) {
+                              for (const section of activeSchema) {
+                                flatFields.push(...(section.fields || []));
+                              }
+                            } else {
+                              flatFields = activeSchema;
+                            }
+                            const getCustomAnswer = (answers: any, field: any) => {
+                              const key = field.key || field.id;
+                              if (event.id === 19) {
+                                const map: Record<string, string> = { "p2_skill": "skill_level", "p2_preferred_partner": "partner_name" };
+                                return answers?.[key] ?? answers?.[map[key]] ?? "";
+                              }
+                              return answers?.[key] ?? "";
+                            };
+                            const customFields = flatFields.filter(f => f && (f.key || f.id) && !["first_name", "last_name", "email", "company"].includes(f.key || f.id));
+                            
+                            if (customFields.length === 0) {
+                              return <p className="text-[10px] text-white/50 italic">No custom questions configured for this event form.</p>;
+                            }
+                            
+                            return (
+                              <div className="space-y-3.5 max-h-60 overflow-y-auto pr-1">
+                                {customFields.map((field) => {
+                                  const label = (field.label || "").replace(/<[^>]*>/g, "").trim();
+                                  const fieldKey = field.key || field.id;
+                                  const val = getCustomAnswer(editedAnswers, field);
+                                  
+                                  return (
+                                    <div key={fieldKey} className="space-y-1.5">
+                                      <label className="text-[9px] font-black text-white/65 uppercase tracking-wider block">{label}</label>
+                                      {field.type === "select" && field.options && field.options.length > 0 ? (
+                                        <select
+                                          value={val}
+                                          onChange={(e) => handleAnswerChange(fieldKey, e.target.value)}
+                                          className="w-full px-3 py-2 bg-white/15 rounded-xl border border-white/10 text-xs font-bold text-white outline-none focus:ring-1 focus:ring-yellow-400"
+                                        >
+                                          <option value="" className="text-slate-800">Select option...</option>
+                                          {field.options.map((opt: string) => (
+                                            <option key={opt} value={opt} className="text-slate-800">{opt}</option>
+                                          ))}
+                                        </select>
+                                      ) : field.type === "checkbox" ? (
+                                        <label className="flex items-center gap-2 cursor-pointer select-none text-xs font-bold text-white">
+                                          <input
+                                            type="checkbox"
+                                            checked={val === "Yes" || val === true}
+                                            onChange={(e) => handleAnswerChange(fieldKey, e.target.checked ? "Yes" : "No")}
+                                            className="w-4 h-4 rounded text-[#0f172a]"
+                                          />
+                                          Check if true
+                                        </label>
+                                      ) : (
+                                        <input
+                                          type="text"
+                                          value={val}
+                                          onChange={(e) => handleAnswerChange(fieldKey, e.target.value)}
+                                          placeholder={`Enter ${label.toLowerCase()}...`}
+                                          className="w-full px-3 py-2 bg-white/15 rounded-xl border border-white/10 text-xs font-semibold text-white placeholder-white/30 outline-none focus:ring-1 focus:ring-yellow-400"
+                                        />
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            );
+                          })()}
+                          
+                          <button
+                            onClick={async () => {
+                              try {
+                                setIsSavingAnswers(true);
+                                const res = await fetch(`/api/py/registrations/${checkedInReg.id}/custom-answers`, {
+                                  method: "PUT",
+                                  headers: { 
+                                    "Content-Type": "application/json",
+                                    "x-user-email": session?.user?.email || "",
+                                    ...getAppEnvironmentHeaders()
+                                  },
+                                  body: JSON.stringify(editedAnswers)
+                                });
+                                if (res.ok) {
+                                  const data = await res.json();
+                                  setRegistrations(prev => prev.map(r => r.id === checkedInReg.id ? { ...r, custom_answers: data.custom_answers } : r));
+                                  setCheckedInReg((prev: any) => prev ? { ...prev, custom_answers: data.custom_answers } : null);
+                                  alert("Answers saved successfully!");
+                                } else {
+                                  alert("Failed to save answers.");
+                                }
+                              } catch (err) {
+                                console.error(err);
+                                alert("Connection error while saving answers.");
+                              } finally {
+                                setIsSavingAnswers(false);
+                              }
+                            }}
+                            disabled={isSavingAnswers}
+                            className="w-full mt-2 bg-white hover:bg-slate-100 text-slate-900 font-black py-2.5 rounded-xl text-[10px] uppercase tracking-wider transition-all disabled:opacity-50"
+                          >
+                            {isSavingAnswers ? "Saving..." : "Save Custom Answers"}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                <div className="w-full mt-6">
                   <button
                     type="button"
                     onClick={() => {
-                      const fullReg = registrations.find(r => r.id === checkedInReg.id) || checkedInReg;
-                      setHideResendButton(true);
-                      setSelectedReg(fullReg);
                       setShowPinPostCheckInModal(false);
                       setPinStatus("idle");
                       setCheckedInReg(null);
                       setPinMessage("");
                     }}
-                    className="px-6 py-4 bg-white hover:bg-white/95 text-green-600 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto"
+                    className="w-full py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border bg-white/20 hover:bg-white/30 border-white/10 cursor-pointer text-center"
                   >
-                    <Eye size={12} />
-                    View Details & Edit
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowPinPostCheckInModal(false);
-                      setPinStatus("idle");
-                      setCheckedInReg(null);
-                      setPinMessage("");
-                    }}
-                    className="px-6 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border bg-white/20 hover:bg-white/30 border-white/10 w-full sm:w-auto cursor-pointer"
-                  >
-                    {pinStatus === "success" || pinStatus === "warning" ? "Scan Next Guest" : "Close & Resume"}
+                    {pinStatus === "success" || pinStatus === "warning" ? "Close & Continue" : "Close & Resume"}
                   </button>
                 </div>
               </div>
