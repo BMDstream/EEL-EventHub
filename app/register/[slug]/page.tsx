@@ -282,10 +282,19 @@ function PublicRegistrationPageContent() {
     }
 
     if (Array.isArray(parentVal)) {
-      return parentVal.some((v) => String(v ?? "").trim() === expectedVal);
+      return parentVal.some((v) => {
+        const vStr = String(v ?? "").trim().toLowerCase();
+        const expStr = expectedVal.toLowerCase();
+        return vStr === expStr || (expStr.length >= 3 && vStr.startsWith(expStr)) || (vStr.length >= 3 && expStr.startsWith(vStr));
+      });
     }
-    const parentValStr = typeof parentVal === "boolean" ? String(parentVal) : String(parentVal ?? "").trim();
-    return parentValStr === expectedVal;
+    const parentValStr = (typeof parentVal === "boolean" ? String(parentVal) : String(parentVal ?? "")).trim().toLowerCase();
+    const expStr = expectedVal.toLowerCase();
+    return (
+      parentValStr === expStr ||
+      (expStr.length >= 3 && parentValStr.startsWith(expStr)) ||
+      (parentValStr.length >= 3 && expStr.startsWith(parentValStr))
+    );
   };
 
   const getPostSubmitTitle = () => {

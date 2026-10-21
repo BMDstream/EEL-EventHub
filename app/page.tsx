@@ -82,10 +82,11 @@ function ParticleBackground() {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
       
-      // Calculate particle density dynamically
+      // Calculate particle density dynamically (lighter on mobile for maximum fps)
       particles = [];
-      const density = Math.floor((canvas.width * canvas.height) / 12000);
-      const maxParticles = Math.min(density, 100);
+      const isMobile = window.innerWidth < 768;
+      const density = Math.floor((canvas.width * canvas.height) / (isMobile ? 24000 : 16000));
+      const maxParticles = Math.min(density, isMobile ? 35 : 65);
       for (let i = 0; i < maxParticles; i++) {
         particles.push(new Particle(canvas.width, canvas.height));
       }
@@ -105,13 +106,23 @@ function ParticleBackground() {
       };
     };
 
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        cancelAnimationFrame(animationFrameId);
+      } else {
+        animationFrameId = requestAnimationFrame(draw);
+      }
+    };
+
     window.addEventListener("resize", handleResize);
     window.addEventListener("mousemove", handleMouseMove);
     document.addEventListener("mouseleave", handleMouseLeave);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
     
     handleResize();
 
     const draw = () => {
+      if (document.hidden) return;
       if (!ctx || !canvas) return;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
@@ -119,6 +130,7 @@ function ParticleBackground() {
       ctx.strokeStyle = "rgba(255, 255, 255, 0.03)";
       ctx.lineWidth = 0.5;
       
+      const maxDistSq = 14400; // 120 * 120: Avoid expensive Math.sqrt for non-matches
       for (let i = 0; i < particles.length; i++) {
         particles[i].update(canvas.width, canvas.height, mouseRef.current.x, mouseRef.current.y);
         particles[i].draw(ctx);
@@ -126,9 +138,9 @@ function ParticleBackground() {
         for (let j = i + 1; j < particles.length; j++) {
           const dx = particles[i].x - particles[j].x;
           const dy = particles[i].y - particles[j].y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
+          const distSq = dx * dx + dy * dy;
 
-          if (dist < 150) {
+          if (distSq < maxDistSq) {
             ctx.beginPath();
             ctx.moveTo(particles[i].x, particles[i].y);
             ctx.lineTo(particles[j].x, particles[j].y);
@@ -146,6 +158,7 @@ function ParticleBackground() {
       window.removeEventListener("resize", handleResize);
       window.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseleave", handleMouseLeave);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
       cancelAnimationFrame(animationFrameId);
     };
   }, []);

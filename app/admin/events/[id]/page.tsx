@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -104,13 +104,24 @@ const getAnswerString = (ans: any): string => {
 const getCustomAnswer = (customAnswers: any, fieldDef: any): any => {
   if (!customAnswers || !fieldDef) return "";
   
+  let answers = customAnswers;
+  if (typeof answers === "string") {
+    try {
+      answers = JSON.parse(answers);
+      if (typeof answers === "string") answers = JSON.parse(answers);
+    } catch {
+      return "";
+    }
+  }
+  if (!answers || typeof answers !== "object") return "";
+  
   const fieldId = fieldDef.id;
   const fieldKey = fieldDef.key;
   const fieldLabel = (fieldDef.label || fieldDef.title || "").replace(/<[^>]*>/g, "").trim().toLowerCase();
   
   // 1. Direct ID / Key match
-  if (fieldId && customAnswers[fieldId] !== undefined) return customAnswers[fieldId];
-  if (fieldKey && customAnswers[fieldKey] !== undefined) return customAnswers[fieldKey];
+  if (fieldId && answers[fieldId] !== undefined) return answers[fieldId];
+  if (fieldKey && answers[fieldKey] !== undefined) return answers[fieldKey];
   
   // 1b. Legacy Padel (ID 19) mapping
   const padelLegacyMap: Record<string, string> = {
@@ -123,16 +134,16 @@ const getCustomAnswer = (customAnswers: any, fieldDef: any): any => {
     "partner_t_shirt": "field_1781158985365",
   };
   
-  if (fieldId && padelLegacyMap[fieldId] && customAnswers[padelLegacyMap[fieldId]] !== undefined) {
-    return customAnswers[padelLegacyMap[fieldId]];
+  if (fieldId && padelLegacyMap[fieldId] && answers[padelLegacyMap[fieldId]] !== undefined) {
+    return answers[padelLegacyMap[fieldId]];
   }
   
   // 2. Exact label match (case insensitive)
-  const keys = Object.keys(customAnswers);
+  const keys = Object.keys(answers);
   for (const k of keys) {
     const cleanK = k.toLowerCase().trim();
     if (fieldLabel && cleanK === fieldLabel) {
-      return customAnswers[k];
+      return answers[k];
     }
   }
   
@@ -141,7 +152,7 @@ const getCustomAnswer = (customAnswers: any, fieldDef: any): any => {
     for (const k of keys) {
       const cleanK = k.toLowerCase().trim();
       if (cleanK.length >= 4 && (fieldLabel.startsWith(cleanK) || cleanK.startsWith(fieldLabel))) {
-        return customAnswers[k];
+        return answers[k];
       }
     }
   }
@@ -327,9 +338,22 @@ export default function EventDetailsPage() {
     };
   }, []);
 
+  const normalizeAnswers = (ca: any) => {
+    if (!ca) return {};
+    if (typeof ca === "string") {
+      try {
+        const p = JSON.parse(ca);
+        return typeof p === "string" ? JSON.parse(p) : p;
+      } catch {
+        return {};
+      }
+    }
+    return ca;
+  };
+
   useEffect(() => {
     if (checkedInReg) {
-      setEditedAnswers(checkedInReg.custom_answers || {});
+      setEditedAnswers(normalizeAnswers(checkedInReg.custom_answers));
     } else {
       setEditedAnswers({});
     }
@@ -337,7 +361,7 @@ export default function EventDetailsPage() {
 
   useEffect(() => {
     if (selectedReg) {
-      setDetailsEditedAnswers(selectedReg.custom_answers || {});
+      setDetailsEditedAnswers(normalizeAnswers(selectedReg.custom_answers));
       setEditedFirstName(selectedReg.attendee?.first_name || "");
       setEditedLastName(selectedReg.attendee?.last_name || "");
       setEditedEmail(selectedReg.attendee?.email || "");
@@ -1545,68 +1569,74 @@ export default function EventDetailsPage() {
   ).sort((a, b) => a.localeCompare(b));
 
   // Get unique registration dates (formatted as YYYY-MM-DD) for the date filter
-  const uniqueDates = Array.from(
-    new Set(
-      registrations
-        .map((r) => r.created_at ? new Date(r.created_at).toISOString().split('T')[0] : "")
-        .filter((d): d is string => Boolean(d))
-    )
-  ).sort((a, b) => b.localeCompare(a));
+  const uniqueDates = useMemo(() => {
+    return Array.from(
+      new Set(
+        registrations
+          .map((r) => r.created_at ? new Date(r.created_at).toISOString().split('T')[0] : "")
+          .filter((d): d is string => Boolean(d))
+      )
+    ).sort((a, b) => b.localeCompare(a));
+  }, [registrations]);
 
-  const filteredRegistrations = registrations
-    .filter(reg => {
-      const search = searchTerm.toLowerCase();
-      const matchesSearch = (
-        (reg.attendee?.first_name || "").toLowerCase().includes(search) ||
-        (reg.attendee?.last_name || "").toLowerCase().includes(search) ||
-        (reg.attendee?.email || "").toLowerCase().includes(search) ||
-        (reg.attendee?.company || "").toLowerCase().includes(search) ||
-        (reg.pin ? String(reg.pin).toLowerCase().includes(search) : false) ||
-        (reg.id ? String(reg.id).toLowerCase().includes(search) : false) ||
-        (reg.clearance_id ? String(reg.clearance_id).toLowerCase().includes(search) : false)
-      );
-      if (!matchesSearch) return false;
-      
-      if (checkInFilter === "checked_in") return reg.checked_in;
-      if (checkInFilter === "not_checked_in") return reg.status !== "declined" && !reg.checked_in;
-      if (checkInFilter === "declined") return reg.status === "declined";
-      return true;
-    })
-    .filter(reg => {
-      if (companyFilter !== "all" && reg.attendee?.company?.trim() !== companyFilter) {
-        return false;
-      }
-      return true;
-    })
-    .filter(reg => {
-      if (dateFilter !== "all") {
-        const regDate = reg.created_at ? new Date(reg.created_at).toISOString().split('T')[0] : "";
-        if (regDate !== dateFilter) {
+  const filteredRegistrations = useMemo(() => {
+    return registrations
+      .filter(reg => {
+        const search = searchTerm.toLowerCase();
+        const matchesSearch = (
+          (reg.attendee?.first_name || "").toLowerCase().includes(search) ||
+          (reg.attendee?.last_name || "").toLowerCase().includes(search) ||
+          (reg.attendee?.email || "").toLowerCase().includes(search) ||
+          (reg.attendee?.company || "").toLowerCase().includes(search) ||
+          (reg.pin ? String(reg.pin).toLowerCase().includes(search) : false) ||
+          (reg.id ? String(reg.id).toLowerCase().includes(search) : false) ||
+          ((reg as any).clearance_id ? String((reg as any).clearance_id).toLowerCase().includes(search) : false)
+        );
+        if (!matchesSearch) return false;
+        
+        if (checkInFilter === "checked_in") return reg.checked_in;
+        if (checkInFilter === "not_checked_in") return reg.status !== "declined" && !reg.checked_in;
+        if (checkInFilter === "declined") return reg.status === "declined";
+        return true;
+      })
+      .filter(reg => {
+        if (companyFilter !== "all" && reg.attendee?.company?.trim() !== companyFilter) {
           return false;
         }
-      }
-      return true;
-    })
-    .sort((a, b) => {
-      if (sortBy === "alphabetical") {
-        const nameA = `${a.attendee?.first_name || ""} ${a.attendee?.last_name || ""}`.trim().toLowerCase();
-        const nameB = `${b.attendee?.first_name || ""} ${b.attendee?.last_name || ""}`.trim().toLowerCase();
-        return sortOrder === "asc" ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
-      } else {
-        const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
-        const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
-        return sortOrder === "asc" ? dateA - dateB : dateB - dateA;
-      }
-    });
+        return true;
+      })
+      .filter(reg => {
+        if (dateFilter !== "all") {
+          const regDate = reg.created_at ? new Date(reg.created_at).toISOString().split('T')[0] : "";
+          if (regDate !== dateFilter) {
+            return false;
+          }
+        }
+        return true;
+      })
+      .sort((a, b) => {
+        if (sortBy === "alphabetical") {
+          const nameA = `${a.attendee?.first_name || ""} ${a.attendee?.last_name || ""}`.trim().toLowerCase();
+          const nameB = `${b.attendee?.first_name || ""} ${b.attendee?.last_name || ""}`.trim().toLowerCase();
+          return sortOrder === "asc" ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
+        } else {
+          const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+          const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+          return sortOrder === "asc" ? dateA - dateB : dateB - dateA;
+        }
+      });
+  }, [registrations, searchTerm, checkInFilter, companyFilter, dateFilter, sortBy, sortOrder]);
 
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, checkInFilter, companyFilter, dateFilter, sortBy, sortOrder]);
 
   const totalPages = Math.ceil(filteredRegistrations.length / (pageSize === -1 ? (filteredRegistrations.length || 1) : pageSize)) || 1;
-  const paginatedRegistrations = pageSize === -1 
-    ? filteredRegistrations 
-    : filteredRegistrations.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const paginatedRegistrations = useMemo(() => {
+    return pageSize === -1 
+      ? filteredRegistrations 
+      : filteredRegistrations.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  }, [filteredRegistrations, currentPage, pageSize]);
 
   const handleScanCheckin = async (regId: string) => {
     const targetDay = selectedScanDay === "auto" ? 1 : selectedScanDay;
@@ -1853,7 +1883,7 @@ export default function EventDetailsPage() {
           const checkedInDays = localReg.checked_in_days || [];
           const isAlreadyInDays = checkedInDays.includes(targetDay);
           const newDays = isAlreadyInDays
-            ? checkedInDays.filter(d => d !== targetDay)
+            ? checkedInDays.filter((d: any) => d !== targetDay)
             : [...checkedInDays, targetDay];
           const newCheckedIn = newDays.length > 0;
 

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Response
 from sqlmodel import Session, select
 from sqlalchemy import text
 from typing import List, Dict, Any, Optional
@@ -252,7 +252,8 @@ def find_event_by_slug_or_id(slug_or_id: str, session: Session) -> Optional[Even
 
 
 @router.get("/{slug}")
-def read_event(slug: str, session: Session = Depends(get_session)):
+def read_event(slug: str, response: Response, session: Session = Depends(get_session)):
+    response.headers["Cache-Control"] = "public, s-maxage=10, stale-while-revalidate=50"
     from backend.cache_service import get_cached_event, set_cached_event
     
     # Check Redis cache first
@@ -547,7 +548,8 @@ def delete_event(
     return {"ok": True}
 
 @router.get("/{slug}/public-stats")
-def get_public_stats(slug: str, session: Session = Depends(get_session)):
+def get_public_stats(slug: str, response: Response, session: Session = Depends(get_session)):
+    response.headers["Cache-Control"] = "public, s-maxage=10, stale-while-revalidate=50"
     event = find_event_by_slug_or_id(slug, session)
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")

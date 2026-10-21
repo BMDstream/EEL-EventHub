@@ -24,12 +24,18 @@ def encrypt_data(data: str) -> str:
         return ""
     return fernet.encrypt(data.encode()).decode()
 
+from functools import lru_cache
+
+@lru_cache(maxsize=16384)
+def _cached_fernet_decrypt(token: str) -> str:
+    return fernet.decrypt(token.encode()).decode()
+
 def decrypt_data(token: str) -> str:
     """Decrypt a Fernet token back to a string."""
     if not token:
         return ""
     try:
-        return fernet.decrypt(token.encode()).decode()
+        return _cached_fernet_decrypt(token)
     except Exception as e:
         print(f"Decryption error: {e}")
         # In case decryption fails (e.g. key changed), return a placeholder or raw token
@@ -46,13 +52,23 @@ def encrypt_dict(data: dict) -> dict:
     ciphertext = encrypt_data(serialized)
     return {"_encrypted": ciphertext}
 
-def decrypt_dict(data: dict) -> dict:
+def decrypt_dict(data) -> dict:
     """
-    Decrypts a dictionary if it contains the encrypted wrapper format.
+    Decrypts a dictionary or stringified JSON payload if it contains the encrypted wrapper format.
     Otherwise, returns the dictionary as-is.
     """
     if not data:
         return {}
+    if isinstance(data, str):
+        try:
+            data = json.loads(data)
+        except Exception:
+            return {}
+    if isinstance(data, str):
+        try:
+            data = json.loads(data)
+        except Exception:
+            return {}
     if isinstance(data, dict) and "_encrypted" in data:
         ciphertext = data["_encrypted"]
         decrypted_str = decrypt_data(ciphertext)
@@ -63,4 +79,4 @@ def decrypt_dict(data: dict) -> dict:
         except Exception as e:
             print(f"JSON deserialization error after decryption: {e}")
             return {}
-    return data
+    return data if isinstance(data, dict) else {}

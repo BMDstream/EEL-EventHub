@@ -171,10 +171,25 @@ def register_attendee(
                     depends_on = field.get("dependsOn")
                     if depends_on and isinstance(depends_on, dict):
                         parent_id = depends_on.get("fieldId")
-                        expected_val = depends_on.get("value")
-                        parent_val = data.get("custom_answers", {}).get(parent_id)
-                        parent_val_str = str(parent_val).lower() if parent_val is not None else ""
-                        if parent_val_str != str(expected_val).lower():
+                        expected_val = str(depends_on.get("value") or "").strip().lower()
+                        custom_answers = data.get("custom_answers", {})
+                        parent_val = custom_answers.get(parent_id)
+                        if parent_val is None:
+                            for sec in active_schema:
+                                sec_fields = sec.get("fields", []) if isinstance(sec, dict) else []
+                                for sf in sec_fields:
+                                    if sf.get("id") == parent_id or sf.get("key") == parent_id:
+                                        parent_val = custom_answers.get(sf.get("key")) or custom_answers.get(sf.get("id"))
+                                        break
+                                if parent_val is not None:
+                                    break
+                        parent_val_str = str(parent_val or "").strip().lower()
+                        matched = (
+                            parent_val_str == expected_val or
+                            (len(expected_val) >= 3 and parent_val_str.startswith(expected_val)) or
+                            (len(parent_val_str) >= 3 and expected_val.startswith(parent_val_str))
+                        )
+                        if not matched:
                             continue
 
                     if field.get("visible", True) and field.get("required"):
@@ -956,8 +971,6 @@ def create_registrations_bulk(
                     flag_modified(match_reg, "custom_answers")
                     
                 session.add(match_reg)
-                session.commit()
-                session.refresh(match_reg)
                 
                 reg_by_id[str(match_reg.id)] = match_reg
                 if match_reg.pin:
@@ -1021,8 +1034,7 @@ def create_registrations_bulk(
                         company=company
                     )
                     session.add(attendee)
-                    session.commit()
-                    session.refresh(attendee)
+                    session.flush()
                 else:
                     if company:
                         attendee.company = company
@@ -1031,30 +1043,17 @@ def create_registrations_bulk(
                     if last_name:
                         attendee.last_name = last_name
                     session.add(attendee)
-                    session.commit()
-                    session.refresh(attendee)
                     
                 assigned_pin = pin if pin else None
-                if assigned_pin:
-                    exists_pin = session.exec(
-                        select(Registration)
-                        .where(Registration.event_id == event_id)
-                        .where(Registration.pin == assigned_pin)
-                    ).first()
-                    if exists_pin:
-                        assigned_pin = None
+                if assigned_pin and assigned_pin in reg_by_pin:
+                    assigned_pin = None
                         
                 if not assigned_pin:
                     capacity = event.capacity or 0
                     pin_min, pin_max = (100000, 999999) if (capacity >= 5000 or capacity == 0) else (1000, 9999)
                     while True:
                         new_pin = str(random.randint(pin_min, pin_max))
-                        exists = session.exec(
-                            select(Registration)
-                            .where(Registration.event_id == event_id)
-                            .where(Registration.pin == new_pin)
-                        ).first()
-                        if not exists:
+                        if new_pin not in reg_by_pin:
                             assigned_pin = new_pin
                             break
                             
@@ -1067,8 +1066,6 @@ def create_registrations_bulk(
                     checked_in=checked_in if checked_in is not None else False
                 )
                 session.add(new_reg)
-                session.commit()
-                session.refresh(new_reg)
                 
                 reg_by_id[str(new_reg.id)] = new_reg
                 if new_reg.pin:
@@ -1109,9 +1106,24 @@ def create_registrations_bulk(
                     )
                 created.append(raw_email)
                 
+            # Periodically commit in batches of 50 to maintain low memory and fast bulk throughput
+            if (idx + 1) % 50 == 0:
+                try:
+                    session.commit()
+                except Exception as commit_err:
+                    session.rollback()
+                    print(f"Batch commit warning at row {idx + 1}: {commit_err}")
+                
         except Exception as e:
             session.rollback()
             errors.append(f"Row {idx + 1} ({raw_email}): {str(e)}")
+
+    # Final commit for remaining batched changes
+    try:
+        session.commit()
+    except Exception as final_commit_err:
+        session.rollback()
+        print(f"Final batch commit warning: {final_commit_err}")
             
     if created or updated:
         log_audit(

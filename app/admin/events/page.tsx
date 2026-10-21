@@ -32,6 +32,7 @@ interface Event {
   location: string;
   address?: string;
   capacity: number;
+  duration_days?: number;
   client?: any;
 }
 

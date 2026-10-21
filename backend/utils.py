@@ -18,6 +18,8 @@ limiter = Limiter(key_func=get_remote_address)
 if os.getenv("MOCK_EMAIL_SERVICE") == "true":
     limiter.enabled = False
 
+_session_last_updated: dict = {}
+
 def get_current_user_from_request(
     request: Request,
     x_user_email: Optional[str] = Header(None),
@@ -33,35 +35,41 @@ def get_current_user_from_request(
         session.rollback()
         user = session.exec(select(User).where(func.lower(User.email) == user_email.lower())).first()
     
-    # Track Active Session
+    # Track Active Session (throttled to at most once every 5 minutes per user to preserve DB connection pool)
     if user and request:
-        try:
-            from datetime import datetime
-            from backend.database import engine
-            from backend.models import UserSession
-            ip_addr = request.client.host if request.client else None
-            user_agent = request.headers.get("user-agent")
-            
-            with Session(engine) as tracker_session:
-                user_sess = tracker_session.exec(
-                    select(UserSession).where(UserSession.user_email == user.email)
-                ).first()
-                if user_sess:
-                    user_sess.ip_address = ip_addr
-                    user_sess.user_agent = user_agent
-                    user_sess.last_active = datetime.utcnow()
-                    tracker_session.add(user_sess)
-                else:
-                    new_sess = UserSession(
-                        user_email=user.email,
-                        ip_address=ip_addr,
-                        user_agent=user_agent,
-                        last_active=datetime.utcnow()
-                    )
-                    tracker_session.add(new_sess)
-                tracker_session.commit()
-        except Exception as session_err:
-            print(f"Session tracking warning: {session_err}")
+        import time
+        now_ts = time.time()
+        last_tracked = _session_last_updated.get(user.email, 0)
+        if now_ts - last_tracked >= 300: # 5 minutes throttle
+            _session_last_updated[user.email] = now_ts
+            try:
+                from datetime import datetime
+                from backend.models import UserSession
+                ip_addr = request.client.host if request.client else None
+                user_agent = request.headers.get("user-agent")
+                
+                # Use current session's engine to avoid connection leaks
+                bind_engine = session.bind
+                with Session(bind_engine) as tracker_session:
+                    user_sess = tracker_session.exec(
+                        select(UserSession).where(UserSession.user_email == user.email)
+                    ).first()
+                    if user_sess:
+                        user_sess.ip_address = ip_addr
+                        user_sess.user_agent = user_agent
+                        user_sess.last_active = datetime.utcnow()
+                        tracker_session.add(user_sess)
+                    else:
+                        new_sess = UserSession(
+                            user_email=user.email,
+                            ip_address=ip_addr,
+                            user_agent=user_agent,
+                            last_active=datetime.utcnow()
+                        )
+                        tracker_session.add(new_sess)
+                    tracker_session.commit()
+            except Exception as session_err:
+                print(f"Session tracking warning: {session_err}")
             
     return user
 

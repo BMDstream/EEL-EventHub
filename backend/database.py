@@ -283,11 +283,19 @@ def run_db_initialization(session: Session, check_only_migrations: bool = False)
             'CREATE INDEX IF NOT EXISTS idx_reg_event_pin ON registration(event_id, pin)',
             'CREATE INDEX IF NOT EXISTS idx_reg_event_checked_in ON registration(event_id, checked_in)',
             'CREATE INDEX IF NOT EXISTS idx_reg_event_created_at ON registration(event_id, created_at DESC)',
-            'CREATE INDEX IF NOT EXISTS idx_event_client_id ON event(client_id)'
+            'CREATE INDEX IF NOT EXISTS idx_event_client_id ON event(client_id)',
+            'CREATE INDEX IF NOT EXISTS idx_reg_event_attendee ON registration(event_id, attendee_id)',
+            'CREATE INDEX IF NOT EXISTS idx_attendee_email ON attendee(email)',
+            'CREATE INDEX IF NOT EXISTS idx_attendee_lower_email ON attendee(LOWER(email))',
+            'CREATE INDEX IF NOT EXISTS idx_user_lower_email ON "user"(LOWER(email))',
+            'CREATE INDEX IF NOT EXISTS idx_audit_logs_event_time ON audit_logs(event_id, timestamp DESC)'
         ]
         for idx in indexes:
-            session.execute(text(idx))
-        session.commit()
+            try:
+                session.execute(text(idx))
+                session.commit()
+            except Exception:
+                session.rollback()
     except Exception as e:
         session.rollback()
         print(f"Performance index check warning: {e}")
