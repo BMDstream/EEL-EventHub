@@ -750,8 +750,9 @@ def download_event_qrcodes_zip(
             
     zip_buffer.seek(0)
     
+    clean_slug = re.sub(r'[^a-zA-Z0-9_-]+', '_', event.slug or 'event')[:20].strip('_')
     headers = {
-        "Content-Disposition": f"attachment; filename={event.slug}_qrcodes.zip",
+        "Content-Disposition": f"attachment; filename=qrcodes_{clean_slug or 'event'}.zip",
         "Access-Control-Expose-Headers": "Content-Disposition"
     }
     return StreamingResponse(zip_buffer, media_type="application/x-zip-compressed", headers=headers)

@@ -87,6 +87,15 @@ const StaffAssignment = dynamic(() => import("@/components/StaffAssignment"), {
   ssr: false
 });
 
+const getSafeExportFileName = (prefix: string, name: string | undefined, ext: string = "xlsx"): string => {
+  const clean = (name || "event")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 20);
+  return `${prefix}_${clean || "event"}.${ext}`;
+};
+
 const getAnswerString = (ans: any): string => {
   if (ans === null || ans === undefined) return "—";
   if (Array.isArray(ans)) {
@@ -921,7 +930,8 @@ export default function EventDetailsPage() {
       });
       worksheet["!cols"] = cols;
       
-      XLSX.writeFile(workbook, `registrants_template_${event?.slug || "event"}.xlsx`);
+      const fileName = getSafeExportFileName("template", event?.slug || event?.title, "xlsx");
+      XLSX.writeFile(workbook, fileName);
     });
   };
 
@@ -1460,7 +1470,7 @@ export default function EventDetailsPage() {
     // Filter out basic identity fields already exported separately
     const displayFields = flatFields.filter(f => f && !["first_name", "last_name", "email", "company"].includes(f.key || f.id || ""));
 
-    // Define headers
+    // Define headers (clean plain text for both Excel and CSV)
     const headers = [
       "First Name", 
       "Last Name", 
@@ -1475,23 +1485,10 @@ export default function EventDetailsPage() {
         : []
       ),
       "Registered At",
-      ...displayFields.map(f => {
-        const lbl = (f.label || f.title || "").replace(/<[^>]*>/g, "").trim();
-        return `"${lbl.replace(/"/g, '""')}"`;
-      })
+      ...displayFields.map(f => (f.label || f.title || "").replace(/<[^>]*>/g, "").trim())
     ];
 
-    // Helper to escape CSV values (wrap in quotes, escape existing quotes)
-    const escapeCSV = (val: any) => {
-      if (val === null || val === undefined) return "";
-      let str = String(val);
-      if (str.includes(",") || str.includes('"') || str.includes("\n")) {
-        return `"${str.replace(/"/g, '""')}"`;
-      }
-      return str;
-    };
-
-    const rows = filteredRegistrations.map(reg => {
+    const rawRows = filteredRegistrations.map(reg => {
       const checkedInDaysStr = reg.checked_in_days && reg.checked_in_days.length > 0
         ? reg.checked_in_days.map(d => `Day ${d}`).join(", ")
         : "None";
@@ -1507,51 +1504,70 @@ export default function EventDetailsPage() {
       const qrLinkVal = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${pinVal}`;
 
       const basicInfo = [
-        escapeCSV(reg.attendee.first_name),
-        escapeCSV(reg.attendee.last_name),
-        escapeCSV(reg.attendee.email),
-        escapeCSV(reg.attendee.company || ""),
-        escapeCSV(reg.status),
-        escapeCSV(pinVal),
-        escapeCSV(qrLinkVal),
-        escapeCSV(reg.checked_in ? "Yes" : "No"),
+        reg.attendee?.first_name || "",
+        reg.attendee?.last_name || "",
+        reg.attendee?.email || "",
+        reg.attendee?.company || "",
+        reg.status || "",
+        pinVal,
+        qrLinkVal,
+        reg.checked_in ? "Yes" : "No",
         ...(event?.duration_days && event.duration_days > 1
-          ? [escapeCSV(checkedInDaysStr), ...dailyCheckIns]
+          ? [checkedInDaysStr, ...dailyCheckIns]
           : []
         ),
-        escapeCSV(new Date(reg.created_at).toLocaleString()),
+        reg.created_at ? new Date(reg.created_at).toLocaleString() : "",
       ];
 
       const customInfo = displayFields.map(f => {
         const val = getCustomAnswer(reg.custom_answers, f);
         if (val === null || val === undefined || val === "") return "";
         if (typeof val === "boolean") return val ? "Yes" : "No";
-        if (Array.isArray(val)) return escapeCSV(val.join(", "));
+        if (Array.isArray(val)) return val.join(", ");
         if (typeof val === "object") {
           if (val.first_name || val.last_name || val.email) {
-            return escapeCSV(`${val.first_name || ""} ${val.last_name || ""} (${val.email || ""})`.trim());
+            return `${val.first_name || ""} ${val.last_name || ""} (${val.email || ""})`.trim();
           }
-          return escapeCSV(JSON.stringify(val));
+          return JSON.stringify(val);
         }
-        return escapeCSV(val);
+        return String(val);
       });
 
       return [...basicInfo, ...customInfo];
     });
-    
-    const csvContent = [
-      headers.join(","),
-      ...rows.map(r => r.join(","))
-    ].join("\n");
-    
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `registrants_${event?.title?.replace(/\s+/g, '_') || 'event'}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+
+    const excelFileName = getSafeExportFileName("registrants", event?.slug || event?.title, "xlsx");
+
+    import("xlsx").then((XLSX) => {
+      const worksheet = XLSX.utils.aoa_to_sheet([headers, ...rawRows]);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Registrants");
+      XLSX.writeFile(workbook, excelFileName);
+    }).catch((err) => {
+      console.error("XLSX export failed, falling back to CSV", err);
+      // Fallback to CSV if xlsx fails
+      const escapeCSV = (val: any) => {
+        if (val === null || val === undefined) return "";
+        let str = String(val);
+        if (str.includes(",") || str.includes('"') || str.includes("\n")) {
+          return `"${str.replace(/"/g, '""')}"`;
+        }
+        return str;
+      };
+
+      const csvHeaders = headers.map(h => `"${h.replace(/"/g, '""')}"`);
+      const csvRows = rawRows.map(r => r.map(escapeCSV).join(","));
+      const csvContent = [csvHeaders.join(","), ...csvRows].join("\n");
+      
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", getSafeExportFileName("registrants", event?.slug || event?.title, "csv"));
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    });
   };
 
   const declinedCount = registrations.filter(r => r.status === "declined").length;
@@ -2331,7 +2347,7 @@ export default function EventDetailsPage() {
                         const url = window.URL.createObjectURL(blob);
                         const a = document.createElement("a");
                         a.href = url;
-                        a.download = `${event.slug}_qrcodes.zip`;
+                        a.download = getSafeExportFileName("qrcodes", event?.slug || event?.title, "zip");
                         document.body.appendChild(a);
                         a.click();
                         a.remove();
