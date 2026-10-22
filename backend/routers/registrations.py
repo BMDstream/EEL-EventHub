@@ -62,6 +62,17 @@ def register_attendee(
     event_id = data.get("event_id")
     raw_email = data.get("email", "")
     email = raw_email.strip().lower()
+    first_name = data.get("first_name", "").strip()
+    last_name = data.get("last_name", "").strip()
+    company = data.get("company", "").strip()
+    
+    # Always enforce core identity requirements
+    if not email or "@" not in email:
+        raise HTTPException(status_code=400, detail="A valid email address is required.")
+    if not first_name:
+        raise HTTPException(status_code=400, detail="First name is required.")
+    if not last_name:
+        raise HTTPException(status_code=400, detail="Last name is required.")
     
     # Domain restriction and status check
     if event_id:
@@ -154,57 +165,64 @@ def register_attendee(
 
             # Validate each field in fields_schema
             is_attending = data.get("is_attending", True)
-            if is_attending:
-                for field in fields_schema:
-                    if field.get("inactive"):
-                        continue
-                    field_key = field.get("key") or field.get("id")
-                    if not field_key:
-                        continue
-                    
-                    val = None
-                    if field_key in ["first_name", "last_name", "email", "company"]:
-                        val = data.get(field_key)
-                    else:
-                        val = data.get("custom_answers", {}).get(field_key)
-                    
-                    depends_on = field.get("dependsOn")
-                    if depends_on and isinstance(depends_on, dict):
-                        parent_id = depends_on.get("fieldId")
-                        expected_val = str(depends_on.get("value") or "").strip().lower()
-                        custom_answers = data.get("custom_answers", {})
-                        parent_val = custom_answers.get(parent_id)
-                        if parent_val is None:
-                            for sec in active_schema:
-                                sec_fields = sec.get("fields", []) if isinstance(sec, dict) else []
-                                for sf in sec_fields:
-                                    if sf.get("id") == parent_id or sf.get("key") == parent_id:
-                                        parent_val = custom_answers.get(sf.get("key")) or custom_answers.get(sf.get("id"))
-                                        break
-                                if parent_val is not None:
+            if getattr(event, "company_required", False) and not company:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Organization / Company is required."
+                )
+            for field in fields_schema:
+                if field.get("inactive"):
+                    continue
+                # If declining, only validate fields that appear before attendance status or core identity fields
+                if not is_attending and not field.get("showBeforeAttendance") and field.get("key") not in ["first_name", "last_name", "email", "company"]:
+                    continue
+                field_key = field.get("key") or field.get("id")
+                if not field_key:
+                    continue
+                
+                val = None
+                if field_key in ["first_name", "last_name", "email", "company"]:
+                    val = data.get(field_key)
+                else:
+                    val = data.get("custom_answers", {}).get(field_key)
+                
+                depends_on = field.get("dependsOn")
+                if depends_on and isinstance(depends_on, dict):
+                    parent_id = depends_on.get("fieldId")
+                    expected_val = str(depends_on.get("value") or "").strip().lower()
+                    custom_answers = data.get("custom_answers", {})
+                    parent_val = custom_answers.get(parent_id)
+                    if parent_val is None:
+                        for sec in active_schema:
+                            sec_fields = sec.get("fields", []) if isinstance(sec, dict) else []
+                            for sf in sec_fields:
+                                if sf.get("id") == parent_id or sf.get("key") == parent_id:
+                                    parent_val = custom_answers.get(sf.get("key")) or custom_answers.get(sf.get("id"))
                                     break
-                        parent_val_str = str(parent_val or "").strip().lower()
-                        matched = (
-                            parent_val_str == expected_val or
-                            (len(expected_val) >= 3 and parent_val_str.startswith(expected_val)) or
-                            (len(parent_val_str) >= 3 and expected_val.startswith(parent_val_str))
-                        )
-                        if not matched:
-                            continue
+                            if parent_val is not None:
+                                break
+                    parent_val_str = str(parent_val or "").strip().lower()
+                    matched = (
+                        parent_val_str == expected_val or
+                        (len(expected_val) >= 3 and parent_val_str.startswith(expected_val)) or
+                        (len(parent_val_str) >= 3 and expected_val.startswith(parent_val_str))
+                    )
+                    if not matched:
+                        continue
 
-                    if field.get("visible", True) and field.get("required"):
-                        if val is None or (isinstance(val, str) and not val.strip()) or (isinstance(val, list) and not val):
-                            if field.get("type") == "partner_card":
-                                if not isinstance(val, dict) or not val.get("first_name") or not val.get("last_name") or not val.get("email"):
-                                    raise HTTPException(
-                                        status_code=400,
-                                        detail=f"Please fill out all partner details for '{field.get('label')}'."
-                                    )
-                            else:
+                if field.get("visible", True) and field.get("required"):
+                    if val is None or (isinstance(val, str) and not val.strip()) or (isinstance(val, list) and not val):
+                        if field.get("type") == "partner_card":
+                            if not isinstance(val, dict) or not val.get("first_name") or not val.get("last_name") or not val.get("email"):
                                 raise HTTPException(
                                     status_code=400,
-                                    detail=f"'{field.get('label')}' is required."
+                                    detail=f"Please fill out all partner details for '{field.get('label')}'."
                                 )
+                        else:
+                            raise HTTPException(
+                                status_code=400,
+                                detail=f"'{field.get('label')}' is required."
+                            )
 
                 # Enforce capacity check
                 existing_reg = None

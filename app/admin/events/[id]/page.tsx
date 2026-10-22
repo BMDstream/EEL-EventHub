@@ -4534,6 +4534,7 @@ export default function EventDetailsPage() {
                             className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400 outline-none font-bold text-[#0f172a] dark:text-white text-sm capitalize"
                           >
                             <option value="confirmed">confirmed</option>
+                            <option value="declined">declined</option>
                             <option value="waitlisted">waitlisted</option>
                             <option value="cancelled">cancelled</option>
                           </select>

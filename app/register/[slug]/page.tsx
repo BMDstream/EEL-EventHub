@@ -520,6 +520,10 @@ function PublicRegistrationPageContent() {
       const isStandardField = ["first_name", "last_name", "email", "company"].includes(field.key);
       const value = isStandardField ? formData[field.key as keyof typeof formData] : (customAnswers[field.key || field.id] || "");
 
+      const isIdentityField = ["first_name", "last_name", "email"].includes(field.key || field.id) ||
+                              (field.key === "company" && !!event?.company_required);
+      const isFieldRequired = field.required && (isIdentityField || !!field.showBeforeAttendance || isAttending !== false);
+
       const handleFieldChange = (val: any) => {
         if (isStandardField) {
           setFormData(prev => ({ ...prev, [field.key]: val }));
@@ -532,7 +536,7 @@ function PublicRegistrationPageContent() {
         <div key={field.id} className={`space-y-3 ${textAlignClass}`}>
           <label className={`${style.label} client-question-label flex items-center flex-wrap gap-1 ${flexAlignClass}`}>
             <span dangerouslySetInnerHTML={{ __html: formatLabel(field.label) }} />
-            {field.required && <span className={`${isLightTheme ? "client-text-primary" : "client-text-accent"} ml-0.5 font-bold`}>*</span>}
+            {isFieldRequired && <span className={`${isLightTheme ? "client-text-primary" : "client-text-accent"} ml-0.5 font-bold`}>*</span>}
           </label>
           
           {field.description && (
@@ -554,7 +558,7 @@ function PublicRegistrationPageContent() {
           
           {(field.type === "text" || field.type === "email") && (
             <input
-              required={isAttending !== false && field.required}
+              required={isFieldRequired}
               type={field.type === "email" ? "email" : "text"}
               placeholder={field.placeholder || "Enter your answer"}
               value={value as string}
@@ -565,7 +569,7 @@ function PublicRegistrationPageContent() {
 
           {field.type === "numeric" && (
             <input
-              required={isAttending !== false && field.required}
+              required={isFieldRequired}
               type="tel"
               inputMode="numeric"
               placeholder={field.placeholder || "Numbers only"}
@@ -581,7 +585,7 @@ function PublicRegistrationPageContent() {
           {field.type === "select" && (
             <div className="relative">
               <select
-                required={isAttending !== false && field.required}
+                required={isFieldRequired}
                 value={value as string}
                 onChange={(e) => handleFieldChange(e.target.value)}
                 className={`${style.select} ${textAlignClass} ${!customInputBg && isFormLight ? '!bg-slate-50 !border-slate-300 !text-slate-900 focus:!bg-white focus:!border-slate-500' : ''}`}
@@ -836,6 +840,24 @@ function PublicRegistrationPageContent() {
       return;
     }
     
+    // Always validate core identity fields regardless of attendance status
+    if (!formData.first_name?.trim()) {
+      setSubmitError("Please enter your First Name.");
+      return;
+    }
+    if (!formData.last_name?.trim()) {
+      setSubmitError("Please enter your Last Name.");
+      return;
+    }
+    if (!formData.email?.trim() || !formData.email.includes("@")) {
+      setSubmitError("Please enter a valid Email Address.");
+      return;
+    }
+    if (event.company_required && !formData.company?.trim()) {
+      setSubmitError("Please enter your Organization / Company.");
+      return;
+    }
+
     // Enforce disclaimer acceptance
     if (isAttending && event.disclaimer_enabled && event.disclaimer_text && !disclaimerAccepted) {
       setSubmitError("You must read and accept the Disclaimer and Indemnity to register.");
@@ -844,6 +866,22 @@ function PublicRegistrationPageContent() {
     
     // Validate partner card fields (identical check and corporate domain validation)
     const flatFields = getFlatFields();
+    if (!isAttending && flatFields.length > 0) {
+      for (const field of flatFields) {
+        if (field.inactive || field.visible === false) continue;
+        if (!field.showBeforeAttendance) continue;
+        if (field.dependsOn && !isDependencyMet(field, flatFields, customAnswers)) continue;
+        if (field.required) {
+          const fieldKey = field.key || field.id;
+          if (["first_name", "last_name", "email", "company"].includes(fieldKey)) continue;
+          const val = customAnswers[fieldKey];
+          if (val === undefined || val === null || (typeof val === "string" && !val.trim()) || (Array.isArray(val) && val.length === 0)) {
+            setSubmitError(`Please answer "${field.label.replace(/<[^>]*>/g, "")}".`);
+            return;
+          }
+        }
+      }
+    }
     if (isAttending && flatFields.length > 0) {
       for (const field of flatFields) {
         if (field.inactive || field.visible === false) continue;
