@@ -193,20 +193,26 @@ def register_attendee(
                     custom_answers = data.get("custom_answers", {})
                     parent_val = custom_answers.get(parent_id)
                     if parent_val is None:
-                        for sec in active_schema:
-                            sec_fields = sec.get("fields", []) if isinstance(sec, dict) else []
-                            for sf in sec_fields:
-                                if sf.get("id") == parent_id or sf.get("key") == parent_id:
-                                    parent_val = custom_answers.get(sf.get("key")) or custom_answers.get(sf.get("id"))
-                                    break
-                            if parent_val is not None:
+                        for sf in fields_schema:
+                            if sf.get("id") == parent_id or sf.get("key") == parent_id:
+                                parent_val = custom_answers.get(sf.get("key")) or custom_answers.get(sf.get("id"))
+                                if parent_val is None and sf.get("key") in ["first_name", "last_name", "email", "company"]:
+                                    parent_val = data.get(sf.get("key"))
                                 break
-                    parent_val_str = str(parent_val or "").strip().lower()
-                    matched = (
-                        parent_val_str == expected_val or
-                        (len(expected_val) >= 3 and parent_val_str.startswith(expected_val)) or
-                        (len(parent_val_str) >= 3 and expected_val.startswith(parent_val_str))
-                    )
+                    matched = False
+                    if isinstance(parent_val, list):
+                        for pv in parent_val:
+                            pv_str = str(pv or "").strip().lower()
+                            if pv_str == expected_val or (len(expected_val) >= 3 and pv_str.startswith(expected_val)) or (len(pv_str) >= 3 and expected_val.startswith(pv_str)):
+                                matched = True
+                                break
+                    else:
+                        parent_val_str = str(parent_val or "").strip().lower()
+                        matched = (
+                            parent_val_str == expected_val or
+                            (len(expected_val) >= 3 and parent_val_str.startswith(expected_val)) or
+                            (len(parent_val_str) >= 3 and expected_val.startswith(parent_val_str))
+                        )
                     if not matched:
                         continue
 
@@ -224,7 +230,8 @@ def register_attendee(
                                 detail=f"'{field.get('label')}' is required."
                             )
 
-                # Enforce capacity check
+            # Enforce capacity check
+            if is_attending:
                 existing_reg = None
                 try:
                     attendee_lookup = session.exec(
@@ -560,6 +567,7 @@ def register_attendee(
             
             # Get host dynamically to construct absolute URLs
             host = request.headers.get("host", "eel-event-hub-q61e.vercel.app")
+            scheme = "https" if ("https" in request.headers.get("x-forwarded-proto", "") or "localhost" not in host) else "http"
             import urllib.parse
             clean_slug = urllib.parse.quote(str(event.slug or "").replace("&nbsp;", " ").replace("\u00a0", " ").strip())
             challenger_update_link = f"{scheme}://{host}/register/{clean_slug}?email={email}&first_name={first_name}&last_name={last_name}"
