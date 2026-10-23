@@ -109,15 +109,43 @@ export default function BadgePrintPage() {
 
   // Filtered List
   const filteredRegistrants = registrants.filter((r) => {
+    const search = searchTerm.toLowerCase().trim();
+    if (!search) return true;
     const name = `${r.attendee?.first_name || ""} ${r.attendee?.last_name || ""}`.toLowerCase();
     const company = (r.attendee?.company || "").toLowerCase();
     const email = (r.attendee?.email || "").toLowerCase();
     const pin = (r.pin || "").toLowerCase();
     
-    return name.includes(searchTerm.toLowerCase()) || 
-           company.includes(searchTerm.toLowerCase()) || 
-           email.includes(searchTerm.toLowerCase()) ||
-           pin.includes(searchTerm.toLowerCase());
+    let customAnswersMatch = false;
+    if (r.custom_answers) {
+      let ca: any = r.custom_answers;
+      if (typeof ca === "string") {
+        try {
+          ca = JSON.parse(ca);
+          if (typeof ca === "string") ca = JSON.parse(ca);
+        } catch {}
+      }
+      if (ca && typeof ca === "object") {
+        customAnswersMatch = Object.values(ca).some((val: any) => {
+          if (val === null || val === undefined) return false;
+          if (typeof val === "string") return val.toLowerCase().includes(search);
+          if (typeof val === "number") return String(val).toLowerCase().includes(search);
+          if (typeof val === "object") {
+            if (val.first_name && String(val.first_name).toLowerCase().includes(search)) return true;
+            if (val.last_name && String(val.last_name).toLowerCase().includes(search)) return true;
+            if (val.email && String(val.email).toLowerCase().includes(search)) return true;
+            return JSON.stringify(val).toLowerCase().includes(search);
+          }
+          return false;
+        });
+      }
+    }
+    
+    return name.includes(search) || 
+           company.includes(search) || 
+           email.includes(search) ||
+           pin.includes(search) ||
+           customAnswersMatch;
   });
 
   const toggleSelect = (regId: string) => {

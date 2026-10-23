@@ -1598,15 +1598,43 @@ export default function EventDetailsPage() {
   const filteredRegistrations = useMemo(() => {
     return registrations
       .filter(reg => {
-        const search = searchTerm.toLowerCase();
-        const matchesSearch = (
+        const search = searchTerm.toLowerCase().trim();
+        let customAnswersMatch = false;
+        if (search && reg.custom_answers) {
+          let ca: any = reg.custom_answers;
+          if (typeof ca === "string") {
+            try {
+              ca = JSON.parse(ca);
+              if (typeof ca === "string") ca = JSON.parse(ca);
+            } catch {}
+          }
+          if (ca && typeof ca === "object") {
+            customAnswersMatch = Object.values(ca).some((val: any) => {
+              if (val === null || val === undefined) return false;
+              if (typeof val === "string") return val.toLowerCase().includes(search);
+              if (typeof val === "number") return String(val).toLowerCase().includes(search);
+              if (typeof val === "object") {
+                if (val.first_name && String(val.first_name).toLowerCase().includes(search)) return true;
+                if (val.last_name && String(val.last_name).toLowerCase().includes(search)) return true;
+                if (val.email && String(val.email).toLowerCase().includes(search)) return true;
+                return JSON.stringify(val).toLowerCase().includes(search);
+              }
+              return false;
+            });
+          }
+        }
+
+        const fullName = `${reg.attendee?.first_name || ""} ${reg.attendee?.last_name || ""}`.toLowerCase();
+        const matchesSearch = !search || (
+          fullName.includes(search) ||
           (reg.attendee?.first_name || "").toLowerCase().includes(search) ||
           (reg.attendee?.last_name || "").toLowerCase().includes(search) ||
           (reg.attendee?.email || "").toLowerCase().includes(search) ||
           (reg.attendee?.company || "").toLowerCase().includes(search) ||
           (reg.pin ? String(reg.pin).toLowerCase().includes(search) : false) ||
           (reg.id ? String(reg.id).toLowerCase().includes(search) : false) ||
-          ((reg as any).clearance_id ? String((reg as any).clearance_id).toLowerCase().includes(search) : false)
+          ((reg as any).clearance_id ? String((reg as any).clearance_id).toLowerCase().includes(search) : false) ||
+          customAnswersMatch
         );
         if (!matchesSearch) return false;
         
@@ -2555,7 +2583,7 @@ export default function EventDetailsPage() {
                   <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 dark:text-slate-500" size={18} />
                   <input 
                     type="text" 
-                    placeholder="Search attendee by name, email, or PIN..." 
+                    placeholder="Search by name, email, PIN, company, or answer (e.g. Player, Spectator)..." 
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     onKeyDown={(e) => {
