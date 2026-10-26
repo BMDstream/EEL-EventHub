@@ -29,8 +29,9 @@ def read_events(
         raise HTTPException(status_code=401, detail="Authentication required")
         
     import time
+    from backend.database import is_preview_env
     now_ts = time.time()
-    cache_key = (current_user.id, current_user.role)
+    cache_key = (current_user.id, current_user.role, is_preview_env())
     cached = _events_list_cache.get(cache_key)
     if cached and now_ts < cached[1]:
         return cached[0]
@@ -353,8 +354,9 @@ def read_event_by_id(
     current_user: Optional[User] = Depends(get_current_user_from_request)
 ):
     import time
+    from backend.database import is_preview_env
     now_ts = time.time()
-    cache_key = (event_id, current_user.id if current_user else 0)
+    cache_key = (event_id, current_user.id if current_user else 0, is_preview_env())
     cached = _event_by_id_cache.get(cache_key)
     if cached and (now_ts < cached[1]):
         return cached[0]
@@ -788,8 +790,9 @@ def get_analytics(
         raise HTTPException(status_code=401, detail="Authentication required")
         
     import time
+    from backend.database import is_preview_env
     now_ts = time.time()
-    cache_key = (current_user.id, current_user.role)
+    cache_key = (current_user.id, current_user.role, is_preview_env())
     if not fresh:
         cached = _analytics_cache.get(cache_key)
         if cached and now_ts < cached[1]:

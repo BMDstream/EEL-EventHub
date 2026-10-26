@@ -689,7 +689,9 @@ _REGISTRATIONS_CACHE_TTL = 30  # 30 seconds
 def invalidate_registrations_cache(event_id: Optional[int] = None):
     """Invalidates the in-memory cache for event registrations."""
     if event_id:
-        _registrations_cache.pop(event_id, None)
+        keys_to_del = [k for k in _registrations_cache if k == event_id or (isinstance(k, tuple) and k[0] == event_id)]
+        for k in keys_to_del:
+            _registrations_cache.pop(k, None)
     else:
         _registrations_cache.clear()
 
@@ -700,8 +702,10 @@ def get_event_registrations(
     current_user: Optional[User] = Depends(get_current_user_from_request)
 ):
     import time
+    from backend.database import is_preview_env
     now_ts = time.time()
-    cached = _registrations_cache.get(event_id)
+    cache_key = (event_id, is_preview_env())
+    cached = _registrations_cache.get(cache_key)
     if cached and now_ts < cached[1]:
         return cached[0]
 
@@ -730,7 +734,7 @@ def get_event_registrations(
             "attendee": att
         } for reg, att in registrations
     ]
-    _registrations_cache[event_id] = (result, now_ts + _REGISTRATIONS_CACHE_TTL)
+    _registrations_cache[cache_key] = (result, now_ts + _REGISTRATIONS_CACHE_TTL)
     return result
 
 @router.get("/events/{event_id}/qrcodes/zip")

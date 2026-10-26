@@ -283,14 +283,11 @@ class EmailTemplateCreate(BaseModel):
 class SendTestEmailPayload(BaseModel):
     email: str
 
-_cached_templates: Optional[List[EmailTemplate]] = None
-_cached_templates_time: float = 0
+_cached_templates: dict = {}
 _TEMPLATES_CACHE_TTL: int = 300  # Cache templates in memory for 5 minutes
 
 def invalidate_templates_cache():
-    global _cached_templates, _cached_templates_time
-    _cached_templates = None
-    _cached_templates_time = 0
+    _cached_templates.clear()
 
 @router.get("/settings/templates", response_model=List[EmailTemplate])
 def get_all_templates(
@@ -301,10 +298,12 @@ def get_all_templates(
         raise HTTPException(status_code=403, detail="Only authenticated users can view email templates")
 
     import time
-    global _cached_templates, _cached_templates_time
+    from backend.database import is_preview_env
     now_ts = time.time()
-    if _cached_templates is not None and (now_ts - _cached_templates_time < _TEMPLATES_CACHE_TTL):
-        return _cached_templates
+    env_key = is_preview_env()
+    cached = _cached_templates.get(env_key)
+    if cached and (now_ts - cached[1] < _TEMPLATES_CACHE_TTL):
+        return cached[0]
 
     # Self-healing: Check if any default templates are missing and seed them on the fly
     from backend.default_templates import DEFAULT_TEMPLATES
@@ -332,9 +331,19 @@ def get_all_templates(
             session.rollback()
             print(f"Error seeding missing templates: {e}")
 
-    _cached_templates = existing_templates
-    _cached_templates_time = now_ts
-    return existing_templates
+    detached_templates = [
+        EmailTemplate(
+            id=t.id,
+            key=t.key,
+            name=t.name,
+            subject=t.subject,
+            body_html=t.body_html,
+            created_at=t.created_at,
+            updated_at=t.updated_at
+        ) for t in existing_templates
+    ]
+    _cached_templates[env_key] = (detached_templates, now_ts)
+    return detached_templates
 
 @router.post("/settings/templates", response_model=EmailTemplate)
 def create_template(

@@ -25,7 +25,10 @@ _USER_AUTH_CACHE_TTL: int = 60  # Cache verified users for 60 seconds across par
 def invalidate_user_auth_cache(email: Optional[str] = None):
     """Invalidates the in-memory user authentication cache."""
     if email:
-        _user_auth_cache.pop(email.strip().lower(), None)
+        email_clean = email.strip().lower()
+        keys_to_del = [k for k in _user_auth_cache if k == email_clean or (isinstance(k, tuple) and k[0] == email_clean)]
+        for k in keys_to_del:
+            _user_auth_cache.pop(k, None)
     else:
         _user_auth_cache.clear()
 
@@ -40,11 +43,13 @@ def get_current_user_from_request(
         return None
 
     import time
+    from backend.database import is_preview_env
     user_email_clean = user_email.lower()
     now_ts = time.time()
+    user_key = (user_email_clean, is_preview_env(request))
 
     # Check fast in-memory cache to prevent multiple parallel database roundtrips
-    cached = _user_auth_cache.get(user_email_clean)
+    cached = _user_auth_cache.get(user_key)
     if cached and (now_ts - cached[1] < _USER_AUTH_CACHE_TTL):
         return cached[0]
 
@@ -55,6 +60,7 @@ def get_current_user_from_request(
         user = session.exec(select(User).where(func.lower(User.email) == user_email_clean)).first()
 
     if user:
+        user_clients = list(user.clients or []) if hasattr(user, "clients") else []
         # Detached copy safe for cross-session in-memory cache
         cached_user = User(
             id=user.id,
@@ -64,7 +70,8 @@ def get_current_user_from_request(
             permissions=list(user.permissions or []),
             is_active=user.is_active
         )
-        _user_auth_cache[user_email_clean] = (cached_user, now_ts)
+        cached_user.clients = user_clients
+        _user_auth_cache[user_key] = (cached_user, now_ts)
         user = cached_user
     
     # Track Active Session (throttled to at most once every 5 minutes per user to preserve DB connection pool)

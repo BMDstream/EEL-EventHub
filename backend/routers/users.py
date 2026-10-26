@@ -30,7 +30,9 @@ def read_users(
         raise HTTPException(status_code=403, detail="Only admins can view users")
         
     now_ts = time.time()
-    cached = _users_list_cache.get("all_users")
+    from backend.database import is_preview_env
+    cache_key = ("all_users", is_preview_env())
+    cached = _users_list_cache.get(cache_key)
     if cached and now_ts < cached[1]:
         return cached[0]
 
@@ -55,7 +57,7 @@ def read_users(
         u_dict["clients"] = clients_enriched
         result.append(u_dict)
         
-    _users_list_cache["all_users"] = (result, now_ts + _USERS_CACHE_TTL)
+    _users_list_cache[cache_key] = (result, now_ts + _USERS_CACHE_TTL)
     return result
 
 @router.post("", response_model=User)

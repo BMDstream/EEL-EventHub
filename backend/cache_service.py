@@ -24,21 +24,30 @@ if REDIS_URL:
     except Exception as e:
         print(f"Failed to initialize Redis connection: {e}")
 
+def _get_cache_key(slug: str) -> str:
+    try:
+        from backend.database import is_preview_env
+        env_suffix = "preview" if is_preview_env() else "prod"
+    except Exception:
+        env_suffix = "prod"
+    return f"event:{slug}:{env_suffix}"
+
 def get_cached_event(slug: str) -> Optional[Any]:
     """
     Retrieves the cached event schema for a given slug.
     Falls back to high-speed in-memory cache when Redis is unavailable.
     """
+    key = _get_cache_key(slug)
     if redis_client:
         try:
-            data = redis_client.get(f"event:{slug}")
+            data = redis_client.get(key)
             if data:
                 return json.loads(data)
         except Exception as e:
             print(f"Redis GET error: {e}")
     
     # In-memory fallback check
-    cached = _in_memory_event_cache.get(f"event:{slug}")
+    cached = _in_memory_event_cache.get(key)
     if cached and time.time() < cached[1]:
         return cached[0]
     return None
@@ -48,10 +57,11 @@ def set_cached_event(slug: str, data: Any, expire_seconds: int = 300) -> bool:
     Caches the event schema for a given slug with a default expiration.
     Falls back to high-speed in-memory cache when Redis is unavailable.
     """
+    key = _get_cache_key(slug)
     if redis_client:
         try:
             redis_client.setex(
-                f"event:{slug}",
+                key,
                 expire_seconds,
                 json.dumps(data)
             )
@@ -60,18 +70,22 @@ def set_cached_event(slug: str, data: Any, expire_seconds: int = 300) -> bool:
             print(f"Redis SETEX error: {e}")
             
     # In-memory fallback storage
-    _in_memory_event_cache[f"event:{slug}"] = (data, time.time() + expire_seconds)
+    _in_memory_event_cache[key] = (data, time.time() + expire_seconds)
     return True
 
 def clear_cached_event(slug: str) -> bool:
     """
     Clears the cached event schema for a given slug.
     """
+    key_prod = f"event:{slug}:prod"
+    key_prev = f"event:{slug}:preview"
     if redis_client:
         try:
-            redis_client.delete(f"event:{slug}")
+            redis_client.delete(key_prod, key_prev, f"event:{slug}")
         except Exception as e:
             print(f"Redis DELETE error: {e}")
             
+    _in_memory_event_cache.pop(key_prod, None)
+    _in_memory_event_cache.pop(key_prev, None)
     _in_memory_event_cache.pop(f"event:{slug}", None)
     return True
