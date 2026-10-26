@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import useSWR from "swr";
+import { getAppEnvironmentHeaders } from "@/lib/env-utils";
 import { Users, Plus, Shield, Mail, Trash2, Loader2, CheckCircle2, Lock, Building2, X, Key, Upload, Download, Save, ArrowUpDown, Search } from "lucide-react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
@@ -23,13 +24,13 @@ export default function UserManagementPage() {
   const { data: usersData, mutate: mutateUsers } = useSWR<User[]>(
     session?.user?.email && userRole === "admin" ? ["/api/py/users", session.user.email] : null,
     ([url, email]: [string, string]) =>
-      fetch(url, { headers: { "x-user-email": email } }).then(r => r.json())
+      fetch(url, { headers: { "x-user-email": email, ...getAppEnvironmentHeaders() } }).then(r => r.json())
   );
 
   const { data: clientsData } = useSWR<any[]>(
     session?.user?.email && userRole === "admin" ? ["/api/py/clients", session.user.email] : null,
     ([url, email]: [string, string]) =>
-      fetch(url, { headers: { "x-user-email": email } }).then(r => r.json())
+      fetch(url, { headers: { "x-user-email": email, ...getAppEnvironmentHeaders() } }).then(r => r.json())
   );
   
   const [users, setUsers] = useState<User[]>([]);

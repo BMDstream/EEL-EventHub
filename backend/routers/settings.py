@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session, select
 from sqlalchemy import text
 from typing import List, Dict, Any, Optional
+import time
 
 from backend.database import get_session
 from backend.models import User, Client, SystemSetting, Event, EmailTemplate, RegistrationFormTemplate
@@ -127,11 +128,8 @@ def update_approved_sender_emails(
 
 
 
-_clients_cache: dict = {}
-_CLIENTS_CACHE_TTL = 60
-
 def invalidate_clients_cache():
-    _clients_cache.clear()
+    pass
 
 @router.get("/clients", response_model=List[Client])
 def get_clients(
@@ -140,20 +138,9 @@ def get_clients(
 ):
     if not current_user:
         raise HTTPException(status_code=401, detail="Authentication required")
-        
-    now_ts = time.time()
-    cache_key = (current_user.id, current_user.role)
-    cached = _clients_cache.get(cache_key)
-    if cached and now_ts < cached[1]:
-        return cached[0]
-
     if current_user.role == "admin":
-        res = session.exec(select(Client)).all()
-    else:
-        res = current_user.clients
-        
-    _clients_cache[cache_key] = (res, now_ts + _CLIENTS_CACHE_TTL)
-    return res
+        return session.exec(select(Client).order_by(Client.id.asc())).all()
+    return current_user.clients
 
 @router.post("/clients", response_model=Client)
 def create_client(

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import useSWR from "swr";
+import { getAppEnvironmentHeaders } from "@/lib/env-utils";
 import { 
   Building2, 
   Plus, 
@@ -38,10 +39,15 @@ interface Client {
 const fetcher = async (url: string, email: string): Promise<Client[]> => {
   const res = await fetch(url, {
     headers: {
-      "x-user-email": email
+      "x-user-email": email,
+      ...getAppEnvironmentHeaders()
     }
   });
-  if (!res.ok) throw new Error("Failed to fetch clients");
+  if (!res.ok) {
+    const errorText = await res.text();
+    console.error("Failed to fetch clients:", res.status, errorText);
+    throw new Error(`Failed to fetch clients (${res.status})`);
+  }
   const data = await res.json();
   return Array.isArray(data) ? data : [];
 };
@@ -174,7 +180,8 @@ export default function ClientsPage() {
         method,
         headers: { 
           "Content-Type": "application/json",
-          "x-user-email": session?.user?.email || ""
+          "x-user-email": session?.user?.email || "",
+          ...getAppEnvironmentHeaders()
         },
         body: JSON.stringify(payload)
       });
@@ -202,7 +209,8 @@ export default function ClientsPage() {
       const res = await fetch(`/api/py/clients/${id}`, {
         method: "DELETE",
         headers: {
-          "x-user-email": session?.user?.email || ""
+          "x-user-email": session?.user?.email || "",
+          ...getAppEnvironmentHeaders()
         }
       });
       if (res.ok) {
