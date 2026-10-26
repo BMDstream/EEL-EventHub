@@ -7,7 +7,8 @@ from backend.database import get_session
 from backend.models import User
 from backend.utils import (
     get_current_user_from_request,
-    hash_password
+    hash_password,
+    invalidate_user_auth_cache
 )
 
 router = APIRouter()
@@ -123,6 +124,7 @@ def update_user(
     session.add(db_user)
     session.commit()
     session.refresh(db_user)
+    invalidate_user_auth_cache(db_user.email)
     return db_user
 
 @router.delete("/{user_id}")
@@ -143,8 +145,10 @@ def delete_user(
     try:
         session.execute(text('DELETE FROM "userclientlink" WHERE user_id = :uid'), {"uid": user_id})
         session.execute(text('DELETE FROM "usereventlink" WHERE user_id = :uid'), {"uid": user_id})
+        user_email = user.email
         session.delete(user)
         session.commit()
+        invalidate_user_auth_cache(user_email)
     except Exception as e:
         session.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to delete user: {str(e)}")

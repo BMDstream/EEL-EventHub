@@ -271,6 +271,15 @@ class EmailTemplateCreate(BaseModel):
 class SendTestEmailPayload(BaseModel):
     email: str
 
+_cached_templates: Optional[List[EmailTemplate]] = None
+_cached_templates_time: float = 0
+_TEMPLATES_CACHE_TTL: int = 300  # Cache templates in memory for 5 minutes
+
+def invalidate_templates_cache():
+    global _cached_templates, _cached_templates_time
+    _cached_templates = None
+    _cached_templates_time = 0
+
 @router.get("/settings/templates", response_model=List[EmailTemplate])
 def get_all_templates(
     session: Session = Depends(get_session),
@@ -278,7 +287,13 @@ def get_all_templates(
 ):
     if not current_user:
         raise HTTPException(status_code=403, detail="Only authenticated users can view email templates")
-    
+
+    import time
+    global _cached_templates, _cached_templates_time
+    now_ts = time.time()
+    if _cached_templates is not None and (now_ts - _cached_templates_time < _TEMPLATES_CACHE_TTL):
+        return _cached_templates
+
     # Self-healing: Check if any default templates are missing and seed them on the fly
     from backend.default_templates import DEFAULT_TEMPLATES
     existing_templates = session.exec(select(EmailTemplate).order_by(EmailTemplate.id)).all()
@@ -304,7 +319,9 @@ def get_all_templates(
         except Exception as e:
             session.rollback()
             print(f"Error seeding missing templates: {e}")
-            
+
+    _cached_templates = existing_templates
+    _cached_templates_time = now_ts
     return existing_templates
 
 @router.post("/settings/templates", response_model=EmailTemplate)
@@ -333,6 +350,7 @@ def create_template(
     session.add(template)
     session.commit()
     session.refresh(template)
+    invalidate_templates_cache()
     return template
 
 SYSTEM_TEMPLATE_KEYS = {
@@ -372,6 +390,7 @@ def delete_template(
     session.commit()
     from backend.email_service import invalidate_template_cache
     invalidate_template_cache(key)
+    invalidate_templates_cache()
     return {"ok": True}
 
 @router.get("/settings/templates/{key}", response_model=EmailTemplate)
@@ -429,6 +448,7 @@ def update_template(
     session.refresh(template)
     from backend.email_service import invalidate_template_cache
     invalidate_template_cache(key)
+    invalidate_templates_cache()
     return template
 
 @router.post("/settings/templates/{key}/reset", response_model=EmailTemplate)
@@ -458,6 +478,7 @@ def reset_template(
     session.refresh(template)
     from backend.email_service import invalidate_template_cache
     invalidate_template_cache(key)
+    invalidate_templates_cache()
     return template
 
 @router.post("/settings/templates/{key}/test")
@@ -662,6 +683,7 @@ def create_registration_template(
     session.add(template)
     session.commit()
     session.refresh(template)
+    invalidate_templates_cache()
     return template
 
 @router.put("/settings/registration-templates/{tpl_id}", response_model=RegistrationFormTemplate)

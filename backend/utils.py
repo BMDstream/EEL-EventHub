@@ -19,6 +19,15 @@ if os.getenv("MOCK_EMAIL_SERVICE") == "true":
     limiter.enabled = False
 
 _session_last_updated: dict = {}
+_user_auth_cache: dict = {}
+_USER_AUTH_CACHE_TTL: int = 60  # Cache verified users for 60 seconds across parallel requests
+
+def invalidate_user_auth_cache(email: Optional[str] = None):
+    """Invalidates the in-memory user authentication cache."""
+    if email:
+        _user_auth_cache.pop(email.strip().lower(), None)
+    else:
+        _user_auth_cache.clear()
 
 def get_current_user_from_request(
     request: Request,
@@ -29,11 +38,34 @@ def get_current_user_from_request(
     user_email = (x_user_email or email or "").strip()
     if not user_email:
         return None
+
+    import time
+    user_email_clean = user_email.lower()
+    now_ts = time.time()
+
+    # Check fast in-memory cache to prevent multiple parallel database roundtrips
+    cached = _user_auth_cache.get(user_email_clean)
+    if cached and (now_ts - cached[1] < _USER_AUTH_CACHE_TTL):
+        return cached[0]
+
     try:
-        user = session.exec(select(User).where(func.lower(User.email) == user_email.lower())).first()
+        user = session.exec(select(User).where(func.lower(User.email) == user_email_clean)).first()
     except Exception:
         session.rollback()
-        user = session.exec(select(User).where(func.lower(User.email) == user_email.lower())).first()
+        user = session.exec(select(User).where(func.lower(User.email) == user_email_clean)).first()
+
+    if user:
+        # Detached copy safe for cross-session in-memory cache
+        cached_user = User(
+            id=user.id,
+            email=user.email,
+            password=user.password,
+            role=user.role,
+            permissions=list(user.permissions or []),
+            is_active=user.is_active
+        )
+        _user_auth_cache[user_email_clean] = (cached_user, now_ts)
+        user = cached_user
     
     # Track Active Session (throttled to at most once every 5 minutes per user to preserve DB connection pool)
     if user and request:

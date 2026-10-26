@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import useSWR from "swr";
 import { 
   Plus, 
   Calendar, 
@@ -37,18 +38,45 @@ interface Event {
   client?: any;
 }
 
+const dashboardFetcher = async ([url, email]: [string, string]) => {
+  const headers = {
+    "x-user-email": email || "",
+    ...getAppEnvironmentHeaders()
+  };
+  const res = await fetch(url, { headers });
+  if (!res.ok) return null;
+  return await res.json();
+};
+
 export default function AdminDashboard() {
-  const [events, setEvents] = useState<Event[]>([]);
-  const [statsData, setStatsData] = useState<any>(null);
-  const [activities, setActivities] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [isAuditLogOpen, setIsAuditLogOpen] = useState(false);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [auditLoading, setAuditLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const { data: session } = useSession();
   const userRole = (session?.user as any)?.role || "staff";
+  const userEmail = session?.user?.email || "";
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const { data: eventsData, isLoading: eventsLoading } = useSWR<Event[]>(
+    userEmail ? ["/api/py/events", userEmail] : null,
+    dashboardFetcher,
+    { revalidateOnFocus: false, dedupingInterval: 10000 }
+  );
+  const { data: statsData, isLoading: statsLoading } = useSWR<any>(
+    userEmail ? ["/api/py/stats", userEmail] : null,
+    dashboardFetcher,
+    { revalidateOnFocus: false, dedupingInterval: 10000 }
+  );
+  const { data: activitiesData, isLoading: activitiesLoading } = useSWR<any[]>(
+    userEmail ? ["/api/py/activities", userEmail] : null,
+    dashboardFetcher,
+    { revalidateOnFocus: false, dedupingInterval: 10000 }
+  );
+
+  const events = Array.isArray(eventsData) ? eventsData : [];
+  const activities = Array.isArray(activitiesData) ? activitiesData : [];
+  const loading = (!eventsData && eventsLoading) || (!statsData && statsLoading);
 
   const handleRefreshDatabase = async () => {
     if (!session?.user?.email) return;
@@ -93,34 +121,6 @@ export default function AdminDashboard() {
       setAuditLoading(false);
     }
   };
-
-  useEffect(() => {
-    if (!session?.user?.email) return;
-    const fetchData = async () => {
-      try {
-        const headers = {
-          "x-user-email": session.user.email || "",
-          ...getAppEnvironmentHeaders()
-        };
-        const [eventsRes, statsRes, activitiesRes] = await Promise.all([
-          fetch("/api/py/events", { headers }),
-          fetch("/api/py/stats", { headers }),
-          fetch("/api/py/activities", { headers })
-        ]);
-        const eventsData = eventsRes.ok ? await eventsRes.json() : [];
-        const sData = statsRes.ok ? await statsRes.json() : null;
-        const aData = activitiesRes.ok ? await activitiesRes.json() : [];
-        setEvents(Array.isArray(eventsData) ? eventsData : []);
-        setStatsData(sData);
-        setActivities(Array.isArray(aData) ? aData : []);
-      } catch (err) {
-        console.error("Failed to fetch dashboard data", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, [session]);
 
   const formatRelativeTime = (dateString: string) => {
     if (!dateString) return "Recently";

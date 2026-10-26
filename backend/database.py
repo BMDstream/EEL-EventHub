@@ -136,8 +136,8 @@ engine_args = {
 if not is_sqlite:
     engine_args["pool_size"] = 5
     engine_args["max_overflow"] = 10
-    engine_args["pool_recycle"] = 300
-    engine_args["pool_pre_ping"] = True
+    engine_args["pool_recycle"] = 180
+    engine_args["pool_pre_ping"] = False
 
 engine_prod = create_engine(PROD_DATABASE_URL, **engine_args)
 engine_preview = create_engine(PREVIEW_DATABASE_URL, **engine_args) if PREVIEW_DATABASE_URL != PROD_DATABASE_URL else engine_prod
