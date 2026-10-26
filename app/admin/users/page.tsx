@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import useSWR from "swr";
 import { Users, Plus, Shield, Mail, Trash2, Loader2, CheckCircle2, Lock, Building2, X, Key, Upload, Download, Save, ArrowUpDown, Search } from "lucide-react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
@@ -17,6 +18,19 @@ interface User {
 export default function UserManagementPage() {
   const { data: session } = useSession();
   const userRole = (session?.user as any)?.role || "staff";
+
+  // SWR-based background caching for instant rendering
+  const { data: usersData, mutate: mutateUsers } = useSWR<User[]>(
+    session?.user?.email && userRole === "admin" ? ["/api/py/users", session.user.email] : null,
+    ([url, email]: [string, string]) =>
+      fetch(url, { headers: { "x-user-email": email } }).then(r => r.json())
+  );
+
+  const { data: clientsData } = useSWR<any[]>(
+    session?.user?.email && userRole === "admin" ? ["/api/py/clients", session.user.email] : null,
+    ([url, email]: [string, string]) =>
+      fetch(url, { headers: { "x-user-email": email } }).then(r => r.json())
+  );
   
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -50,24 +64,20 @@ export default function UserManagementPage() {
   const [updatingPassword, setUpdatingPassword] = useState(false);
 
   useEffect(() => {
-    if (userRole === "admin") {
-      fetchUsers();
-      fetchClients();
+    if (usersData && Array.isArray(usersData)) {
+      setUsers(usersData);
+      setLoading(false);
     }
-  }, [userRole]);
+  }, [usersData]);
 
-  const fetchClients = async () => {
-    try {
-      const res = await fetch("/api/py/clients", {
-        headers: {
-          "x-user-email": session?.user?.email || ""
-        }
-      });
-      const data = res.ok ? await res.json() : [];
-      setAllClients(Array.isArray(data) ? data : []);
-    } catch (err) {
-      console.error("Failed to fetch clients", err);
+  useEffect(() => {
+    if (clientsData && Array.isArray(clientsData)) {
+      setAllClients(clientsData);
     }
+  }, [clientsData]);
+
+  const fetchUsers = async () => {
+    mutateUsers();
   };
 
   if (userRole !== "admin") {
@@ -83,23 +93,6 @@ export default function UserManagementPage() {
       </AdminLayout>
     );
   }
-
-  const fetchUsers = async () => {
-    try {
-      const res = await fetch("/api/py/users", {
-        headers: {
-          "x-user-email": session?.user?.email || ""
-        }
-      });
-      const data = res.ok ? await res.json() : [];
-      setUsers(Array.isArray(data) ? data : []);
-      setPendingRoles({});
-    } catch (err) {
-      console.error("Failed to fetch users", err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();

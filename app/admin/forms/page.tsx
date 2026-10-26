@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
+import useSWR from "swr";
 import { 
   Settings, 
   Loader2, 
@@ -15,6 +16,7 @@ import { motion } from "framer-motion";
 import { useSession } from "next-auth/react";
 import AdminLayout from "@/components/AdminLayout";
 import { cleanHtmlText } from "@/lib/utils";
+import { getAppEnvironmentHeaders } from "@/lib/env-utils";
 
 interface Event {
   id: number;
@@ -24,32 +26,32 @@ interface Event {
   address?: string;
 }
 
+const fetcher = async (url: string, email: string): Promise<Event[]> => {
+  const res = await fetch(url, {
+    headers: {
+      "x-user-email": email,
+      ...getAppEnvironmentHeaders()
+    }
+  });
+  if (!res.ok) throw new Error("Failed to fetch events");
+  const data = await res.json();
+  return Array.isArray(data) ? data : [];
+};
+
 export default function FormsHubPage() {
   const { data: session } = useSession();
   const userRole = (session?.user as any)?.role || "staff";
-
-  const [events, setEvents] = useState<Event[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
 
-  useEffect(() => {
-    if (userRole === "admin" || userRole === "manager") {
-      fetchEvents();
-    }
-  }, [userRole]);
+  const { data: eventsData, error } = useSWR<Event[]>(
+    session?.user?.email && (userRole === "admin" || userRole === "manager")
+      ? ["/api/py/events", session.user.email]
+      : null,
+    ([url, email]: [string, string]) => fetcher(url, email)
+  );
 
-  const fetchEvents = () => {
-    fetch("/api/py/events")
-      .then((res) => res.json())
-      .then((data) => {
-        setEvents(data);
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error("Failed to fetch events", err);
-        setLoading(false);
-      });
-  };
+  const events = Array.isArray(eventsData) ? eventsData : [];
+  const loading = !eventsData && !error;
 
   if (userRole === "staff") {
     return (

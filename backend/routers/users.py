@@ -10,8 +10,16 @@ from backend.utils import (
     hash_password,
     invalidate_user_auth_cache
 )
+import time
 
 router = APIRouter()
+
+_users_list_cache: dict = {}
+_USERS_CACHE_TTL = 30
+
+def invalidate_users_cache():
+    """Invalidates the cached users list."""
+    _users_list_cache.clear()
 
 @router.get("", response_model=List[Dict[str, Any]])
 def read_users(
@@ -20,9 +28,20 @@ def read_users(
 ):
     if not current_user or current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Only admins can view users")
+        
+    now_ts = time.time()
+    cached = _users_list_cache.get("all_users")
+    if cached and now_ts < cached[1]:
+        return cached[0]
+
     users = session.exec(select(User).order_by(func.lower(User.email).asc())).all()
     result = []
     from sqlalchemy import text
+    
+    # Pre-fetch all user-client link roles in a single batch query to eliminate N+1 queries
+    link_rows = session.execute(text('SELECT user_id, client_id, role FROM "userclientlink"')).all()
+    links_map = {(row[0], row[1]): row[2] for row in link_rows}
+
     for user in users:
         u_dict = user.dict()
         u_dict["password"] = None  # Security check: redact passwords
@@ -30,15 +49,13 @@ def read_users(
         clients_enriched = []
         for client in user.clients:
             c_dict = client.dict()
-            link = session.execute(
-                text('SELECT role FROM "userclientlink" WHERE user_id = :user_id AND client_id = :client_id'),
-                {"user_id": user.id, "client_id": client.id}
-            ).first()
-            c_dict["role"] = link[0] if link else "staff"
+            c_dict["role"] = links_map.get((user.id, client.id), "staff")
             clients_enriched.append(c_dict)
             
         u_dict["clients"] = clients_enriched
         result.append(u_dict)
+        
+    _users_list_cache["all_users"] = (result, now_ts + _USERS_CACHE_TTL)
     return result
 
 @router.post("", response_model=User)
@@ -57,6 +74,7 @@ def create_user(
     session.add(user)
     session.commit()
     session.refresh(user)
+    invalidate_users_cache()
     return user
 
 @router.post("/bulk")
@@ -93,6 +111,7 @@ def create_users_bulk(
             errors.append(f"Error creating {user_email}: {str(e)}")
             
     session.commit()
+    invalidate_users_cache()
     return {"created": created, "errors": errors}
 
 @router.get("/me", response_model=User)
@@ -125,6 +144,7 @@ def update_user(
     session.commit()
     session.refresh(db_user)
     invalidate_user_auth_cache(db_user.email)
+    invalidate_users_cache()
     return db_user
 
 @router.delete("/{user_id}")
@@ -149,6 +169,7 @@ def delete_user(
         session.delete(user)
         session.commit()
         invalidate_user_auth_cache(user_email)
+        invalidate_users_cache()
     except Exception as e:
         session.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to delete user: {str(e)}")

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import useSWR from "swr";
 import { 
   Building2, 
   Plus, 
@@ -34,12 +35,29 @@ interface Client {
   created_at: string;
 }
 
+const fetcher = async (url: string, email: string): Promise<Client[]> => {
+  const res = await fetch(url, {
+    headers: {
+      "x-user-email": email
+    }
+  });
+  if (!res.ok) throw new Error("Failed to fetch clients");
+  const data = await res.json();
+  return Array.isArray(data) ? data : [];
+};
+
 export default function ClientsPage() {
   const { data: session } = useSession();
   const userRole = (session?.user as any)?.role || "staff";
 
-  const [clients, setClients] = useState<Client[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: clientsData, error, mutate } = useSWR<Client[]>(
+    session?.user?.email ? ["/api/py/clients", session.user.email] : null,
+    ([url, email]: [string, string]) => fetcher(url, email)
+  );
+
+  const clients = Array.isArray(clientsData) ? clientsData : [];
+  const loading = !clientsData && !error;
+
   const [modalOpen, setModalOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [saving, setSaving] = useState(false);
@@ -60,40 +78,8 @@ export default function ClientsPage() {
     font_size: "16px"
   });
 
-  // Fetch on mount and whenever session becomes available
-  useEffect(() => {
-    if (session?.user?.email) {
-      fetchClients();
-    }
-  }, [session]);
-
-  // Also re-fetch whenever the page becomes visible again (e.g. navigating back)
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (!document.hidden && session?.user?.email) {
-        fetchClients();
-      }
-    };
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
-  }, [session]);
-
   const fetchClients = async () => {
-    try {
-      const res = await fetch("/api/py/clients", {
-        headers: {
-          "x-user-email": session?.user?.email || ""
-        }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setClients(data);
-      }
-    } catch (err) {
-      console.error("Failed to fetch clients", err);
-    } finally {
-      setLoading(false);
-    }
+    mutate();
   };
 
   const handleOpenAdd = () => {

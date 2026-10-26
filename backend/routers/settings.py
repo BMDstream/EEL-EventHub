@@ -127,6 +127,12 @@ def update_approved_sender_emails(
 
 
 
+_clients_cache: dict = {}
+_CLIENTS_CACHE_TTL = 60
+
+def invalidate_clients_cache():
+    _clients_cache.clear()
+
 @router.get("/clients", response_model=List[Client])
 def get_clients(
     session: Session = Depends(get_session),
@@ -134,9 +140,20 @@ def get_clients(
 ):
     if not current_user:
         raise HTTPException(status_code=401, detail="Authentication required")
+        
+    now_ts = time.time()
+    cache_key = (current_user.id, current_user.role)
+    cached = _clients_cache.get(cache_key)
+    if cached and now_ts < cached[1]:
+        return cached[0]
+
     if current_user.role == "admin":
-        return session.exec(select(Client)).all()
-    return current_user.clients
+        res = session.exec(select(Client)).all()
+    else:
+        res = current_user.clients
+        
+    _clients_cache[cache_key] = (res, now_ts + _CLIENTS_CACHE_TTL)
+    return res
 
 @router.post("/clients", response_model=Client)
 def create_client(
@@ -154,6 +171,7 @@ def create_client(
     session.add(client)
     session.commit()
     session.refresh(client)
+    invalidate_clients_cache()
     return client
 
 @router.get("/clients/{client_id}", response_model=Client)
@@ -181,6 +199,7 @@ def update_client(client_id: int, client_data: Client, session: Session = Depend
     session.add(db_client)
     session.commit()
     session.refresh(db_client)
+    invalidate_clients_cache()
     return db_client
 
 @router.delete("/clients/{client_id}")
@@ -202,6 +221,7 @@ def delete_client(
         
     session.delete(db_client)
     session.commit()
+    invalidate_clients_cache()
     return {"ok": True}
 
 @router.get("/users/{user_id}/clients", response_model=List[Client])
@@ -255,6 +275,11 @@ def sync_user_clients(
                     {"user_id": user_id, "client_id": c_id, "role": "staff"}
                 )
     session.commit()
+    try:
+        from backend.routers.users import invalidate_users_cache
+        invalidate_users_cache()
+    except Exception:
+        pass
     return {"ok": True}
 
 # Pydantic models for request bodies

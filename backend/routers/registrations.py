@@ -675,6 +675,7 @@ def register_attendee(
         except Exception as e:
             print(f"Error dispatching confirmation email: {e}")
 
+    invalidate_registrations_cache(event.id)
     return {
         "id": str(registration.id),
         "pin": registration.pin,
@@ -682,12 +683,28 @@ def register_attendee(
         "version": "1.4-tournament-integrated"
     }
 
+_registrations_cache: dict = {}
+_REGISTRATIONS_CACHE_TTL = 30  # 30 seconds
+
+def invalidate_registrations_cache(event_id: Optional[int] = None):
+    """Invalidates the in-memory cache for event registrations."""
+    if event_id:
+        _registrations_cache.pop(event_id, None)
+    else:
+        _registrations_cache.clear()
+
 @router.get("/events/{event_id}/registrations")
 def get_event_registrations(
     event_id: int, 
     session: Session = Depends(get_session),
     current_user: Optional[User] = Depends(get_current_user_from_request)
 ):
+    import time
+    now_ts = time.time()
+    cached = _registrations_cache.get(event_id)
+    if cached and now_ts < cached[1]:
+        return cached[0]
+
     event = session.get(Event, event_id)
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
@@ -700,7 +717,7 @@ def get_event_registrations(
         .order_by(Registration.created_at.desc())
     ).all()
     
-    return [
+    result = [
         {
             "id": reg.id,
             "event_id": reg.event_id,
@@ -713,6 +730,8 @@ def get_event_registrations(
             "attendee": att
         } for reg, att in registrations
     ]
+    _registrations_cache[event_id] = (result, now_ts + _REGISTRATIONS_CACHE_TTL)
+    return result
 
 @router.get("/events/{event_id}/qrcodes/zip")
 def download_event_qrcodes_zip(
@@ -1160,6 +1179,7 @@ def create_registrations_bulk(
             event_id
         )
         
+    invalidate_registrations_cache(event_id)
     return {
         "ok": True,
         "created": created,
@@ -1203,6 +1223,7 @@ def bulk_delete_registrations(
             "bulk_delete",
             f"Bulk deleted {deleted_count} registrations"
         )
+    invalidate_registrations_cache()
     return {"ok": True, "deleted_count": deleted_count}
 
 @router.delete("/registrations/{registration_id}")
@@ -1236,6 +1257,7 @@ def delete_registration(
         event_id
     )
     
+    invalidate_registrations_cache(event_id)
     return {"ok": True}
 
 @router.put("/registrations/{registration_id}/checkin")
@@ -1319,6 +1341,7 @@ def toggle_checkin(
         registration.event_id
     )
 
+    invalidate_registrations_cache(registration.event_id)
     return {
         "id": str(registration.id),
         "event_id": registration.event_id,
@@ -1405,6 +1428,7 @@ def checkin_by_pin(
         event_id
     )
 
+    invalidate_registrations_cache(event_id)
     return {
         "id": str(registration.id),
         "event_id": registration.event_id,
@@ -1736,6 +1760,7 @@ def bulk_checkin(
             session.rollback()
             errors.append({"registration_id": reg_id, "detail": f"Database error: {str(e)}"})
             
+    invalidate_registrations_cache(event_id)
     return {
         "ok": True,
         "synced": synced,
@@ -1810,6 +1835,7 @@ def update_registration(
         registration.event_id
     )
     
+    invalidate_registrations_cache(registration.event_id)
     return {
         "ok": True,
         "registration": {
@@ -1865,6 +1891,7 @@ def update_registration_custom_answers(
         registration.event_id
     )
     
+    invalidate_registrations_cache(registration.event_id)
     return {"ok": True, "custom_answers": existing_answers}
 
 @router.post("/events/{event_id}/registrations/walk-in", response_model=Registration)
@@ -1956,5 +1983,6 @@ def create_walkin_registration(
         event_id
     )
     
+    invalidate_registrations_cache(event_id)
     return registration
 

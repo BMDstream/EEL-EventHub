@@ -227,6 +227,7 @@ export default function EventDetailsPage() {
   const [event, setEvent] = useState<Event | null>(null);
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [loading, setLoading] = useState(true);
+  const [regLoading, setRegLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [selectedReg, setSelectedReg] = useState<Registration | null>(null);
@@ -1358,43 +1359,58 @@ export default function EventDetailsPage() {
           "x-user-email": session.user.email || "",
           ...getAppEnvironmentHeaders()
         };
-        const [eventRes, regRes, templatesRes] = await Promise.all([
-          fetch(`/api/py/events/id/${id}`, { headers }),
-          fetch(`/api/py/events/${id}/registrations`, { headers }),
-          fetch(`/api/py/settings/templates`, { headers }).catch((err) => {
-            console.error("Failed to load email templates", err);
-            return null;
+
+        // 1. Fetch Event Details first: renders the page shell immediately
+        fetch(`/api/py/events/id/${id}`, { headers })
+          .then(async (res) => {
+            if (!res.ok) {
+              const detail = await res.text();
+              throw new Error(`Failed to fetch Event Details: HTTP ${res.status} - ${detail}`);
+            }
+            const eventData = await res.json();
+            setEvent(eventData);
+            setEventUserRole(eventData.user_role_for_client || "staff");
+            setLoading(false);
           })
-        ]);
+          .catch((err) => {
+            console.error("Failed to fetch event details", err);
+            setError(err.message || String(err));
+            setLoading(false);
+          });
 
-        if (!eventRes.ok) {
-          const detail = await eventRes.text();
-          throw new Error(`Failed to fetch Event Details: HTTP ${eventRes.status} - ${detail}`);
-        }
-        const eventData = await eventRes.json();
-        setEvent(eventData);
-        setEventUserRole(eventData.user_role_for_client || "staff");
+        // 2. Fetch registrations in parallel without blocking page rendering
+        setRegLoading(true);
+        fetch(`/api/py/events/${id}/registrations`, { headers })
+          .then(async (res) => {
+            if (res.ok) {
+              const regData = await res.json();
+              setRegistrations(Array.isArray(regData) ? regData : []);
+            }
+          })
+          .catch((err) => {
+            console.error("Failed to fetch registrations", err);
+          })
+          .finally(() => {
+            setRegLoading(false);
+          });
 
-        if (!regRes.ok) {
-          const detail = await regRes.text();
-          throw new Error(`Failed to fetch Event Registrations: HTTP ${regRes.status} - ${detail}`);
-        }
-        const regData = await regRes.json();
-        setRegistrations(regData);
+        // 3. Fetch email templates in parallel
+        fetch(`/api/py/settings/templates`, { headers })
+          .then(async (res) => {
+            if (res.ok) {
+              const templatesData = await res.json();
+              setEmailTemplates(Array.isArray(templatesData) ? templatesData : []);
+            }
+          })
+          .catch((err) => {
+            console.error("Failed to load email templates", err);
+          });
 
-        if (templatesRes && templatesRes.ok) {
-          try {
-            const templatesData = await templatesRes.json();
-            setEmailTemplates(Array.isArray(templatesData) ? templatesData : []);
-          } catch (templateErr) {
-            console.error("Failed to parse email templates", templateErr);
-          }
-        }
       } catch (err: any) {
-        console.error("Failed to fetch event details", err);
+        console.error("Failed to initialize event page", err);
         setError(err.message || String(err));
-      } finally {
         setLoading(false);
+        setRegLoading(false);
       }
     };
 
@@ -2768,7 +2784,16 @@ export default function EventDetailsPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50 dark:divide-slate-800/40">
-                  {filteredRegistrations.length === 0 ? (
+                  {regLoading ? (
+                    <tr>
+                      <td colSpan={(userRole === "admin" || userRole === "manager") ? 6 : 5} className="px-10 py-24 text-center">
+                        <div className="flex flex-col items-center justify-center gap-3">
+                          <Loader2 className="animate-spin text-slate-300 dark:text-slate-600" size={32} />
+                          <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Loading guest manifest...</p>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : filteredRegistrations.length === 0 ? (
                     <tr>
                       <td colSpan={(userRole === "admin" || userRole === "manager") ? 6 : 5} className="px-10 py-24 text-center">
                         <div className="bg-slate-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -2931,7 +2956,12 @@ export default function EventDetailsPage() {
             </div>
               {/* Mobile Card List (md:hidden) */}
               <div className="block md:hidden divide-y divide-slate-100 dark:divide-slate-800/60">
-                {filteredRegistrations.length === 0 ? (
+                {regLoading ? (
+                  <div className="p-8 text-center flex flex-col items-center justify-center gap-3">
+                    <Loader2 className="animate-spin text-slate-300 dark:text-slate-600" size={28} />
+                    <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Loading guest manifest...</p>
+                  </div>
+                ) : filteredRegistrations.length === 0 ? (
                   <div className="p-8 text-center">
                     <div className="bg-slate-50 dark:bg-slate-800/50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
                       <Users className="text-slate-300 dark:text-slate-600" size={24} />

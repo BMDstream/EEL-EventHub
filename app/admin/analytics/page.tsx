@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import AdminLayout from "@/components/AdminLayout";
 import { cleanHtmlText } from "@/lib/utils";
 import { getAppEnvironmentHeaders } from "@/lib/env-utils";
+import useSWR from "swr";
 import { 
   TrendingUp, 
   Users, 
@@ -52,42 +53,34 @@ interface AnalyticsData {
   };
 }
 
+const fetcher = async (url: string, email: string): Promise<AnalyticsData> => {
+  const res = await fetch(url, {
+    headers: {
+      "x-user-email": email,
+      ...getAppEnvironmentHeaders()
+    }
+  });
+  if (!res.ok) throw new Error(`Failed to fetch analytics (${res.status})`);
+  return res.json();
+};
+
 export default function AnalyticsDashboard() {
   const { data: session } = useSession();
   const userRole = (session?.user as any)?.role || "staff";
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
   const [activeTooltip, setActiveTooltip] = useState<{ x: number; y: number; date: string; count: number } | null>(null);
 
-  const fetchAnalytics = async () => {
-    if (!session?.user?.email) return;
-    try {
-      const res = await fetch("/api/py/analytics", {
-        headers: { 
-          "x-user-email": session.user.email || "",
-          ...getAppEnvironmentHeaders()
-        }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setAnalyticsData(data);
-      }
-    } catch (err) {
-      console.error("Failed to fetch analytics", err);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
+  const { data: swrData, error, isValidating, mutate } = useSWR<AnalyticsData>(
+    session?.user?.email ? ["/api/py/analytics", session.user.email] : null,
+    ([url, email]: [string, string]) => fetcher(url, email),
+    { revalidateOnFocus: false }
+  );
 
-  useEffect(() => {
-    fetchAnalytics();
-  }, [session]);
+  const analyticsData = swrData || null;
+  const loading = !swrData && !error;
+  const refreshing = isValidating && !!swrData;
 
   const handleRefresh = () => {
-    setRefreshing(true);
-    fetchAnalytics();
+    mutate();
   };
 
   if (userRole === "staff") {

@@ -17,6 +17,9 @@ from backend.utils import (
 
 router = APIRouter()
 
+_events_list_cache: dict = {}
+_EVENTS_LIST_CACHE_TTL = 30
+
 @router.get("", response_model=List[Dict[str, Any]])
 def read_events(
     session: Session = Depends(get_session),
@@ -25,6 +28,13 @@ def read_events(
     if not current_user:
         raise HTTPException(status_code=401, detail="Authentication required")
         
+    import time
+    now_ts = time.time()
+    cache_key = (current_user.id, current_user.role)
+    cached = _events_list_cache.get(cache_key)
+    if cached and now_ts < cached[1]:
+        return cached[0]
+
     if current_user.role == "admin":
         events = session.exec(select(Event).order_by(Event.id.desc())).all()
     else:
@@ -67,6 +77,7 @@ def read_events(
         event_dict = event.dict()
         event_dict["client"] = clients_map.get(event.client_id) if event.client_id else None
         result.append(event_dict)
+    _events_list_cache[cache_key] = (result, now_ts + _EVENTS_LIST_CACHE_TTL)
     return result
 
 def _parse_event_datetime(val: Any) -> Optional[Any]:
@@ -316,12 +327,38 @@ def read_event(slug: str, response: Response, session: Session = Depends(get_ses
     set_cached_event(slug, event_dict)
     return event_dict
 
+_event_by_id_cache: dict = {}
+_EVENT_ID_CACHE_TTL = 60
+_analytics_cache: dict = {}
+_ANALYTICS_CACHE_TTL = 30
+
+def invalidate_event_cache(event_id: Optional[int] = None, slug: Optional[str] = None):
+    """Invalidates the in-memory cache for event details, listings, and analytics."""
+    if event_id:
+        keys_to_remove = [k for k in _event_by_id_cache if k[0] == event_id]
+        for k in keys_to_remove:
+            _event_by_id_cache.pop(k, None)
+    else:
+        _event_by_id_cache.clear()
+    _events_list_cache.clear()
+    _analytics_cache.clear()
+    if slug:
+        from backend.cache_service import clear_cached_event
+        clear_cached_event(slug)
+
 @router.get("/id/{event_id}")
 def read_event_by_id(
     event_id: int, 
     session: Session = Depends(get_session),
     current_user: Optional[User] = Depends(get_current_user_from_request)
 ):
+    import time
+    now_ts = time.time()
+    cache_key = (event_id, current_user.id if current_user else 0)
+    cached = _event_by_id_cache.get(cache_key)
+    if cached and (now_ts < cached[1]):
+        return cached[0]
+
     event = session.get(Event, event_id)
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
@@ -369,6 +406,7 @@ def read_event_by_id(
     event_dict["operator_config"] = getattr(event, "operator_config", None) or (reg_tpl.operator_config if reg_tpl else {})
     
     event_dict["user_role_for_client"] = user_role
+    _event_by_id_cache[cache_key] = (event_dict, now_ts + _EVENT_ID_CACHE_TTL)
     return event_dict
 
 from sqlalchemy.exc import IntegrityError
@@ -461,9 +499,8 @@ def update_event(
         session.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to update event: {str(e)}")
     
-    # Invalidate Redis cache
-    from backend.cache_service import clear_cached_event
-    clear_cached_event(db_event.slug)
+    # Invalidate cache
+    invalidate_event_cache(db_event.id, db_event.slug)
     
     log_audit(
         current_user.email,
@@ -495,7 +532,8 @@ def update_event_form_schema(
     session.commit()
     session.refresh(db_event)
     
-    # Invalidate Redis cache
+    # Invalidate cache
+    invalidate_event_cache(db_event.id, db_event.slug)
     from backend.cache_service import clear_cached_event
     clear_cached_event(db_event.slug)
     
@@ -742,12 +780,21 @@ def get_recent_activities(
 
 @metrics_router.get("/analytics")
 def get_analytics(
+    fresh: Optional[int] = None,
     session: Session = Depends(get_session),
     current_user: Optional[User] = Depends(get_current_user_from_request)
 ):
     if not current_user:
         raise HTTPException(status_code=401, detail="Authentication required")
         
+    import time
+    now_ts = time.time()
+    cache_key = (current_user.id, current_user.role)
+    if not fresh:
+        cached = _analytics_cache.get(cache_key)
+        if cached and now_ts < cached[1]:
+            return cached[0]
+
     if current_user.role == "admin":
         events = session.exec(select(Event)).all()
         clients_count = len(session.exec(select(Client)).all())
@@ -886,7 +933,7 @@ def get_analytics(
             "registrations_count": client_agg.get(c.id, 0)
         })
 
-    return {
+    res = {
         "registrations_by_day": registrations_by_day,
         "event_breakdown": event_breakdown,
         "client_breakdown": client_breakdown,
@@ -898,6 +945,8 @@ def get_analytics(
             "clients": clients_count
         }
     }
+    _analytics_cache[cache_key] = (res, now_ts + _ANALYTICS_CACHE_TTL)
+    return res
 
 @router.get("/{event_id}/staff")
 def get_event_staff(
