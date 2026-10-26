@@ -6,6 +6,7 @@ from typing import List, Dict, Any, Optional, Union
 from pydantic import BaseModel
 from sqlalchemy.orm.attributes import flag_modified
 import random
+import re
 import zipfile
 from io import BytesIO
 import qrcode

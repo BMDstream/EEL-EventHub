@@ -2381,11 +2381,19 @@ export default function EventDetailsPage() {
                     onClick={async () => {
                       try {
                         const res = await fetch(`/api/py/events/${event.id}/qrcodes/zip`, {
-                          headers: { "x-user-email": session?.user?.email || "" }
+                          headers: { 
+                            "x-user-email": session?.user?.email || "",
+                            ...getAppEnvironmentHeaders()
+                          }
                         });
                         if (!res.ok) {
-                          const errData = await res.json();
-                          throw new Error(errData.detail || "Failed to download ZIP");
+                          const errText = await res.text();
+                          let errMsg = errText;
+                          try {
+                            const errJson = JSON.parse(errText);
+                            errMsg = errJson.detail || errText;
+                          } catch (_) {}
+                          throw new Error(errMsg || `Server responded with status ${res.status}`);
                         }
                         const blob = await res.blob();
                         const url = window.URL.createObjectURL(blob);
