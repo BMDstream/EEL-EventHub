@@ -774,8 +774,11 @@ def download_event_qrcodes_zip(
             img.save(qr_bytes, format="PNG")
             qr_bytes.seek(0)
             
-            filename = f"{att.first_name.strip()}_{att.last_name.strip()}_{pin}.png"
-            filename = "".join(c for c in filename if c.isalnum() or c in (' ', '_', '-', '.')).strip()
+            first = (att.first_name or "").strip() if att else ""
+            last = (att.last_name or "").strip() if att else ""
+            name_part = f"{first}_{last}".strip("_") if (first or last) else "attendee"
+            raw_filename = f"{name_part}_{pin}.png"
+            filename = "".join(c for c in raw_filename if c.isalnum() or c in (' ', '_', '-', '.')).strip()
             filename = filename.replace(" ", "_")
             
             zip_file.writestr(filename, qr_bytes.read())

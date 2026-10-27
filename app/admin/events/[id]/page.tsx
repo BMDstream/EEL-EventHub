@@ -51,7 +51,9 @@ import {
   Bold,
   Eraser,
   Check,
-  Paintbrush
+  Paintbrush,
+  ListFilter,
+  CheckSquare
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import AdminLayout from "@/components/AdminLayout";
@@ -1466,8 +1468,14 @@ export default function EventDetailsPage() {
     }
   };
 
-  const exportToExcel = () => {
-    if (filteredRegistrations.length === 0) return;
+  const [isExportingQRs, setIsExportingQRs] = useState(false);
+  const [isListMatcherOpen, setIsListMatcherOpen] = useState(false);
+  const [matcherText, setMatcherText] = useState("");
+  const [matchedResults, setMatchedResults] = useState<{ matched: any[]; unmatched: string[] } | null>(null);
+
+  const exportToExcel = (targetList?: any[]) => {
+    const sourceList = targetList && targetList.length > 0 ? targetList : filteredRegistrations;
+    if (sourceList.length === 0) return;
     
     // Flatten schema fields (supporting custom layout sections)
     const activeSchema = (event?.custom_fields_schema && event.custom_fields_schema.length > 0)
@@ -1504,7 +1512,7 @@ export default function EventDetailsPage() {
       ...displayFields.map(f => (f.label || f.title || "").replace(/<[^>]*>/g, "").trim())
     ];
 
-    const rawRows = filteredRegistrations.map(reg => {
+    const rawRows = sourceList.map(reg => {
       const checkedInDaysStr = reg.checked_in_days && reg.checked_in_days.length > 0
         ? reg.checked_in_days.map(d => `Day ${d}`).join(", ")
         : "None";
@@ -1552,7 +1560,8 @@ export default function EventDetailsPage() {
       return [...basicInfo, ...customInfo];
     });
 
-    const excelFileName = getSafeExportFileName("registrants", event?.slug || event?.title, "xlsx");
+    const filePrefix = targetList && targetList.length > 0 ? "selected_registrants" : "registrants";
+    const excelFileName = getSafeExportFileName(filePrefix, event?.slug || event?.title, "xlsx");
 
     import("xlsx").then((XLSX) => {
       const worksheet = XLSX.utils.aoa_to_sheet([headers, ...rawRows]);
@@ -1579,11 +1588,139 @@ export default function EventDetailsPage() {
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.setAttribute("href", url);
-      link.setAttribute("download", getSafeExportFileName("registrants", event?.slug || event?.title, "csv"));
+      link.setAttribute("download", getSafeExportFileName(filePrefix, event?.slug || event?.title, "csv"));
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
     });
+  };
+
+  const downloadQRCodesZip = async (targetList?: any[]) => {
+    const items = targetList && targetList.length > 0
+      ? targetList
+      : registrations.filter(r => r.status === "confirmed");
+      
+    if (!items || items.length === 0) {
+      alert("No confirmed registrants available to export QR codes.");
+      return;
+    }
+
+    setIsExportingQRs(true);
+    try {
+      const QRCode = (await import("qrcode")).default;
+      const JSZip = (await import("jszip")).default;
+      const zip = new JSZip();
+
+      for (const reg of items) {
+        const pin = reg.pin || String(reg.id).substring(0, 8);
+        const fn = (reg.attendee?.first_name || "").trim();
+        const ln = (reg.attendee?.last_name || "").trim();
+        const namePart = (fn || ln) ? `${fn}_${ln}`.replace(/_+/g, "_") : "attendee";
+        let cleanFilename = `${namePart}_${pin}.png`
+          .replace(/[^a-zA-Z0-9_\-\.]+/g, "_")
+          .replace(/_+/g, "_");
+
+        const dataUrl = await QRCode.toDataURL(pin, {
+          width: 300,
+          margin: 2,
+          errorCorrectionLevel: "M",
+          color: { dark: "#000000", light: "#ffffff" }
+        });
+        const base64Data = dataUrl.replace(/^data:image\/png;base64,/, "");
+        zip.file(cleanFilename, base64Data, { base64: true });
+      }
+
+      const zipBlob = await zip.generateAsync({ type: "blob" });
+      const url = window.URL.createObjectURL(zipBlob);
+      const a = document.createElement("a");
+      a.href = url;
+      const filePrefix = targetList && targetList.length > 0 ? "selected_qrcodes" : "qrcodes";
+      a.download = getSafeExportFileName(filePrefix, event?.slug || event?.title, "zip");
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err: any) {
+      console.error("QR Code ZIP export failed:", err);
+      alert(`Error generating QR Codes ZIP: ${err.message}`);
+    } finally {
+      setIsExportingQRs(false);
+    }
+  };
+
+  const handleRunListMatcher = () => {
+    if (!matcherText.trim()) return;
+
+    const rawLines = matcherText.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    const matched: any[] = [];
+    const matchedIds = new Set<string>();
+    const unmatched: string[] = [];
+
+    const findReg = (term: string) => {
+      const clean = term.toLowerCase().trim();
+      if (!clean) return null;
+
+      // 1. Direct email match
+      let match = registrations.find(r => r.attendee?.email && r.attendee.email.toLowerCase().trim() === clean);
+      if (match) return match;
+
+      // 2. PIN match (4-8 digits)
+      if (/^\d{4,8}$/.test(clean)) {
+        match = registrations.find(r => r.pin && r.pin.trim() === clean);
+        if (match) return match;
+      }
+
+      // 3. Exact full name match
+      match = registrations.find(r => {
+        const full = `${r.attendee?.first_name || ""} ${r.attendee?.last_name || ""}`.toLowerCase().trim();
+        return full === clean;
+      });
+      if (match) return match;
+
+      // 4. Substring / partial name match
+      match = registrations.find(r => {
+        const full = `${r.attendee?.first_name || ""} ${r.attendee?.last_name || ""}`.toLowerCase().trim();
+        return full.length > 3 && (full.includes(clean) || clean.includes(full));
+      });
+      return match || null;
+    };
+
+    for (const line of rawLines) {
+      const emailMatches = line.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g);
+      let foundReg: any = null;
+
+      if (emailMatches && emailMatches.length > 0) {
+        for (const em of emailMatches) {
+          foundReg = findReg(em);
+          if (foundReg) break;
+        }
+      }
+
+      if (!foundReg) {
+        const tokens = line.split(/[\t,;]+/).map(t => t.trim()).filter(Boolean);
+        for (const tok of tokens) {
+          foundReg = findReg(tok);
+          if (foundReg) break;
+        }
+      }
+
+      if (!foundReg) {
+        foundReg = findReg(line);
+      }
+
+      if (foundReg) {
+        if (!matchedIds.has(foundReg.id)) {
+          matchedIds.add(foundReg.id);
+          matched.push(foundReg);
+        }
+      } else {
+        if (!unmatched.includes(line)) {
+          unmatched.push(line);
+        }
+      }
+    }
+
+    setMatchedResults({ matched, unmatched });
   };
 
   const declinedCount = registrations.filter(r => r.status === "declined").length;
@@ -2378,40 +2515,12 @@ export default function EventDetailsPage() {
                     <span>Export Excel</span>
                   </button>
                   <button
-                    onClick={async () => {
-                      try {
-                        const res = await fetch(`/api/py/events/${event.id}/qrcodes/zip`, {
-                          headers: { 
-                            "x-user-email": session?.user?.email || "",
-                            ...getAppEnvironmentHeaders()
-                          }
-                        });
-                        if (!res.ok) {
-                          const errText = await res.text();
-                          let errMsg = errText;
-                          try {
-                            const errJson = JSON.parse(errText);
-                            errMsg = errJson.detail || errText;
-                          } catch (_) {}
-                          throw new Error(errMsg || `Server responded with status ${res.status}`);
-                        }
-                        const blob = await res.blob();
-                        const url = window.URL.createObjectURL(blob);
-                        const a = document.createElement("a");
-                        a.href = url;
-                        a.download = getSafeExportFileName("qrcodes", event?.slug || event?.title, "zip");
-                        document.body.appendChild(a);
-                        a.click();
-                        a.remove();
-                      } catch (err: any) {
-                        alert(`Error: ${err.message}`);
-                      }
-                    }}
-                    disabled={registrations.length === 0}
+                    onClick={() => downloadQRCodesZip()}
+                    disabled={registrations.length === 0 || isExportingQRs}
                     className="flex items-center justify-center gap-2 bg-[#eab308] hover:bg-[#ca8a04] disabled:bg-slate-200 dark:disabled:bg-slate-800 dark:disabled:text-slate-500 text-[#0f172a] px-3 py-3 rounded-xl font-black transition-all shadow-sm uppercase tracking-wider text-[10px]"
                   >
-                    <Download size={14} />
-                    <span>QR Codes ZIP</span>
+                    {isExportingQRs ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+                    <span>{isExportingQRs ? "Generating ZIP..." : "QR Codes ZIP"}</span>
                   </button>
                   {(() => {
                     const cleanSlug = (event.slug || "").replace(/&nbsp;/g, " ").replace(/\u00a0/g, " ").trim() || String(event.id);
@@ -2731,17 +2840,66 @@ export default function EventDetailsPage() {
                 <h2 className="text-xl font-black text-[#0f172a] dark:text-white font-bricolage italic uppercase tracking-tight">Active <span className="text-slate-300 dark:text-slate-600">Registrants</span></h2>
                 <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
                   {selectedIds.length > 0 && (userRole === "admin" || userRole === "manager") && (
-                    <button
-                      onClick={handleBulkDelete}
-                      disabled={bulkDeleting}
-                      className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all disabled:opacity-50 animate-fade-in"
+                    <div className="flex flex-wrap items-center gap-2 animate-fade-in bg-slate-100 dark:bg-slate-800/80 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-700">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 px-2">
+                        {selectedIds.length} Selected
+                      </span>
+                      <button
+                        onClick={() => {
+                          const selectedRegs = registrations.filter(r => selectedIds.includes(r.id));
+                          exportToExcel(selectedRegs);
+                        }}
+                        className="flex items-center gap-1.5 bg-[#0f172a] hover:bg-black text-white dark:bg-yellow-400 dark:hover:bg-yellow-500 dark:text-[#0f172a] px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shadow-xs"
+                        title="Export only selected attendees to Excel"
+                      >
+                        <Download size={12} />
+                        <span>Export Excel</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          const selectedRegs = registrations.filter(r => selectedIds.includes(r.id));
+                          downloadQRCodesZip(selectedRegs);
+                        }}
+                        disabled={isExportingQRs}
+                        className="flex items-center gap-1.5 bg-[#eab308] hover:bg-[#ca8a04] text-[#0f172a] px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shadow-xs disabled:opacity-50"
+                        title="Download QR codes ZIP for only selected attendees"
+                      >
+                        {isExportingQRs ? <Loader2 size={12} className="animate-spin" /> : <Download size={12} />}
+                        <span>QR Codes ZIP</span>
+                      </button>
+                      <button
+                        onClick={() => setSelectedIds([])}
+                        className="px-2.5 py-1.5 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white text-[10px] font-bold uppercase transition-all"
+                        title="Deselect all"
+                      >
+                        Clear
+                      </button>
+                      <button
+                        onClick={handleBulkDelete}
+                        disabled={bulkDeleting}
+                        className="flex items-center gap-1 bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all disabled:opacity-50 ml-1"
+                      >
+                        {bulkDeleting ? (
+                          <Loader2 className="animate-spin" size={12} />
+                        ) : (
+                          <Trash2 size={12} />
+                        )}
+                        <span>Delete</span>
+                      </button>
+                    </div>
+                  )}
+                  {(userRole === "admin" || userRole === "manager") && (
+                    <button 
+                      onClick={() => {
+                        setIsListMatcherOpen(true);
+                        setMatcherText("");
+                        setMatchedResults(null);
+                      }}
+                      className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-sm"
+                      title="Paste a list of names or emails to match and select them"
                     >
-                      {bulkDeleting ? (
-                        <Loader2 className="animate-spin" size={14} />
-                      ) : (
-                        <Trash2 size={14} />
-                      )}
-                      Delete Selected ({selectedIds.length})
+                      <ListFilter size={14} />
+                      Match / Select List
                     </button>
                   )}
                   {(userRole === "admin" || userRole === "manager") && (
@@ -4980,6 +5138,166 @@ export default function EventDetailsPage() {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+        {/* Match & Select List Modal */}
+        {isListMatcherOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-md font-outfit">
+            <div className="bg-white dark:bg-[#0f172a] rounded-[2.5rem] shadow-2xl border border-slate-100 dark:border-slate-800 w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-200">
+              {/* Modal Header */}
+              <div className="px-8 py-6 border-b border-slate-100 dark:border-slate-800/80 flex justify-between items-center bg-slate-50/60 dark:bg-slate-900/60">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-indigo-500/10 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center border border-indigo-500/20">
+                    <ListFilter size={20} />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-black text-[#0f172a] dark:text-white font-bricolage italic uppercase tracking-tight">
+                      Match & Select <span className="text-indigo-600 dark:text-indigo-400">Attendees</span>
+                    </h3>
+                    <p className="text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest text-[9px] mt-0.5">
+                      Paste attendee names, emails, or spreadsheet rows to match and batch-export
+                    </p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => {
+                    setIsListMatcherOpen(false);
+                    setMatcherText("");
+                    setMatchedResults(null);
+                  }}
+                  className="w-9 h-9 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full flex items-center justify-center text-slate-400 dark:text-slate-300 hover:text-slate-600 dark:hover:text-white transition-colors"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-8 overflow-y-auto space-y-6 flex-1 text-slate-600 dark:text-slate-300">
+                <div>
+                  <label className="block text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2">
+                    Paste Names, Emails, or Spreadsheet Rows:
+                  </label>
+                  <textarea
+                    rows={6}
+                    value={matcherText}
+                    onChange={(e) => setMatcherText(e.target.value)}
+                    placeholder="Paste attendee names, emails, or copy-pasted table rows here...&#10;e.g.&#10;suvesh@dfafrica.co.za&#10;Nick East&#10;andre@fibertime.com"
+                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl font-mono text-xs focus:ring-2 focus:ring-indigo-500 outline-none text-[#0f172a] dark:text-white resize-y"
+                  />
+                  <div className="mt-3 flex flex-wrap justify-between items-center gap-2">
+                    <p className="text-[11px] text-slate-400">
+                      Supports direct copy-paste from Excel, Google Sheets, or plain email lists.
+                    </p>
+                    <button
+                      onClick={handleRunListMatcher}
+                      disabled={!matcherText.trim()}
+                      className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-sm flex items-center gap-2"
+                    >
+                      <Search size={14} />
+                      Find Matches
+                    </button>
+                  </div>
+                </div>
+
+                {matchedResults && (
+                  <div className="space-y-5 pt-4 border-t border-slate-100 dark:border-slate-800 animate-in fade-in">
+                    <div className="flex flex-wrap items-center justify-between gap-3 bg-indigo-50/50 dark:bg-indigo-950/20 p-4 rounded-2xl border border-indigo-100 dark:border-indigo-900/30">
+                      <div>
+                        <p className="text-xs font-black uppercase tracking-wider text-indigo-900 dark:text-indigo-300">
+                          Match Results
+                        </p>
+                        <p className="text-sm font-bold text-slate-700 dark:text-slate-300 mt-0.5">
+                          <span className="text-emerald-600 dark:text-emerald-400 font-black">{matchedResults.matched.length} Matched</span>
+                          {matchedResults.unmatched.length > 0 && (
+                            <span className="text-amber-600 dark:text-amber-400 font-black ml-2">• {matchedResults.unmatched.length} Not Found</span>
+                          )}
+                        </p>
+                      </div>
+
+                      {matchedResults.matched.length > 0 && (
+                        <div className="flex flex-wrap items-center gap-2">
+                          <button
+                            onClick={() => {
+                              setSelectedIds(matchedResults.matched.map(r => r.id));
+                              setIsListMatcherOpen(false);
+                            }}
+                            className="px-3 py-2 bg-white dark:bg-slate-800 hover:bg-slate-100 text-[#0f172a] dark:text-white rounded-xl text-[10px] font-black uppercase tracking-wider border border-slate-200 dark:border-slate-700 transition-all flex items-center gap-1.5 shadow-xs"
+                          >
+                            <CheckSquare size={13} className="text-indigo-500" />
+                            Select in Table ({matchedResults.matched.length})
+                          </button>
+                          <button
+                            onClick={() => exportToExcel(matchedResults.matched)}
+                            className="px-3 py-2 bg-[#0f172a] hover:bg-black text-white dark:bg-yellow-400 dark:hover:bg-yellow-500 dark:text-[#0f172a] rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 shadow-xs"
+                          >
+                            <Download size={13} />
+                            Export Excel
+                          </button>
+                          <button
+                            onClick={() => downloadQRCodesZip(matchedResults.matched)}
+                            disabled={isExportingQRs}
+                            className="px-3 py-2 bg-[#eab308] hover:bg-[#ca8a04] text-[#0f172a] rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 shadow-xs disabled:opacity-50"
+                          >
+                            {isExportingQRs ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
+                            QR Codes ZIP
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Matched list preview */}
+                    {matchedResults.matched.length > 0 && (
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Matched Attendees ({matchedResults.matched.length})</p>
+                        <div className="max-h-48 overflow-y-auto rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 divide-y divide-slate-100 dark:divide-slate-800/80">
+                          {matchedResults.matched.map(m => (
+                            <div key={m.id} className="p-2.5 flex items-center justify-between text-xs">
+                              <div>
+                                <span className="font-bold text-[#0f172a] dark:text-white">{m.attendee?.first_name} {m.attendee?.last_name}</span>
+                                <span className="text-slate-400 ml-2 text-[11px]">({m.attendee?.email})</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400 font-mono font-bold text-[10px]">
+                                  PIN: {m.pin || "—"}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Unmatched list preview */}
+                    {matchedResults.unmatched.length > 0 && (
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-amber-500 mb-2">Unmatched Lines ({matchedResults.unmatched.length})</p>
+                        <div className="max-h-32 overflow-y-auto rounded-xl border border-amber-200/50 dark:border-amber-900/40 bg-amber-50/30 dark:bg-amber-950/20 p-2 divide-y divide-amber-100 dark:divide-amber-900/30">
+                          {matchedResults.unmatched.map((un, idx) => (
+                            <div key={idx} className="p-1.5 text-xs font-mono text-amber-800 dark:text-amber-300 truncate">
+                              {un}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Modal Footer */}
+              <div className="px-8 py-5 border-t border-slate-100 dark:border-slate-800/80 bg-slate-50/40 dark:bg-slate-900/40 flex justify-end">
+                <button
+                  onClick={() => {
+                    setIsListMatcherOpen(false);
+                    setMatcherText("");
+                    setMatchedResults(null);
+                  }}
+                  className="px-5 py-2.5 bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold uppercase transition-all"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         )}
